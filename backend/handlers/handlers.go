@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -15,6 +18,16 @@ import (
 	"project/backend/models"
 )
 
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const (
+	maxLoginAttempts = 3
+	lockDuration     = 1 * time.Minute
+	resetTokenTTL    = 15 * time.Minute
+)
+
+// ── Handler struct ───────────────────────────────────────────────────────────
+
 type Handler struct {
 	DB *gorm.DB
 }
@@ -23,7 +36,7 @@ func NewHandler(db *gorm.DB) *Handler {
 	return &Handler{DB: db}
 }
 
-// ── Request/Response types ──────────────────────────────────────────────────
+// ── Request/Response types ───────────────────────────────────────────────────
 
 type RegisterRequest struct {
 	FirstName       string `json:"first_name" binding:"required,min=2"`
@@ -70,9 +83,9 @@ type CreateUserRequest struct {
 // ── Password validation ──────────────────────────────────────────────────────
 
 func validatePassword(password string) []string {
-	var errors []string
+	var errs []string
 	if len(password) < 8 {
-		errors = append(errors, "at least 8 characters")
+		errs = append(errs, "at least 8 characters")
 	}
 	var hasUpper, hasLower, hasDigit, hasSpecial bool
 	for _, c := range password {
@@ -88,18 +101,18 @@ func validatePassword(password string) []string {
 		}
 	}
 	if !hasUpper {
-		errors = append(errors, "at least one uppercase letter")
+		errs = append(errs, "one uppercase letter")
 	}
 	if !hasLower {
-		errors = append(errors, "at least one lowercase letter")
+		errs = append(errs, "one lowercase letter")
 	}
 	if !hasDigit {
-		errors = append(errors, "at least one digit")
+		errs = append(errs, "one digit")
 	}
 	if !hasSpecial {
-		errors = append(errors, "at least one special character")
+		errs = append(errs, "one special character")
 	}
-	return errors
+	return errs
 }
 
 // ── JWT helpers ──────────────────────────────────────────────────────────────
@@ -118,6 +131,16 @@ func generateToken(userID uint, role models.Role) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
+// ── Random token generator ───────────────────────────────────────────────────
+
+func generateResetToken() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
 // ── Auth Handlers ────────────────────────────────────────────────────────────
 
 func (h *Handler) Register(c *gin.Context) {
@@ -127,13 +150,10 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	// Confirm password check
 	if req.Password != req.ConfirmPassword {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
 		return
 	}
-
-	// Strong password validation
 	if errs := validatePassword(req.Password); len(errs) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Password too weak",
@@ -142,14 +162,12 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	// Check duplicate email
 	var existing models.User
-	if result := h.DB.Where("email = ?", req.Email).First(&existing); result.Error == nil {
+	if h.DB.Where("email = ?", req.Email).First(&existing).Error == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
 		return
 	}
 
-	// Hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
@@ -167,21 +185,14 @@ func (h *Handler) Register(c *gin.Context) {
 		Role:       models.RoleUser,
 		IsActive:   true,
 	}
-
-	if result := h.DB.Create(&user); result.Error != nil {
+	if h.DB.Create(&user).Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
-	// Log activity
 	h.logActivity(user.ID, "REGISTER", "New user registered", c.ClientIP())
-
 	token, _ := generateToken(user.ID, user.Role)
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Registration successful",
-		"token":   token,
-		"user":    user,
-	})
+	c.JSON(http.StatusCreated, gin.H{"message": "Registration successful", "token": token, "user": user})
 }
 
 func (h *Handler) Login(c *gin.Context) {
@@ -192,31 +203,157 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	var user models.User
-	if result := h.DB.Where("email = ?", strings.ToLower(req.Email)).First(&user); result.Error != nil {
+	if h.DB.Where("email = ?", strings.ToLower(req.Email)).First(&user).Error != nil {
+		// Don't reveal whether email exists
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
 	if !user.IsActive {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Account is deactivated"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Account is deactivated. Contact support."})
 		return
 	}
 
+	// ── Check if account is currently locked ────────────────────────────────
+	if user.LockedUntil != nil && time.Now().Before(*user.LockedUntil) {
+		remaining := time.Until(*user.LockedUntil).Seconds()
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"error":            "Account temporarily locked due to too many failed attempts.",
+			"locked":           true,
+			"retry_after_secs": int(remaining) + 1,
+		})
+		return
+	}
+
+	// ── Wrong password ───────────────────────────────────────────────────────
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		newCount := user.FailedLoginCount + 1
+		updates := map[string]interface{}{"failed_login_count": newCount}
+
+		remaining := maxLoginAttempts - newCount
+
+		if newCount >= maxLoginAttempts {
+			// Lock the account for 1 minute
+			lockedUntil := time.Now().Add(lockDuration)
+			updates["locked_until"] = lockedUntil
+			updates["failed_login_count"] = newCount
+			h.DB.Model(&user).Updates(updates)
+			h.logActivity(user.ID, "ACCOUNT_LOCKED", fmt.Sprintf("Account locked after %d failed attempts", newCount), c.ClientIP())
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":            "Too many failed attempts. Account locked for 1 minute.",
+				"locked":           true,
+				"retry_after_secs": int(lockDuration.Seconds()),
+			})
+			return
+		}
+
+		h.DB.Model(&user).Updates(updates)
+		h.logActivity(user.ID, "LOGIN_FAILED", fmt.Sprintf("Failed login attempt %d/%d", newCount, maxLoginAttempts), c.ClientIP())
+
+		msg := fmt.Sprintf("Invalid email or password. %d attempt(s) remaining.", remaining)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":         msg,
+			"attempts_left": remaining,
+			"locked":        false,
+		})
 		return
 	}
 
+	// ── Successful login — reset counters ────────────────────────────────────
 	now := time.Now()
-	h.DB.Model(&user).Update("last_login_at", now)
-	h.logActivity(user.ID, "LOGIN", "User logged in", c.ClientIP())
-
-	token, _ := generateToken(user.ID, user.Role)
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
-		"token":   token,
-		"user":    user,
+	h.DB.Model(&user).Updates(map[string]interface{}{
+		"failed_login_count": 0,
+		"locked_until":       nil,
+		"last_login_at":      now,
 	})
+
+	h.logActivity(user.ID, "LOGIN", "User logged in", c.ClientIP())
+	token, _ := generateToken(user.ID, user.Role)
+	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "token": token, "user": user})
+}
+
+// ── Password Reset ───────────────────────────────────────────────────────────
+
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var body struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Valid email required"})
+		return
+	}
+
+	var user models.User
+	if h.DB.Where("email = ?", strings.ToLower(body.Email)).First(&user).Error != nil {
+		// Always return success to avoid email enumeration
+		c.JSON(http.StatusOK, gin.H{"message": "If that email exists, a reset token has been sent."})
+		return
+	}
+
+	token, err := generateResetToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		return
+	}
+
+	expiry := time.Now().Add(resetTokenTTL)
+	h.DB.Model(&user).Updates(map[string]interface{}{
+		"reset_token":        token,
+		"reset_token_expiry": expiry,
+	})
+	h.logActivity(user.ID, "PASSWORD_RESET_REQUEST", "Reset token generated", c.ClientIP())
+
+	// In production: send token via email. Here we return it directly for dev/demo.
+	c.JSON(http.StatusOK, gin.H{
+		"message":     "Reset token generated. In production this would be emailed.",
+		"reset_token": token, // ← Remove this line in production
+		"expires_in":  "15 minutes",
+	})
+}
+
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var body struct {
+		Token           string `json:"token" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required,min=8"`
+		ConfirmPassword string `json:"confirm_password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if body.NewPassword != body.ConfirmPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
+		return
+	}
+	if errs := validatePassword(body.NewPassword); len(errs) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Password too weak",
+			"details": strings.Join(errs, ", "),
+		})
+		return
+	}
+
+	var user models.User
+	if h.DB.Where("reset_token = ?", body.Token).First(&user).Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
+		return
+	}
+	if user.ResetTokenExpiry == nil || time.Now().After(*user.ResetTokenExpiry) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Reset token has expired. Please request a new one."})
+		return
+	}
+
+	hashed, _ := bcrypt.GenerateFromPassword([]byte(body.NewPassword), bcrypt.DefaultCost)
+	h.DB.Model(&user).Updates(map[string]interface{}{
+		"password":           string(hashed),
+		"reset_token":        "",
+		"reset_token_expiry": nil,
+		"failed_login_count": 0,
+		"locked_until":       nil,
+	})
+	h.logActivity(user.ID, "PASSWORD_RESET", "Password reset successfully", c.ClientIP())
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully. You can now log in."})
 }
 
 // ── Profile Handlers ─────────────────────────────────────────────────────────
@@ -235,15 +372,14 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	updates := map[string]interface{}{
+	h.DB.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
 		"first_name": req.FirstName,
 		"last_name":  req.LastName,
 		"phone":      req.Phone,
 		"department": req.Department,
 		"position":   req.Position,
 		"bio":        req.Bio,
-	}
-	h.DB.Model(&models.User{}).Where("id = ?", userID).Updates(updates)
+	})
 	h.logActivity(userID, "UPDATE_PROFILE", "Profile updated", c.ClientIP())
 	var user models.User
 	h.DB.First(&user, userID)
@@ -257,28 +393,20 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	if req.NewPassword != req.ConfirmPassword {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "New passwords do not match"})
 		return
 	}
-
 	if errs := validatePassword(req.NewPassword); len(errs) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Password too weak",
-			"details": "Password must contain: " + strings.Join(errs, ", "),
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password too weak: " + strings.Join(errs, ", ")})
 		return
 	}
-
 	var user models.User
 	h.DB.First(&user, userID)
-
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.CurrentPassword)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Current password is incorrect"})
 		return
 	}
-
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	h.DB.Model(&user).Update("password", string(hashed))
 	h.logActivity(userID, "CHANGE_PASSWORD", "Password changed", c.ClientIP())
@@ -287,7 +415,6 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 
 func (h *Handler) UploadAvatar(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	// In production, upload to S3/Cloudinary. Here we save the URL sent from client.
 	var body struct {
 		AvatarURL string `json:"avatar_url"`
 	}
@@ -296,7 +423,7 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Avatar updated", "avatar_url": body.AvatarURL})
 }
 
-// ── Dashboard Handlers ────────────────────────────────────────────────────────
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
 func (h *Handler) GetDashboardStats(c *gin.Context) {
 	var totalUsers, activeUsers, adminUsers int64
@@ -320,18 +447,15 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 	})
 }
 
-// ── User Management Handlers (Admin) ─────────────────────────────────────────
+// ── User Management (Admin) ───────────────────────────────────────────────────
 
 func (h *Handler) ListUsers(c *gin.Context) {
 	var users []models.User
 	query := h.DB.Model(&models.User{})
-
-	// Optional search
 	if search := c.Query("search"); search != "" {
 		query = query.Where("first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ?",
 			"%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
-
 	query.Order("created_at desc").Find(&users)
 	c.JSON(http.StatusOK, gin.H{"users": users, "total": len(users)})
 }
@@ -342,19 +466,16 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	var existing models.User
 	if h.DB.Where("email = ?", req.Email).First(&existing).Error == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
 		return
 	}
-
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	role := req.Role
 	if role == "" {
 		role = models.RoleUser
 	}
-
 	user := models.User{
 		FirstName:  req.FirstName,
 		LastName:   req.LastName,
@@ -367,7 +488,6 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		IsActive:   true,
 	}
 	h.DB.Create(&user)
-
 	adminID := c.GetUint("user_id")
 	h.logActivity(adminID, "CREATE_USER", "Admin created user: "+user.Email, c.ClientIP())
 	c.JSON(http.StatusCreated, gin.H{"message": "User created", "user": user})
@@ -400,23 +520,19 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
-	// Soft delete via GORM
 	h.DB.Delete(&user)
 	adminID := c.GetUint("user_id")
 	h.logActivity(adminID, "DELETE_USER", "Admin deleted user: "+user.Email, c.ClientIP())
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
 }
 
-// ── Activity Log ─────────────────────────────────────────────────────────────
+// ── Activity Log ──────────────────────────────────────────────────────────────
 
 func (h *Handler) GetActivityLogs(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	role := c.GetString("role")
-
 	var logs []models.ActivityLog
 	query := h.DB.Preload("User").Order("created_at desc").Limit(50)
-
-	// Admins see all logs, users see only their own
 	if role != string(models.RoleAdmin) {
 		query = query.Where("user_id = ?", userID)
 	}
@@ -425,11 +541,11 @@ func (h *Handler) GetActivityLogs(c *gin.Context) {
 }
 
 func (h *Handler) logActivity(userID uint, action, details, ip string) {
-	log := models.ActivityLog{
+	entry := models.ActivityLog{
 		UserID:    userID,
 		Action:    action,
 		Details:   details,
 		IPAddress: ip,
 	}
-	h.DB.Create(&log)
+	h.DB.Create(&entry)
 }

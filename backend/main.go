@@ -25,7 +25,7 @@ func main() {
 
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "host=localhost user=postgres password=password123 dbname=userapp port=5432 sslmode=disable"
+		dsn = "host=localhost user=postgres password=postgres dbname=userapp port=5432 sslmode=disable"
 	}
 
 	var err error
@@ -64,6 +64,8 @@ func main() {
 	{
 		auth.POST("/register", h.Register)
 		auth.POST("/login", h.Login)
+		auth.POST("/forgot-password", h.ForgotPassword)
+		auth.POST("/reset-password", h.ResetPassword)
 	}
 
 	// Protected routes

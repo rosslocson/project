@@ -27,6 +27,14 @@ type User struct {
 	IsActive    bool       `json:"is_active" gorm:"default:true"`
 	LastLoginAt *time.Time `json:"last_login_at"`
 	Bio         string     `json:"bio"`
+
+	// Login lockout tracking
+	FailedLoginCount int        `json:"failed_login_count" gorm:"default:0"`
+	LockedUntil      *time.Time `json:"locked_until"`
+
+	// Password reset (tokens never exposed to client)
+	ResetToken       string     `json:"-"`
+	ResetTokenExpiry *time.Time `json:"-"`
 }
 
 type ActivityLog struct {

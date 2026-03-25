@@ -21,16 +21,18 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _loadFromStorage() async {
     final prefs = await SharedPreferences.getInstance();
     final userStr = prefs.getString('user');
-    final token = prefs.getString('token');
+    final token   = prefs.getString('token');
     if (userStr != null && token != null) {
       _user = jsonDecode(userStr);
       notifyListeners();
-      // Refresh profile from server
       await refreshProfile();
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  // ── loginWithDetails: returns raw response map so LoginScreen
+  //    can read locked/attempts_left fields ─────────────────────────────────
+
+  Future<Map<String, dynamic>> loginWithDetails(String email, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -42,28 +44,31 @@ class AuthProvider extends ChangeNotifier {
         await ApiService.saveToken(res['token']);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user', jsonEncode(_user));
-        _isLoading = false;
-        notifyListeners();
-        return true;
       } else {
         _error = res['error'] ?? 'Login failed';
-        _isLoading = false;
-        notifyListeners();
-        return false;
       }
+      _isLoading = false;
+      notifyListeners();
+      return res;
     } catch (e) {
       _error = 'Connection error. Is the backend running?';
       _isLoading = false;
       notifyListeners();
-      return false;
+      return {'ok': false, 'error': _error};
     }
+  }
+
+  // ── Kept for compatibility ───────────────────────────────────────────────
+
+  Future<bool> login(String email, String password) async {
+    final res = await loginWithDetails(email, password);
+    return res['ok'] == true;
   }
 
   Future<bool> register(Map<String, dynamic> data) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-
     try {
       final res = await ApiService.register(data);
       if (res['ok'] == true) {
@@ -115,4 +120,4 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
-} 
+}
