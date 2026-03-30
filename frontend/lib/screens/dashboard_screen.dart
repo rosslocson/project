@@ -14,25 +14,42 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _stats;
+  List<dynamic> _activityLogs = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadStats();
+    _loadAll();
   }
 
-  Future<void> _loadStats() async {
+  // Loads stats and activity logs in parallel.
+  // getActivityLogs() is already filtered on the backend:
+  //   - regular users  → only their own logs
+  //   - admins         → all logs
+  Future<void> _loadAll() async {
+    setState(() => _loading = true);
     try {
-      final res = await ApiService.getDashboardStats();
-      if (res['ok'] == true && mounted) {
-        setState(() {
-          _stats = res;
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      setState(() => _loading = false);
+      final results = await Future.wait([
+        ApiService.getDashboardStats(),
+        ApiService.getActivityLogs(),
+      ]);
+
+      if (!mounted) return;
+
+      final statsRes = results[0];
+      final logsRes  = results[1];
+
+      setState(() {
+        if (statsRes['ok'] == true) {
+          _stats = statsRes;
+        }
+        _activityLogs = (logsRes['logs'] as List?) ?? [];
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('_loadAll error: $e');
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -52,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
+                  // ── Header ───────────────────────────────────────────
                   Row(
                     children: [
                       Expanded(
@@ -73,12 +90,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
                       ),
-                      // Refresh button
                       IconButton(
-                        onPressed: () {
-                          setState(() => _loading = true);
-                          _loadStats();
-                        },
+                        onPressed: _loadAll,
                         icon: const Icon(Icons.refresh),
                         tooltip: 'Refresh',
                       ),
@@ -89,9 +102,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   if (_loading)
                     const Center(child: CircularProgressIndicator())
                   else ...[
-                    // Stats cards
+                    // ── Stat cards — visible to ALL users ────────────
                     LayoutBuilder(builder: (context, constraints) {
-                      int cols = constraints.maxWidth > 800 ? 4 : 2;
+                      final cols = constraints.maxWidth > 800 ? 4 : 2;
                       return GridView.count(
                         crossAxisCount: cols,
                         shrinkWrap: true,
@@ -133,15 +146,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     }),
                     const SizedBox(height: 32),
 
-                    // Recent users
+                    // ── Recent users — visible to ALL users ──────────
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Recent Users',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          'Recent Users',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
                         if (auth.isAdmin)
                           TextButton.icon(
                             onPressed: () => context.go('/users'),
@@ -153,22 +168,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 12),
                     Card(
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                       child: _buildRecentUsers(),
                     ),
                     const SizedBox(height: 24),
 
-                    // Activity feed
-                    Text('Recent Activity',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    // ── Recent Activity — filtered per role ──────────
+                    // Regular users → their own logs only (backend filters)
+                    // Admins        → all users' logs (backend returns all)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              auth.isAdmin
+                                  ? 'Recent Activity'
+                                  : 'My Recent Activity',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            if (!auth.isAdmin)
+                              Text(
+                                'Your account activity only',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     Card(
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: _buildActivityFeed(),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      child: _buildActivityFeed(auth.isAdmin),
                     ),
                   ],
                 ],
@@ -180,6 +220,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ── Recent users ───────────────────────────────────────────────────────────
   Widget _buildRecentUsers() {
     final users = (_stats?['recent_users'] as List?) ?? [];
     if (users.isEmpty) {
@@ -197,17 +238,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final u = users[i];
         return ListTile(
           leading: CircleAvatar(
-            backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+            backgroundColor:
+                const Color(0xFF6C63FF).withValues(alpha: 0.1),
             child: Text(
               '${u['first_name']?[0] ?? ''}${u['last_name']?[0] ?? ''}',
-              style: const TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Color(0xFF6C63FF),
+                  fontWeight: FontWeight.bold),
             ),
           ),
-          title: Text('${u['first_name']} ${u['last_name']}',
-              style: const TextStyle(fontWeight: FontWeight.w500)),
+          title: Text(
+            '${u['first_name']} ${u['last_name']}',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
           subtitle: Text(u['email'] ?? ''),
           trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: u['role'] == 'admin'
                   ? Colors.red.shade50
@@ -217,7 +264,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Text(
               u['role'] ?? 'user',
               style: TextStyle(
-                color: u['role'] == 'admin' ? Colors.red.shade700 : Colors.green.shade700,
+                color: u['role'] == 'admin'
+                    ? Colors.red.shade700
+                    : Colors.green.shade700,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -228,9 +277,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildActivityFeed() {
-    final logs = (_stats?['recent_logs'] as List?) ?? [];
-    if (logs.isEmpty) {
+  // ── Activity feed ──────────────────────────────────────────────────────────
+  Widget _buildActivityFeed(bool isAdmin) {
+    if (_activityLogs.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(24),
         child: Center(child: Text('No activity yet')),
@@ -239,24 +288,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: logs.length,
+      itemCount: _activityLogs.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, i) {
-        final log = logs[i];
+        final log = _activityLogs[i];
+
+        // Admins see whose action it was; regular users don't need this
+        final logUser = log['user'] as Map<String, dynamic>?;
+        final userName = (isAdmin && logUser != null)
+            ? '${logUser['first_name'] ?? ''} ${logUser['last_name'] ?? ''}'
+                .trim()
+            : '';
+
         return ListTile(
           dense: true,
-          leading: _actionIcon(log['action']),
-          title: Text(log['details'] ?? log['action'] ?? '',
-              style: const TextStyle(fontSize: 13)),
+          leading: _actionIcon(log['action'] as String?),
+          title: Text(
+            log['details'] ?? log['action'] ?? '',
+            style: const TextStyle(fontSize: 13),
+          ),
+          // Only show the user name subtitle for admins
+          subtitle: userName.isNotEmpty
+              ? Text(
+                  userName,
+                  style: TextStyle(
+                      fontSize: 11, color: Colors.grey.shade500),
+                )
+              : null,
           trailing: Text(
-            _formatDate(log['created_at']),
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+            _formatDate(log['created_at'] as String?),
+            style:
+                TextStyle(color: Colors.grey.shade500, fontSize: 11),
           ),
         );
       },
     );
   }
 
+  // ── Action icon ────────────────────────────────────────────────────────────
   Widget _actionIcon(String? action) {
     IconData icon;
     Color color;
@@ -277,8 +346,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
         icon = Icons.lock;
         color = Colors.purple;
         break;
+      case 'LOGIN_FAILED':
+        icon = Icons.warning_amber_rounded;
+        color = Colors.red;
+        break;
+      case 'ACCOUNT_LOCKED':
+        icon = Icons.lock_clock;
+        color = Colors.red;
+        break;
+      case 'PASSWORD_RESET_REQUEST':
+        icon = Icons.mail_outline;
+        color = Colors.blue;
+        break;
+      case 'PASSWORD_RESET':
+        icon = Icons.lock_reset;
+        color = Colors.teal;
+        break;
+      case 'CREATE_USER':
+        icon = Icons.person_add_alt;
+        color = Colors.teal;
+        break;
+      case 'DELETE_USER':
+        icon = Icons.delete_outline;
+        color = Colors.red;
+        break;
+      case 'UPDATE_USER':
+        icon = Icons.manage_accounts;
+        color = Colors.indigo;
+        break;
       default:
-        icon = Icons.info;
+        icon = Icons.info_outline;
         color = Colors.grey;
     }
     return CircleAvatar(
@@ -288,12 +385,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ── Date formatter ─────────────────────────────────────────────────────────
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
     try {
       final dt = DateTime.parse(dateStr).toLocal();
-      final now = DateTime.now();
-      final diff = now.difference(dt);
+      final diff = DateTime.now().difference(dt);
       if (diff.inMinutes < 1) return 'Just now';
       if (diff.inHours < 1) return '${diff.inMinutes}m ago';
       if (diff.inDays < 1) return '${diff.inHours}h ago';
