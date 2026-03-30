@@ -441,7 +441,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       fontSize: 13,
                       color: Color(0xFF2979FF),
                       fontWeight: FontWeight.w600,
-                      decoration: TextDecoration.underline,
+                      //decoration: TextDecoration.underline,
                       decorationColor: Color(0xFF2979FF),
                     ),
                   ),

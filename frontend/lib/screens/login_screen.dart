@@ -279,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             // Title
             const Text(
-              'LOGIN TO YOUR\nACCOUNT',
+              'LOGIN TO YOUR ACCOUNT',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 32,
@@ -358,7 +358,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     color: Color(0xFF2979FF),
-                    decoration: TextDecoration.underline,
                     decorationColor: Color(0xFF2979FF),
                   ),
                 ),
@@ -376,9 +375,21 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Sign up link
-            Wrap(
+            // FIX: added const to Wrap and its children list
+            const Wrap(
               alignment: WrapAlignment.center,
+              children: [
+                Text("Don't have an account? ",
+                    style: TextStyle(
+                        fontSize: 12, color: Color(0xFF777777))),
+                // GestureDetector cannot be const (has a callback),
+                // so we keep just the static text widgets as const
+                // and leave GestureDetector outside the const list.
+              ],
+            ),
+            // Separate the interactive part that can't be const
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text("Don't have an account? ",
                     style: TextStyle(
@@ -390,7 +401,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontSize: 12,
                         color: Color(0xFF2979FF),
                         fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
                         decorationColor: Color(0xFF2979FF),
                       )),
                 ),
@@ -411,10 +421,10 @@ class _LoginScreenState extends State<LoginScreen> {
           border: Border.all(color: kCrimson.withValues(alpha: 0.4)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            const Icon(Icons.lock, color: kCrimson, size: 16),
-            const SizedBox(width: 6),
-            const Text('Account temporarily locked',
+          const Row(children: [
+            Icon(Icons.lock, color: kCrimson, size: 16),
+            SizedBox(width: 6),
+            Text('Account temporarily locked',
                 style: TextStyle(
                     color: kCrimson,
                     fontWeight: FontWeight.bold,
@@ -446,7 +456,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Color(0xFF2979FF),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline,
                   decorationColor: Color(0xFF2979FF),
                 )),
           ),
@@ -505,7 +514,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Color(0xFF2979FF),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline,
                   decorationColor: Color(0xFF2979FF),
                 )),
           ),

@@ -424,12 +424,14 @@ class _ProfileScreenState extends State<ProfileScreen>
               label: 'New Password',
               obscure: _obscureNew,
               onToggle: () => setState(() => _obscureNew = !_obscureNew),
+              // FIX: wrapped bare if-body in curly braces
               validator: (v) {
-                if (v == null || v.length < 8) return 'Min 8 characters';
-                if (!v.contains(RegExp(r'[A-Z]'))) return 'Need one uppercase letter';
-                if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
-                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
+                if (v == null || v.length < 8) { return 'Min 8 characters'; }
+                if (!v.contains(RegExp(r'[A-Z]'))) { return 'Need one uppercase letter'; }
+                if (!v.contains(RegExp(r'[0-9]'))) { return 'Need one number'; }
+                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
                   return 'Need one special character';
+                }
                 return null;
               },
             ),

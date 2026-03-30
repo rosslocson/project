@@ -424,7 +424,7 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-
+/*
 func (h *Handler) GetDashboardStats(c *gin.Context) {
 	var totalUsers, activeUsers, adminUsers int64
 	h.DB.Model(&models.User{}).Count(&totalUsers)
@@ -436,6 +436,40 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 
 	var recentLogs []models.ActivityLog
 	h.DB.Preload("User").Order("created_at desc").Limit(10).Find(&recentLogs)
+
+	c.JSON(http.StatusOK, gin.H{
+		"total_users":  totalUsers,
+		"active_users": activeUsers,
+		"admin_users":  adminUsers,
+		"new_users":    totalUsers - activeUsers,
+		"recent_users": recentUsers,
+		"recent_logs":  recentLogs,
+	})
+}
+*/
+
+func (h *Handler) GetDashboardStats(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	role := c.GetString("role")
+
+	var totalUsers, activeUsers, adminUsers int64
+	h.DB.Model(&models.User{}).Count(&totalUsers)
+	h.DB.Model(&models.User{}).Where("is_active = true").Count(&activeUsers)
+	h.DB.Model(&models.User{}).Where("role = ?", models.RoleAdmin).Count(&adminUsers)
+
+	// ── Recent Users (Admin only or keep as is) ─────────────────────────────
+	var recentUsers []models.User
+	h.DB.Order("created_at desc").Limit(5).Find(&recentUsers)
+
+	// ── FIXED: Filter recent logs ──────────────────────────────────────────
+	var recentLogs []models.ActivityLog
+	query := h.DB.Preload("User").Order("created_at desc").Limit(10)
+
+	if role != string(models.RoleAdmin) {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	query.Find(&recentLogs)
 
 	c.JSON(http.StatusOK, gin.H{
 		"total_users":  totalUsers,

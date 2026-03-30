@@ -205,20 +205,25 @@ class _AddUserScreenState extends State<AddUserScreen> {
 
                             fieldLabel('Password'),
                             const SizedBox(height: 6),
+                            // FIX: wrapped each bare `if` body in curly braces
                             passwordTextField(
                               controller: _passCtrl,
                               hint: 'Min 8 chars, uppercase, number, symbol',
                               obscure: true,
                               onToggle: () {},
                               validator: (v) {
-                                if (v == null || v.length < 8)
+                                if (v == null || v.length < 8) {
                                   return 'Min 8 characters';
-                                if (!v.contains(RegExp(r'[A-Z]')))
+                                }
+                                if (!v.contains(RegExp(r'[A-Z]'))) {
                                   return 'Need one uppercase letter';
-                                if (!v.contains(RegExp(r'[0-9]')))
+                                }
+                                if (!v.contains(RegExp(r'[0-9]'))) {
                                   return 'Need one number';
-                                if (!v.contains(RegExp(r'[!@#$%^&*()]')))
+                                }
+                                if (!v.contains(RegExp(r'[!@#$%^&*()]'))) {
                                   return 'Need one special character';
+                                }
                                 return null;
                               },
                             ),
