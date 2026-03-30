@@ -4,8 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // ✅ Change this to your computer's IP if testing on a phone
-  //static const String baseUrl = 'http://localhost:8080/api';
-  static const String baseUrl = 'http://127.0.0.1:8080/api';
+  static const String baseUrl = 'http://localhost:8080/api';
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();

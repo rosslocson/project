@@ -45,12 +45,14 @@ func main() {
 	r := gin.Default()
 
 	// CORS config - allows Flutter web app to call the API
+	// CORS: AllowAllOrigins must be used instead of AllowOrigins["*"]
+	// when AllowCredentials is true — otherwise browsers block DELETE/PUT with Auth headers
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
 	}))
 

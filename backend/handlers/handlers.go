@@ -424,7 +424,7 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-/*
+
 func (h *Handler) GetDashboardStats(c *gin.Context) {
 	var totalUsers, activeUsers, adminUsers int64
 	h.DB.Model(&models.User{}).Count(&totalUsers)
@@ -436,40 +436,6 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 
 	var recentLogs []models.ActivityLog
 	h.DB.Preload("User").Order("created_at desc").Limit(10).Find(&recentLogs)
-
-	c.JSON(http.StatusOK, gin.H{
-		"total_users":  totalUsers,
-		"active_users": activeUsers,
-		"admin_users":  adminUsers,
-		"new_users":    totalUsers - activeUsers,
-		"recent_users": recentUsers,
-		"recent_logs":  recentLogs,
-	})
-}
-*/
-
-func (h *Handler) GetDashboardStats(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	role := c.GetString("role")
-
-	var totalUsers, activeUsers, adminUsers int64
-	h.DB.Model(&models.User{}).Count(&totalUsers)
-	h.DB.Model(&models.User{}).Where("is_active = true").Count(&activeUsers)
-	h.DB.Model(&models.User{}).Where("role = ?", models.RoleAdmin).Count(&adminUsers)
-
-	// ── Recent Users (Admin only or keep as is) ─────────────────────────────
-	var recentUsers []models.User
-	h.DB.Order("created_at desc").Limit(5).Find(&recentUsers)
-
-	// ── FIXED: Filter recent logs ──────────────────────────────────────────
-	var recentLogs []models.ActivityLog
-	query := h.DB.Preload("User").Order("created_at desc").Limit(10)
-
-	if role != string(models.RoleAdmin) {
-		query = query.Where("user_id = ?", userID)
-	}
-
-	query.Find(&recentLogs)
 
 	c.JSON(http.StatusOK, gin.H{
 		"total_users":  totalUsers,
@@ -585,15 +551,29 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 }
 
 func (h *Handler) DeleteUser(c *gin.Context) {
-	var user models.User
-	if h.DB.First(&user, c.Param("id")).Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+	userIDParam := c.Param("id")
+	if userIDParam == "" || userIDParam == "0" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
-	h.DB.Delete(&user)
+
+	var user models.User
+	result := h.DB.Where("id = ?", userIDParam).First(&user)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found", "id": userIDParam})
+		return
+	}
+
+	// Hard delete — bypass soft-delete scope entirely
+	delResult := h.DB.Unscoped().Where("id = ?", user.ID).Delete(&models.User{})
+	if delResult.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
 	adminID := c.GetUint("user_id")
-	h.logActivity(adminID, "DELETE_USER", "Admin deleted user: "+user.Email, c.ClientIP())
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
+	h.logActivity(adminID, "DELETE_USER", fmt.Sprintf("Admin deleted user: %s (id=%d)", user.Email, user.ID), c.ClientIP())
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted", "deleted_id": user.ID})
 }
 
 // ── Activity Log ──────────────────────────────────────────────────────────────

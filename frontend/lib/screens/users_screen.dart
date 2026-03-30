@@ -5,6 +5,18 @@ import '../widgets/sidebar.dart';
 
 const kCrimson = Color(0xFF7B0D1E);
 
+// Safe ID cast — JSON numbers come as num (int or double), not guaranteed int
+// Safe ID cast — handles int, double, and null from JSON
+int _toInt(dynamic v) {
+  if (v == null) {
+    debugPrint('[_toInt] WARNING: id is null');
+    return 0;
+  }
+  final result = (v as num).toInt();
+  debugPrint('[_toInt] id = $result (type: ${v.runtimeType})');
+  return result;
+}
+
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
   @override
@@ -34,23 +46,41 @@ class _UsersScreenState extends State<UsersScreen> {
       final res = await ApiService.getUsers(search: search);
       if (mounted) {
         setState(() {
-          _users = res['ok'] == true ? (res['users'] ?? []) : [];
+          _users  = res['ok'] == true ? (res['users'] ?? []) : [];
           _loading = false;
         });
       }
     } catch (e) {
-      debugPrint('_loadUsers error: $e');
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // ── Toggle active / inactive ───────────────────────────────────────────────
+  Future<void> _toggleActive(Map<String, dynamic> user) async {
+    final id      = _toInt(user['id']);
+    final current = user['is_active'] as bool? ?? false;
+    final next    = !current;
+
+    // Optimistic UI
+    setState(() => user['is_active'] = next);
+
+    final res = await ApiService.updateUser(id, {'is_active': next});
+    if (res['ok'] != true && mounted) {
+      setState(() => user['is_active'] = current); // revert
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed: ${res['error'] ?? 'Unknown error'}'),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ));
     }
   }
 
   // ── Delete with confirmation ───────────────────────────────────────────────
   Future<void> _deleteUser(Map<String, dynamic> user) async {
-    final id = user['id'] as int;
+    final id   = _toInt(user['id']);
     final name = '${user['first_name']} ${user['last_name']}';
 
-    debugPrint('Attempting to delete user $id: $name');
-
+    // Step 1 — confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -67,7 +97,8 @@ class _UsersScreenState extends State<UsersScreen> {
                 color: Colors.red.shade700, size: 22),
           ),
           const SizedBox(width: 12),
-          const Text('Delete User', style: TextStyle(fontSize: 18)),
+          const Text('Delete User',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -89,7 +120,7 @@ class _UsersScreenState extends State<UsersScreen> {
             const SizedBox(height: 8),
             Text(
               'This action cannot be undone.',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             ),
           ],
         ),
@@ -115,14 +146,23 @@ class _UsersScreenState extends State<UsersScreen> {
 
     if (confirmed != true || !mounted) return;
 
+    // Guard: never send delete for id=0
+    if (id == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Error: could not read user ID. Try refreshing.'),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+
+    // Step 2 — loading snackbar
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Row(children: [
           SizedBox(
-            width: 18,
-            height: 18,
-            child:
-                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            width: 18, height: 18,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: Colors.white),
           ),
           SizedBox(width: 12),
           Text('Deleting user...'),
@@ -131,45 +171,34 @@ class _UsersScreenState extends State<UsersScreen> {
       ),
     );
 
-    try {
-      final res = await ApiService.deleteUser(id);
-      debugPrint('deleteUser response: $res');
+    // Step 3 — call API
+    final res = await ApiService.deleteUser(id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).clearSnackBars();
-
-      if (res['ok'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('$name has been deleted.'),
-          backgroundColor: Colors.green.shade700,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
-        await _loadUsers(
-            search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Delete failed: ${res['error'] ?? 'Unknown error'}'),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
-      }
-    } catch (e) {
-      debugPrint('_deleteUser error: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).clearSnackBars();
+    if (res['ok'] == true) {
+      // Step 4a — success feedback
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error: $e'),
+        content: Text('$name has been deleted.'),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+      // Reload list
+      await _loadUsers(
+          search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
+    } else {
+      // Step 4b — error feedback
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Delete failed: ${res['error'] ?? 'Unknown error'}'),
         backgroundColor: Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ));
     }
   }
 
-  // ── Manage departments/positions sheet ─────────────────────────────────────
+  // ── Manage departments / positions ─────────────────────────────────────────
   void _showConfigManager() {
     showModalBottomSheet(
       context: context,
@@ -192,7 +221,7 @@ class _UsersScreenState extends State<UsersScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header row
+                  // ── Header ───────────────────────────────────────────
                   Row(children: [
                     Expanded(
                       child: Text(
@@ -232,7 +261,7 @@ class _UsersScreenState extends State<UsersScreen> {
                   ]),
                   const SizedBox(height: 20),
 
-                  // Search bar
+                  // ── Search ───────────────────────────────────────────
                   TextField(
                     controller: _searchCtrl,
                     decoration: InputDecoration(
@@ -258,7 +287,7 @@ class _UsersScreenState extends State<UsersScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // User list
+                  // ── User list ─────────────────────────────────────────
                   Expanded(
                     child: Card(
                       elevation: 0,
@@ -286,11 +315,12 @@ class _UsersScreenState extends State<UsersScreen> {
                                   separatorBuilder: (_, __) =>
                                       const Divider(height: 1, indent: 20),
                                   itemBuilder: (context, i) {
-                                    final user = _users[i];
+                                    final u = _users[i];
                                     return _UserTile(
-                                      key: ValueKey(user['id']),
-                                      user: user,
-                                      onDelete: () => _deleteUser(user),
+                                      key: ValueKey(_toInt(u['id'])),
+                                      user: u,
+                                      onToggle: () => _toggleActive(u),
+                                      onDelete: () => _deleteUser(u),
                                     );
                                   },
                                 ),
@@ -306,29 +336,33 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 }
 
-// ── User list tile ────────────────────────────────────────────────────────────
+// ── User tile ─────────────────────────────────────────────────────────────────
 class _UserTile extends StatelessWidget {
   final Map<String, dynamic> user;
+  final VoidCallback onToggle;
   final VoidCallback onDelete;
 
   const _UserTile({
     super.key,
     required this.user,
+    required this.onToggle,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     final isActive = user['is_active'] as bool? ?? false;
-    final isAdmin = user['role'] == 'admin';
+    final isAdmin  = user['role'] == 'admin';
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       leading: CircleAvatar(
         backgroundColor: kCrimson.withValues(alpha: 0.1),
         child: Text(
           '${user['first_name']?[0] ?? ''}${user['last_name']?[0] ?? ''}',
-          style: const TextStyle(color: kCrimson, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              color: kCrimson, fontWeight: FontWeight.bold),
         ),
       ),
       title: Text(
@@ -350,7 +384,8 @@ class _UserTile extends StatelessWidget {
             Text(
               '${user['department']} · ${user['position'] ?? ''}',
               style: TextStyle(
-                  fontSize: 11, color: isActive ? Colors.black38 : Colors.grey),
+                  fontSize: 11,
+                  color: isActive ? Colors.black38 : Colors.grey),
             ),
         ],
       ),
@@ -359,7 +394,8 @@ class _UserTile extends StatelessWidget {
         children: [
           // Role badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: isAdmin ? Colors.red.shade50 : Colors.blue.shade50,
               borderRadius: BorderRadius.circular(20),
@@ -368,18 +404,55 @@ class _UserTile extends StatelessWidget {
               isAdmin ? 'Admin' : 'User',
               style: TextStyle(
                 fontSize: 11,
-                color: isAdmin ? Colors.red.shade700 : Colors.blue.shade700,
+                color: isAdmin
+                    ? Colors.red.shade700
+                    : Colors.blue.shade700,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
           const SizedBox(width: 4),
 
+          // Active badge
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? Colors.green.shade50
+                  : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              isActive ? 'Active' : 'Inactive',
+              style: TextStyle(
+                fontSize: 11,
+                color: isActive
+                    ? Colors.green.shade700
+                    : Colors.orange.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+
+          // Active / inactive toggle
+          Tooltip(
+            message: isActive ? 'Deactivate user' : 'Activate user',
+            child: Switch(
+              value: isActive,
+              activeThumbColor: Colors.green.shade600,
+              inactiveThumbColor: Colors.orange.shade400,
+              onChanged: (_) => onToggle(),
+            ),
+          ),
+
           // Delete button
           Tooltip(
             message: 'Delete user',
             child: IconButton(
-              icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
+              icon: Icon(Icons.delete_outline,
+                  color: Colors.red.shade400),
               onPressed: onDelete,
             ),
           ),
@@ -389,7 +462,7 @@ class _UserTile extends StatelessWidget {
   }
 }
 
-// ── Config manager bottom sheet ───────────────────────────────────────────────
+// ── Config manager sheet ──────────────────────────────────────────────────────
 class _ConfigManagerSheet extends StatefulWidget {
   const _ConfigManagerSheet();
   @override
@@ -400,10 +473,10 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
   List<dynamic> _departments = [];
-  List<dynamic> _positions = [];
+  List<dynamic> _positions   = [];
   bool _loading = true;
   final _deptCtrl = TextEditingController();
-  final _posCtrl = TextEditingController();
+  final _posCtrl  = TextEditingController();
 
   @override
   void initState() {
@@ -427,8 +500,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
     if (mounted) {
       setState(() {
         _departments = d['items'] ?? [];
-        _positions = p['items'] ?? [];
-        _loading = false;
+        _positions   = p['items'] ?? [];
+        _loading     = false;
       });
     }
   }
@@ -438,10 +511,11 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
     final res = await ApiService.createConfig(name.trim(), type);
     if (res['ok'] == true) {
       await _loadAll();
-      if (type == 'department')
+      if (type == 'department') {
         _deptCtrl.clear();
-      else
+      } else {
         _posCtrl.clear();
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(res['error'] ?? 'Failed'),
@@ -464,7 +538,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, foregroundColor: Colors.white),
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white),
             child: const Text('Delete'),
           ),
         ],
@@ -480,6 +555,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
       List<dynamic> items, TextEditingController ctrl, String type) {
     return Column(
       children: [
+        // Add row
         Padding(
           padding: const EdgeInsets.all(16),
           child: Row(children: [
@@ -494,8 +570,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
                 ),
                 onSubmitted: (v) => _add(v, type),
               ),
@@ -503,14 +579,15 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
             const SizedBox(width: 10),
             ElevatedButton(
               onPressed: () => _add(
-                  type == 'department' ? _deptCtrl.text : _posCtrl.text, type),
+                  type == 'department' ? _deptCtrl.text : _posCtrl.text,
+                  type),
               style: ElevatedButton.styleFrom(
                 backgroundColor: kCrimson,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
               ),
               child: const Icon(Icons.add),
             ),
@@ -526,7 +603,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
           Padding(
             padding: const EdgeInsets.all(32),
             child: Column(children: [
-              Icon(Icons.inbox_outlined, size: 40, color: Colors.grey.shade300),
+              Icon(Icons.inbox_outlined,
+                  size: 40, color: Colors.grey.shade300),
               const SizedBox(height: 8),
               Text('No ${type}s added yet',
                   style: TextStyle(color: Colors.grey.shade500)),
@@ -550,7 +628,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
                 trailing: IconButton(
                   icon: Icon(Icons.delete_outline,
                       color: Colors.red.shade400, size: 20),
-                  onPressed: () => _delete(item['id'] as int, item['name']),
+                  onPressed: () =>
+                      _delete(_toInt(item['id']), item['name']),
                 ),
               )),
       ],
@@ -570,8 +649,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
           const SizedBox(height: 12),
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: 40, height: 4,
               decoration: BoxDecoration(
                   color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2)),
@@ -584,7 +662,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
               Icon(Icons.settings_outlined, color: kCrimson),
               SizedBox(width: 10),
               Text('Manage Departments & Positions',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
             ]),
           ),
           const SizedBox(height: 12),
@@ -603,7 +682,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
               controller: _tabs,
               children: [
                 SingleChildScrollView(
-                    child: _buildList(_departments, _deptCtrl, 'department')),
+                    child:
+                        _buildList(_departments, _deptCtrl, 'department')),
                 SingleChildScrollView(
                     child: _buildList(_positions, _posCtrl, 'position')),
               ],
