@@ -44,41 +44,6 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
-  // ── Toggle active/inactive ─────────────────────────────────────────────────
-  Future<void> _toggleActive(Map<String, dynamic> user) async {
-    final id = user['id'] as int;
-    final current = user['is_active'] as bool? ?? false;
-    final newValue = !current;
-
-    debugPrint('Toggling user $id: $current -> $newValue');
-
-    // Optimistic UI update
-    setState(() => user['is_active'] = newValue);
-
-    try {
-      final res = await ApiService.updateUser(id, {'is_active': newValue});
-      debugPrint('updateUser response: $res');
-
-      if (res['ok'] != true && mounted) {
-        // Revert on failure
-        setState(() => user['is_active'] = current);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Failed to update: ${res['error'] ?? 'Unknown error'}'),
-          backgroundColor: Colors.red,
-        ));
-      }
-    } catch (e) {
-      debugPrint('_toggleActive error: $e');
-      if (mounted) {
-        setState(() => user['is_active'] = current);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ));
-      }
-    }
-  }
-
   // ── Delete with confirmation ───────────────────────────────────────────────
   Future<void> _deleteUser(Map<String, dynamic> user) async {
     final id = user['id'] as int;
@@ -154,10 +119,11 @@ class _UsersScreenState extends State<UsersScreen> {
       const SnackBar(
         content: Row(children: [
           SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.white)),
+            width: 18,
+            height: 18,
+            child:
+                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          ),
           SizedBox(width: 12),
           Text('Deleting user...'),
         ]),
@@ -181,8 +147,7 @@ class _UsersScreenState extends State<UsersScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ));
         await _loadUsers(
-            search:
-                _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
+            search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Delete failed: ${res['error'] ?? 'Unknown error'}'),
@@ -304,8 +269,7 @@ class _UsersScreenState extends State<UsersScreen> {
                           : _users.isEmpty
                               ? Center(
                                   child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(Icons.people_outline,
                                           size: 56,
@@ -321,15 +285,14 @@ class _UsersScreenState extends State<UsersScreen> {
                                   itemCount: _users.length,
                                   separatorBuilder: (_, __) =>
                                       const Divider(height: 1, indent: 20),
-                                  // FIX: Use a ValueKey so Flutter correctly
-                                  // identifies and rebuilds each tile when
-                                  // the list changes (e.g. after delete).
-                                  itemBuilder: (context, i) => _UserTile(
-                                    key: ValueKey(_users[i]['id']),
-                                    user: _users[i],
-                                    onToggle: () => _toggleActive(_users[i]),
-                                    onDelete: () => _deleteUser(_users[i]),
-                                  ),
+                                  itemBuilder: (context, i) {
+                                    final user = _users[i];
+                                    return _UserTile(
+                                      key: ValueKey(user['id']),
+                                      user: user,
+                                      onDelete: () => _deleteUser(user),
+                                    );
+                                  },
                                 ),
                     ),
                   ),
@@ -343,45 +306,33 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 }
 
-// ── User list tile ─────────────────────────────────────────────────────────────
-// FIX: Changed to StatefulWidget so it can rebuild itself when the parent
-// calls setState() after a toggle. StatelessWidget with a mutable map
-// reference can miss rebuilds in some Flutter versions.
-class _UserTile extends StatefulWidget {
+// ── User list tile ────────────────────────────────────────────────────────────
+class _UserTile extends StatelessWidget {
   final Map<String, dynamic> user;
-  final VoidCallback onToggle;
   final VoidCallback onDelete;
 
   const _UserTile({
     super.key,
     required this.user,
-    required this.onToggle,
     required this.onDelete,
   });
 
   @override
-  State<_UserTile> createState() => _UserTileState();
-}
-
-class _UserTileState extends State<_UserTile> {
-  @override
   Widget build(BuildContext context) {
-    final isActive = widget.user['is_active'] as bool? ?? false;
-    final isAdmin = widget.user['role'] == 'admin';
+    final isActive = user['is_active'] as bool? ?? false;
+    final isAdmin = user['role'] == 'admin';
 
     return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       leading: CircleAvatar(
         backgroundColor: kCrimson.withValues(alpha: 0.1),
         child: Text(
-          '${widget.user['first_name']?[0] ?? ''}${widget.user['last_name']?[0] ?? ''}',
-          style: const TextStyle(
-              color: kCrimson, fontWeight: FontWeight.bold),
+          '${user['first_name']?[0] ?? ''}${user['last_name']?[0] ?? ''}',
+          style: const TextStyle(color: kCrimson, fontWeight: FontWeight.bold),
         ),
       ),
       title: Text(
-        '${widget.user['first_name']} ${widget.user['last_name']}',
+        '${user['first_name']} ${user['last_name']}',
         style: TextStyle(
           fontWeight: FontWeight.w600,
           color: isActive ? Colors.black87 : Colors.grey,
@@ -391,16 +342,15 @@ class _UserTileState extends State<_UserTile> {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.user['email'] ?? '',
+          Text(user['email'] ?? '',
               style: TextStyle(
                   fontSize: 12,
                   color: isActive ? Colors.black54 : Colors.grey)),
-          if ((widget.user['department'] as String? ?? '').isNotEmpty)
+          if ((user['department'] as String? ?? '').isNotEmpty)
             Text(
-              '${widget.user['department']} · ${widget.user['position'] ?? ''}',
+              '${user['department']} · ${user['position'] ?? ''}',
               style: TextStyle(
-                  fontSize: 11,
-                  color: isActive ? Colors.black38 : Colors.grey),
+                  fontSize: 11, color: isActive ? Colors.black38 : Colors.grey),
             ),
         ],
       ),
@@ -418,70 +368,19 @@ class _UserTileState extends State<_UserTile> {
               isAdmin ? 'Admin' : 'User',
               style: TextStyle(
                 fontSize: 11,
-                color: isAdmin
-                    ? Colors.red.shade700
-                    : Colors.blue.shade700,
+                color: isAdmin ? Colors.red.shade700 : Colors.blue.shade700,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
           const SizedBox(width: 4),
 
-          // Active/inactive badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? Colors.green.shade50
-                  : Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              isActive ? 'Active' : 'Inactive',
-              style: TextStyle(
-                fontSize: 11,
-                color: isActive
-                    ? Colors.green.shade700
-                    : Colors.orange.shade700,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-
-          // FIX: GestureDetector wrapper prevents ListTile from
-          // absorbing the tap before Switch/IconButton can handle it.
-          GestureDetector(
-            onTap: () {}, // absorb tap to stop ListTile interference
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Toggle switch
-                Tooltip(
-                  message: isActive ? 'Deactivate user' : 'Activate user',
-                  child: Switch(
-                    value: isActive,
-                    activeThumbColor: Colors.green.shade600,
-                    inactiveThumbColor: Colors.orange.shade400,
-                    // FIX: Use the bool parameter directly instead of
-                    // ignoring it, and wrap in setState to force local
-                    // rebuild immediately before the API call settles.
-                    onChanged: (value) {
-                      widget.onToggle();
-                    },
-                  ),
-                ),
-
-                // Delete button
-                Tooltip(
-                  message: 'Delete user',
-                  child: IconButton(
-                    icon: Icon(Icons.delete_outline,
-                        color: Colors.red.shade400),
-                    onPressed: widget.onDelete,
-                  ),
-                ),
-              ],
+          // Delete button
+          Tooltip(
+            message: 'Delete user',
+            child: IconButton(
+              icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
+              onPressed: onDelete,
             ),
           ),
         ],
@@ -539,11 +438,10 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
     final res = await ApiService.createConfig(name.trim(), type);
     if (res['ok'] == true) {
       await _loadAll();
-      if (type == 'department') {
+      if (type == 'department')
         _deptCtrl.clear();
-      } else {
+      else
         _posCtrl.clear();
-      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(res['error'] ?? 'Failed'),
@@ -556,8 +454,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Text('Confirm Delete'),
         content: Text('Remove "$name"?'),
         actions: [
@@ -567,8 +464,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white),
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Delete'),
           ),
         ],
@@ -598,8 +494,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 ),
                 onSubmitted: (v) => _add(v, type),
               ),
@@ -607,8 +503,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
             const SizedBox(width: 10),
             ElevatedButton(
               onPressed: () => _add(
-                  type == 'department' ? _deptCtrl.text : _posCtrl.text,
-                  type),
+                  type == 'department' ? _deptCtrl.text : _posCtrl.text, type),
               style: ElevatedButton.styleFrom(
                 backgroundColor: kCrimson,
                 foregroundColor: Colors.white,
@@ -631,8 +526,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
           Padding(
             padding: const EdgeInsets.all(32),
             child: Column(children: [
-              Icon(Icons.inbox_outlined,
-                  size: 40, color: Colors.grey.shade300),
+              Icon(Icons.inbox_outlined, size: 40, color: Colors.grey.shade300),
               const SizedBox(height: 8),
               Text('No ${type}s added yet',
                   style: TextStyle(color: Colors.grey.shade500)),
@@ -656,8 +550,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
                 trailing: IconButton(
                   icon: Icon(Icons.delete_outline,
                       color: Colors.red.shade400, size: 20),
-                  onPressed: () =>
-                      _delete(item['id'] as int, item['name']),
+                  onPressed: () => _delete(item['id'] as int, item['name']),
                 ),
               )),
       ],
@@ -676,13 +569,14 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
         children: [
           const SizedBox(height: 12),
           Center(
-              child: Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2)),
-          )),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
           const SizedBox(height: 16),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
@@ -690,8 +584,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
               Icon(Icons.settings_outlined, color: kCrimson),
               SizedBox(width: 10),
               Text('Manage Departments & Positions',
-                  style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ]),
           ),
           const SizedBox(height: 12),
@@ -710,8 +603,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
               controller: _tabs,
               children: [
                 SingleChildScrollView(
-                    child:
-                        _buildList(_departments, _deptCtrl, 'department')),
+                    child: _buildList(_departments, _deptCtrl, 'department')),
                 SingleChildScrollView(
                     child: _buildList(_positions, _posCtrl, 'position')),
               ],
