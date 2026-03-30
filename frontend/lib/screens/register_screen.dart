@@ -12,17 +12,17 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey       = GlobalKey<FormState>();
-  final _firstCtrl     = TextEditingController();
-  final _lastCtrl      = TextEditingController();
-  final _emailCtrl     = TextEditingController();
-  final _phoneCtrl     = TextEditingController();
-  final _passCtrl      = TextEditingController();
-  final _confirmCtrl   = TextEditingController();
+  final _formKey      = GlobalKey<FormState>();
+  final _firstCtrl    = TextEditingController();
+  final _lastCtrl     = TextEditingController();
+  final _emailCtrl    = TextEditingController();
+  final _phoneCtrl    = TextEditingController();
+  final _passCtrl     = TextEditingController();
+  final _confirmCtrl  = TextEditingController();
   bool  _obscurePass    = true;
   bool  _obscureConfirm = true;
 
-  // Config dropdowns
+  // Config dropdowns — both declared AND used in _buildDropdown calls
   List<String> _departments = [];
   List<String> _positions   = [];
   String? _selectedDept;
@@ -44,8 +44,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     for (final c in [
-      _firstCtrl, _lastCtrl, _emailCtrl, _phoneCtrl,
-      _passCtrl, _confirmCtrl,
+      _firstCtrl, _lastCtrl, _emailCtrl,
+      _phoneCtrl, _passCtrl, _confirmCtrl,
     ]) {
       c.dispose();
     }
@@ -75,11 +75,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (pass.contains(RegExp(r'[0-9]'))) score++;
     if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) score++;
     setState(() {
-      if (score <= 2)      { _passStrength = 'Weak';   _passColor = kCrimson;        _passValue = 0.25; }
-      else if (score == 3) { _passStrength = 'Fair';   _passColor = Colors.orange;   _passValue = 0.50; }
-      else if (score == 4) { _passStrength = 'Good';   _passColor = Colors.blue;     _passValue = 0.75; }
-      else                 { _passStrength = 'Strong'; _passColor = Colors.green;    _passValue = 1.00; }
-      _passError = pass.isNotEmpty && pass.length < 8
+      if (score <= 2) {
+        _passStrength = 'Weak';
+        _passColor = kCrimson;
+        _passValue = 0.25;
+      } else if (score == 3) {
+        _passStrength = 'Fair';
+        _passColor = Colors.orange;
+        _passValue = 0.50;
+      } else if (score == 4) {
+        _passStrength = 'Good';
+        _passColor = Colors.blue;
+        _passValue = 0.75;
+      } else {
+        _passStrength = 'Strong';
+        _passColor = Colors.green;
+        _passValue = 1.00;
+      }
+      _passError = (pass.isNotEmpty && pass.length < 8)
           ? 'Must be at least 8 characters'
           : null;
       if (_confirmCtrl.text.isNotEmpty) {
@@ -116,35 +129,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (mounted && ok) context.go('/dashboard');
   }
 
-  // ── Dropdown builder ───────────────────────────────────────────────────────
+  // ── Dropdown builder (used for dept, pos) ──────────────────────────────────
   Widget _buildDropdown({
     required String? value,
     required String hint,
     required List<String> items,
     required void Function(String?) onChanged,
-  }) =>
-      Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: const Color(0xFFEEF2F5),
-          borderRadius: BorderRadius.circular(25),
+  }) {
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF2F5),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(hint,
+              style: TextStyle(color: Colors.grey[400], fontSize: 15)),
+          isExpanded: true,
+          icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey[500]),
+          style: const TextStyle(color: Colors.black87, fontSize: 16),
+          items: items
+              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+              .toList(),
+          onChanged: items.isEmpty ? null : onChanged,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: value,
-            hint: Text(hint,
-                style: TextStyle(color: Colors.grey[400], fontSize: 15)),
-            isExpanded: true,
-            icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey[500]),
-            style: const TextStyle(color: Colors.black87, fontSize: 16),
-            items: items
-                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                .toList(),
-            onChanged: items.isEmpty ? null : onChanged,
-          ),
-        ),
-      );
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +174,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Title
+            // ── Title ──────────────────────────────────────────────────
             const Text(
               'CREATE ACCOUNT',
               textAlign: TextAlign.center,
@@ -173,23 +187,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Error banner
+            // ── Error banner ───────────────────────────────────────────
             if (auth.error != null) ...[
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: kCrimson.withOpacity(0.06),
+                  color: kCrimson.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: kCrimson.withOpacity(0.4)),
+                  border: Border.all(
+                      color: kCrimson.withValues(alpha: 0.4)),
                 ),
                 child: Row(children: [
-                  const Icon(Icons.error_outline, color: kCrimson, size: 16),
+                  const Icon(Icons.error_outline,
+                      color: kCrimson, size: 16),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(auth.error!,
-                      style: const TextStyle(color: kCrimson, fontSize: 13))),
+                  Expanded(
+                      child: Text(auth.error!,
+                          style: const TextStyle(
+                              color: kCrimson, fontSize: 13))),
                   GestureDetector(
-                    onTap: () => context.read<AuthProvider>().clearError(),
-                    child: const Icon(Icons.close, size: 15, color: kCrimson),
+                    onTap: () =>
+                        context.read<AuthProvider>().clearError(),
+                    child: const Icon(Icons.close,
+                        size: 15, color: kCrimson),
                   ),
                 ]),
               ),
@@ -198,31 +218,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             // ── First Name & Last Name ─────────────────────────────────
             Row(children: [
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  fieldLabel('First Name'),
-                  const SizedBox(height: 6),
-                  plainTextField(
-                    controller: _firstCtrl,
-                    hint: 'First Name',
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
-                  ),
-                ],
-              )),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    fieldLabel('First Name'),
+                    const SizedBox(height: 6),
+                    plainTextField(
+                      controller: _firstCtrl,
+                      hint: 'First Name',
+                      validator: (v) =>
+                          v!.isEmpty ? 'Required' : null,
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  fieldLabel('Last Name'),
-                  const SizedBox(height: 6),
-                  plainTextField(
-                    controller: _lastCtrl,
-                    hint: 'Last Name',
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
-                  ),
-                ],
-              )),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    fieldLabel('Last Name'),
+                    const SizedBox(height: 6),
+                    plainTextField(
+                      controller: _lastCtrl,
+                      hint: 'Last Name',
+                      validator: (v) =>
+                          v!.isEmpty ? 'Required' : null,
+                    ),
+                  ],
+                ),
+              ),
             ]),
             const SizedBox(height: 14),
 
@@ -234,14 +260,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               hint: 'Enter Email Address',
               keyboardType: TextInputType.emailAddress,
               validator: (v) {
-                if (v!.isEmpty) return 'Email is required';
-                if (!v.contains('@')) return 'Enter a valid email';
+                if (v!.isEmpty) { return 'Email is required'; }
+                if (!v.contains('@')) { return 'Enter a valid email'; }
                 return null;
               },
             ),
             const SizedBox(height: 14),
 
-            /*
             // ── Phone ──────────────────────────────────────────────────
             fieldLabel('Phone (optional)'),
             const SizedBox(height: 6),
@@ -254,58 +279,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             // ── Department & Position dropdowns ────────────────────────
             Row(children: [
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  fieldLabel('Department'),
-                  const SizedBox(height: 6),
-                  _buildDropdown(
-                    value: _selectedDept,
-                    hint: _departments.isEmpty ? 'N/A' : 'Select',
-                    items: _departments,
-                    onChanged: (v) => setState(() => _selectedDept = v),
-                  ),
-                ],
-              )),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    fieldLabel('Department'),
+                    const SizedBox(height: 6),
+                    _buildDropdown(
+                      value: _selectedDept,
+                      hint: _departments.isEmpty ? 'N/A' : 'Select',
+                      items: _departments,
+                      onChanged: (v) =>
+                          setState(() => _selectedDept = v),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  fieldLabel('Position'),
-                  const SizedBox(height: 6),
-                  _buildDropdown(
-                    value: _selectedPos,
-                    hint: _positions.isEmpty ? 'N/A' : 'Select',
-                    items: _positions,
-                    onChanged: (v) => setState(() => _selectedPos = v),
-                  ),
-                ],
-              )),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    fieldLabel('Position'),
+                    const SizedBox(height: 6),
+                    _buildDropdown(
+                      value: _selectedPos,
+                      hint: _positions.isEmpty ? 'N/A' : 'Select',
+                      items: _positions,
+                      onChanged: (v) =>
+                          setState(() => _selectedPos = v),
+                    ),
+                  ],
+                ),
+              ),
             ]),
             const SizedBox(height: 14),
-*/
-            // ── Password ───────────────────────────────────────────────
+
+            // ── Password + strength meter ──────────────────────────────
             fieldLabel('Password'),
             const SizedBox(height: 6),
             passwordTextField(
               controller: _passCtrl,
               hint: 'Enter Password',
               obscure: _obscurePass,
-              onToggle: () => setState(() => _obscurePass = !_obscurePass),
+              onToggle: () =>
+                  setState(() => _obscurePass = !_obscurePass),
               onChanged: _checkStrength,
               hasError: _passError != null,
               validator: (v) {
-                if (v == null || v.length < 8) return 'Min 8 characters';
-                if (!v.contains(RegExp(r'[A-Z]')))
+                if (v == null || v.length < 8) {
+                  return 'Min 8 characters';
+                }
+                if (!v.contains(RegExp(r'[A-Z]'))) {
                   return 'Need one uppercase letter';
-                if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
-                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
+                }
+                if (!v.contains(RegExp(r'[0-9]'))) {
+                  return 'Need one number';
+                }
+                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
                   return 'Need one special character (!@#...)';
+                }
                 return null;
               },
             ),
             const SizedBox(height: 5),
-            // Strength bar
             if (_passCtrl.text.isNotEmpty) ...[
               Row(children: [
                 Expanded(
@@ -320,11 +357,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(_passStrength,
-                    style: TextStyle(
-                        color: _passColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700)),
+                Text(
+                  _passStrength,
+                  style: TextStyle(
+                    color: _passColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ]),
               const SizedBox(height: 3),
             ],
@@ -334,7 +374,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 _passError ?? 'Must be at least 8 characters',
                 style: TextStyle(
                   fontSize: 11,
-                  color: _passError != null ? kCrimson : Colors.grey[500],
+                  color: _passError != null
+                      ? kCrimson
+                      : Colors.grey[500],
                 ),
               ),
             ),
@@ -352,9 +394,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onChanged: _checkConfirm,
               hasError: _confirmError != null,
               validator: (v) {
-                if (v == null || v.isEmpty)
+                if (v == null || v.isEmpty) {
                   return 'Please confirm your password';
-                if (v != _passCtrl.text) return 'Passwords do not match';
+                }
+                if (v != _passCtrl.text) {
+                  return 'Passwords do not match';
+                }
                 return null;
               },
             ),
@@ -362,9 +407,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 4),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: Text(_confirmError!,
-                    style:
-                        const TextStyle(fontSize: 11, color: kCrimson)),
+                child: Text(
+                  _confirmError!,
+                  style:
+                      const TextStyle(fontSize: 11, color: kCrimson),
+                ),
               ),
             ],
             const SizedBox(height: 24),
@@ -381,19 +428,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Wrap(
               alignment: WrapAlignment.center,
               children: [
-                const Text('Already have an account? ',
-                    style: TextStyle(
-                        fontSize: 13, color: Color(0xFF777777))),
+                const Text(
+                  'Already have an account? ',
+                  style: TextStyle(
+                      fontSize: 13, color: Color(0xFF777777)),
+                ),
                 GestureDetector(
                   onTap: () => context.go('/login'),
-                  child: const Text('Login Now',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF2979FF),
-                        fontWeight: FontWeight.w600,
-                        //decoration: TextDecoration.underline,
-                        decorationColor: Color(0xFF2979FF),
-                      )),
+                  child: const Text(
+                    'Login Now',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF2979FF),
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Color(0xFF2979FF),
+                    ),
+                  ),
                 ),
               ],
             ),
