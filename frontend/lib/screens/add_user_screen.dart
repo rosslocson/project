@@ -10,21 +10,23 @@ class AddUserScreen extends StatefulWidget {
 }
 
 class _AddUserScreenState extends State<AddUserScreen> {
-  final _formKey  = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   final _firstCtrl = TextEditingController();
-  final _lastCtrl  = TextEditingController();
+  final _lastCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  final _passCtrl  = TextEditingController();
+  final _passCtrl = TextEditingController();
+
   String? _selectedDept;
   String? _selectedPos;
-  String  _role    = 'user';
-  bool    _loading = false;
-  bool    _configLoading = true;
+  String _role = 'user';
+  bool _loading = false;
+  bool _configLoading = true;
+  bool _obscurePass = true; // ← controls password visibility
   String? _error;
 
   List<String> _departments = [];
-  List<String> _positions   = [];
+  List<String> _positions = [];
 
   @override
   void initState() {
@@ -34,7 +36,13 @@ class _AddUserScreenState extends State<AddUserScreen> {
 
   @override
   void dispose() {
-    for (final c in [_firstCtrl, _lastCtrl, _emailCtrl, _phoneCtrl, _passCtrl]) {
+    for (final c in [
+      _firstCtrl,
+      _lastCtrl,
+      _emailCtrl,
+      _phoneCtrl,
+      _passCtrl
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -58,17 +66,20 @@ class _AddUserScreenState extends State<AddUserScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     final res = await ApiService.createUser({
       'first_name': _firstCtrl.text.trim(),
-      'last_name':  _lastCtrl.text.trim(),
-      'email':      _emailCtrl.text.trim(),
-      'password':   _passCtrl.text,
-      'phone':      _phoneCtrl.text.trim(),
+      'last_name': _lastCtrl.text.trim(),
+      'email': _emailCtrl.text.trim(),
+      'password': _passCtrl.text,
+      'phone': _phoneCtrl.text.trim(),
       'department': _selectedDept ?? '',
-      'position':   _selectedPos ?? '',
-      'role':       _role,
+      'position': _selectedPos ?? '',
+      'role': _role,
     });
 
     if (res['ok'] == true && mounted) {
@@ -148,18 +159,20 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.red.shade50,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                      color: Colors.red.shade200),
+                                  border:
+                                      Border.all(color: Colors.red.shade200),
                                 ),
                                 child: Text(_error!,
-                                    style: TextStyle(
-                                        color: Colors.red.shade700)),
+                                    style:
+                                        TextStyle(color: Colors.red.shade700)),
                               ),
                               const SizedBox(height: 14),
                             ],
 
+                            // First & Last Name
                             Row(children: [
-                              Expanded(child: Column(
+                              Expanded(
+                                  child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   fieldLabel('First Name'),
@@ -173,7 +186,8 @@ class _AddUserScreenState extends State<AddUserScreen> {
                                 ],
                               )),
                               const SizedBox(width: 12),
-                              Expanded(child: Column(
+                              Expanded(
+                                  child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   fieldLabel('Last Name'),
@@ -189,6 +203,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                             ]),
                             const SizedBox(height: 12),
 
+                            // Email
                             fieldLabel('Email'),
                             const SizedBox(height: 6),
                             plainTextField(
@@ -203,14 +218,15 @@ class _AddUserScreenState extends State<AddUserScreen> {
                             ),
                             const SizedBox(height: 12),
 
+                            // Password — fixed toggle
                             fieldLabel('Password'),
                             const SizedBox(height: 6),
-                            // FIX: wrapped each bare `if` body in curly braces
                             passwordTextField(
                               controller: _passCtrl,
                               hint: 'Min 8 chars, uppercase, number, symbol',
-                              obscure: true,
-                              onToggle: () {},
+                              obscure: _obscurePass,
+                              onToggle: () =>
+                                  setState(() => _obscurePass = !_obscurePass),
                               validator: (v) {
                                 if (v == null || v.length < 8) {
                                   return 'Min 8 characters';
@@ -229,6 +245,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                             ),
                             const SizedBox(height: 12),
 
+                            // Phone
                             fieldLabel('Phone (optional)'),
                             const SizedBox(height: 6),
                             plainTextField(
@@ -238,7 +255,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                             ),
                             const SizedBox(height: 12),
 
-                            // Department dropdown
+                            // Department
                             fieldLabel('Department'),
                             const SizedBox(height: 6),
                             _buildDropdown(
@@ -252,7 +269,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                             ),
                             const SizedBox(height: 12),
 
-                            // Position dropdown
+                            // Position
                             fieldLabel('Position'),
                             const SizedBox(height: 6),
                             _buildDropdown(
@@ -266,7 +283,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                             ),
                             const SizedBox(height: 12),
 
-                            // Role dropdown
+                            // Role
                             fieldLabel('Role'),
                             const SizedBox(height: 6),
                             _buildDropdown(
