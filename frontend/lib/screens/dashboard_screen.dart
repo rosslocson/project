@@ -197,7 +197,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final u = users[i];
         return ListTile(
           leading: CircleAvatar(
-            backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+            backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
             child: Text(
               '${u['first_name']?[0] ?? ''}${u['last_name']?[0] ?? ''}',
               style: const TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
@@ -283,7 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     return CircleAvatar(
       radius: 14,
-      backgroundColor: color.withOpacity(0.1),
+      backgroundColor: color.withValues(alpha: 0.1),
       child: Icon(icon, size: 14, color: color),
     );
   }

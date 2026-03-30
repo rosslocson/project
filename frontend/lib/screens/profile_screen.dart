@@ -176,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         child: Row(children: [
                           CircleAvatar(
                             radius: 40,
-                            backgroundColor: _kCrimson.withOpacity(0.1),
+                            backgroundColor: _kCrimson.withValues(alpha: 0.1),
                             backgroundImage: (user?['avatar_url'] as String? ?? '')
                                     .isNotEmpty
                                 ? NetworkImage(user!['avatar_url'])
@@ -224,7 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   decoration: BoxDecoration(
                                     color: user?['role'] == 'admin'
                                         ? Colors.red.shade50
-                                        : _kCrimson.withOpacity(0.08),
+                                        : _kCrimson.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(

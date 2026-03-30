@@ -47,14 +47,14 @@ class Sidebar extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colors.primary.withOpacity(0.05),
+              color: colors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: colors.primary.withOpacity(0.15),
+                  backgroundColor: colors.primary.withValues(alpha: 0.15),
                   child: Text(
                     '${user?['first_name']?[0] ?? ''}${user?['last_name']?[0] ?? ''}',
                     style: TextStyle(color: colors.primary, fontWeight: FontWeight.bold, fontSize: 13),
@@ -140,7 +140,7 @@ class _NavItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
-        color: isActive ? colors.primary.withOpacity(0.1) : Colors.transparent,
+        color: isActive ? colors.primary.withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(

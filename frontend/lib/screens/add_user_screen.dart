@@ -128,7 +128,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: kCrimson.withOpacity(0.1),
+                                  color: kCrimson.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(Icons.person_add,

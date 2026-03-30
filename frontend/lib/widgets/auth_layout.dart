@@ -137,7 +137,7 @@ class _LeftPanel extends StatelessWidget {
                     subheadline,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 22,
                       fontWeight: FontWeight.w400,
                       letterSpacing: 0.5,
@@ -267,7 +267,7 @@ Widget crimsonButton({
           backgroundColor: kCrimson,
           foregroundColor: Colors.white,
           elevation: 2,
-          shadowColor: kCrimson.withOpacity(0.4),
+          shadowColor: kCrimson.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30)),
         ),
@@ -294,7 +294,7 @@ class _DiamondPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.12)
+      ..color = Colors.white.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 

@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Reset password controllers
   final _resetEmailCtrl = TextEditingController();
-  final _resetTokenCtrl = TextEditingController();
+  final resetTokenCtrl = TextEditingController();
   final _newPassCtrl    = TextEditingController();
   final _confPassCtrl   = TextEditingController();
 
@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _lockTimer?.cancel();
     for (final c in [
       _emailCtrl, _passCtrl, _resetEmailCtrl,
-      _resetTokenCtrl, _newPassCtrl, _confPassCtrl,
+      resetTokenCtrl, _newPassCtrl, _confPassCtrl,
     ]) {
       c.dispose();
     }
@@ -77,10 +77,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // ── Forgot password sheet ──────────────────────────────────────────────────
   void _showForgotPassword() {
-    String? _resetToken;
-    String? _stepMsg;
-    bool    _stepLoading = false;
-    int     _step        = 1;
+    String? resetToken;
+    String? stepMsg;
+    bool    stepLoading = false;
+    int     step        = 1;
     _resetEmailCtrl.text = _emailCtrl.text.trim();
 
     showModalBottomSheet(
@@ -91,36 +91,36 @@ class _LoginScreenState extends State<LoginScreen> {
         builder: (ctx, setSheet) {
           Future<void> requestReset() async {
             if (_resetEmailCtrl.text.isEmpty) return;
-            setSheet(() { _stepLoading = true; _stepMsg = null; });
+            setSheet(() { stepLoading = true; stepMsg = null; });
             final res =
                 await ApiService.forgotPassword(_resetEmailCtrl.text.trim());
-            setSheet(() => _stepLoading = false);
+            setSheet(() => stepLoading = false);
             if (res['ok'] == true) {
-              _resetToken = res['reset_token'];
+              resetToken = res['reset_token'];
               setSheet(() {
-                _step    = 2;
-                _stepMsg = res['message'];
-                if (_resetToken != null) _resetTokenCtrl.text = _resetToken!;
+                step    = 2;
+                stepMsg = res['message'];
+                if (resetToken != null) resetTokenCtrl.text = resetToken!;
               });
             } else {
-              setSheet(() => _stepMsg = res['error'] ?? 'Request failed');
+              setSheet(() => stepMsg = res['error'] ?? 'Request failed');
             }
           }
 
           Future<void> doReset() async {
-            if (_resetTokenCtrl.text.isEmpty || _newPassCtrl.text.isEmpty) return;
+            if (resetTokenCtrl.text.isEmpty || _newPassCtrl.text.isEmpty) return;
             if (_newPassCtrl.text != _confPassCtrl.text) {
-              setSheet(() => _stepMsg = 'Passwords do not match');
+              setSheet(() => stepMsg = 'Passwords do not match');
               return;
             }
-            setSheet(() { _stepLoading = true; _stepMsg = null; });
+            setSheet(() { stepLoading = true; stepMsg = null; });
             final res = await ApiService.resetPassword(
-                _resetTokenCtrl.text.trim(),
+                resetTokenCtrl.text.trim(),
                 _newPassCtrl.text,
                 _confPassCtrl.text);
-            setSheet(() => _stepLoading = false);
+            setSheet(() => stepLoading = false);
             if (res['ok'] == true) {
-              Navigator.pop(ctx);
+              if (ctx.mounted) Navigator.pop(ctx);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: const Text('Password reset! You can now log in.'),
@@ -134,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 context.read<AuthProvider>().clearError();
               }
             } else {
-              setSheet(() => _stepMsg = res['error'] ?? 'Reset failed');
+              setSheet(() => stepMsg = res['error'] ?? 'Reset failed');
             }
           }
 
@@ -166,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: kCrimson.withOpacity(0.1),
+                      color: kCrimson.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.lock_reset, color: kCrimson),
@@ -179,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                               fontSize: 17, fontWeight: FontWeight.bold)),
                       Text(
-                        _step == 1
+                        step == 1
                             ? 'Step 1 of 2 — Enter your email'
                             : 'Step 2 of 2 — Set new password',
                         style: TextStyle(
@@ -189,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ]),
                 const SizedBox(height: 16),
-                if (_stepMsg != null) ...[
+                if (stepMsg != null) ...[
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
@@ -197,13 +197,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.blue.shade200),
                     ),
-                    child: Text(_stepMsg!,
+                    child: Text(stepMsg!,
                         style: TextStyle(
                             color: Colors.blue.shade800, fontSize: 13)),
                   ),
                   const SizedBox(height: 12),
                 ],
-                if (_step == 1) ...[
+                if (step == 1) ...[
                   fieldLabel('Email address'),
                   const SizedBox(height: 8),
                   plainTextField(
@@ -214,14 +214,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   crimsonButton(
                     label: 'SEND RESET TOKEN',
-                    onPressed: _stepLoading ? null : requestReset,
-                    loading: _stepLoading,
+                    onPressed: stepLoading ? null : requestReset,
+                    loading: stepLoading,
                   ),
                 ] else ...[
                   fieldLabel('Reset Token'),
                   const SizedBox(height: 8),
                   plainTextField(
-                      controller: _resetTokenCtrl,
+                      controller: resetTokenCtrl,
                       hint: 'Paste token from email'),
                   const SizedBox(height: 12),
                   fieldLabel('New Password'),
@@ -244,13 +244,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   crimsonButton(
                     label: 'RESET PASSWORD',
-                    onPressed: _stepLoading ? null : doReset,
-                    loading: _stepLoading,
+                    onPressed: stepLoading ? null : doReset,
+                    loading: stepLoading,
                   ),
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: () =>
-                        setSheet(() { _step = 1; _stepMsg = null; }),
+                        setSheet(() { step = 1; stepMsg = null; }),
                     child: const Text('← Back'),
                   ),
                 ],
@@ -358,7 +358,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     color: Color(0xFF2979FF),
-                    //decoration: TextDecoration.underline,
+                    decoration: TextDecoration.underline,
                     decorationColor: Color(0xFF2979FF),
                   ),
                 ),
@@ -390,7 +390,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontSize: 12,
                         color: Color(0xFF2979FF),
                         fontWeight: FontWeight.w600,
-                        //decoration: TextDecoration.underline,
+                        decoration: TextDecoration.underline,
                         decorationColor: Color(0xFF2979FF),
                       )),
                 ),
@@ -406,9 +406,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _lockedBanner() => Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: kCrimson.withOpacity(0.06),
+          color: kCrimson.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: kCrimson.withOpacity(0.4)),
+          border: Border.all(color: kCrimson.withValues(alpha: 0.4)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -433,7 +433,7 @@ class _LoginScreenState extends State<LoginScreen> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: _lockSecsLeft / 60,
-              backgroundColor: kCrimson.withOpacity(0.15),
+              backgroundColor: kCrimson.withValues(alpha: 0.15),
               color: kCrimson,
               minHeight: 5,
             ),
@@ -446,7 +446,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Color(0xFF2979FF),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  //decoration: TextDecoration.underline,
+                  decoration: TextDecoration.underline,
                   decorationColor: Color(0xFF2979FF),
                 )),
           ),
@@ -505,7 +505,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Color(0xFF2979FF),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  //decoration: TextDecoration.underline,
+                  decoration: TextDecoration.underline,
                   decorationColor: Color(0xFF2979FF),
                 )),
           ),

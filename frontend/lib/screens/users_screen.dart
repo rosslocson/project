@@ -326,7 +326,7 @@ class _UserTile extends StatelessWidget {
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       leading: CircleAvatar(
-        backgroundColor: kCrimson.withOpacity(0.1),
+        backgroundColor: kCrimson.withValues(alpha: 0.1),
         child: Text(
           '${user['first_name']?[0] ?? ''}${user['last_name']?[0] ?? ''}',
           style: const TextStyle(
@@ -409,7 +409,7 @@ class _UserTile extends StatelessWidget {
             message: isActive ? 'Deactivate user' : 'Activate user',
             child: Switch(
               value: isActive,
-              activeColor: Colors.green.shade600,
+              activeThumbColor: Colors.green.shade600,
               inactiveThumbColor: Colors.orange.shade400,
               onChanged: (_) => onToggle(),
             ),
@@ -524,7 +524,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
               child: TextField(
                 controller: ctrl,
                 decoration: InputDecoration(
-                  hintText: 'Add new ${type}...',
+                  hintText: 'Add new $type...',
                   filled: true,
                   fillColor: const Color(0xFFEEF2F5),
                   border: OutlineInputBorder(
@@ -573,7 +573,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
           ...items.map((item) => ListTile(
                 leading: CircleAvatar(
                   radius: 14,
-                  backgroundColor: kCrimson.withOpacity(0.08),
+                  backgroundColor: kCrimson.withValues(alpha: 0.08),
                   child: Text(
                     (item['name'] as String)[0].toUpperCase(),
                     style: const TextStyle(
