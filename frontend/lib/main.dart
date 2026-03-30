@@ -20,6 +20,20 @@ void main() {
   );
 }
 
+// No-animation page transition
+CustomTransitionPage<void> _noTransition({
+  required BuildContext context,
+  required GoRouterState state,
+  required Widget child,
+}) =>
+    CustomTransitionPage<void>(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      transitionsBuilder: (_, __, ___, child) => child,
+    );
+
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
   @override
@@ -33,7 +47,6 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     final auth = Provider.of<AuthProvider>(context, listen: false);
-
     _router = GoRouter(
       refreshListenable: auth,
       redirect: (context, state) {
@@ -45,13 +58,37 @@ class _MyAppState extends State<MyApp> {
         return null;
       },
       routes: [
-        GoRoute(path: '/login',     builder: (_, __) => const LoginScreen()),
-        GoRoute(path: '/register',  builder: (_, __) => const RegisterScreen()),
-        GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
-        GoRoute(path: '/profile',   builder: (_, __) => const ProfileScreen()),
-        GoRoute(path: '/users',     builder: (_, __) => const UsersScreen()),
-        GoRoute(path: '/users/add', builder: (_, __) => const AddUserScreen()),
-        GoRoute(path: '/',          redirect: (_, __) => '/dashboard'),
+        GoRoute(
+          path: '/login',
+          pageBuilder: (c, s) => _noTransition(
+              context: c, state: s, child: const LoginScreen()),
+        ),
+        GoRoute(
+          path: '/register',
+          pageBuilder: (c, s) => _noTransition(
+              context: c, state: s, child: const RegisterScreen()),
+        ),
+        GoRoute(
+          path: '/dashboard',
+          pageBuilder: (c, s) => _noTransition(
+              context: c, state: s, child: const DashboardScreen()),
+        ),
+        GoRoute(
+          path: '/profile',
+          pageBuilder: (c, s) => _noTransition(
+              context: c, state: s, child: const ProfileScreen()),
+        ),
+        GoRoute(
+          path: '/users',
+          pageBuilder: (c, s) => _noTransition(
+              context: c, state: s, child: const UsersScreen()),
+        ),
+        GoRoute(
+          path: '/users/add',
+          pageBuilder: (c, s) => _noTransition(
+              context: c, state: s, child: const AddUserScreen()),
+        ),
+        GoRoute(path: '/', redirect: (_, __) => '/dashboard'),
       ],
     );
   }
@@ -63,24 +100,19 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C63FF),
+          seedColor: const Color(0xFF7B0D1E),
           brightness: Brightness.light,
         ),
         textTheme: GoogleFonts.poppinsTextTheme(),
         useMaterial3: true,
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: Colors.grey.shade50,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6C63FF),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            textStyle: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+          },
         ),
       ),
       routerConfig: _router,

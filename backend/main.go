@@ -35,7 +35,7 @@ func main() {
 	}
 
 	// Auto migrate models
-	DB.AutoMigrate(&models.User{}, &models.ActivityLog{})
+	DB.AutoMigrate(&models.User{}, &models.ActivityLog{}, &models.DepartmentConfig{})
 
 	log.Println("Database migrated successfully")
 
@@ -81,6 +81,9 @@ func main() {
 		// Dashboard stats
 		api.GET("/dashboard/stats", h.GetDashboardStats)
 
+		// Config (departments/positions) - public read, admin write
+		api.GET("/config", h.ListConfig)
+
 		// User management (admin only)
 		users := api.Group("/users")
 		users.Use(middleware.AdminOnly())
@@ -90,6 +93,14 @@ func main() {
 			users.GET("/:id", h.GetUser)
 			users.PUT("/:id", h.UpdateUser)
 			users.DELETE("/:id", h.DeleteUser)
+		}
+
+		// Config management (admin only)
+		cfg := api.Group("/config")
+		cfg.Use(middleware.AdminOnly())
+		{
+			cfg.POST("", h.CreateConfig)
+			cfg.DELETE("/:id", h.DeleteConfig)
 		}
 
 		// Activity logs

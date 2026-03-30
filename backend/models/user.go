@@ -45,3 +45,11 @@ type ActivityLog struct {
 	Details   string `json:"details"`
 	IPAddress string `json:"ip_address"`
 }
+
+// DepartmentConfig stores admin-managed department and position lists
+type DepartmentConfig struct {
+	gorm.Model
+	Name     string `json:"name" gorm:"uniqueIndex;not null"`
+	Type     string `json:"type" gorm:"not null"` // "department" or "position"
+	IsActive bool   `json:"is_active" gorm:"default:true"`
+}

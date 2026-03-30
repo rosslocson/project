@@ -508,9 +508,45 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
-	var body map[string]interface{}
-	c.ShouldBindJSON(&body)
-	h.DB.Model(&user).Updates(body)
+	var body struct {
+		FirstName  *string      `json:"first_name"`
+		LastName   *string      `json:"last_name"`
+		Phone      *string      `json:"phone"`
+		Department *string      `json:"department"`
+		Position   *string      `json:"position"`
+		Role       *models.Role `json:"role"`
+		IsActive   *bool        `json:"is_active"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// Use Omit to allow false boolean updates (GORM skips zero values with Updates)
+	if body.FirstName != nil {
+		user.FirstName = *body.FirstName
+	}
+	if body.LastName != nil {
+		user.LastName = *body.LastName
+	}
+	if body.Phone != nil {
+		user.Phone = *body.Phone
+	}
+	if body.Department != nil {
+		user.Department = *body.Department
+	}
+	if body.Position != nil {
+		user.Position = *body.Position
+	}
+	if body.Role != nil {
+		user.Role = *body.Role
+	}
+	if body.IsActive != nil {
+		user.IsActive = *body.IsActive
+	}
+	// Save updates ALL fields including booleans
+	h.DB.Save(&user)
+	adminID := c.GetUint("user_id")
+	h.logActivity(adminID, "UPDATE_USER", fmt.Sprintf("Admin updated user %s (active=%v)", user.Email, user.IsActive), c.ClientIP())
 	c.JSON(http.StatusOK, gin.H{"message": "User updated", "user": user})
 }
 
@@ -548,4 +584,48 @@ func (h *Handler) logActivity(userID uint, action, details, ip string) {
 		IPAddress: ip,
 	}
 	h.DB.Create(&entry)
+}
+
+// ── Department / Position Config (Admin) ─────────────────────────────────────
+
+func (h *Handler) ListConfig(c *gin.Context) {
+	configType := c.Query("type") // "department" or "position"
+	var items []models.DepartmentConfig
+	query := h.DB.Where("is_active = true")
+	if configType != "" {
+		query = query.Where("type = ?", configType)
+	}
+	query.Order("name asc").Find(&items)
+	c.JSON(http.StatusOK, gin.H{"items": items})
+}
+
+func (h *Handler) CreateConfig(c *gin.Context) {
+	var body struct {
+		Name string `json:"name" binding:"required"`
+		Type string `json:"type" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if body.Type != "department" && body.Type != "position" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "type must be 'department' or 'position'"})
+		return
+	}
+	item := models.DepartmentConfig{Name: body.Name, Type: body.Type, IsActive: true}
+	if err := h.DB.Create(&item).Error; err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Name already exists"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "Created", "item": item})
+}
+
+func (h *Handler) DeleteConfig(c *gin.Context) {
+	var item models.DepartmentConfig
+	if h.DB.First(&item, c.Param("id")).Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		return
+	}
+	h.DB.Delete(&item)
+	c.JSON(http.StatusOK, gin.H{"message": "Deleted"})
 }

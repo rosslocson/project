@@ -174,7 +174,46 @@ class ApiService {
       final res = await http.put(
         Uri.parse('$baseUrl/users/$id'),
         headers: await _authHeaders(),
-        body: jsonEncode(data),
+        body: jsonEncode(data), // data must use typed values (bool not string)
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Config (departments / positions) ──────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getConfig({required String type}) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/config?type=$type'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createConfig(String name, String type) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/config'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name, 'type': type}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteConfig(int id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/config/$id'),
+        headers: await _authHeaders(),
       );
       return _parse(res);
     } catch (e) {
