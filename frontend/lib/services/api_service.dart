@@ -182,12 +182,12 @@ class ApiService {
     }
   }
 
-  // ── Config (departments / positions) ──────────────────────────────────────
+  // ── Departments ───────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> getConfig({required String type}) async {
+  static Future<Map<String, dynamic>> getDepartments() async {
     try {
       final res = await http.get(
-        Uri.parse('$baseUrl/config?type=$type'),
+        Uri.parse('$baseUrl/departments'),
         headers: await _authHeaders(),
       );
       return _parse(res);
@@ -196,12 +196,12 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> createConfig(String name, String type) async {
+  static Future<Map<String, dynamic>> createDepartment(String name) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/config'),
+        Uri.parse('$baseUrl/departments'),
         headers: await _authHeaders(),
-        body: jsonEncode({'name': name, 'type': type}),
+        body: jsonEncode({'name': name}),
       );
       return _parse(res);
     } catch (e) {
@@ -209,10 +209,23 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> deleteConfig(int id) async {
+  static Future<Map<String, dynamic>> updateDepartment(int id, String name) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/departments/$id'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteDepartment(int id) async {
     try {
       final res = await http.delete(
-        Uri.parse('$baseUrl/config/$id'),
+        Uri.parse('$baseUrl/departments/$id'),
         headers: await _authHeaders(),
       );
       return _parse(res);
@@ -221,11 +234,79 @@ class ApiService {
     }
   }
 
-// ════════════════════════════════════════════════════════════════════
-// 1. ADD THIS METHOD to api_service.dart
-//    Place it right after deleteConfig()
-// ════════════════════════════════════════════════════════════════════
- 
+  // ── Positions ─────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getPositions() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/positions'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createPosition(String name) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/positions'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updatePosition(int id, String name) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/positions/$id'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deletePosition(int id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/positions/$id'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Legacy getConfig wrapper (used by register/profile dropdowns) ──────────
+  static Future<Map<String, dynamic>> getConfig({required String type}) async {
+    if (type == 'department') return getDepartments();
+    if (type == 'position')   return getPositions();
+    return {'ok': false, 'error': 'Unknown type'};
+  }
+
+  static Future<Map<String, dynamic>> deleteUser(int id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/users/$id'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Config (departments / positions) ─────────────────────────────
+
 static Future<Map<String, dynamic>> updateConfig(int id, String name) async {
   try {
     final res = await http.put(
@@ -239,18 +320,17 @@ static Future<Map<String, dynamic>> updateConfig(int id, String name) async {
   }
 }
 
-
-  static Future<Map<String, dynamic>> deleteUser(int id) async {
-    try {
-      final res = await http.delete(
-        Uri.parse('$baseUrl/users/$id'),
-        headers: await _authHeaders(),
-      );
-      return _parse(res);
-    } catch (e) {
-      return {'ok': false, 'error': 'Connection error'};
-    }
+static Future<Map<String, dynamic>> deleteConfig(int id) async {
+  try {
+    final res = await http.delete(
+      Uri.parse('$baseUrl/config/$id'),
+      headers: await _authHeaders(),
+    );
+    return _parse(res);
+  } catch (e) {
+    return {'ok': false, 'error': 'Connection error'};
   }
+}
 
   // ── Activity Logs ─────────────────────────────────────────────────────────
 

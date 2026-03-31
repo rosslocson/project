@@ -495,8 +495,8 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
 
   Future<void> _loadAll() async {
     setState(() => _loading = true);
-    final d = await ApiService.getConfig(type: 'department');
-    final p = await ApiService.getConfig(type: 'position');
+    final d = await ApiService.getDepartments();
+    final p = await ApiService.getPositions();
     if (mounted) {
       setState(() {
         _departments = d['items'] ?? [];
@@ -508,7 +508,9 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
 
   Future<void> _add(String name, String type) async {
     if (name.trim().isEmpty) return;
-    final res = await ApiService.createConfig(name.trim(), type);
+    final res = type == 'department'
+        ? await ApiService.createDepartment(name.trim())
+        : await ApiService.createPosition(name.trim());
     if (res['ok'] == true) {
       await _loadAll();
       if (type == 'department') {
@@ -524,7 +526,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
     }
   }
 
-  Future<void> _delete(int id, String name) async {
+  Future<void> _delete(int id, String name, String type) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -629,7 +631,7 @@ class _ConfigManagerSheetState extends State<_ConfigManagerSheet>
                   icon: Icon(Icons.delete_outline,
                       color: Colors.red.shade400, size: 20),
                   onPressed: () =>
-                      _delete(_toInt(item['id']), item['name']),
+                      _delete(_toInt(item['id']), item['name'], type),
                 ),
               )),
       ],

@@ -35,7 +35,7 @@ func main() {
 	}
 
 	// Auto migrate models
-	DB.AutoMigrate(&models.User{}, &models.ActivityLog{}, &models.DepartmentConfig{})
+	DB.AutoMigrate(&models.User{}, &models.ActivityLog{}, &models.Department{}, &models.Position{})
 
 	log.Println("Database migrated successfully")
 
@@ -83,8 +83,25 @@ func main() {
 		// Dashboard stats
 		api.GET("/dashboard/stats", h.GetDashboardStats)
 
-		// Config (departments/positions) - public read, admin write
-		api.GET("/config", h.ListConfig)
+		// Departments — public read, admin write/edit/delete
+		api.GET("/departments", h.ListDepartments)
+		depts := api.Group("/departments")
+		depts.Use(middleware.AdminOnly())
+		{
+			depts.POST("", h.CreateDepartment)
+			depts.PUT("/:id", h.UpdateDepartment)
+			depts.DELETE("/:id", h.DeleteDepartment)
+		}
+
+		// Positions — public read, admin write/edit/delete
+		api.GET("/positions", h.ListPositions)
+		positions := api.Group("/positions")
+		positions.Use(middleware.AdminOnly())
+		{
+			positions.POST("", h.CreatePosition)
+			positions.PUT("/:id", h.UpdatePosition)
+			positions.DELETE("/:id", h.DeletePosition)
+		}
 
 		// User management (admin only)
 		users := api.Group("/users")
@@ -95,15 +112,6 @@ func main() {
 			users.GET("/:id", h.GetUser)
 			users.PUT("/:id", h.UpdateUser)
 			users.DELETE("/:id", h.DeleteUser)
-		}
-
-		// Config management (admin only)
-		cfg := api.Group("/config")
-		cfg.Use(middleware.AdminOnly())
-		{
-			cfg.POST("", h.CreateConfig)
-			cfg.PUT("/:id", h.UpdateConfig) // ← NEW: edit department/position name
-			cfg.DELETE("/:id", h.DeleteConfig)
 		}
 
 		// Activity logs

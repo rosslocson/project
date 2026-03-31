@@ -50,13 +50,24 @@ type ActivityLog struct {
 	IPAddress string `json:"ip_address"`
 }
 
-type DepartmentConfig struct {
+// Department — stored in its own table
+type Department struct {
 	ID        uint           `json:"id"         gorm:"primarykey;autoIncrement"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
 
-	Name     string `json:"name"      gorm:"uniqueIndex;not null"`
-	Type     string `json:"type"      gorm:"not null"`
+	Name     string `json:"name"     gorm:"uniqueIndex;not null"`
+	IsActive bool   `json:"is_active" gorm:"default:true"`
+}
+
+// Position — stored in its own table
+type Position struct {
+	ID        uint           `json:"id"         gorm:"primarykey;autoIncrement"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
+
+	Name     string `json:"name"     gorm:"uniqueIndex;not null"`
 	IsActive bool   `json:"is_active" gorm:"default:true"`
 }

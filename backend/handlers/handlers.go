@@ -233,6 +233,7 @@ func (h *Handler) Login(c *gin.Context) {
 		remaining := maxLoginAttempts - newCount
 
 		if newCount >= maxLoginAttempts {
+			// Lock the account for 1 minute
 			lockedUntil := time.Now().Add(lockDuration)
 			updates["locked_until"] = lockedUntil
 			updates["failed_login_count"] = newCount
@@ -284,6 +285,7 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 
 	var user models.User
 	if h.DB.Where("email = ?", strings.ToLower(body.Email)).First(&user).Error != nil {
+		// Always return success to avoid email enumeration
 		c.JSON(http.StatusOK, gin.H{"message": "If that email exists, a reset token has been sent."})
 		return
 	}
@@ -301,6 +303,7 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	})
 	h.logActivity(user.ID, "PASSWORD_RESET_REQUEST", "Reset token generated", c.ClientIP())
 
+	// In production: send token via email. Here we return it directly for dev/demo.
 	c.JSON(http.StatusOK, gin.H{
 		"message":     "Reset token generated. In production this would be emailed.",
 		"reset_token": token, // ← Remove this line in production
@@ -350,7 +353,7 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 		"locked_until":       nil,
 	})
 	h.logActivity(user.ID, "PASSWORD_RESET", "Password reset successfully", c.ClientIP())
-	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully. You can now log in.", "ok": true})
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully. You can now log in."})
 }
 
 // ── Profile Handlers ─────────────────────────────────────────────────────────
@@ -380,7 +383,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	h.logActivity(userID, "UPDATE_PROFILE", "Profile updated", c.ClientIP())
 	var user models.User
 	h.DB.First(&user, userID)
-	c.JSON(http.StatusOK, gin.H{"message": "Profile updated", "user": user, "ok": true})
+	c.JSON(http.StatusOK, gin.H{"message": "Profile updated", "user": user})
 }
 
 func (h *Handler) ChangePassword(c *gin.Context) {
@@ -407,7 +410,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	h.DB.Model(&user).Update("password", string(hashed))
 	h.logActivity(userID, "CHANGE_PASSWORD", "Password changed", c.ClientIP())
-	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully", "ok": true})
+	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully"})
 }
 
 func (h *Handler) UploadAvatar(c *gin.Context) {
@@ -417,7 +420,7 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 	}
 	c.ShouldBindJSON(&body)
 	h.DB.Model(&models.User{}).Where("id = ?", userID).Update("avatar_url", body.AvatarURL)
-	c.JSON(http.StatusOK, gin.H{"message": "Avatar updated", "avatar_url": body.AvatarURL, "ok": true})
+	c.JSON(http.StatusOK, gin.H{"message": "Avatar updated", "avatar_url": body.AvatarURL})
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -441,7 +444,6 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 		"new_users":    totalUsers - activeUsers,
 		"recent_users": recentUsers,
 		"recent_logs":  recentLogs,
-		"ok":           true,
 	})
 }
 
@@ -455,7 +457,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 			"%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 	query.Order("created_at desc").Find(&users)
-	c.JSON(http.StatusOK, gin.H{"users": users, "total": len(users), "ok": true})
+	c.JSON(http.StatusOK, gin.H{"users": users, "total": len(users)})
 }
 
 func (h *Handler) CreateUser(c *gin.Context) {
@@ -488,7 +490,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	h.DB.Create(&user)
 	adminID := c.GetUint("user_id")
 	h.logActivity(adminID, "CREATE_USER", "Admin created user: "+user.Email, c.ClientIP())
-	c.JSON(http.StatusCreated, gin.H{"message": "User created", "user": user, "ok": true})
+	c.JSON(http.StatusCreated, gin.H{"message": "User created", "user": user})
 }
 
 func (h *Handler) GetUser(c *gin.Context) {
@@ -497,7 +499,7 @@ func (h *Handler) GetUser(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"user": user, "ok": true})
+	c.JSON(http.StatusOK, user)
 }
 
 func (h *Handler) UpdateUser(c *gin.Context) {
@@ -519,6 +521,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// Use Omit to allow false boolean updates (GORM skips zero values with Updates)
 	if body.FirstName != nil {
 		user.FirstName = *body.FirstName
 	}
@@ -544,15 +547,9 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	h.DB.Save(&user)
 	adminID := c.GetUint("user_id")
 	h.logActivity(adminID, "UPDATE_USER", fmt.Sprintf("Admin updated user %s (active=%v)", user.Email, user.IsActive), c.ClientIP())
-	c.JSON(http.StatusOK, gin.H{"message": "User updated", "user": user, "ok": true})
+	c.JSON(http.StatusOK, gin.H{"message": "User updated", "user": user})
 }
 
-// ── FIXED: DeleteUser ─────────────────────────────────────────────────────────
-// Root cause of "failed to delete":
-//
-//	ActivityLog has a FK → users.id with no ON DELETE CASCADE.
-//	Any user with login/activity history causes a constraint violation.
-//	Fix: hard-delete the user's activity logs first, then delete the user.
 func (h *Handler) DeleteUser(c *gin.Context) {
 	userIDParam := c.Param("id")
 	if userIDParam == "" || userIDParam == "0" {
@@ -560,39 +557,23 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	// 1. Find the user (Unscoped so soft-deleted users can also be purged)
 	var user models.User
-	if err := h.DB.Unscoped().Where("id = ?", userIDParam).First(&user).Error; err != nil {
+	result := h.DB.Where("id = ?", userIDParam).First(&user)
+	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found", "id": userIDParam})
 		return
 	}
 
-	// 2. Hard-delete activity logs that reference this user FIRST.
-	//    Without this, the FK constraint on activity_logs.user_id → users.id
-	//    causes the user delete to fail with a constraint violation.
-	if err := h.DB.Unscoped().Where("user_id = ?", user.ID).Delete(&models.ActivityLog{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to remove user activity logs",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	// 3. Hard-delete the user — FK is now satisfied.
-	if err := h.DB.Unscoped().Delete(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to delete user",
-			"details": err.Error(),
-		})
+	// Hard delete — bypass soft-delete scope entirely
+	delResult := h.DB.Unscoped().Where("id = ?", user.ID).Delete(&models.User{})
+	if delResult.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
 	}
 
 	adminID := c.GetUint("user_id")
-	h.logActivity(adminID, "DELETE_USER",
-		fmt.Sprintf("Admin deleted user: %s (id=%d)", user.Email, user.ID),
-		c.ClientIP())
-
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted", "deleted_id": user.ID, "ok": true})
+	h.logActivity(adminID, "DELETE_USER", fmt.Sprintf("Admin deleted user: %s (id=%d)", user.Email, user.ID), c.ClientIP())
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted", "deleted_id": user.ID})
 }
 
 // ── Activity Log ──────────────────────────────────────────────────────────────
@@ -606,7 +587,7 @@ func (h *Handler) GetActivityLogs(c *gin.Context) {
 		query = query.Where("user_id = ?", userID)
 	}
 	query.Find(&logs)
-	c.JSON(http.StatusOK, gin.H{"logs": logs, "ok": true})
+	c.JSON(http.StatusOK, gin.H{"logs": logs})
 }
 
 func (h *Handler) logActivity(userID uint, action, details, ip string) {
@@ -619,59 +600,34 @@ func (h *Handler) logActivity(userID uint, action, details, ip string) {
 	h.DB.Create(&entry)
 }
 
-// ── Department / Position Config (Admin) ─────────────────────────────────────
+// ── Departments ───────────────────────────────────────────────────────────────
 
-func (h *Handler) ListConfig(c *gin.Context) {
-	configType := c.Query("type") // "department" or "position"
-	var items []models.DepartmentConfig
-	query := h.DB.Where("is_active = true")
-	if configType != "" {
-		query = query.Where("type = ?", configType)
-	}
-	query.Order("name asc").Find(&items)
-	c.JSON(http.StatusOK, gin.H{"items": items, "ok": true})
+func (h *Handler) ListDepartments(c *gin.Context) {
+	var items []models.Department
+	h.DB.Order("name asc").Find(&items)
+	c.JSON(http.StatusOK, gin.H{"items": items})
 }
 
-func (h *Handler) CreateConfig(c *gin.Context) {
+func (h *Handler) CreateDepartment(c *gin.Context) {
 	var body struct {
 		Name string `json:"name" binding:"required"`
-		Type string `json:"type" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if body.Type != "department" && body.Type != "position" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "type must be 'department' or 'position'"})
-		return
-	}
-	item := models.DepartmentConfig{Name: body.Name, Type: body.Type, IsActive: true}
+	item := models.Department{Name: strings.TrimSpace(body.Name), IsActive: true}
 	if err := h.DB.Create(&item).Error; err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Name already exists"})
+		c.JSON(http.StatusConflict, gin.H{"error": "Department name already exists"})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "Created", "item": item, "ok": true})
+	c.JSON(http.StatusCreated, gin.H{"message": "Department created", "item": item})
 }
 
-func (h *Handler) DeleteConfig(c *gin.Context) {
-	var item models.DepartmentConfig
+func (h *Handler) UpdateDepartment(c *gin.Context) {
+	var item models.Department
 	if h.DB.First(&item, c.Param("id")).Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
-		return
-	}
-	h.DB.Delete(&item)
-	c.JSON(http.StatusOK, gin.H{"message": "Deleted", "ok": true})
-}
-
-// ════════════════════════════════════════════════════════════════════
-// 2. ADD THIS HANDLER to handlers.go
-//    Place it right after DeleteConfig()
-// ════════════════════════════════════════════════════════════════════
-
-func (h *Handler) UpdateConfig(c *gin.Context) {
-	var item models.DepartmentConfig
-	if h.DB.First(&item, c.Param("id")).Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
 		return
 	}
 	var body struct {
@@ -681,9 +637,75 @@ func (h *Handler) UpdateConfig(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.DB.Model(&item).Update("name", body.Name).Error; err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Name already exists"})
+	item.Name = strings.TrimSpace(body.Name)
+	if err := h.DB.Save(&item).Error; err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Department name already exists"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Updated", "item": item, "ok": true})
+	c.JSON(http.StatusOK, gin.H{"message": "Department updated", "item": item})
+}
+
+func (h *Handler) DeleteDepartment(c *gin.Context) {
+	var item models.Department
+	if h.DB.First(&item, c.Param("id")).Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
+		return
+	}
+	h.DB.Unscoped().Delete(&item)
+	c.JSON(http.StatusOK, gin.H{"message": "Department deleted"})
+}
+
+// ── Positions ──────────────────────────────────────────────────────────────────
+
+func (h *Handler) ListPositions(c *gin.Context) {
+	var items []models.Position
+	h.DB.Order("name asc").Find(&items)
+	c.JSON(http.StatusOK, gin.H{"items": items})
+}
+
+func (h *Handler) CreatePosition(c *gin.Context) {
+	var body struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	item := models.Position{Name: strings.TrimSpace(body.Name), IsActive: true}
+	if err := h.DB.Create(&item).Error; err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "Position created", "item": item})
+}
+
+func (h *Handler) UpdatePosition(c *gin.Context) {
+	var item models.Position
+	if h.DB.First(&item, c.Param("id")).Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Position not found"})
+		return
+	}
+	var body struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	item.Name = strings.TrimSpace(body.Name)
+	if err := h.DB.Save(&item).Error; err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Position updated", "item": item})
+}
+
+func (h *Handler) DeletePosition(c *gin.Context) {
+	var item models.Position
+	if h.DB.First(&item, c.Param("id")).Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Position not found"})
+		return
+	}
+	h.DB.Unscoped().Delete(&item)
+	c.JSON(http.StatusOK, gin.H{"message": "Position deleted"})
 }

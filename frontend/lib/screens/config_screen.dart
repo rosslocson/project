@@ -4,6 +4,8 @@ import '../widgets/sidebar.dart';
 
 const _kCrimson = Color(0xFF7B0D1E);
 
+int _id(dynamic v) => v == null ? 0 : (v as num).toInt();
+
 class ConfigScreen extends StatefulWidget {
   const ConfigScreen({super.key});
   @override
@@ -15,89 +17,79 @@ class _ConfigScreenState extends State<ConfigScreen>
   late TabController _tabs;
   List<dynamic> _departments = [];
   List<dynamic> _positions   = [];
-  bool _loading = true;
-  final _deptCtrl   = TextEditingController();
-  final _posCtrl    = TextEditingController();
-  final _deptSearch = TextEditingController();
-  final _posSearch  = TextEditingController();
+  bool _loadingDept = true;
+  bool _loadingPos  = true;
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
-    _deptSearch.addListener(() => setState(() {}));
-    _posSearch.addListener(() => setState(() {}));
-    _loadAll();
+    _loadDepartments();
+    _loadPositions();
   }
 
   @override
   void dispose() {
     _tabs.dispose();
-    _deptCtrl.dispose();
-    _posCtrl.dispose();
-    _deptSearch.dispose();
-    _posSearch.dispose();
     super.dispose();
   }
 
-  Future<void> _loadAll() async {
-    setState(() => _loading = true);
-    final d = await ApiService.getConfig(type: 'department');
-    final p = await ApiService.getConfig(type: 'position');
+  Future<void> _loadDepartments() async {
+    setState(() => _loadingDept = true);
+    final res = await ApiService.getDepartments();
     if (mounted) {
       setState(() {
-        _departments = d['items'] ?? [];
-        _positions   = p['items'] ?? [];
-        _loading     = false;
+        _departments = res['items'] ?? [];
+        _loadingDept  = false;
       });
     }
   }
 
-  // ── Add ───────────────────────────────────────────────────────────────────
-  Future<void> _add(String name, String type) async {
-    if (name.trim().isEmpty) return;
-    final res = await ApiService.createConfig(name.trim(), type);
-    if (res['ok'] == true) {
-      await _loadAll();
-      if (type == 'department') {
-        _deptCtrl.clear();
-      } else {
-        _posCtrl.clear();
-      }
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(res['error'] ?? 'Failed to add'),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-      ));
+  Future<void> _loadPositions() async {
+    setState(() => _loadingPos = true);
+    final res = await ApiService.getPositions();
+    if (mounted) {
+      setState(() {
+        _positions  = res['items'] ?? [];
+        _loadingPos = false;
+      });
     }
   }
 
-  // ── Edit — inline dialog ──────────────────────────────────────────────────
-  Future<void> _edit(int id, String currentName, String type) async {
-    final ctrl = TextEditingController(text: currentName);
+  // ── Add ────────────────────────────────────────────────────────────────────
+  Future<void> _addDepartment(String name) async {
+    final res = await ApiService.createDepartment(name.trim());
+    if (res['ok'] == true) {
+      await _loadDepartments();
+    } else if (mounted) {
+      _showError(res['error'] ?? 'Failed to add department');
+    }
+  }
 
-    final newName = await showDialog<String>(
+  Future<void> _addPosition(String name) async {
+    final res = await ApiService.createPosition(name.trim());
+    if (res['ok'] == true) {
+      await _loadPositions();
+    } else if (mounted) {
+      _showError(res['error'] ?? 'Failed to add position');
+    }
+  }
+
+  // ── Edit ───────────────────────────────────────────────────────────────────
+  Future<void> _editItem({
+    required int id,
+    required String currentName,
+    required String type, // 'department' or 'position'
+  }) async {
+    final ctrl = TextEditingController(text: currentName);
+    final saved = await showDialog<String>(
       context: context,
-      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Row(children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _kCrimson.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.edit_outlined,
-                color: _kCrimson, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            'Edit ${type[0].toUpperCase()}${type.substring(1)}',
-            style: const TextStyle(fontSize: 17),
-          ),
+          Icon(Icons.edit_outlined, color: _kCrimson, size: 20),
+          const SizedBox(width: 8),
+          Text('Edit ${type[0].toUpperCase()}${type.substring(1)}'),
         ]),
         content: TextField(
           controller: ctrl,
@@ -111,99 +103,72 @@ class _ConfigScreenState extends State<ConfigScreen>
               borderSide: BorderSide.none,
             ),
           ),
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, null),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            icon: const Icon(Icons.check, size: 16),
-            label: const Text('Save'),
+          ElevatedButton(
+            onPressed: () {
+              final v = ctrl.text.trim();
+              if (v.isNotEmpty) Navigator.pop(ctx, v);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: _kCrimson,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
+            child: const Text('Save'),
           ),
         ],
       ),
     );
-
     ctrl.dispose();
 
-    if (newName == null || newName.isEmpty || newName == currentName) return;
-    if (!mounted) return;
+    if (saved == null || saved == currentName) return;
 
-    // Show loading
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(children: [
-          SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.white)),
-          SizedBox(width: 12),
-          Text('Saving...'),
-        ]),
-        duration: const Duration(seconds: 10),
-        backgroundColor: Colors.grey.shade800,
-      ),
-    );
-
-    final res = await ApiService.updateConfig(id, newName);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
+    final res = type == 'department'
+        ? await ApiService.updateDepartment(id, saved)
+        : await ApiService.updatePosition(id, saved);
 
     if (res['ok'] == true) {
-      await _loadAll();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('"$newName" updated successfully.'),
-        backgroundColor: Colors.green.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(res['error'] ?? 'Failed to update'),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      type == 'department'
+          ? await _loadDepartments()
+          : await _loadPositions();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('"$saved" updated.'),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+        ));
+      }
+    } else if (mounted) {
+      _showError(res['error'] ?? 'Update failed');
     }
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────
-  Future<void> _delete(int id, String name, String type) async {
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  Future<void> _deleteItem({
+    required int id,
+    required String name,
+    required String type,
+  }) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Row(children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.delete_forever,
-                color: Colors.red.shade700, size: 20),
-          ),
-          const SizedBox(width: 12),
-          const Text('Confirm Delete', style: TextStyle(fontSize: 17)),
+          Icon(Icons.delete_forever, color: Colors.red.shade700, size: 20),
+          const SizedBox(width: 8),
+          const Text('Confirm Delete'),
         ]),
         content: RichText(
           text: TextSpan(
-            style:
-                const TextStyle(color: Colors.black87, fontSize: 14),
+            style: const TextStyle(color: Colors.black87, fontSize: 14),
             children: [
               const TextSpan(text: 'Remove '),
               TextSpan(
@@ -217,124 +182,239 @@ class _ConfigScreenState extends State<ConfigScreen>
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Cancel')),
-          ElevatedButton.icon(
+          ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            icon: const Icon(Icons.delete_forever, size: 16),
-            label: const Text('Delete'),
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8))),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true) return;
 
-    final res = await ApiService.deleteConfig(id);
+    final res = type == 'department'
+        ? await ApiService.deleteDepartment(id)
+        : await ApiService.deletePosition(id);
+
     if (res['ok'] == true) {
-      await _loadAll();
+      type == 'department'
+          ? await _loadDepartments()
+          : await _loadPositions();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('"$name" removed.'),
+          content: Text('"$name" deleted.'),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10)),
         ));
       }
+    } else if (mounted) {
+      _showError(res['error'] ?? 'Delete failed');
     }
   }
 
-  // ── Tab content ───────────────────────────────────────────────────────────
-  Widget _buildTab(
-    List<dynamic> allItems,
-    TextEditingController addCtrl,
-    TextEditingController searchCtrl,
-    String type,
-  ) {
-    // Filter by search query
-    final query = searchCtrl.text.trim().toLowerCase();
-    final items = query.isEmpty
-        ? allItems
-        : allItems
-            .where((e) =>
-                (e['name'] as String? ?? '')
-                    .toLowerCase()
-                    .contains(query))
-            .toList();
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: Colors.red.shade700,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
 
+  // ── Tab builders ───────────────────────────────────────────────────────────
+  Widget _buildDeptTab() {
+    return _ItemTab(
+      loading: _loadingDept,
+      items: _departments,
+      type: 'department',
+      hintText: 'New department name...',
+      onAdd: _addDepartment,
+      onEdit: (id, name) => _editItem(id: id, currentName: name, type: 'department'),
+      onDelete: (id, name) => _deleteItem(id: id, name: name, type: 'department'),
+    );
+  }
+
+  Widget _buildPosTab() {
+    return _ItemTab(
+      loading: _loadingPos,
+      items: _positions,
+      type: 'position',
+      hintText: 'New position name...',
+      onAdd: _addPosition,
+      onEdit: (id, name) => _editItem(id: id, currentName: name, type: 'position'),
+      onDelete: (id, name) => _deleteItem(id: id, name: name, type: 'position'),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5FF),
+      body: Row(
+        children: [
+          const Sidebar(currentRoute: '/config'),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Departments & Positions',
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Manage dropdown options shown during registration and profile editing.',
+                    style: TextStyle(
+                        color: Colors.grey.shade600, fontSize: 13),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Expanded(
+                    child: Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        children: [
+                          TabBar(
+                            controller: _tabs,
+                            labelColor: _kCrimson,
+                            indicatorColor: _kCrimson,
+                            unselectedLabelColor: Colors.grey,
+                            indicatorWeight: 3,
+                            tabs: [
+                              Tab(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.business_outlined,
+                                        size: 16),
+                                    const SizedBox(width: 6),
+                                    const Text('Departments'),
+                                    if (_departments.isNotEmpty) ...[
+                                      const SizedBox(width: 6),
+                                      _CountBadge(_departments.length),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Tab(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.work_outline, size: 16),
+                                    const SizedBox(width: 6),
+                                    const Text('Positions'),
+                                    if (_positions.isNotEmpty) ...[
+                                      const SizedBox(width: 6),
+                                      _CountBadge(_positions.length),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Expanded(
+                            child: TabBarView(
+                              controller: _tabs,
+                              children: [
+                                SingleChildScrollView(
+                                    child: _buildDeptTab()),
+                                SingleChildScrollView(
+                                    child: _buildPosTab()),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Reusable tab content ──────────────────────────────────────────────────────
+class _ItemTab extends StatefulWidget {
+  final bool loading;
+  final List<dynamic> items;
+  final String type;
+  final String hintText;
+  final Future<void> Function(String name) onAdd;
+  final Future<void> Function(int id, String name) onEdit;
+  final Future<void> Function(int id, String name) onDelete;
+
+  const _ItemTab({
+    required this.loading,
+    required this.items,
+    required this.type,
+    required this.hintText,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ItemTab> createState() => _ItemTabState();
+}
+
+class _ItemTabState extends State<_ItemTab> {
+  final _ctrl    = TextEditingController();
+  bool  _adding  = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final name = _ctrl.text.trim();
+    if (name.isEmpty) return;
+    setState(() => _adding = true);
+    await widget.onAdd(name);
+    if (mounted) {
+      _ctrl.clear();
+      setState(() => _adding = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Add + Search row ───────────────────────────────────────────
+        // ── Add row ─────────────────────────────────────────────────────
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            border:
-                Border(bottom: BorderSide(color: Colors.grey.shade100)),
+            border: Border(
+                bottom: BorderSide(color: Colors.grey.shade100)),
           ),
-          child: Column(
-            children: [
-              // Add new
-              Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: addCtrl,
-                    decoration: InputDecoration(
-                      hintText:
-                          'New ${type[0].toUpperCase()}${type.substring(1)} name...',
-                      filled: true,
-                      fillColor: const Color(0xFFEEF2F5),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                    ),
-                    onSubmitted: (v) => _add(v, type),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: () => _add(
-                      type == 'department'
-                          ? _deptCtrl.text
-                          : _posCtrl.text,
-                      type),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kCrimson,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 12),
-              // Search
-              TextField(
-                controller: searchCtrl,
+          child: Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _ctrl,
                 decoration: InputDecoration(
-                  hintText:
-                      'Search ${type}s...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  suffixIcon: searchCtrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            searchCtrl.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
+                  hintText: widget.hintText,
                   filled: true,
                   fillColor: const Color(0xFFEEF2F5),
                   border: OutlineInputBorder(
@@ -344,53 +424,67 @@ class _ConfigScreenState extends State<ConfigScreen>
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
                 ),
+                onSubmitted: (_) => _submit(),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: _adding ? null : _submit,
+              icon: _adding
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.add, size: 18),
+              label: const Text('Add'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kCrimson,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ]),
         ),
 
-        // ── List ───────────────────────────────────────────────────────
-        if (_loading)
+        // ── List ────────────────────────────────────────────────────────
+        if (widget.loading)
           const Padding(
             padding: EdgeInsets.all(40),
             child: Center(child: CircularProgressIndicator()),
           )
-        else if (allItems.isEmpty)
+        else if (widget.items.isEmpty)
           Padding(
             padding: const EdgeInsets.all(48),
             child: Column(children: [
               Icon(Icons.inbox_outlined,
                   size: 48, color: Colors.grey.shade300),
               const SizedBox(height: 12),
-              Text('No ${type}s added yet.',
-                  style: TextStyle(color: Colors.grey.shade500)),
+              Text(
+                'No ${widget.type}s yet.',
+                style: TextStyle(color: Colors.grey.shade500),
+              ),
               const SizedBox(height: 4),
-              Text('Use the field above to add one.',
-                  style: TextStyle(
-                      color: Colors.grey.shade400, fontSize: 12)),
-            ]),
-          )
-        else if (items.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(48),
-            child: Column(children: [
-              Icon(Icons.search_off,
-                  size: 48, color: Colors.grey.shade300),
-              const SizedBox(height: 12),
-              Text('No ${type}s match "$query".',
-                  style: TextStyle(color: Colors.grey.shade500)),
+              Text(
+                'Add one using the field above.',
+                style: TextStyle(
+                    color: Colors.grey.shade400, fontSize: 12),
+              ),
             ]),
           )
         else
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
+            itemCount: widget.items.length,
             separatorBuilder: (_, __) =>
                 const Divider(height: 1, indent: 20),
             itemBuilder: (context, i) {
-              final item = items[i];
-              final id   = (item['id'] as num).toInt();
+              final item = widget.items[i];
+              final id   = _id(item['id']);
               final name = item['name'] as String? ?? '';
 
               return ListTile(
@@ -417,9 +511,9 @@ class _ConfigScreenState extends State<ConfigScreen>
                     Tooltip(
                       message: 'Edit',
                       child: IconButton(
-                        icon: Icon(Icons.edit_outlined,
-                            color: Colors.blue.shade400, size: 20),
-                        onPressed: () => _edit(id, name, type),
+                        icon: const Icon(Icons.edit_outlined,
+                            size: 18, color: _kCrimson),
+                        onPressed: () => widget.onEdit(id, name),
                       ),
                     ),
                     // Delete button
@@ -427,8 +521,8 @@ class _ConfigScreenState extends State<ConfigScreen>
                       message: 'Delete',
                       child: IconButton(
                         icon: Icon(Icons.delete_outline,
-                            color: Colors.red.shade400, size: 20),
-                        onPressed: () => _delete(id, name, type),
+                            size: 18, color: Colors.red.shade400),
+                        onPressed: () => widget.onDelete(id, name),
                       ),
                     ),
                   ],
@@ -439,117 +533,8 @@ class _ConfigScreenState extends State<ConfigScreen>
       ],
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5FF),
-      body: Row(
-        children: [
-          const Sidebar(currentRoute: '/config'),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Text(
-                    'Departments & Positions',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manage the dropdown options available in registration and profiles.',
-                    style: TextStyle(
-                        color: Colors.grey.shade600, fontSize: 13),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Tab card
-                  Expanded(
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        children: [
-                          TabBar(
-                            controller: _tabs,
-                            labelColor: _kCrimson,
-                            indicatorColor: _kCrimson,
-                            unselectedLabelColor: Colors.grey,
-                            indicatorWeight: 3,
-                            tabs: [
-                              Tab(
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                        Icons.business_outlined,
-                                        size: 16),
-                                    const SizedBox(width: 6),
-                                    const Text('Departments'),
-                                    if (_departments.isNotEmpty) ...[
-                                      const SizedBox(width: 6),
-                                      _CountBadge(_departments.length),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Tab(
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.work_outline,
-                                        size: 16),
-                                    const SizedBox(width: 6),
-                                    const Text('Positions'),
-                                    if (_positions.isNotEmpty) ...[
-                                      const SizedBox(width: 6),
-                                      _CountBadge(_positions.length),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          Expanded(
-                            child: TabBarView(
-                              controller: _tabs,
-                              children: [
-                                SingleChildScrollView(
-                                  child: _buildTab(_departments,
-                                      _deptCtrl, _deptSearch, 'department'),
-                                ),
-                                SingleChildScrollView(
-                                  child: _buildTab(_positions,
-                                      _posCtrl, _posSearch, 'position'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// ── Count badge ───────────────────────────────────────────────────────────────
 class _CountBadge extends StatelessWidget {
   final int count;
   const _CountBadge(this.count);
@@ -562,12 +547,10 @@ class _CountBadge extends StatelessWidget {
           color: _kCrimson,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Text(
-          '$count',
-          style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold),
-        ),
+        child: Text('$count',
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold)),
       );
 }
