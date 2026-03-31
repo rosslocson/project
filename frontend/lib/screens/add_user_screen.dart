@@ -109,7 +109,9 @@ class _AddUserScreenState extends State<AddUserScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          //onPressed: () => context.pop(),
+          onPressed: () => context.go('/dashboard'),
+          
         ),
       ),
       body: Center(
