@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-
-const _kCrimson = Color(0xFF7B0D1E);
+import '../widgets/app_theme.dart';
 
 class Sidebar extends StatelessWidget {
   final String currentRoute;
@@ -11,155 +10,173 @@ class Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final user = auth.user;
-
-    final first = user?['first_name'] as String? ?? '';
-    final last  = user?['last_name']  as String? ?? '';
-    String initials = '';
-    if (first.isNotEmpty) initials += first[0];
-    if (last.isNotEmpty)  initials += last[0];
+    final auth    = context.watch<AuthProvider>();
+    final isAdmin = auth.isAdmin;
+    final user    = auth.user;
 
     return Container(
-      width: 240,
-      color: Colors.white,
+      width: 230,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: Colors.grey.shade100)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(2, 0),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          // ── Logo ──────────────────────────────────────────────────────
+          // ── Logo / brand ────────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 20, vertical: 24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  kCrimson,
+                  kCrimson.withValues(alpha: 0.85),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
             child: Row(children: [
               Container(
-                width: 36, height: 36,
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _kCrimson,
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.people_alt,
-                    color: Colors.white, size: 20),
+                child: const Icon(Icons.people_alt_outlined,
+                    color: Colors.white, size: 22),
               ),
-              const SizedBox(width: 10),
-              const Text('UserApp',
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'UserApp',
                   style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: _kCrimson)),
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
             ]),
           ),
 
-          // ── User card (clickable → My Profile) ───────────────────────
-          GestureDetector(
-            onTap: () => context.go('/profile'),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 14),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _kCrimson.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: currentRoute == '/profile'
-                      ? _kCrimson.withValues(alpha: 0.3)
-                      : Colors.transparent,
+          // ── User chip ───────────────────────────────────────────────
+          Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: kCrimson.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: kCrimson.withValues(alpha: 0.1)),
+            ),
+            child: Row(children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: kCrimson.withValues(alpha: 0.15),
+                child: Text(
+                  '${(user?['first_name'] as String? ?? ' ')[0]}'
+                  '${(user?['last_name']  as String? ?? ' ')[0]}',
+                  style: const TextStyle(
+                      color: kCrimson,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13),
                 ),
               ),
-              child: Row(children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: _kCrimson.withValues(alpha: 0.15),
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                        color: _kCrimson,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13),
-                  ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2937)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      (user?['role'] as String? ?? 'user')
+                          .toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: kCrimson,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$first $last',
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        (user?['role'] ?? 'user').toUpperCase(),
-                        style: const TextStyle(
-                            fontSize: 10, color: _kCrimson),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right,
-                    size: 16, color: _kCrimson),
-              ]),
-            ),
+              ),
+            ]),
           ),
 
-          const SizedBox(height: 20),
-
-          // ── MENU section ───────────────────────────────────────────────
-          _sectionLabel('MENU'),
-          const SizedBox(height: 6),
-          _NavItem(
-            icon: Icons.dashboard_outlined,
-            label: 'Dashboard',
-            route: '/dashboard',
-            current: currentRoute,
-          ),
-          _NavItem(
-            icon: Icons.person_outline,
-            label: 'My Profile',
-            route: '/profile',
-            current: currentRoute,
-          ),
-          _NavItem(
-            icon: Icons.edit_outlined,
-            label: 'Edit Profile',
-            route: '/profile/edit',
-            current: currentRoute,
-          ),
-
-          // ── ADMIN section ──────────────────────────────────────────────
-          if (auth.isAdmin) ...[
-            const SizedBox(height: 16),
-            _sectionLabel('ADMIN'),
-            const SizedBox(height: 6),
-            _NavItem(
-              icon: Icons.people_outline,
-              label: 'User Management',
-              route: '/users',
-              current: currentRoute,
-            ),
-            _NavItem(
-              icon: Icons.person_add_outlined,
-              label: 'Add User',
-              route: '/users/add',
-              current: currentRoute,
-            ),
-            _NavItem(
-              icon: Icons.business_outlined,
-              label: 'Departments',
-              route: '/config',
-              current: currentRoute,
-            ),
-          ],
-
-          const Spacer(),
-          const Divider(height: 1),
           const SizedBox(height: 4),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red, size: 20),
-            title: const Text('Sign Out',
-                style: TextStyle(color: Colors.red, fontSize: 14)),
-            dense: true,
-            onTap: () async {
-              await auth.logout();
-              if (context.mounted) context.go('/login');
-            },
+
+          // ── Nav items ───────────────────────────────────────────────
+          Expanded(
+            child: ListView(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              children: [
+                _NavItem(
+                  icon: Icons.dashboard_outlined,
+                  label: 'Dashboard',
+                  route: '/dashboard',
+                  current: currentRoute,
+                ),
+                _NavItem(
+                  icon: Icons.person_outline,
+                  label: 'My Profile',
+                  route: '/profile',
+                  current: currentRoute,
+                ),
+                if (isAdmin) ...[
+                  const _SectionLabel('Administration'),
+                  _NavItem(
+                    icon: Icons.manage_accounts_outlined,
+                    label: 'User Management',
+                    route: '/users',
+                    current: currentRoute,
+                  ),
+                  _NavItem(
+                    icon: Icons.business_outlined,
+                    label: 'Departments',
+                    route: '/config',
+                    current: currentRoute,
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // ── Sign out ────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextButton.icon(
+              onPressed: () {
+                context.read<AuthProvider>().logout();
+                context.go('/login');
+              },
+              icon: const Icon(Icons.logout_outlined,
+                  color: Color(0xFF6B7280), size: 18),
+              label: const Text('Sign Out',
+                  style: TextStyle(
+                      color: Color(0xFF6B7280), fontSize: 13)),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
         ],
@@ -167,20 +184,6 @@ class Sidebar extends StatelessWidget {
     );
   }
 }
-
-// ── Section label helper ──────────────────────────────────────────────────────
-Widget _sectionLabel(String text) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 10,
-                letterSpacing: 1.5,
-                color: Colors.grey,
-                fontWeight: FontWeight.w600)),
-      ),
-    );
 
 // ── Nav item ──────────────────────────────────────────────────────────────────
 class _NavItem extends StatelessWidget {
@@ -198,35 +201,66 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = current == route;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+    final active = current == route;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
-        color: isActive
-            ? _kCrimson.withValues(alpha: 0.08)
+        color: active
+            ? kCrimson.withValues(alpha: 0.08)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(
+        dense: true,
         leading: Icon(
           icon,
-          color: isActive ? _kCrimson : Colors.grey.shade500,
           size: 20,
+          color: active ? kCrimson : const Color(0xFF6B7280),
         ),
         title: Text(
           label,
           style: TextStyle(
-            color: isActive ? _kCrimson : Colors.grey.shade700,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
             fontSize: 13,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? kCrimson : const Color(0xFF374151),
           ),
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        onTap: () => context.go(route),
-        dense: true,
-        visualDensity: const VisualDensity(vertical: -1),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10)),
+        onTap: active ? null : () => context.go(route),
+        // Active indicator bar
+        trailing: active
+            ? Container(
+                width: 3,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: kCrimson,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              )
+            : null,
       ),
     );
   }
+}
+
+// ── Section label ─────────────────────────────────────────────────────────────
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(14, 16, 14, 4),
+        child: Text(
+          text.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Colors.grey.shade400,
+            letterSpacing: 1.0,
+          ),
+        ),
+      );
 }

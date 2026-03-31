@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_service.dart';
-import '../widgets/auth_layout.dart';
+import '../widgets/star_background.dart';
+import '../widgets/app_theme.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,60 +11,75 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey      = GlobalKey<FormState>();
-  final _firstCtrl    = TextEditingController();
-  final _lastCtrl     = TextEditingController();
-  final _emailCtrl    = TextEditingController();
-  final _phoneCtrl    = TextEditingController();
-  final _passCtrl     = TextEditingController();
-  final _confirmCtrl  = TextEditingController();
-  bool  _obscurePass    = true;
-  bool  _obscureConfirm = true;
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
+  final _formKey     = GlobalKey<FormState>();
+  final _firstCtrl   = TextEditingController();
+  final _lastCtrl    = TextEditingController();
+  final _emailCtrl   = TextEditingController();
+  final _passCtrl    = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+  bool _obscurePass    = true;
+  bool _obscureConfirm = true;
 
-  // Config dropdowns — both declared AND used in _buildDropdown calls
-  List<String> _departments = [];
-  List<String> _positions   = [];
+  // Department → Position mapping (static for registration)
+  static const Map<String, List<String>> _deptRoles = {
+    'Business Relationship Management': [
+      'Account Manager', 'Business Analyst', 'Client Relations',
+      'Intern', 'Others',
+    ],
+    'Project Management Office': [
+      'Project Manager', 'Project Coordinator', 'Scrum Master',
+      'Intern', 'Others',
+    ],
+    'Quality Assurance': [
+      'QA Engineer', 'QA Automation Tester', 'Manual Tester',
+      'Intern', 'Others',
+    ],
+    'Technical Support Department': [
+      'IT Support Specialist', 'System Administrator',
+      'Helpdesk Technician', 'Intern', 'Others',
+    ],
+    'Development Department': [
+      'Software Engineer', 'Frontend Developer', 'Backend Developer',
+      'UI/UX Designer', 'Intern', 'Others',
+    ],
+  };
+
+  List<String> get _departments => _deptRoles.keys.toList();
+  List<String> _positions = [];
   String? _selectedDept;
   String? _selectedPos;
 
-  // Validation state
-  String? _passError;
+  // Password strength
+  String _passStrength = '';
+  Color  _passColor    = Colors.grey;
+  double _passValue    = 0;
   String? _confirmError;
-  String  _passStrength = '';
-  Color   _passColor    = Colors.grey;
-  double  _passValue    = 0;
+
+  // Galaxy
+  late AnimationController _bgCtrl;
+  late List<Star> _stars;
 
   @override
   void initState() {
     super.initState();
-    _loadConfig();
+    _stars = generateStars();
+    _bgCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 40),
+    )..repeat();
   }
 
   @override
   void dispose() {
+    _bgCtrl.dispose();
     for (final c in [
-      _firstCtrl, _lastCtrl, _emailCtrl,
-      _phoneCtrl, _passCtrl, _confirmCtrl,
+      _firstCtrl, _lastCtrl, _emailCtrl, _passCtrl, _confirmCtrl,
     ]) {
       c.dispose();
     }
     super.dispose();
-  }
-
-  Future<void> _loadConfig() async {
-    final d = await ApiService.getConfig(type: 'department');
-    final p = await ApiService.getConfig(type: 'position');
-    if (mounted) {
-      setState(() {
-        _departments = (d['items'] as List? ?? [])
-            .map((e) => e['name'] as String)
-            .toList();
-        _positions = (p['items'] as List? ?? [])
-            .map((e) => e['name'] as String)
-            .toList();
-      });
-    }
   }
 
   void _checkStrength(String pass) {
@@ -76,25 +91,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) score++;
     setState(() {
       if (score <= 2) {
-        _passStrength = 'Weak';
-        _passColor = kCrimson;
-        _passValue = 0.25;
+        _passStrength = 'Weak'; _passColor = kCrimsonDeep; _passValue = 0.25;
       } else if (score == 3) {
-        _passStrength = 'Fair';
-        _passColor = Colors.orange;
-        _passValue = 0.50;
+        _passStrength = 'Fair'; _passColor = Colors.orange; _passValue = 0.5;
       } else if (score == 4) {
-        _passStrength = 'Good';
-        _passColor = Colors.blue;
-        _passValue = 0.75;
+        _passStrength = 'Good'; _passColor = Colors.blue; _passValue = 0.75;
       } else {
-        _passStrength = 'Strong';
-        _passColor = Colors.green;
-        _passValue = 1.00;
+        _passStrength = 'Strong'; _passColor = Colors.green; _passValue = 1.0;
       }
-      _passError = (pass.isNotEmpty && pass.length < 8)
-          ? 'Must be at least 8 characters'
-          : null;
       if (_confirmCtrl.text.isNotEmpty) {
         _confirmError =
             _confirmCtrl.text != pass ? 'Passwords do not match' : null;
@@ -102,10 +106,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  void _checkConfirm(String value) {
+  void _checkConfirm(String v) {
     setState(() {
-      _confirmError =
-          value != _passCtrl.text ? 'Passwords do not match' : null;
+      _confirmError = v != _passCtrl.text ? 'Passwords do not match' : null;
     });
   }
 
@@ -122,334 +125,411 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'email':            _emailCtrl.text.trim(),
       'password':         _passCtrl.text,
       'confirm_password': _confirmCtrl.text,
-      'phone':            _phoneCtrl.text.trim(),
       'department':       _selectedDept ?? '',
       'position':         _selectedPos  ?? '',
     });
     if (mounted && ok) context.go('/dashboard');
   }
 
-  // ── Dropdown builder (used for dept, pos) ──────────────────────────────────
-  Widget _buildDropdown({
-    required String? value,
-    required String hint,
-    required List<String> items,
-    required void Function(String?) onChanged,
-  }) {
+  // ── Form ───────────────────────────────────────────────────────────────────
+  Widget _buildForm(AuthProvider auth, {required bool isMobile}) {
+    final dec = pillInputDecoration();
+
     return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF2F5),
-        borderRadius: BorderRadius.circular(25),
+      alignment: Alignment.center,
+      color: Colors.transparent,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 24 : 64,
+        vertical: isMobile ? 24 : 40,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          hint: Text(hint,
-              style: TextStyle(color: Colors.grey[400], fontSize: 15)),
-          isExpanded: true,
-          icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey[500]),
-          style: const TextStyle(color: Colors.black87, fontSize: 16),
-          items: items
-              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-              .toList(),
-          onChanged: items.isEmpty ? null : onChanged,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'CREATE ACCOUNT',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: kCrimsonDeep,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const Spacer(flex: 3),
+
+              // Error banner
+              if (auth.error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: kCrimsonDeep.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: kCrimsonDeep.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.error_outline,
+                        color: kCrimsonDeep, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Text(auth.error!,
+                            style: TextStyle(
+                                color: kCrimsonDeep,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600))),
+                    GestureDetector(
+                      onTap: () =>
+                          context.read<AuthProvider>().clearError(),
+                      child: Icon(Icons.close,
+                          size: 20, color: kCrimsonDeep),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // First + Last name
+              Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      fieldLabel('First Name'),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        controller: _firstCtrl,
+                        decoration: dec.copyWith(hintText: 'First Name'),
+                        validator: (v) => v!.isEmpty ? 'Required' : null,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      fieldLabel('Last Name'),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        controller: _lastCtrl,
+                        decoration: dec.copyWith(hintText: 'Last Name'),
+                        validator: (v) => v!.isEmpty ? 'Required' : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ]),
+              const Spacer(flex: 1),
+
+              // Email
+              fieldLabel('Email Address'),
+              const SizedBox(height: 4),
+              TextFormField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration:
+                    dec.copyWith(hintText: 'Enter Email Address'),
+                validator: (v) {
+                  if (v!.isEmpty) return 'Email is required';
+                  if (!v.contains('@')) return 'Enter a valid email';
+                  return null;
+                },
+              ),
+              const Spacer(flex: 1),
+
+              // Department + Position
+              Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      fieldLabel('Department'),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<String>(
+                        value: _selectedDept,
+                        decoration: dec,
+                        hint: Text(
+                            _departments.isEmpty
+                                ? 'N/A'
+                                : 'Select Department',
+                            style:
+                                const TextStyle(fontSize: 13)),
+                        icon: Icon(Icons.keyboard_arrow_down,
+                            color: Colors.grey.shade500),
+                        items: _departments
+                            .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(s,
+                                    overflow:
+                                        TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 12))))
+                            .toList(),
+                        onChanged: (v) {
+                          setState(() {
+                            _selectedDept = v;
+                            _positions =
+                                _deptRoles[v] ?? ['Intern', 'Others'];
+                            if (_selectedPos != null &&
+                                !_positions.contains(_selectedPos)) {
+                              _selectedPos = null;
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      fieldLabel('Position'),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<String>(
+                        value: _selectedPos,
+                        decoration: dec,
+                        hint: Text(
+                            _positions.isEmpty
+                                ? 'Select Dept First'
+                                : 'Select Position',
+                            style:
+                                const TextStyle(fontSize: 13)),
+                        icon: Icon(Icons.keyboard_arrow_down,
+                            color: Colors.grey.shade500),
+                        items: _positions
+                            .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(s,
+                                    overflow:
+                                        TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 12))))
+                            .toList(),
+                        onChanged: _positions.isEmpty
+                            ? null
+                            : (v) => setState(() => _selectedPos = v),
+                      ),
+                    ],
+                  ),
+                ),
+              ]),
+              const Spacer(flex: 1),
+
+              // Password
+              fieldLabel('Password'),
+              const SizedBox(height: 4),
+              TextFormField(
+                controller: _passCtrl,
+                obscureText: _obscurePass,
+                onChanged: _checkStrength,
+                decoration: dec.copyWith(
+                  hintText: 'Create a password',
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: IconButton(
+                      icon: Icon(
+                        _obscurePass
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: const Color(0xFF9CA3AF),
+                        size: 20,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePass = !_obscurePass),
+                    ),
+                  ),
+                ),
+                validator: (v) {
+                  if (v == null || v.length < 8) {
+                    return 'Min 8 characters';
+                  }
+                  if (!v.contains(RegExp(r'[A-Z]'))) {
+                    return 'Need one uppercase letter';
+                  }
+                  if (!v.contains(RegExp(r'[0-9]'))) {
+                    return 'Need one number';
+                  }
+                  if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+                    return 'Need one special character';
+                  }
+                  return null;
+                },
+              ),
+              if (_passCtrl.text.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: _passValue,
+                        color: _passColor,
+                        backgroundColor: Colors.grey.shade200,
+                        minHeight: 4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 48,
+                    child: Text(_passStrength,
+                        style: TextStyle(
+                            color: _passColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ]),
+              ],
+              const Spacer(flex: 1),
+
+              // Confirm password
+              fieldLabel('Confirm Password'),
+              const SizedBox(height: 4),
+              TextFormField(
+                controller: _confirmCtrl,
+                obscureText: _obscureConfirm,
+                onChanged: _checkConfirm,
+                decoration: dec.copyWith(
+                  hintText: 'Confirm your password',
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: IconButton(
+                      icon: Icon(
+                        _obscureConfirm
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: const Color(0xFF9CA3AF),
+                        size: 20,
+                      ),
+                      onPressed: () => setState(
+                          () => _obscureConfirm = !_obscureConfirm),
+                    ),
+                  ),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'Please confirm your password';
+                  }
+                  if (v != _passCtrl.text) {
+                    return 'Passwords do not match';
+                  }
+                  return null;
+                },
+              ),
+              if (_confirmError != null) ...[
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Text(_confirmError!,
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.red)),
+                ),
+              ],
+              const Spacer(flex: 3),
+
+              CrimsonButton(
+                label: 'SIGN UP',
+                onPressed: auth.isLoading ? null : _register,
+                loading: auth.isLoading,
+              ),
+              const Spacer(flex: 2),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Already have an account? ',
+                      style: TextStyle(
+                          fontSize: 13, color: Color(0xFF6B7280))),
+                  GestureDetector(
+                    onTap: () => context.go('/login'),
+                    child: Text('Login Now',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: kCrimsonDeep,
+                          fontWeight: FontWeight.bold,
+                        )),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    return buildAuthLayout(
-      context: context,
-      headline: 'HI, WELCOME!',
-      subheadline: 'Intern Data & Profile Overview',
-      rightPanel: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Title ──────────────────────────────────────────────────
-            const Text(
-              'CREATE ACCOUNT',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w700,
-                color: kCrimson,
-                letterSpacing: 1.1,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: false,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth > 900) {
+            return Stack(children: [
+              Positioned.fill(
+                child: GalaxyBackground(
+                    animation: _bgCtrl, stars: _stars),
               ),
-            ),
-            const SizedBox(height: 20),
-
-            // ── Error banner ───────────────────────────────────────────
-            if (auth.error != null) ...[
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: kCrimson.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: kCrimson.withValues(alpha: 0.4)),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.error_outline,
-                      color: kCrimson, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                      child: Text(auth.error!,
-                          style: const TextStyle(
-                              color: kCrimson, fontSize: 13))),
-                  GestureDetector(
-                    onTap: () =>
-                        context.read<AuthProvider>().clearError(),
-                    child: const Icon(Icons.close,
-                        size: 15, color: kCrimson),
-                  ),
-                ]),
-              ),
-              const SizedBox(height: 14),
-            ],
-
-            // ── First Name & Last Name ─────────────────────────────────
-            Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    fieldLabel('First Name'),
-                    const SizedBox(height: 6),
-                    plainTextField(
-                      controller: _firstCtrl,
-                      hint: 'First Name',
-                      validator: (v) =>
-                          v!.isEmpty ? 'Required' : null,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    fieldLabel('Last Name'),
-                    const SizedBox(height: 6),
-                    plainTextField(
-                      controller: _lastCtrl,
-                      hint: 'Last Name',
-                      validator: (v) =>
-                          v!.isEmpty ? 'Required' : null,
-                    ),
-                  ],
-                ),
-              ),
-            ]),
-            const SizedBox(height: 14),
-
-            // ── Email ──────────────────────────────────────────────────
-            fieldLabel('Email'),
-            const SizedBox(height: 6),
-            plainTextField(
-              controller: _emailCtrl,
-              hint: 'Enter Email Address',
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) {
-                if (v!.isEmpty) { return 'Email is required'; }
-                if (!v.contains('@')) { return 'Enter a valid email'; }
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-
-            // ── Phone ──────────────────────────────────────────────────
-            fieldLabel('Phone (optional)'),
-            const SizedBox(height: 6),
-            plainTextField(
-              controller: _phoneCtrl,
-              hint: 'Enter Phone Number',
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 14),
-
-            // ── Department & Position dropdowns ────────────────────────
-            Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    fieldLabel('Department'),
-                    const SizedBox(height: 6),
-                    _buildDropdown(
-                      value: _selectedDept,
-                      hint: _departments.isEmpty ? 'N/A' : 'Select',
-                      items: _departments,
-                      onChanged: (v) =>
-                          setState(() => _selectedDept = v),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    fieldLabel('Position'),
-                    const SizedBox(height: 6),
-                    _buildDropdown(
-                      value: _selectedPos,
-                      hint: _positions.isEmpty ? 'N/A' : 'Select',
-                      items: _positions,
-                      onChanged: (v) =>
-                          setState(() => _selectedPos = v),
-                    ),
-                  ],
-                ),
-              ),
-            ]),
-            const SizedBox(height: 14),
-
-            // ── Password + strength meter ──────────────────────────────
-            fieldLabel('Password'),
-            const SizedBox(height: 6),
-            passwordTextField(
-              controller: _passCtrl,
-              hint: 'Enter Password',
-              obscure: _obscurePass,
-              onToggle: () =>
-                  setState(() => _obscurePass = !_obscurePass),
-              onChanged: _checkStrength,
-              hasError: _passError != null,
-              validator: (v) {
-                if (v == null || v.length < 8) {
-                  return 'Min 8 characters';
-                }
-                if (!v.contains(RegExp(r'[A-Z]'))) {
-                  return 'Need one uppercase letter';
-                }
-                if (!v.contains(RegExp(r'[0-9]'))) {
-                  return 'Need one number';
-                }
-                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-                  return 'Need one special character (!@#...)';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 5),
-            if (_passCtrl.text.isNotEmpty) ...[
+              const Positioned.fill(child: GalaxyBlendMask()),
               Row(children: [
                 Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: _passValue,
-                      color: _passColor,
-                      backgroundColor: Colors.grey.shade200,
-                      minHeight: 5,
-                    ),
+                  flex: 5,
+                  child: GalaxyLeftPanel(
+                    headline: 'JOIN US NOW!',
+                    subheadline:
+                        'Intern Data & Profile Overview\nCreate your account to start managing your workspace.',
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  _passStrength,
-                  style: TextStyle(
-                    color: _passColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                Expanded(
+                    flex: 6,
+                    child: _buildForm(auth, isMobile: false)),
               ]),
-              const SizedBox(height: 3),
-            ],
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: Text(
-                _passError ?? 'Must be at least 8 characters',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: _passError != null
-                      ? kCrimson
-                      : Colors.grey[500],
-                ),
+            ]);
+          } else {
+            return Stack(children: [
+              Positioned.fill(
+                child: GalaxyBackground(
+                    animation: _bgCtrl, stars: _stars),
               ),
-            ),
-            const SizedBox(height: 14),
-
-            // ── Confirm password ───────────────────────────────────────
-            fieldLabel('Confirm Password'),
-            const SizedBox(height: 6),
-            passwordTextField(
-              controller: _confirmCtrl,
-              hint: 'Confirm Password',
-              obscure: _obscureConfirm,
-              onToggle: () =>
-                  setState(() => _obscureConfirm = !_obscureConfirm),
-              onChanged: _checkConfirm,
-              hasError: _confirmError != null,
-              validator: (v) {
-                if (v == null || v.isEmpty) {
-                  return 'Please confirm your password';
-                }
-                if (v != _passCtrl.text) {
-                  return 'Passwords do not match';
-                }
-                return null;
-              },
-            ),
-            if (_confirmError != null) ...[
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text(
-                  _confirmError!,
-                  style:
-                      const TextStyle(fontSize: 11, color: kCrimson),
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-
-            // ── Sign up button ─────────────────────────────────────────
-            crimsonButton(
-              label: 'SIGN UP',
-              onPressed: auth.isLoading ? null : _register,
-              loading: auth.isLoading,
-            ),
-            const SizedBox(height: 16),
-
-            // ── Login link ─────────────────────────────────────────────
-            Wrap(
-              alignment: WrapAlignment.center,
-              children: [
-                const Text(
-                  'Already have an account? ',
-                  style: TextStyle(
-                      fontSize: 13, color: Color(0xFF777777)),
-                ),
-                GestureDetector(
-                  onTap: () => context.go('/login'),
-                  child: const Text(
-                    'Login Now',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF2979FF),
-                      fontWeight: FontWeight.w600,
-                      //decoration: TextDecoration.underline,
-                      decorationColor: Color(0xFF2979FF),
-                    ),
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
                   ),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  child: _buildForm(auth, isMobile: true),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ]);
+          }
+        },
       ),
     );
   }

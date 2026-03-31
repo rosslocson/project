@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
-import 'screens/login_screen.dart';
+import 'screens/login_screen.dart' hide LoginScreen;
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/my_profile_screen.dart';   // view-only
@@ -131,6 +131,19 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       routerConfig: _router,
+    );
+  }
+}
+
+class MyProfileScreen extends StatelessWidget {
+  const MyProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Text('My Profile Screen'),
+      ),
     );
   }
 }
