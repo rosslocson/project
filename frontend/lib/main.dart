@@ -51,14 +51,18 @@ class _MyAppState extends State<MyApp> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     _router = GoRouter(
       refreshListenable: auth,
-      redirect: (context, state) {
+      /*redirect: (context, state) {
         final loggedIn = auth.isLoggedIn;
         final isAuthRoute = state.matchedLocation == '/login' ||
             state.matchedLocation == '/register';
         if (!loggedIn && !isAuthRoute) return '/login';
         if (loggedIn && isAuthRoute) return '/dashboard';
         return null;
-      },
+      },*/
+
+      redirect: (context, state) {
+  return null; // 👈 disables login checking
+},
       routes: [
         GoRoute(
           path: '/login',
