@@ -23,10 +23,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadAll();
   }
 
-  // Loads stats and activity logs in parallel.
-  // getActivityLogs() is already filtered on the backend:
-  //   - regular users  → only their own logs
-  //   - admins         → all logs
   Future<void> _loadAll() async {
     setState(() => _loading = true);
     try {
@@ -34,16 +30,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ApiService.getDashboardStats(),
         ApiService.getActivityLogs(),
       ]);
-
       if (!mounted) return;
-
       final statsRes = results[0];
       final logsRes  = results[1];
-
       setState(() {
-        if (statsRes['ok'] == true) {
-          _stats = statsRes;
-        }
+        if (statsRes['ok'] == true) _stats = statsRes;
         _activityLogs = (logsRes['logs'] as List?) ?? [];
         _loading = false;
       });
@@ -51,6 +42,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       debugPrint('_loadAll error: $e');
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  // ── Cleans up raw backend detail strings for display ──────────────────────
+  // Removes technical noise like (id=13), (active=false), email addresses
+  // embedded mid-sentence, and trims extra whitespace.
+  String _cleanDetail(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    return raw
+        .replaceAll(RegExp(r'\s*\(id=\d+\)'), '')           // remove (id=13)
+        .replaceAll(RegExp(r'\s*\(active=\w+\)'), '')        // remove (active=false)
+        .replaceAll(RegExp(r':\s*[\w.+-]+@[\w.-]+\.\w+'), '') // remove ": email@x.com"
+        .replaceAll(RegExp(r'\s{2,}'), ' ')                  // collapse double spaces
+        .trim();
   }
 
   @override
@@ -102,7 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   if (_loading)
                     const Center(child: CircularProgressIndicator())
                   else ...[
-                    // ── Stat cards — visible to ALL users ────────────
+                    // ── Stat cards — all users ────────────────────────
                     LayoutBuilder(builder: (context, constraints) {
                       final cols = constraints.maxWidth > 800 ? 4 : 2;
                       return GridView.count(
@@ -146,7 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     }),
                     const SizedBox(height: 32),
 
-                    // ── Recent users — visible to ALL users ──────────
+                    // ── Recent users — all users ──────────────────────
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -174,11 +178,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // ── Recent Activity — filtered per role ──────────
-                    // Regular users → their own logs only (backend filters)
-                    // Admins        → all users' logs (backend returns all)
+                    // ── Recent Activity ───────────────────────────────
+                    // Backend already filters:
+                    //   regular users → own logs only
+                    //   admins        → all logs
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -292,9 +296,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, i) {
         final log = _activityLogs[i];
+        final action   = log['action'] as String?;
+        final rawDetail = log['details'] as String? ?? action ?? '';
 
-        // Admins see whose action it was; regular users don't need this
-        final logUser = log['user'] as Map<String, dynamic>?;
+        // Strip technical noise from the stored detail string
+        final displayText = _cleanDetail(rawDetail);
+
+        // For admins: show whose action it was as a subtitle
+        final logUser  = log['user'] as Map<String, dynamic>?;
         final userName = (isAdmin && logUser != null)
             ? '${logUser['first_name'] ?? ''} ${logUser['last_name'] ?? ''}'
                 .trim()
@@ -302,12 +311,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         return ListTile(
           dense: true,
-          leading: _actionIcon(log['action'] as String?),
+          leading: _actionIcon(action),
           title: Text(
-            log['details'] ?? log['action'] ?? '',
+            displayText,
             style: const TextStyle(fontSize: 13),
           ),
-          // Only show the user name subtitle for admins
           subtitle: userName.isNotEmpty
               ? Text(
                   userName,
@@ -317,8 +325,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               : null,
           trailing: Text(
             _formatDate(log['created_at'] as String?),
-            style:
-                TextStyle(color: Colors.grey.shade500, fontSize: 11),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
           ),
         );
       },
@@ -389,11 +396,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
     try {
-      final dt = DateTime.parse(dateStr).toLocal();
+      final dt   = DateTime.parse(dateStr).toLocal();
       final diff = DateTime.now().difference(dt);
       if (diff.inMinutes < 1) return 'Just now';
-      if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-      if (diff.inDays < 1) return '${diff.inHours}h ago';
+      if (diff.inHours < 1)   return '${diff.inMinutes}m ago';
+      if (diff.inDays < 1)    return '${diff.inHours}h ago';
       return '${diff.inDays}d ago';
     } catch (_) {
       return '';
