@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
@@ -39,8 +40,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   final _confirmPassCtrl = TextEditingController();
 
   // UI state
-  bool    _savingProfile  = false;
-  bool    _savingPass     = false;
+  bool    _savingProfile = false;
+  bool    _savingPass    = false;
   String? _profileMsg;
   String? _passMsg;
   bool    _profileSuccess = false;
@@ -89,7 +90,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       _positions = (p['items'] as List? ?? [])
           .map((e) => e['name'] as String)
           .toList();
-      // Re-validate selected values exist in list
       if (_selectedDept != null && !_departments.contains(_selectedDept)) {
         _departments.add(_selectedDept!);
       }
@@ -113,9 +113,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (!mounted) return;
     if (res['ok'] == true) {
       context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-      setState(() { _profileMsg = 'Profile updated successfully!'; _profileSuccess = true; });
+      setState(() {
+        _profileMsg    = 'Profile updated successfully!';
+        _profileSuccess = true;
+      });
     } else {
-      setState(() { _profileMsg = res['error'] ?? 'Update failed'; _profileSuccess = false; });
+      setState(() {
+        _profileMsg    = res['error'] ?? 'Update failed';
+        _profileSuccess = false;
+      });
     }
     setState(() => _savingProfile = false);
   }
@@ -135,7 +141,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       _confirmPassCtrl.clear();
       setState(() { _passMsg = 'Password changed successfully!'; _passSuccess = true; });
     } else {
-      setState(() { _passMsg = res['error'] ?? res['details'] ?? 'Change failed'; _passSuccess = false; });
+      setState(() {
+        _passMsg    = res['error'] ?? res['details'] ?? 'Change failed';
+        _passSuccess = false;
+      });
     }
     setState(() => _savingPass = false);
   }
@@ -143,14 +152,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final user   = context.watch<AuthProvider>().user;
-    final colors = Theme.of(context).colorScheme;
+    final user = context.watch<AuthProvider>().user;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5FF),
       body: Row(
         children: [
-          const Sidebar(currentRoute: '/profile'),
+          const Sidebar(currentRoute: '/profile/edit'),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(32),
@@ -159,11 +167,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('My Profile',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
+
+                    // ── Page header with back button ─────────────────────
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios, size: 18),
+                          onPressed: () => context.go('/profile'),
+                          tooltip: 'Back to My Profile',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Edit Profile',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 24),
 
                     // ── Avatar card ──────────────────────────────────────
@@ -173,75 +197,83 @@ class _ProfileScreenState extends State<ProfileScreen>
                           borderRadius: BorderRadius.circular(20)),
                       child: Padding(
                         padding: const EdgeInsets.all(24),
-                        child: Row(children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: _kCrimson.withValues(alpha: 0.1),
-                            backgroundImage: (user?['avatar_url'] as String? ?? '')
-                                    .isNotEmpty
-                                ? NetworkImage(user!['avatar_url'])
-                                : null,
-                            child: (user?['avatar_url'] as String? ?? '').isEmpty
-                                ? Text(
-                                    '${(user?['first_name'] as String? ?? ' ')[0]}'
-                                    '${(user?['last_name']  as String? ?? ' ')[0]}',
-                                    style: TextStyle(
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor:
+                                  _kCrimson.withValues(alpha: 0.1),
+                              backgroundImage:
+                                  (user?['avatar_url'] as String? ?? '')
+                                          .isNotEmpty
+                                      ? NetworkImage(user!['avatar_url'])
+                                      : null,
+                              child: (user?['avatar_url'] as String? ?? '')
+                                      .isEmpty
+                                  ? Text(
+                                      '${(user?['first_name'] as String? ?? ' ')[0]}'
+                                      '${(user?['last_name'] as String? ?? ' ')[0]}',
+                                      style: const TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
-                                        color: colors.primary),
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(width: 20),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                Text(user?['email'] ?? '',
-                                    style: TextStyle(
-                                        color: Colors.grey.shade600)),
-                                if ((user?['department'] as String? ?? '')
-                                    .isNotEmpty) ...[
-                                  const SizedBox(height: 2),
+                                        color: _kCrimson,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    '${user?['department']} · ${user?['position'] ?? ''}',
-                                    style: TextStyle(
-                                        color: Colors.grey.shade500,
-                                        fontSize: 13),
+                                    '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
-                                ],
-                                const SizedBox(height: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: user?['role'] == 'admin'
-                                        ? Colors.red.shade50
-                                        : _kCrimson.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    (user?['role'] ?? 'user').toUpperCase(),
+                                  Text(
+                                    user?['email'] ?? '',
                                     style: TextStyle(
+                                        color: Colors.grey.shade600),
+                                  ),
+                                  if ((user?['department'] as String? ?? '')
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${user?['department']} · ${user?['position'] ?? ''}',
+                                      style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 13),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
                                       color: user?['role'] == 'admin'
-                                          ? Colors.red.shade700
-                                          : _kCrimson,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
+                                          ? Colors.red.shade50
+                                          : _kCrimson.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      (user?['role'] ?? 'user').toUpperCase(),
+                                      style: TextStyle(
+                                        color: user?['role'] == 'admin'
+                                            ? Colors.red.shade700
+                                            : _kCrimson,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        ]),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -251,29 +283,32 @@ class _ProfileScreenState extends State<ProfileScreen>
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20)),
-                      child: Column(children: [
-                        TabBar(
-                          controller: _tabs,
-                          labelColor: _kCrimson,
-                          indicatorColor: _kCrimson,
-                          unselectedLabelColor: Colors.grey,
-                          tabs: const [
-                            Tab(text: 'Edit Profile'),
-                            Tab(text: 'Change Password'),
-                          ],
-                        ),
-                        SizedBox(
-                          height: 520,
-                          child: TabBarView(
+                      child: Column(
+                        children: [
+                          TabBar(
                             controller: _tabs,
-                            children: [
-                              _buildProfileForm(),
-                              _buildPasswordForm(),
+                            labelColor: _kCrimson,
+                            indicatorColor: _kCrimson,
+                            unselectedLabelColor: Colors.grey,
+                            tabs: const [
+                              Tab(text: 'Edit Profile'),
+                              Tab(text: 'Change Password'),
                             ],
                           ),
-                        ),
-                      ]),
+                          SizedBox(
+                            height: 520,
+                            child: TabBarView(
+                              controller: _tabs,
+                              children: [
+                                _buildProfileForm(),
+                                _buildPasswordForm(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+
                   ],
                 ),
               ),
@@ -298,7 +333,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 12),
             ],
 
-            // Name row
             Row(children: [
               Expanded(child: TextFormField(
                 controller: _firstCtrl,
@@ -314,7 +348,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ]),
             const SizedBox(height: 12),
 
-            // Email (read-only)
             TextFormField(
               controller: _emailCtrl,
               enabled: false,
@@ -325,7 +358,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: 12),
 
-            // Phone
             TextFormField(
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
@@ -336,7 +368,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: 12),
 
-            // Department dropdown
             _dropdownField(
               label: 'Department',
               value: _selectedDept,
@@ -348,7 +379,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: 12),
 
-            // Position dropdown
             _dropdownField(
               label: 'Position',
               value: _selectedPos,
@@ -360,7 +390,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: 12),
 
-            // Bio
             TextFormField(
               controller: _bioCtrl,
               maxLines: 3,
@@ -384,7 +413,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 child: _savingProfile
                     ? const SizedBox(
-                        height: 20, width: 20,
+                        height: 20,
+                        width: 20,
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
                     : const Text('Save Changes',
@@ -419,16 +449,20 @@ class _ProfileScreenState extends State<ProfileScreen>
               validator: (v) => v!.isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 12),
+
             _passField(
               controller: _newPassCtrl,
               label: 'New Password',
               obscure: _obscureNew,
               onToggle: () => setState(() => _obscureNew = !_obscureNew),
-              // FIX: wrapped bare if-body in curly braces
               validator: (v) {
                 if (v == null || v.length < 8) { return 'Min 8 characters'; }
-                if (!v.contains(RegExp(r'[A-Z]'))) { return 'Need one uppercase letter'; }
-                if (!v.contains(RegExp(r'[0-9]'))) { return 'Need one number'; }
+                if (!v.contains(RegExp(r'[A-Z]'))) {
+                  return 'Need one uppercase letter';
+                }
+                if (!v.contains(RegExp(r'[0-9]'))) {
+                  return 'Need one number';
+                }
                 if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
                   return 'Need one special character';
                 }
@@ -436,14 +470,15 @@ class _ProfileScreenState extends State<ProfileScreen>
               },
             ),
             const SizedBox(height: 12),
+
             _passField(
               controller: _confirmPassCtrl,
               label: 'Confirm New Password',
               obscure: _obscureConf,
               onToggle: () => setState(() => _obscureConf = !_obscureConf),
               validator: (v) {
-                if (v!.isEmpty) return 'Required';
-                if (v != _newPassCtrl.text) return 'Passwords do not match';
+                if (v!.isEmpty) { return 'Required'; }
+                if (v != _newPassCtrl.text) { return 'Passwords do not match'; }
                 return null;
               },
             ),
@@ -462,7 +497,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 child: _savingPass
                     ? const SizedBox(
-                        height: 20, width: 20,
+                        height: 20,
+                        width: 20,
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
                     : const Text('Change Password',
@@ -475,7 +511,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Shared helpers ─────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
   Widget _dropdownField({
     required String label,
     required String? value,
@@ -509,8 +545,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 isExpanded: true,
                 icon: Icon(Icons.keyboard_arrow_down,
                     color: Colors.grey[500]),
-                style: const TextStyle(
-                    color: Colors.black87, fontSize: 14),
+                style: const TextStyle(color: Colors.black87, fontSize: 14),
                 items: items
                     .map((s) =>
                         DropdownMenuItem(value: s, child: Text(s)))
@@ -551,22 +586,25 @@ class _ProfileScreenState extends State<ProfileScreen>
           color: success ? Colors.green.shade50 : Colors.red.shade50,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color:
-                  success ? Colors.green.shade200 : Colors.red.shade200),
+              color: success
+                  ? Colors.green.shade200
+                  : Colors.red.shade200),
         ),
-        child: Row(children: [
-          Icon(
-              success ? Icons.check_circle : Icons.error_outline,
-              color: success ? Colors.green : Colors.red,
-              size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(msg,
-                style: TextStyle(
-                    color: success
-                        ? Colors.green.shade800
-                        : Colors.red.shade800)),
-          ),
-        ]),
+        child: Row(
+          children: [
+            Icon(
+                success ? Icons.check_circle : Icons.error_outline,
+                color: success ? Colors.green : Colors.red,
+                size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(msg,
+                  style: TextStyle(
+                      color: success
+                          ? Colors.green.shade800
+                          : Colors.red.shade800)),
+            ),
+          ],
+        ),
       );
 }

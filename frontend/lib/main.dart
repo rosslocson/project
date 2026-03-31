@@ -7,9 +7,11 @@ import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/profile_screen.dart';
+import 'screens/my_profile_screen.dart';   // view-only
+import 'screens/profile_screen.dart';       // edit profile
 import 'screens/users_screen.dart';
 import 'screens/add_user_screen.dart';
+import 'screens/config_screen.dart';        // departments & positions
 
 void main() {
   runApp(
@@ -73,8 +75,15 @@ class _MyAppState extends State<MyApp> {
           pageBuilder: (c, s) => _noTransition(
               context: c, state: s, child: const DashboardScreen()),
         ),
+        // View-only profile
         GoRoute(
           path: '/profile',
+          pageBuilder: (c, s) => _noTransition(
+              context: c, state: s, child: const MyProfileScreen()),
+        ),
+        // Edit profile
+        GoRoute(
+          path: '/profile/edit',
           pageBuilder: (c, s) => _noTransition(
               context: c, state: s, child: const ProfileScreen()),
         ),
@@ -87,6 +96,12 @@ class _MyAppState extends State<MyApp> {
           path: '/users/add',
           pageBuilder: (c, s) => _noTransition(
               context: c, state: s, child: const AddUserScreen()),
+        ),
+        // Departments & positions config page
+        GoRoute(
+          path: '/config',
+          pageBuilder: (c, s) => _noTransition(
+              context: c, state: s, child: const ConfigScreen()),
         ),
         GoRoute(path: '/', redirect: (_, __) => '/dashboard'),
       ],
