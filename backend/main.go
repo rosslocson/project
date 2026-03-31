@@ -102,6 +102,7 @@ func main() {
 		cfg.Use(middleware.AdminOnly())
 		{
 			cfg.POST("", h.CreateConfig)
+			cfg.PUT("/:id", h.UpdateConfig) // ← NEW: edit department/position name
 			cfg.DELETE("/:id", h.DeleteConfig)
 		}
 

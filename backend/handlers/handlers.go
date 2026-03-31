@@ -662,3 +662,28 @@ func (h *Handler) DeleteConfig(c *gin.Context) {
 	h.DB.Delete(&item)
 	c.JSON(http.StatusOK, gin.H{"message": "Deleted", "ok": true})
 }
+
+// ════════════════════════════════════════════════════════════════════
+// 2. ADD THIS HANDLER to handlers.go
+//    Place it right after DeleteConfig()
+// ════════════════════════════════════════════════════════════════════
+
+func (h *Handler) UpdateConfig(c *gin.Context) {
+	var item models.DepartmentConfig
+	if h.DB.First(&item, c.Param("id")).Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		return
+	}
+	var body struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.DB.Model(&item).Update("name", body.Name).Error; err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Name already exists"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Updated", "item": item, "ok": true})
+}

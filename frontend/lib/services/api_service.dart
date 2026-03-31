@@ -221,6 +221,25 @@ class ApiService {
     }
   }
 
+// ════════════════════════════════════════════════════════════════════
+// 1. ADD THIS METHOD to api_service.dart
+//    Place it right after deleteConfig()
+// ════════════════════════════════════════════════════════════════════
+ 
+static Future<Map<String, dynamic>> updateConfig(int id, String name) async {
+  try {
+    final res = await http.put(
+      Uri.parse('$baseUrl/config/$id'),
+      headers: await _authHeaders(),
+      body: jsonEncode({'name': name}),
+    );
+    return _parse(res);
+  } catch (e) {
+    return {'ok': false, 'error': 'Connection error'};
+  }
+}
+
+
   static Future<Map<String, dynamic>> deleteUser(int id) async {
     try {
       final res = await http.delete(
