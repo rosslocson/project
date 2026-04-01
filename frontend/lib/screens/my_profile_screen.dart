@@ -1,601 +1,307 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_service.dart';
-import '../widgets/star_background.dart';
-import '../widgets/app_theme.dart';
+import '../widgets/sidebar.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+const _kCrimson = Color(0xFF7B0D1E);
+
+class MyProfileScreen extends StatelessWidget {
+  const MyProfileScreen({super.key});
+
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  Widget build(BuildContext context) {
+    final user   = context.watch<AuthProvider>().user;
+    final isAdmin = user?['role'] == 'admin';
+
+    String initials = '';
+    final first = user?['first_name'] as String? ?? '';
+    final last  = user?['last_name']  as String? ?? '';
+    if (first.isNotEmpty) initials += first[0];
+    if (last.isNotEmpty)  initials += last[0];
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5FF),
+      body: Row(
+        children: [
+          const Sidebar(currentRoute: '/profile'),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Page header ──────────────────────────────────────
+                    Row(
+                      children: [
+                        Text('My Profile',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        // Small edit button
+                        OutlinedButton.icon(
+                          onPressed: () => context.go('/profile/edit'),
+                          icon: const Icon(Icons.edit_outlined, size: 15),
+                          label: const Text('Edit Profile',
+                              style: TextStyle(fontSize: 13)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _kCrimson,
+                            side: const BorderSide(color: _kCrimson),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Avatar + name card ───────────────────────────────
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(28),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Avatar
+                            CircleAvatar(
+                              radius: 44,
+                              backgroundColor:
+                                  _kCrimson.withValues(alpha: 0.1),
+                              backgroundImage:
+                                  (user?['avatar_url'] as String? ?? '')
+                                          .isNotEmpty
+                                      ? NetworkImage(user!['avatar_url'])
+                                      : null,
+                              child:
+                                  (user?['avatar_url'] as String? ?? '')
+                                          .isEmpty
+                                      ? Text(
+                                          initials,
+                                          style: const TextStyle(
+                                            fontSize: 30,
+                                            fontWeight: FontWeight.bold,
+                                            color: _kCrimson,
+                                          ),
+                                        )
+                                      : null,
+                            ),
+                            const SizedBox(width: 24),
+                            // Info
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$first $last',
+                                    style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    user?['email'] ?? '',
+                                    style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      // Role badge
+                                      _Badge(
+                                        label: (user?['role'] ?? 'user')
+                                            .toUpperCase(),
+                                        color: isAdmin
+                                            ? Colors.red.shade700
+                                            : _kCrimson,
+                                        bg: isAdmin
+                                            ? Colors.red.shade50
+                                            : _kCrimson
+                                                .withValues(alpha: 0.08),
+                                      ),
+                                      // Active badge
+                                      _Badge(
+                                        label: (user?['is_active'] == true)
+                                            ? 'ACTIVE'
+                                            : 'INACTIVE',
+                                        color: (user?['is_active'] == true)
+                                            ? Colors.green.shade700
+                                            : Colors.orange.shade700,
+                                        bg: (user?['is_active'] == true)
+                                            ? Colors.green.shade50
+                                            : Colors.orange.shade50,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Details grid ─────────────────────────────────────
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Personal Information',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 20),
+                            _InfoGrid(fields: [
+                              _Field('First Name', first),
+                              _Field('Last Name', last),
+                              _Field('Email', user?['email'] ?? '—'),
+                              _Field('Phone',
+                                  (user?['phone'] as String? ?? '').isEmpty
+                                      ? '—'
+                                      : user!['phone']),
+                              _Field('Department',
+                                  (user?['department'] as String? ?? '')
+                                          .isEmpty
+                                      ? '—'
+                                      : user!['department']),
+                              _Field('Position',
+                                  (user?['position'] as String? ?? '')
+                                          .isEmpty
+                                      ? '—'
+                                      : user!['position']),
+                            ]),
+                            if ((user?['bio'] as String? ?? '').isNotEmpty) ...[
+                              const SizedBox(height: 20),
+                              const Divider(),
+                              const SizedBox(height: 16),
+                              const Text('Bio',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black54)),
+                              const SizedBox(height: 6),
+                              Text(user!['bio'],
+                                  style: const TextStyle(
+                                      fontSize: 14, height: 1.5)),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
-  final _formKey   = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
-  final _passCtrl  = TextEditingController();
-  bool _obscure    = true;
+// ── Supporting widgets ────────────────────────────────────────────────────────
 
-  // Lockout
-  bool   _isLocked     = false;
-  int    _lockSecsLeft = 0;
-  int    _attemptsLeft = 3;
-  Timer? _lockTimer;
-
-  // Reset password
-  final _resetEmailCtrl = TextEditingController();
-  final _resetTokenCtrl = TextEditingController();
-  final _newPassCtrl    = TextEditingController();
-  final _confPassCtrl   = TextEditingController();
-
-  // Galaxy
-  late AnimationController _bgCtrl;
-  late List<Star> _stars;
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color bg;
+  const _Badge({required this.label, required this.color, required this.bg});
 
   @override
-  void initState() {
-    super.initState();
-    _stars = generateStars();
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 40),
-    )..repeat();
-  }
+  Widget build(BuildContext context) => Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color)),
+      );
+}
+
+class _Field {
+  final String label;
+  final String value;
+  const _Field(this.label, this.value);
+}
+
+class _InfoGrid extends StatelessWidget {
+  final List<_Field> fields;
+  const _InfoGrid({required this.fields});
 
   @override
-  void dispose() {
-    _bgCtrl.dispose();
-    _lockTimer?.cancel();
-    for (final c in [
-      _emailCtrl, _passCtrl, _resetEmailCtrl,
-      _resetTokenCtrl, _newPassCtrl, _confPassCtrl,
-    ]) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  // ── Lock countdown ─────────────────────────────────────────────────────────
-  void _startLockCountdown(int seconds) {
-    setState(() { _isLocked = true; _lockSecsLeft = seconds; });
-    _lockTimer?.cancel();
-    _lockTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() => _lockSecsLeft--);
-      if (_lockSecsLeft <= 0) {
-        t.cancel();
-        setState(() { _isLocked = false; _attemptsLeft = 3; });
-        context.read<AuthProvider>().clearError();
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final wide = constraints.maxWidth > 400;
+      if (wide) {
+        // 2-column grid
+        final rows = <Widget>[];
+        for (int i = 0; i < fields.length; i += 2) {
+          rows.add(Row(
+            children: [
+              Expanded(child: _FieldTile(fields[i])),
+              const SizedBox(width: 24),
+              Expanded(
+                  child: i + 1 < fields.length
+                      ? _FieldTile(fields[i + 1])
+                      : const SizedBox()),
+            ],
+          ));
+          if (i + 2 < fields.length) rows.add(const SizedBox(height: 16));
+        }
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: rows);
+      } else {
+        return Column(
+          children: fields
+              .map((f) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _FieldTile(f),
+                  ))
+              .toList(),
+        );
       }
     });
   }
+}
 
-  // ── Login ──────────────────────────────────────────────────────────────────
-  Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
-    final auth   = context.read<AuthProvider>();
-    final result = await auth.loginWithDetails(
-        _emailCtrl.text.trim(), _passCtrl.text);
-    if (!mounted) return;
-    if (result['ok'] == true) {
-      context.go('/dashboard');
-    } else if (result['locked'] == true) {
-      _startLockCountdown(result['retry_after_secs'] as int? ?? 60);
-    } else {
-      setState(() => _attemptsLeft =
-          result['attempts_left'] as int? ?? _attemptsLeft - 1);
-    }
-  }
+class _FieldTile extends StatelessWidget {
+  final _Field field;
+  const _FieldTile(this.field);
 
-  // ── Forgot password sheet ──────────────────────────────────────────────────
-  void _showForgotPassword() {
-    String? resetToken;
-    String? stepMsg;
-    bool    stepLoading = false;
-    int     step        = 1;
-    _resetEmailCtrl.text = _emailCtrl.text.trim();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) {
-          Future<void> requestReset() async {
-            if (_resetEmailCtrl.text.isEmpty) return;
-            setSheet(() { stepLoading = true; stepMsg = null; });
-            final res = await ApiService.forgotPassword(
-                _resetEmailCtrl.text.trim());
-            setSheet(() => stepLoading = false);
-            if (res['ok'] == true) {
-              resetToken = res['reset_token'];
-              setSheet(() {
-                step    = 2;
-                stepMsg = res['message'];
-                if (resetToken != null) {
-                  _resetTokenCtrl.text = resetToken!;
-                }
-              });
-            } else {
-              setSheet(() => stepMsg = res['error'] ?? 'Request failed');
-            }
-          }
-
-          Future<void> doReset() async {
-            if (_resetTokenCtrl.text.isEmpty || _newPassCtrl.text.isEmpty) {
-              return;
-            }
-            if (_newPassCtrl.text != _confPassCtrl.text) {
-              setSheet(() => stepMsg = 'Passwords do not match');
-              return;
-            }
-            setSheet(() { stepLoading = true; stepMsg = null; });
-            final res = await ApiService.resetPassword(
-                _resetTokenCtrl.text.trim(),
-                _newPassCtrl.text,
-                _confPassCtrl.text);
-            setSheet(() => stepLoading = false);
-            if (res['ok'] == true) {
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: const Text('Password reset! You can now log in.'),
-                  backgroundColor: Colors.green.shade700,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ));
-                setState(() { _isLocked = false; _attemptsLeft = 3; });
-                _lockTimer?.cancel();
-                context.read<AuthProvider>().clearError();
-              }
-            } else {
-              setSheet(() => stepMsg = res['error'] ?? 'Reset failed');
-            }
-          }
-
-          final dec = pillInputDecoration();
-
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(32)),
-            ),
-            padding: EdgeInsets.only(
-              left: 32, right: 32, top: 24,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 40,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 48, height: 5,
-                    decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2.5)),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: kCrimsonDeep.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.lock_reset,
-                        color: kCrimsonDeep, size: 26),
-                  ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Reset Password',
-                          style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold)),
-                      Text(
-                        step == 1
-                            ? 'Step 1 of 2 — Enter your email'
-                            : 'Step 2 of 2 — Set new password',
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ]),
-                const SizedBox(height: 20),
-                if (stepMsg != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade100),
-                    ),
-                    child: Text(stepMsg!,
-                        style: TextStyle(
-                            color: Colors.blue.shade800,
-                            fontSize: 13,
-                            height: 1.4)),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                if (step == 1) ...[
-                  fieldLabel('Email Address'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _resetEmailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: dec.copyWith(
-                        hintText: 'Enter your registered email'),
-                  ),
-                  const SizedBox(height: 20),
-                  CrimsonButton(
-                    label: 'SEND RESET TOKEN',
-                    onPressed: stepLoading ? null : requestReset,
-                    loading: stepLoading,
-                  ),
-                ] else ...[
-                  fieldLabel('Reset Token'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _resetTokenCtrl,
-                    decoration:
-                        dec.copyWith(hintText: 'Paste token from email'),
-                  ),
-                  const SizedBox(height: 14),
-                  fieldLabel('New Password'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _newPassCtrl,
-                    obscureText: true,
-                    decoration:
-                        dec.copyWith(hintText: 'Enter new password'),
-                  ),
-                  const SizedBox(height: 14),
-                  fieldLabel('Confirm New Password'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _confPassCtrl,
-                    obscureText: true,
-                    decoration:
-                        dec.copyWith(hintText: 'Confirm new password'),
-                  ),
-                  const SizedBox(height: 20),
-                  CrimsonButton(
-                    label: 'RESET PASSWORD',
-                    onPressed: stepLoading ? null : doReset,
-                    loading: stepLoading,
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () =>
-                        setSheet(() { step = 1; stepMsg = null; }),
-                    child: Text('← Back to Email',
-                        style: TextStyle(color: Colors.grey.shade600)),
-                  ),
-                ],
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ── Form panel ─────────────────────────────────────────────────────────────
-  Widget _buildForm(AuthProvider auth) {
-    final dec = pillInputDecoration();
-
-    return Container(
-      alignment: Alignment.center,
-      color: Colors.transparent,
-      padding:
-          const EdgeInsets.symmetric(horizontal: 64, vertical: 40),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'LOGIN TO YOUR ACCOUNT',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: kCrimsonDeep,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              // Banners
-              if (_isLocked) ...[
-                _lockedBanner(),
-                const SizedBox(height: 20),
-              ] else if (auth.error != null) ...[
-                _errorBanner(auth),
-                const SizedBox(height: 20),
-              ],
-
-              fieldLabel('Email Address'),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                enabled: !_isLocked,
-                decoration: dec.copyWith(hintText: 'Enter your email'),
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Email is required';
-                  if (!v.contains('@')) return 'Enter a valid email';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-
-              fieldLabel('Password'),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _passCtrl,
-                obscureText: _obscure,
-                enabled: !_isLocked,
-                decoration: dec.copyWith(
-                  hintText: 'Enter your password',
-                  suffixIcon: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: IconButton(
-                      icon: Icon(
-                        _obscure
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: const Color(0xFF9CA3AF),
-                        size: 22,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscure = !_obscure),
-                    ),
-                  ),
-                ),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Password is required' : null,
-              ),
-              const SizedBox(height: 12),
-
-              Row(children: [
-                const Spacer(),
-                GestureDetector(
-                  onTap: _showForgotPassword,
-                  child: Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: kCrimsonDeep,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 36),
-
-              CrimsonButton(
-                label: _isLocked
-                    ? 'LOCKED — WAIT ${_lockSecsLeft}s'
-                    : 'LOGIN',
-                onPressed: (auth.isLoading || _isLocked) ? null : _login,
-                loading: auth.isLoading,
-              ),
-              const SizedBox(height: 28),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Don't have an account? ",
-                      style: TextStyle(
-                          fontSize: 13, color: Color(0xFF6B7280))),
-                  GestureDetector(
-                    onTap: () => context.go('/register'),
-                    child: Text('Sign Up Now',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: kCrimsonDeep,
-                          fontWeight: FontWeight.bold,
-                        )),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: false,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 900) {
-            return Stack(children: [
-              Positioned.fill(
-                child: GalaxyBackground(
-                    animation: _bgCtrl, stars: _stars),
-              ),
-              const Positioned.fill(child: GalaxyBlendMask()),
-              Row(children: [
-                Expanded(
-                  flex: 5,
-                  child: GalaxyLeftPanel(
-                    headline: 'HI, WELCOME!',
-                    subheadline:
-                        'Intern Data & Profile Overview\nSecurely manage and monitor your workspace.',
-                  ),
-                ),
-                Expanded(flex: 6, child: _buildForm(auth)),
-              ]),
-            ]);
-          } else {
-            return Stack(children: [
-              Positioned.fill(
-                child: GalaxyBackground(
-                    animation: _bgCtrl, stars: _stars),
-              ),
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  child: _buildForm(auth),
-                ),
-              ),
-            ]);
-          }
-        },
-      ),
-    );
-  }
-
-  // ── Banners ────────────────────────────────────────────────────────────────
-  Widget _lockedBanner() => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: kCrimsonDeep.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: kCrimsonDeep.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Icon(Icons.lock, color: kCrimsonDeep, size: 18),
-                const SizedBox(width: 8),
-                Text('Account temporarily locked',
-                    style: TextStyle(
-                        color: kCrimsonDeep,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13)),
-              ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                Icon(Icons.timer_outlined,
-                    color: kCrimsonDeep, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                    'Try again in $_lockSecsLeft second${_lockSecsLeft != 1 ? 's' : ''}',
-                    style:
-                        TextStyle(color: kCrimsonDeep, fontSize: 12)),
-              ]),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: _lockSecsLeft / 60,
-                  backgroundColor:
-                      kCrimsonDeep.withValues(alpha: 0.15),
-                  color: kCrimsonDeep,
-                  minHeight: 4,
-                ),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _showForgotPassword,
-                child: Text('Forgot your password? Reset it now →',
-                    style: TextStyle(
-                        color: kCrimsonDeep,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700)),
-              ),
-            ]),
-      );
-
-  Widget _errorBanner(AuthProvider auth) => Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.orange.shade50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.orange.shade200),
-        ),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Icon(Icons.warning_amber_rounded,
-                    color: Colors.orange.shade700, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(auth.error!,
-                        style: TextStyle(
-                            color: Colors.orange.shade900,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500))),
-                GestureDetector(
-                  onTap: () =>
-                      context.read<AuthProvider>().clearError(),
-                  child: Icon(Icons.close,
-                      size: 20, color: Colors.orange.shade400),
-                ),
-              ]),
-              if (_attemptsLeft > 0) ...[
-                const SizedBox(height: 8),
-                Row(children: [
-                  Text('Attempts left: ',
-                      style: TextStyle(
-                          color: Colors.orange.shade800,
-                          fontSize: 12)),
-                  ...List.generate(
-                      3,
-                      (i) => Container(
-                            width: 8,
-                            height: 8,
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 3),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: i < _attemptsLeft
-                                  ? Colors.orange.shade500
-                                  : Colors.orange.shade100,
-                            ),
-                          )),
-                ]),
-              ],
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _showForgotPassword,
-                child: Text('Forgot password? Reset it →',
-                    style: TextStyle(
-                        color: Colors.orange.shade800,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-              ),
-            ]),
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(field.label,
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black45,
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          Text(field.value,
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w500)),
+        ],
       );
 }

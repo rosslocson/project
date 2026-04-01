@@ -1,17 +1,21 @@
+// ============================================================
+// IMPORTANT: Do NOT add "hide LoginScreen" to the import below.
+// Do NOT define any Screen classes at the bottom of this file.
+// ============================================================
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
-import 'screens/login_screen.dart' hide LoginScreen;
+import 'screens/login_screen.dart';       // ← NO "hide" keyword here
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/my_profile_screen.dart';   // view-only
-import 'screens/profile_screen.dart';       // edit profile
+import 'screens/my_profile_screen.dart';  // ← imported from its own file
+import 'screens/profile_screen.dart';
 import 'screens/users_screen.dart';
 import 'screens/add_user_screen.dart';
-import 'screens/config_screen.dart';        // departments & positions
+import 'screens/config_screen.dart';
 
 void main() {
   runApp(
@@ -51,18 +55,15 @@ class _MyAppState extends State<MyApp> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     _router = GoRouter(
       refreshListenable: auth,
-      /*redirect: (context, state) {
+      redirect: (context, state) {
         final loggedIn = auth.isLoggedIn;
-        final isAuthRoute = state.matchedLocation == '/login' ||
+        final isAuthRoute =
+            state.matchedLocation == '/login' ||
             state.matchedLocation == '/register';
         if (!loggedIn && !isAuthRoute) return '/login';
         if (loggedIn && isAuthRoute) return '/dashboard';
         return null;
-      },*/
-
-      redirect: (context, state) {
-  return null; // 👈 disables login checking
-},
+      },
       routes: [
         GoRoute(
           path: '/login',
@@ -79,13 +80,11 @@ class _MyAppState extends State<MyApp> {
           pageBuilder: (c, s) => _noTransition(
               context: c, state: s, child: const DashboardScreen()),
         ),
-        // View-only profile
         GoRoute(
           path: '/profile',
           pageBuilder: (c, s) => _noTransition(
               context: c, state: s, child: const MyProfileScreen()),
         ),
-        // Edit profile
         GoRoute(
           path: '/profile/edit',
           pageBuilder: (c, s) => _noTransition(
@@ -101,7 +100,6 @@ class _MyAppState extends State<MyApp> {
           pageBuilder: (c, s) => _noTransition(
               context: c, state: s, child: const AddUserScreen()),
         ),
-        // Departments & positions config page
         GoRoute(
           path: '/config',
           pageBuilder: (c, s) => _noTransition(
@@ -138,16 +136,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
-class MyProfileScreen extends StatelessWidget {
-  const MyProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('My Profile Screen'),
-      ),
-    );
-  }
-}
+// ============================================================
+// END OF FILE — do not add any class definitions below this line
+// ============================================================
