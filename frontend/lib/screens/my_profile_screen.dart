@@ -11,12 +11,12 @@ class MyProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user   = context.watch<AuthProvider>().user;
+    final user    = context.watch<AuthProvider>().user;
     final isAdmin = user?['role'] == 'admin';
 
-    String initials = '';
     final first = user?['first_name'] as String? ?? '';
     final last  = user?['last_name']  as String? ?? '';
+    String initials = '';
     if (first.isNotEmpty) initials += first[0];
     if (last.isNotEmpty)  initials += last[0];
 
@@ -33,26 +33,30 @@ class MyProfileScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Page header ──────────────────────────────────────
+
+                    // ── Header row ───────────────────────────────────────
                     Row(
                       children: [
-                        Text('My Profile',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          'My Profile',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
                         const Spacer(),
-                        // Small edit button
+                        // ── Edit Profile button → goes to /profile/edit ──
                         OutlinedButton.icon(
-                          onPressed: () => context.go('/profile/edit'),
-                          icon: const Icon(Icons.edit_outlined, size: 15),
-                          label: const Text('Edit Profile',
-                              style: TextStyle(fontSize: 13)),
+                          onPressed: () {
+                            context.go('/profile/edit');
+                          },
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: const Text('Edit Profile'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _kCrimson,
                             side: const BorderSide(color: _kCrimson),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
+                                horizontal: 16, vertical: 10),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
                           ),
@@ -71,7 +75,6 @@ class MyProfileScreen extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Avatar
                             CircleAvatar(
                               radius: 44,
                               backgroundColor:
@@ -81,21 +84,19 @@ class MyProfileScreen extends StatelessWidget {
                                           .isNotEmpty
                                       ? NetworkImage(user!['avatar_url'])
                                       : null,
-                              child:
-                                  (user?['avatar_url'] as String? ?? '')
-                                          .isEmpty
-                                      ? Text(
-                                          initials,
-                                          style: const TextStyle(
-                                            fontSize: 30,
-                                            fontWeight: FontWeight.bold,
-                                            color: _kCrimson,
-                                          ),
-                                        )
-                                      : null,
+                              child: (user?['avatar_url'] as String? ?? '')
+                                      .isEmpty
+                                  ? Text(
+                                      initials,
+                                      style: const TextStyle(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.bold,
+                                        color: _kCrimson,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 24),
-                            // Info
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +118,6 @@ class MyProfileScreen extends StatelessWidget {
                                   Wrap(
                                     spacing: 8,
                                     children: [
-                                      // Role badge
                                       _Badge(
                                         label: (user?['role'] ?? 'user')
                                             .toUpperCase(),
@@ -129,7 +129,6 @@ class MyProfileScreen extends StatelessWidget {
                                             : _kCrimson
                                                 .withValues(alpha: 0.08),
                                       ),
-                                      // Active badge
                                       _Badge(
                                         label: (user?['is_active'] == true)
                                             ? 'ACTIVE'
@@ -152,7 +151,7 @@ class MyProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Details grid ─────────────────────────────────────
+                    // ── Info grid ────────────────────────────────────────
                     Card(
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -162,29 +161,41 @@ class MyProfileScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Personal Information',
-                                style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Personal Information',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold),
+                            ),
                             const SizedBox(height: 20),
-                            _InfoGrid(fields: [
-                              _Field('First Name', first),
-                              _Field('Last Name', last),
+                            _infoRow(context, [
+                              _Field('First Name', first.isEmpty ? '—' : first),
+                              _Field('Last Name', last.isEmpty ? '—' : last),
+                            ]),
+                            const SizedBox(height: 16),
+                            _infoRow(context, [
                               _Field('Email', user?['email'] ?? '—'),
-                              _Field('Phone',
-                                  (user?['phone'] as String? ?? '').isEmpty
-                                      ? '—'
-                                      : user!['phone']),
-                              _Field('Department',
-                                  (user?['department'] as String? ?? '')
-                                          .isEmpty
-                                      ? '—'
-                                      : user!['department']),
-                              _Field('Position',
-                                  (user?['position'] as String? ?? '')
-                                          .isEmpty
-                                      ? '—'
-                                      : user!['position']),
+                              _Field(
+                                'Phone',
+                                (user?['phone'] as String? ?? '').isEmpty
+                                    ? '—'
+                                    : user!['phone'],
+                              ),
+                            ]),
+                            const SizedBox(height: 16),
+                            _infoRow(context, [
+                              _Field(
+                                'Department',
+                                (user?['department'] as String? ?? '').isEmpty
+                                    ? '—'
+                                    : user!['department'],
+                              ),
+                              _Field(
+                                'Position',
+                                (user?['position'] as String? ?? '').isEmpty
+                                    ? '—'
+                                    : user!['position'],
+                              ),
                             ]),
                             if ((user?['bio'] as String? ?? '').isNotEmpty) ...[
                               const SizedBox(height: 20),
@@ -196,14 +207,17 @@ class MyProfileScreen extends StatelessWidget {
                                       fontWeight: FontWeight.w600,
                                       color: Colors.black54)),
                               const SizedBox(height: 6),
-                              Text(user!['bio'],
-                                  style: const TextStyle(
-                                      fontSize: 14, height: 1.5)),
+                              Text(
+                                user!['bio'],
+                                style: const TextStyle(
+                                    fontSize: 14, height: 1.5),
+                              ),
                             ],
                           ],
                         ),
                       ),
                     ),
+
                   ],
                 ),
               ),
@@ -213,9 +227,30 @@ class MyProfileScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-// ── Supporting widgets ────────────────────────────────────────────────────────
+  Widget _infoRow(BuildContext context, List<_Field> fields) {
+    return LayoutBuilder(builder: (context, constraints) {
+      if (constraints.maxWidth > 400) {
+        final rowChildren = <Widget>[];
+        for (int i = 0; i < fields.length; i++) {
+          rowChildren.add(Expanded(child: _FieldTile(fields[i])));
+          if (i < fields.length - 1) {
+            rowChildren.add(const SizedBox(width: 24));
+          }
+        }
+        return Row(children: rowChildren);
+      }
+      return Column(
+        children: fields
+            .map((f) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _FieldTile(f),
+                ))
+            .toList(),
+      );
+    });
+  }
+}
 
 class _Badge extends StatelessWidget {
   final String label;
@@ -228,9 +263,7 @@ class _Badge extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(20),
-        ),
+            color: bg, borderRadius: BorderRadius.circular(20)),
         child: Text(label,
             style: TextStyle(
                 fontSize: 11,
@@ -243,46 +276,6 @@ class _Field {
   final String label;
   final String value;
   const _Field(this.label, this.value);
-}
-
-class _InfoGrid extends StatelessWidget {
-  final List<_Field> fields;
-  const _InfoGrid({required this.fields});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final wide = constraints.maxWidth > 400;
-      if (wide) {
-        // 2-column grid
-        final rows = <Widget>[];
-        for (int i = 0; i < fields.length; i += 2) {
-          rows.add(Row(
-            children: [
-              Expanded(child: _FieldTile(fields[i])),
-              const SizedBox(width: 24),
-              Expanded(
-                  child: i + 1 < fields.length
-                      ? _FieldTile(fields[i + 1])
-                      : const SizedBox()),
-            ],
-          ));
-          if (i + 2 < fields.length) rows.add(const SizedBox(height: 16));
-        }
-        return Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: rows);
-      } else {
-        return Column(
-          children: fields
-              .map((f) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _FieldTile(f),
-                  ))
-              .toList(),
-        );
-      }
-    });
-  }
 }
 
 class _FieldTile extends StatelessWidget {

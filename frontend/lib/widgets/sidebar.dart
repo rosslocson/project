@@ -125,7 +125,7 @@ class Sidebar extends StatelessWidget {
                 _NavItem(
                   icon: Icons.edit_outlined,
                   label: 'Edit Profile',
-                  route: '/edit-profile', // Adjust to your actual edit profile route
+                  route: '/profile/edit', // Adjust to your actual edit profile route
                   current: currentRoute,
                 ),
                 
