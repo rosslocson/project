@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui'; // Added for ImageFilter (Glassmorphism effect)
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -204,6 +204,191 @@ class StarfieldPainter extends CustomPainter {
       old.animValue != animValue;
 }
 
+// ── Faded Topbar ──────────────────────────────────────────────────────────────
+class GlassTopBar extends StatelessWidget {
+  final bool isSidebarOpen;
+  final VoidCallback onToggleSidebar;
+  final Map<String, dynamic>? user;
+
+  const GlassTopBar({
+    super.key,
+    required this.isSidebarOpen,
+    required this.onToggleSidebar,
+    this.user,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Extract user info with fallbacks
+    final String firstName = user?['first_name'] ?? 'User';
+    final String lastName = user?['last_name'] ?? '';
+    final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
+    final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
+
+    // Avatar URL helper logic
+    String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+    String finalAvatarUrl = '';
+    if (rawAvatarUrl.isNotEmpty) {
+      // If the backend returned a relative path, attach the backend server address
+      if (!rawAvatarUrl.startsWith('http')) {
+        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl'; // Adjust to match your Go port
+      } else {
+        finalAvatarUrl = rawAvatarUrl;
+      }
+    }
+
+    return Container(
+      // Added a bit more bottom padding so the fade has room to transition smoothly
+      padding: const EdgeInsets.only(left: 32, right: 32, top: 24, bottom: 32),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            // Matches the darkest part of your galaxy background
+            const Color(0xFF050505).withOpacity(0.95), 
+            const Color(0xFF050505).withOpacity(0.7),
+            Colors.transparent, // Fades seamlessly into the background
+          ],
+          stops: const [0.0, 0.6, 1.0], // Controls where the fade happens
+        ),
+      ),
+      child: Row(
+        children: [
+          // Hamburger Menu (Only shows if sidebar is closed)
+          if (!isSidebarOpen) ...[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 1,
+                ),
+              ),
+              child: IconButton(
+                padding: const EdgeInsets.all(12),
+                onPressed: onToggleSidebar,
+                icon: const HamburgerIcon(),
+                tooltip: 'Open Sidebar',
+                splashColor: Colors.white.withOpacity(0.1),
+                highlightColor: Colors.transparent,
+              ),
+            ),
+            const SizedBox(width: 24),
+          ],
+          
+          // Welcome Message
+          Text(
+            'Welcome, $firstName',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+          
+          const Spacer(),
+          
+          // Right Side: Username and Avatar with Dropdown Menu
+          PopupMenuButton<String>(
+            onSelected: (String choice) {
+              if (choice == 'profile') {
+                context.push('/account-settings');
+              } else if (choice == 'logout') {
+                context.read<AuthProvider>().logout();
+                context.go('/login');
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    const Icon(Icons.person_outline, size: 18),
+                    const SizedBox(width: 12),
+                    const Text('View Profile'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    const Icon(Icons.logout, size: 18, color: Colors.red),
+                    const SizedBox(width: 12),
+                    const Text('Sign out', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Row(
+                children: [
+                  Text(
+                    fullName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: const Color(0xFFD4748A).withOpacity(0.1),
+                    backgroundImage: finalAvatarUrl.isNotEmpty
+                        ? NetworkImage(finalAvatarUrl)
+                        : null,
+                    child: finalAvatarUrl.isEmpty
+                        ? Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFD4748A), Color(0xFF4A1040)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.6),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFD4748A).withOpacity(0.4),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
+                                )
+                              ]
+                            ),
+                            child: Center(
+                              child: Text(
+                                initials,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Dashboard Screen ──────────────────────────────────────────────────────────
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -221,7 +406,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   late Timer _autoScrollTimer;
   
   // Start the page at a very large multiple of the total intern count
-  // so the user can immediately swipe backward if they want to.
   int _currentPage = kInterns.length * 1000;
   static const double _viewportFraction = 0.55;
 
@@ -348,149 +532,111 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           Expanded(
             child: Stack(
               children: [
-                // Galaxy Background
+                // ── 1. Galaxy Background covering the entire screen ────────
                 Positioned.fill(child: _buildAnimatedGalaxyBackground()),
                 
-                // Dashboard Content
+                // ── 2. Content (Topbar and Carousel) ───────────────────────
                 Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 120),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Header ───────────────────────────────────────────
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            if (!sidebarProvider.isOpen) ...[
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.15),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: IconButton(
-                                  padding: const EdgeInsets.all(12),
-                                  onPressed: () => context.read<SidebarProvider>().toggle(),
-                                  icon: const HamburgerIcon(),
-                                  tooltip: 'Open Sidebar',
-                                  splashColor: Colors.white.withValues(alpha: 0.1),
-                                  highlightColor: Colors.transparent,
+                  child: Column(
+                    children: [
+                      // Glassmorphism Topbar (Now over the stars)
+                      GlassTopBar(
+                        isSidebarOpen: sidebarProvider.isOpen,
+                        onToggleSidebar: () => context.read<SidebarProvider>().toggle(),
+                        user: user,
+                      ),
+                      
+                      // Main Content Carousel
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 120),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Meet Our Interns',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white.withOpacity(0.92),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Tap a card to view full profile',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.white.withOpacity(0.4),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 24),
-                            ],
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Welcome, ${user?['first_name'] ?? 'User'}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                              const SizedBox(height: 32),
+
+                              Expanded(
+                                child: PageView.builder(
+                                  controller: _pageController,
+                                  onPageChanged: (i) => setState(() => _currentPage = i),
+                                  itemBuilder: (context, index) {
+                                    final realIndex = index % kInterns.length;
+                                    final intern = kInterns[realIndex];
+                                    final isCenter = index == _currentPage;
+                                    
+                                    return AnimatedScale(
+                                      scale: isCenter ? 1.0 : 0.82,
+                                      duration: const Duration(milliseconds: 350),
+                                      curve: Curves.easeOut,
+                                      child: AnimatedOpacity(
+                                        opacity: isCenter ? 1.0 : 0.45,
+                                        duration: const Duration(milliseconds: 350),
+                                        child: GestureDetector(
+                                          onTap: () => _openDetail(intern),
+                                          child: _InternCardFront(intern: intern),
                                         ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _ArrowButton(icon: Icons.chevron_left, onTap: _prev),
+                                  const SizedBox(width: 20),
+                                  Row(
+                                    children: List.generate(kInterns.length, (i) {
+                                      final active = i == (_currentPage % kInterns.length);
+                                      return AnimatedContainer(
+                                        duration: const Duration(milliseconds: 300),
+                                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                                        width: active ? 20 : 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: active
+                                              ? const Color(0xFFD4748A)
+                                              : Colors.white.withOpacity(0.25),
+                                          borderRadius: BorderRadius.circular(3),
+                                        ),
+                                      );
+                                    }),
                                   ),
+                                  const SizedBox(width: 20),
+                                  _ArrowButton(icon: Icons.chevron_right, onTap: _next),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 48),
-
-                        // ── Intern Carousel Titles ───────────────────────────
-                        Center(
-                          child: Column(
-                            children: [
-                              Text(
-                                'Meet Our Interns',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white.withOpacity(0.92),
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Tap a card to view full profile',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white.withOpacity(0.4),
-                                ),
-                              ),
+                              const SizedBox(height: 36),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 32),
-
-                        // ── Intern Carousel ──────────────────────────────────
-                        Expanded(
-                          child: PageView.builder(
-                            controller: _pageController,
-                            // Notice: itemCount is removed to allow infinite scrolling
-                            onPageChanged: (i) => setState(() => _currentPage = i),
-                            itemBuilder: (context, index) {
-                              // Use modulo to cycle through the actual list length
-                              final realIndex = index % kInterns.length;
-                              final intern = kInterns[realIndex];
-                              final isCenter = index == _currentPage;
-                              
-                              return AnimatedScale(
-                                scale: isCenter ? 1.0 : 0.82,
-                                duration: const Duration(milliseconds: 350),
-                                curve: Curves.easeOut,
-                                child: AnimatedOpacity(
-                                  opacity: isCenter ? 1.0 : 0.45,
-                                  duration: const Duration(milliseconds: 350),
-                                  child: GestureDetector(
-                                    onTap: () => _openDetail(intern),
-                                    child: _InternCardFront(intern: intern),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ── Arrow controls + dots ────────────────────────────
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _ArrowButton(icon: Icons.chevron_left, onTap: _prev),
-                            const SizedBox(width: 20),
-                            Row(
-                              children: List.generate(kInterns.length, (i) {
-                                // Match the actual position with modulo
-                                final active = i == (_currentPage % kInterns.length);
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                                  width: active ? 20 : 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: active
-                                        ? const Color(0xFFD4748A)
-                                        : Colors.white.withOpacity(0.25),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                );
-                              }),
-                            ),
-                            const SizedBox(width: 20),
-                            _ArrowButton(icon: Icons.chevron_right, onTap: _next),
-                          ],
-                        ),
-                        const SizedBox(height: 36),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
