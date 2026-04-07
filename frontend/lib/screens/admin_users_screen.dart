@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
-import '../widgets/sidebar.dart';
+import '../widgets/app_scaffold.dart';
 
 const kCrimson = Color(0xFF7B0D1E);
 
@@ -26,6 +26,7 @@ class UsersScreen extends StatefulWidget {
 class _UsersScreenState extends State<UsersScreen> {
   List<dynamic> _users = [];
   bool _loading = true;
+  // _isSidebarVisible removed - use AppScaffold
   final _searchCtrl = TextEditingController();
 
   @override
@@ -210,124 +211,110 @@ class _UsersScreenState extends State<UsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5FF),
-      body: Row(
+    return AppScaffold(
+      title: 'User Management',
+      actions: [
+        OutlinedButton.icon(
+          onPressed: _showConfigManager,
+          icon: const Icon(Icons.settings_outlined, size: 16),
+          label: const Text('Departments & Positions'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: kCrimson,
+            side: const BorderSide(color: kCrimson),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        ElevatedButton.icon(
+          onPressed: () async {
+            await context.push('/users/add');
+            _loadUsers();
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Add User'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kCrimson,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Sidebar(currentRoute: '/users'),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Header ───────────────────────────────────────────
-                  Row(children: [
-                    Expanded(
-                      child: Text(
-                        'User Management',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _showConfigManager,
-                      icon: const Icon(Icons.settings_outlined, size: 16),
-                      label: const Text('Departments & Positions'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: kCrimson,
-                        side: const BorderSide(color: kCrimson),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        await context.push('/users/add');
+          // ── Search ───────────────────────────────────────────
+          TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: 'Search by name or email...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchCtrl.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchCtrl.clear();
                         _loadUsers();
+                        setState(() {});
                       },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add User'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kCrimson,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 20),
-
-                  // ── Search ───────────────────────────────────────────
-                  TextField(
-                    controller: _searchCtrl,
-                    decoration: InputDecoration(
-                      hintText: 'Search by name or email...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchCtrl.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                _loadUsers();
-                                setState(() {});
-                              })
-                          : null,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    onChanged: (v) => setState(() {}),
-                    onSubmitted: (v) => _loadUsers(search: v),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── User list ─────────────────────────────────────────
-                  Expanded(
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      child: _loading
-                          ? const Center(child: CircularProgressIndicator())
-                          : _users.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.people_outline,
-                                          size: 56,
-                                          color: Colors.grey.shade300),
-                                      const SizedBox(height: 12),
-                                      Text('No users found',
-                                          style: TextStyle(
-                                              color: Colors.grey.shade500)),
-                                    ],
-                                  ),
-                                )
-                              : ListView.separated(
-                                  itemCount: _users.length,
-                                  separatorBuilder: (_, __) =>
-                                      const Divider(height: 1, indent: 20),
-                                  itemBuilder: (context, i) {
-                                    final u = _users[i];
-                                    return _UserTile(
-                                      key: ValueKey(_toInt(u['id'])),
-                                      user: u,
-                                      onToggle: () => _toggleActive(u),
-                                      onDelete: () => _deleteUser(u),
-                                    );
-                                  },
-                                ),
-                    ),
-                  ),
-                ],
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
               ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            onChanged: (v) => setState(() {}),
+            onSubmitted: (v) => _loadUsers(search: v),
+          ),
+          const SizedBox(height: 16),
+
+          // ── User list ─────────────────────────────────────────
+          Expanded(
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _users.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                size: 56,
+                                color: Colors.grey.shade300,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No users found',
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: _users.length,
+                          separatorBuilder: (_, __) =>
+                              const Divider(height: 1, indent: 20),
+                          itemBuilder: (context, i) {
+                            final u = _users[i];
+                            return _UserTile(
+                              key: ValueKey(_toInt(u['id'])),
+                              user: u,
+                              onToggle: () => _toggleActive(u),
+                              onDelete: () => _deleteUser(u),
+                            );
+                          },
+                        ),
             ),
           ),
         ],
@@ -394,8 +381,7 @@ class _UserTile extends StatelessWidget {
         children: [
           // Role badge
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: isAdmin ? Colors.red.shade50 : Colors.blue.shade50,
               borderRadius: BorderRadius.circular(20),

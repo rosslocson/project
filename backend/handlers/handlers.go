@@ -415,12 +415,50 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 
 func (h *Handler) UploadAvatar(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	var body struct {
-		AvatarURL string `json:"avatar_url"`
+
+	// Get the file from the multipart form (field name must be 'avatar')
+	header, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File not provided or invalid: " + err.Error()})
+		return
 	}
-	c.ShouldBindJSON(&body)
-	h.DB.Model(&models.User{}).Where("id = ?", userID).Update("avatar_url", body.AvatarURL)
-	c.JSON(http.StatusOK, gin.H{"message": "Avatar updated", "avatar_url": body.AvatarURL})
+
+	// Create uploads directory if it doesn't exist
+	uploadsDir := "./uploads"
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create uploads directory"})
+		return
+	}
+
+	// Generate unique filename
+	filename := fmt.Sprintf("%d_%d_%s", userID, time.Now().Unix(), header.Filename)
+	filepath := fmt.Sprintf("%s/%s", uploadsDir, filename)
+
+	// Save the file
+	if err := c.SaveUploadedFile(header, filepath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file: " + err.Error()})
+		return
+	}
+
+	// Update user's avatar URL in database
+	avatarURL := fmt.Sprintf("/uploads/%s", filename)
+	if err := h.DB.Model(&models.User{}).Where("id = ?", userID).Update("avatar_url", avatarURL).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update avatar URL: " + err.Error()})
+		return
+	}
+
+	// Fetch updated user
+	var user models.User
+	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Avatar uploaded successfully",
+		"user":       user,
+		"avatar_url": avatarURL,
+	})
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────

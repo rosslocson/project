@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/sidebar_provider.dart';
 
 class Sidebar extends StatelessWidget {
   final String currentRoute;
@@ -24,34 +25,56 @@ class Sidebar extends StatelessWidget {
     final user    = auth.user;
 
     return Container(
-      width: 250, // Slightly wider to match the elegant proportions of the image
+      width: 250,
       decoration: const BoxDecoration(
         color: _bgColor,
       ),
       child: Column(
         children: [
-          // ── Logo / brand ────────────────────────────────────────────
+          // ── Logo / brand & Close Button ─────────────────────────────
           Padding(
-            padding: const EdgeInsets.only(left: 20, top: 32, right: 20, bottom: 24),
+            // Increased top and bottom padding for more breathing room
+            padding: const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
             child: Row(
               children: [
+                // Larger Logo Box
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: _logoBoxColor,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.people_alt, color: _textLight, size: 20),
+                  child: const Icon(Icons.people_alt, color: _textLight, size: 24),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16), // Increased horizontal spacing
+                
+                // Larger Application Name
                 const Expanded(
                   child: Text(
                     'UserApp',
                     style: TextStyle(
                       color: _textLight,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 22, // Increased font size
+                      fontWeight: FontWeight.w800, // Made bolder
                       letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                
+                // Larger Close 'X' Button
+                Material(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => context.read<SidebarProvider>().toggle(),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8.0), // Increased tap target padding
+                      child: Icon(
+                        Icons.close_rounded, 
+                        color: _textLight, 
+                        size: 24, // Increased icon size to match logo
+                      ),
                     ),
                   ),
                 ),
@@ -62,7 +85,7 @@ class Sidebar extends StatelessWidget {
           // ── User chip ───────────────────────────────────────────────
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), // Slightly taller
             decoration: BoxDecoration(
               color: _userBoxBg,
               borderRadius: BorderRadius.circular(12),
@@ -72,7 +95,6 @@ class Sidebar extends StatelessWidget {
                 CircleAvatar(
                   radius: 18,
                   backgroundColor: _userAvatarBg,
-                  // We extract the first letter of the first name, or leave blank if none
                   child: Text(
                     user?['first_name'] != null && user!['first_name'].toString().isNotEmpty 
                         ? user['first_name'].toString()[0].toUpperCase() 
@@ -102,7 +124,8 @@ class Sidebar extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
+          // Increased spacing between User Chip and Menu
+          const SizedBox(height: 24),
 
           // ── Nav items ───────────────────────────────────────────────
           Expanded(
@@ -111,9 +134,9 @@ class Sidebar extends StatelessWidget {
               children: [
                 const _SectionLabel('MENU'),
                 _NavItem(
-                  icon: Icons.grid_view_rounded,
-                  label: 'Dashboard',
-                  route: '/dashboard',
+                  icon: Icons.home_rounded,
+                  label: 'Home',
+                  route: '/home',
                   current: currentRoute,
                 ),
                 _NavItem(
@@ -123,15 +146,15 @@ class Sidebar extends StatelessWidget {
                   current: currentRoute,
                 ),
                 _NavItem(
-                  icon: Icons.edit_outlined,
-                  label: 'Edit Profile',
-                  route: '/profile/edit', // Adjust to your actual edit profile route
+                  icon: Icons.settings_outlined,
+                  label: 'Account Settings',
+                  route: '/account-settings', // Account Settings route
                   current: currentRoute,
                 ),
                 
                 // Admin specific section
                 if (isAdmin) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 16), // Extra spacing for the new section
                   const _SectionLabel('ADMINISTRATION'),
                   _NavItem(
                     icon: Icons.manage_accounts_outlined,
@@ -161,7 +184,8 @@ class Sidebar extends StatelessWidget {
                   context.go('/login');
                 },
                 child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  // Slightly increased vertical padding for the Sign Out button
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                   child: Row(
                     children: [
                       Icon(Icons.logout_rounded, color: _textLight, size: 22),
@@ -206,7 +230,8 @@ class _NavItem extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      // Increased vertical margin to spread out the list items
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: active ? Sidebar._activeItemBg : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
@@ -241,7 +266,8 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 20, top: 12, bottom: 8),
+        // Increased top and bottom padding to separate sections visually
+        padding: const EdgeInsets.only(left: 20, top: 16, bottom: 12),
         child: Text(
           text.toUpperCase(),
           style: const TextStyle(

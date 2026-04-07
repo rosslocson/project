@@ -128,7 +128,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       'department':       _selectedDept ?? '',
       'position':         _selectedPos  ?? '',
     });
-    if (mounted && ok) context.go('/dashboard');
+    if (mounted && ok) context.go('/home');
   }
 
   // ── Form ───────────────────────────────────────────────────────────────────

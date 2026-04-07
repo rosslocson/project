@@ -102,15 +102,14 @@ class _AddUserScreenState extends State<AddUserScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5FF),
-      appBar: AppBar(
+  appBar: AppBar(
         title: const Text('Add New User'),
         backgroundColor: Colors.white,
         foregroundColor: kCrimson,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          //onPressed: () => context.pop(),
-          onPressed: () => context.go('/dashboard'),
+          onPressed: () => context.pop(),
           
         ),
       ),

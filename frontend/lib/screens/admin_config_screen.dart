@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_scaffold.dart';
 import '../services/api_service.dart';
-import '../widgets/sidebar.dart';
 
 const _kCrimson = Color(0xFF7B0D1E);
 
@@ -15,6 +15,7 @@ class ConfigScreen extends StatefulWidget {
 class _ConfigScreenState extends State<ConfigScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
+  // _isSidebarVisible removed - using AppScaffold sidebar
   List<dynamic> _departments = [];
   List<dynamic> _positions   = [];
   bool _loadingDept = true;
@@ -254,91 +255,75 @@ class _ConfigScreenState extends State<ConfigScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5FF),
-      body: Row(
+    return AppScaffold(
+      title: 'Departments & Positions',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Sidebar(currentRoute: '/config'),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Departments & Positions',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manage dropdown options shown during registration and profile editing.',
-                    style: TextStyle(
-                        color: Colors.grey.shade600, fontSize: 13),
-                  ),
-                  const SizedBox(height: 24),
+          // Subtitle
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              'Manage dropdown options shown during registration and account settings.',
+              style: TextStyle(
+                  color: Colors.grey.shade600, fontSize: 13),
+            ),
+          ),
 
-                  Expanded(
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        children: [
-                          TabBar(
-                            controller: _tabs,
-                            labelColor: _kCrimson,
-                            indicatorColor: _kCrimson,
-                            unselectedLabelColor: Colors.grey,
-                            indicatorWeight: 3,
-                            tabs: [
-                              Tab(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.business_outlined,
-                                        size: 16),
-                                    const SizedBox(width: 6),
-                                    const Text('Departments'),
-                                    if (_departments.isNotEmpty) ...[
-                                      const SizedBox(width: 6),
-                                      _CountBadge(_departments.length),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Tab(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.work_outline, size: 16),
-                                    const SizedBox(width: 6),
-                                    const Text('Positions'),
-                                    if (_positions.isNotEmpty) ...[
-                                      const SizedBox(width: 6),
-                                      _CountBadge(_positions.length),
-                                    ],
-                                  ],
-                                ),
-                              ),
+          Expanded(
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                children: [
+                  TabBar(
+                    controller: _tabs,
+                    labelColor: _kCrimson,
+                    indicatorColor: _kCrimson,
+                    unselectedLabelColor: Colors.grey,
+                    indicatorWeight: 3,
+                    tabs: [
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.business_outlined,
+                                size: 16),
+                            const SizedBox(width: 6),
+                            const Text('Departments'),
+                            if (_departments.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              _CountBadge(_departments.length),
                             ],
-                          ),
-                          Expanded(
-                            child: TabBarView(
-                              controller: _tabs,
-                              children: [
-                                SingleChildScrollView(
-                                    child: _buildDeptTab()),
-                                SingleChildScrollView(
-                                    child: _buildPosTab()),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.work_outline, size: 16),
+                            const SizedBox(width: 6),
+                            const Text('Positions'),
+                            if (_positions.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              _CountBadge(_positions.length),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabs,
+                      children: [
+                        SingleChildScrollView(
+                            child: _buildDeptTab()),
+                        SingleChildScrollView(
+                            child: _buildPosTab()),
+                      ],
                     ),
                   ),
                 ],

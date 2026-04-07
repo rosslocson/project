@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -26,6 +27,14 @@ class ApiService {
     final token = await getToken();
     return {
       'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  // For multipart requests, only include Authorization (not Content-Type)
+  static Future<Map<String, String>> _authHeadersForMultipart() async {
+    final token = await getToken();
+    return {
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
@@ -126,6 +135,57 @@ class ApiService {
       return _parse(res);
     } catch (e) {
       return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> uploadAvatar(XFile imageFile) async {
+    try {
+      var uri = Uri.parse('$baseUrl/profile/avatar');
+      var request = http.MultipartRequest('POST', uri);
+
+      // Add auth headers (without Content-Type, which http will set automatically)
+      final headers = await _authHeadersForMultipart();
+      request.headers.addAll(headers);
+
+      // Read the file as raw bytes
+      final bytes = await imageFile.readAsBytes();
+
+      // Attach the image file using fromBytes
+      request.files.add(http.MultipartFile.fromBytes(
+        'avatar',
+        bytes,
+        filename: imageFile.name,
+      ));
+
+      // Send request with timeout
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Upload request timed out');
+        },
+      );
+      
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'ok': true,
+          'user': data['user'] ?? data,
+        };
+      } else {
+        print('Upload error - Status: ${response.statusCode}, Body: ${response.body}');
+        return {
+          'ok': false,
+          'error': 'Server error: ${response.statusCode} - ${response.body}',
+        };
+      }
+    } catch (e) {
+      print('Avatar upload exception: $e');
+      return {
+        'ok': false,
+        'error': 'Failed to upload: ${e.toString()}',
+      };
     }
   }
 
@@ -340,6 +400,17 @@ static Future<Map<String, dynamic>> deleteConfig(int id) async {
         Uri.parse('$baseUrl/activity'),
         headers: await _authHeaders(),
       );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> fetchData() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/data'));
       return _parse(res);
     } catch (e) {
       return {'ok': false, 'error': 'Connection error'};

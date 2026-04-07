@@ -25,7 +25,7 @@ func main() {
 
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "host=localhost user=postgres password=postgres dbname=userapp port=5432 sslmode=disable"
+		dsn = "host=localhost user=postgres password=alex12345 dbname=userapp port=5432 sslmode=disable"
 	}
 
 	var err error
@@ -44,21 +44,32 @@ func main() {
 
 	r := gin.Default()
 
+	// Set max multipart memory (32MB)
+	r.MaxMultipartMemory = 32 << 20
+
 	// CORS config - allows Flutter web app to call the API
 	// CORS: AllowAllOrigins must be used instead of AllowOrigins["*"]
 	// when AllowCredentials is true — otherwise browsers block DELETE/PUT with Auth headers
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// Serve uploaded files statically
+	r.Static("/uploads", "./uploads")
+
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "time": time.Now()})
+	})
+
+	// Simple data endpoint
+	r.GET("/api/data", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Connected to Go Backend!"})
 	})
 
 	// Public routes
