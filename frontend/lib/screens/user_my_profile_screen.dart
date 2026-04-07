@@ -166,6 +166,17 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     if (first.isNotEmpty) initials += first[0];
     if (last.isNotEmpty) initials += last[0];
 
+    // Avatar URL helper logic
+    String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+    String finalAvatarUrl = '';
+    if (rawAvatarUrl.isNotEmpty) {
+      // If the backend returned a relative path, attach the backend server address
+      if (!rawAvatarUrl.startsWith('http')) {
+        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl'; // Adjust to match your Go port
+      } else {
+        finalAvatarUrl = rawAvatarUrl;
+      }
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5FF),
@@ -273,13 +284,10 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                       radius: 40,
                                       backgroundColor:
                                           _kCrimson.withValues(alpha: 0.1),
-                                      backgroundImage:
-                                          (user?['avatar_url'] as String? ?? '')
-                                                  .isNotEmpty
-                                              ? NetworkImage(user!['avatar_url'])
-                                              : null,
-                                      child: (user?['avatar_url'] as String? ?? '')
-                                              .isEmpty
+                                      backgroundImage: finalAvatarUrl.isNotEmpty
+                                          ? NetworkImage(finalAvatarUrl)
+                                          : null,
+                                      child: finalAvatarUrl.isEmpty
                                           ? Text(
                                               initials,
                                               style: const TextStyle(

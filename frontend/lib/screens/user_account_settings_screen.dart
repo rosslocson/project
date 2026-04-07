@@ -366,6 +366,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     final user = context.watch<AuthProvider>().user;
     final sidebarProvider = context.watch<SidebarProvider>();
 
+    // Avatar URL helper logic
+    String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+    String finalAvatarUrl = '';
+    if (rawAvatarUrl.isNotEmpty) {
+      // If the backend returned a relative path, attach the backend server address
+      if (!rawAvatarUrl.startsWith('http')) {
+        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl'; // Adjust to match your Go port
+      } else {
+        finalAvatarUrl = rawAvatarUrl;
+      }
+    }
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Row(
@@ -451,13 +463,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                           radius: 40,
                                           backgroundColor:
                                               _kCrimson.withValues(alpha: 0.1),
-                                          backgroundImage:
-                                              (user?['avatar_url'] as String? ?? '').isNotEmpty
-                                                  ? NetworkImage(user!['avatar_url'])
-                                                  : null,
-                                          child: _isUploadingAvatar 
+                                          backgroundImage: finalAvatarUrl.isNotEmpty 
+                                              ? NetworkImage(finalAvatarUrl) 
+                                              : null,
+                                          child: _isUploadingAvatar
                                               ? const CircularProgressIndicator(color: _kCrimson, strokeWidth: 3)
-                                              : (user?['avatar_url'] as String? ?? '').isEmpty
+                                              : finalAvatarUrl.isEmpty
                                                   ? Text(
                                                       '${(user?['first_name'] as String? ?? ' ')[0]}'
                                                       '${(user?['last_name'] as String? ?? ' ')[0]}',
