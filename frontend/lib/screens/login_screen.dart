@@ -82,7 +82,11 @@ class _LoginScreenState extends State<LoginScreen>
         _emailCtrl.text.trim(), _passCtrl.text);
     if (!mounted) return;
     if (result['ok'] == true) {
-      context.go('/home');
+      if (auth.isAdmin) {
+        context.go('/users');
+      } else {
+        context.go('/home');
+      }
     } else if (result['locked'] == true) {
       _startLockCountdown(result['retry_after_secs'] as int? ?? 60);
     } else {
