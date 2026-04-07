@@ -107,7 +107,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     ],
   };
 
-  List<String> get _departments => _deptRoles.keys.toList();
+  List<String> _departments = [];
   List<String> _positions   = [];
   String? _selectedDept;
   String? _selectedPos;
@@ -149,6 +149,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    _departments = _deptRoles.keys.toList();
     final user = context.read<AuthProvider>().user;
     _firstCtrl = TextEditingController(text: user?['first_name'] ?? '');
     _lastCtrl  = TextEditingController(text: user?['last_name']  ?? '');
@@ -165,7 +166,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     } else if (dept.isNotEmpty) {
       // Fallback in case their current dept isn't in the static list
       _selectedDept = dept;
-      _departments.add(dept);
+      if (!_departments.contains(dept)) _departments.add(dept);
       _positions = [pos];
     }
 
@@ -174,7 +175,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     } else if (pos.isNotEmpty) {
        // Fallback in case their current pos isn't in the static list
       _selectedPos = pos;
-      _positions.add(pos);
+      if (!_positions.contains(pos)) _positions.add(pos);
     }
 
     // Initialize Starfield
