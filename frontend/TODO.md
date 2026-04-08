@@ -1,41 +1,21 @@
-# Flutter App Error Fixes - Screens Cleanup
-## Status: [IN PROGRESS]
+# Admin Dashboard Fix Progress
 
-### 1. [ ] main.dart - Fix imports & routes
-   - Rename profile_screen import → account_settings_screen  
-   - Add /account-settings route for AccountSettingsScreen
+## Plan Steps (Approved)
+- [x] 1. Create TODO.md and breakdown approved plan
+- [x] 2. Import star_background.dart properly and use GalaxyBackground + generateStars()
+- [x] 3. Created glass_top_bar.dart with GlassTopBar + HamburgerIcon customized for admin
+- [x] 4. Removed conflicting hide import from user_home_screen.dart
+- [x] 5. Fixed Star generation using generateStars() from star_background.dart
+- [x] 6. Fixed admin_sidebar.dart X button: Changed onTap: () {} to onTap: onClose
 
-### 2. [ ] Add missing imports to ALL screens
-   - go_router, provider, api_service.dart
-   - app_theme.dart (kCrimson, fieldLabel, CrimsonButton)
-   - auth_layout.dart (plainTextField, passwordTextField)
-   - star_background.dart (GalaxyBackground, StarfieldPainter)
 
-### 3. [ ] add_user_screen.dart
-   - Add imports above
-   - Fix AppBar navigation (use context.pop())
-
-### 4. [ ] dashboard_screen.dart & my_profile_screen.dart  
-   - Remove duplicate Star/StarfieldPainter classes
-   - Import/use star_background.dart components
-   - Add stat_card.dart import
-
-### 5. [ ] login_screen.dart & register_screen.dart
-   - Add missing imports
-   - Verify GalaxyBackground usage
-
-### 6. [ ] users_screen.dart
-   - Remove duplicate _isSidebarVisible + header code
-   - Use AppScaffold consistently
-
-### 7. [ ] Verify all screens compile
-   - flutter analyze
-   - No undefined imports/widgets
-
-### 8. [ ] Test
-   - flutter pub get
-   - cd frontend && flutter run
-   - Test navigation/backend
-
-**Completed by BLACKBOXAI**
+- [ ] 2. Import star_background.dart properly and use GalaxyBackground + generateStars()
+- [ ] 3. Copy GlassTopBar class from user_home_screen.dart into file
+- [ ] 4. Wrap content in AppScaffold(title: "Admin Dashboard")
+- [ ] 5. Fix Star generation/constructor to match star_background.dart (named params: twinklePhase)
+- [ ] 6. Remove broken glass_top_bar.dart import and hide import conflicts
+- [ ] 7. Ensure null-safety on _stats, _activityLogs, add mounted checks
+- [ ] 8. Standardize layout with sidebar toggle
+- [ ] 9. Update TODO.md with completion
+- [ ] 10. Test compile & attempt_completion
 

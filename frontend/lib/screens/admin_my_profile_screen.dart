@@ -2,13 +2,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-// Removed sidebar_provider.dart import - local state
-import '../widgets/user_sidebar.dart';
-
+import '../../providers/auth_provider.dart';
+import '../../widgets/admin_sidebar.dart';
 
 const _kCrimson = Color(0xFF7B0D1E);
-
 
 // ── Custom Hamburger Icon (Redesigned) ──────────────────────────────────────
 class HamburgerIcon extends StatelessWidget {
@@ -32,10 +29,10 @@ class HamburgerIcon extends StatelessWidget {
             ),
           ),
           Container(
-            width: 14, // Shorter middle line for a modern, dynamic feel
+            width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Colors.white.withOpacity(0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -53,7 +50,6 @@ class HamburgerIcon extends StatelessWidget {
   }
 }
 
-
 // ── Star Data Class for Galaxy Theme ─────────────────────────────────────────
 class Star {
   final double x;
@@ -62,7 +58,6 @@ class Star {
   final double baseOpacity;
   final double speed;
   final double twinklePhase;
-
 
   Star({
     required this.x,
@@ -74,21 +69,18 @@ class Star {
   });
 }
 
-
-class MyProfileScreen extends StatefulWidget {
-  const MyProfileScreen({super.key});
-
+class AdminMyProfileScreen extends StatefulWidget {
+  const AdminMyProfileScreen({super.key});
 
   @override
-  State<MyProfileScreen> createState() => _MyProfileScreenState();
+  State<AdminMyProfileScreen> createState() => _AdminMyProfileScreenState();
 }
 
-
-class _MyProfileScreenState extends State<MyProfileScreen>
+class _AdminMyProfileScreenState extends State<AdminMyProfileScreen>
     with TickerProviderStateMixin {
   late AnimationController _bgAnimController;
   final List<Star> _stars = [];
-
+  bool _isSidebarOpen = true;
 
   @override
   void initState() {
@@ -99,7 +91,6 @@ class _MyProfileScreenState extends State<MyProfileScreen>
       duration: const Duration(seconds: 150),
     )..repeat();
   }
-
 
   void _generateStars() {
     final random = math.Random();
@@ -115,13 +106,11 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     }
   }
 
-
   @override
   void dispose() {
     _bgAnimController.dispose();
     super.dispose();
   }
-
 
   // ── Animated Background ────────────────────────────────────────────────────
   Widget _buildAnimatedGalaxyBackground() {
@@ -131,9 +120,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
           center: Alignment(-0.3, -0.2),
           radius: 1.5,
           colors: [
-            Color(0xFF3A0812), // Deep glowing nebula red
-            Color(0xFF140306), // Very dark crimson
-            Color(0xFF050505), // Pure deep space black
+            Color(0xFF3A0812),
+            Color(0xFF140306),
+            Color(0xFF050505),
           ],
           stops: [0.0, 0.5, 1.0],
         ),
@@ -152,13 +141,10 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    bool isSidebarOpen = true; // Local sidebar state
     final isAdmin = user?['role'] == 'admin';
-
 
     final first = user?['first_name'] as String? ?? '';
     final last = user?['last_name'] as String? ?? '';
@@ -170,32 +156,29 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
-      // If the backend returned a relative path, attach the backend server address
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl'; // Adjust to match your Go port
+        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5FF),
       body: Row(
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            width: isSidebarOpen ? 250 : 0,
-            child: isSidebarOpen ? const UserSidebar(currentRoute: '/profile') : null,
+            width: _isSidebarOpen ? 250 : 0,
+            child: _isSidebarOpen ? AdminSidebar(
+              currentRoute: '/admin/profile',
+              onClose: () => setState(() => _isSidebarOpen = false),
+            ) : null,
           ),
           Expanded(
             child: Stack(
               children: [
-                // Galaxy Background
                 Positioned.fill(child: _buildAnimatedGalaxyBackground()),
-
-
-                // Profile Content (Non-scrollable, now with fixed overflow stripe)
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
@@ -207,27 +190,25 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // ── Header row with NEW BUTTON details ──────────────
                             Row(
                               children: [
-                                if (!isSidebarOpen) ...[
-                                  // Hamburger menu
+                                if (!_isSidebarOpen) ...[
                                   Container(
                                     margin: const EdgeInsets.only(right: 16),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.05),
+                                      color: Colors.white.withOpacity(0.05),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.15),
+                                        color: Colors.white.withOpacity(0.15),
                                         width: 1,
                                       ),
                                     ),
                                     child: IconButton(
                                       padding: const EdgeInsets.all(12),
-                                      onPressed: () => setState(() => isSidebarOpen = !isSidebarOpen),
+                                      onPressed: () => setState(() => _isSidebarOpen = true),
                                       icon: const HamburgerIcon(),
                                       tooltip: 'Open Sidebar',
-                                      splashColor: Colors.white.withValues(alpha: 0.1),
+                                      splashColor: Colors.white.withOpacity(0.1),
                                       highlightColor: Colors.transparent,
                                     ),
                                   ),
@@ -244,14 +225,11 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                       ),
                                 ),
                                 const Spacer(),
-                                // ── Edit Account button ──
                                 ElevatedButton.icon(
                                   onPressed: () {
-                                    context.go('/account-settings');
+                                    context.go('/admin/account-settings');
                                   },
-                                  // Pen/pencil icon instead of gear
                                   icon: const Icon(Icons.edit_outlined, size: 16),
-                                  // Label text changed to 'Edit Account'
                                   label: const Text('Edit Account',
                                       style: TextStyle(fontWeight: FontWeight.bold)),
                                   style: ElevatedButton.styleFrom(
@@ -267,12 +245,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                               ],
                             ),
                             const SizedBox(height: 20),
-
-
-                            // ── Avatar + name card ───────────────────────────────
                             Card(
                               elevation: 0,
-                              color: Colors.white.withValues(alpha: 0.95),
+                              color: Colors.white.withOpacity(0.95),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24)),
                               child: Padding(
@@ -283,7 +258,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                     CircleAvatar(
                                       radius: 40,
                                       backgroundColor:
-                                          _kCrimson.withValues(alpha: 0.1),
+                                          _kCrimson.withOpacity(0.1),
                                       backgroundImage: finalAvatarUrl.isNotEmpty
                                           ? NetworkImage(finalAvatarUrl)
                                           : null,
@@ -333,8 +308,8 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                                     : _kCrimson,
                                                 bg: isAdmin
                                                     ? Colors.red.shade50
-                                                    : _kCrimson.withValues(
-                                                        alpha: 0.08),
+                                                    : _kCrimson.withOpacity(
+                                                        0.08),
                                               ),
                                               _Badge(
                                                 label: (user?['is_active'] == true)
@@ -357,16 +332,12 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                               ),
                             ),
                             const SizedBox(height: 16),
-
-
-                            // ── Main Info card with FIX for vertical overflow ──
                             Expanded(
                               child: Card(
                                 elevation: 0,
-                                color: Colors.white.withValues(alpha: 0.95),
+                                color: Colors.white.withOpacity(0.95),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(24)),
-                                // This SingleChildScrollView fixes the internal overflow
                                 child: SingleChildScrollView(
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
@@ -381,28 +352,23 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                               color: _kCrimson),
                                         ),
                                         const SizedBox(height: 24),
-                                       
                                         _infoRow(context, [
                                           _Field('Name', first.isEmpty && last.isEmpty ? '—' : '$first $last'),
                                           _Field('Intern Number', user?['intern_number'] ?? '—'),
                                         ]),
                                         const SizedBox(height: 20),
-                                       
                                         _infoRow(context, [
                                           _Field('Program', user?['program'] ?? '—'),
                                           _Field('School', user?['school'] ?? '—'),
                                         ]),
                                         const SizedBox(height: 20),
-                                       
                                         _infoRow(context, [
                                           _Field('Specialization', user?['specialization'] ?? '—'),
                                           _Field('Email', user?['email'] ?? '—'),
                                         ]),
-                                       
                                         const SizedBox(height: 24),
                                         const Divider(),
                                         const SizedBox(height: 20),
-                                       
                                         const Text(
                                           'Skills & Proficiencies',
                                           style: TextStyle(
@@ -411,16 +377,13 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                               color: _kCrimson),
                                         ),
                                         const SizedBox(height: 20),
-                                       
                                         _infoRow(context, [
                                           _Field('Technical Skills', user?['technical_skills'] ?? '—'),
                                         ]),
                                         const SizedBox(height: 20),
-                                       
                                         _infoRow(context, [
                                           _Field('Soft Skills', user?['soft_skills'] ?? '—'),
                                         ]),
-                                       
                                       ],
                                     ),
                                   ),
@@ -440,7 +403,6 @@ class _MyProfileScreenState extends State<MyProfileScreen>
       ),
     );
   }
-
 
   Widget _infoRow(BuildContext context, List<_Field> fields) {
     return LayoutBuilder(builder: (context, constraints) {
@@ -469,13 +431,11 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   }
 }
 
-
 class _Badge extends StatelessWidget {
   final String label;
   final Color color;
   final Color bg;
   const _Badge({required this.label, required this.color, required this.bg});
-
 
   @override
   Widget build(BuildContext context) => Container(
@@ -491,18 +451,15 @@ class _Badge extends StatelessWidget {
       );
 }
 
-
 class _Field {
   final String label;
   final String value;
   const _Field(this.label, this.value);
 }
 
-
 class _FieldTile extends StatelessWidget {
   final _Field field;
   const _FieldTile(this.field);
-
 
   @override
   Widget build(BuildContext context) => Column(
@@ -523,48 +480,39 @@ class _FieldTile extends StatelessWidget {
       );
 }
 
-
 // ── Custom Painter for Starfield ─────────────────────────────────────────────
 class StarfieldPainter extends CustomPainter {
   final double animationValue;
   final List<Star> stars;
 
-
   StarfieldPainter({required this.animationValue, required this.stars});
-
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint();
 
-
     for (var star in stars) {
       double twinkle = (math.sin((animationValue * 2 * math.pi * 1.5) + star.twinklePhase) + 1.0) / 2.0;
       double currentOpacity = star.baseOpacity * (0.3 + (0.7 * twinkle));
      
-      paint.color = Colors.white.withValues(alpha: currentOpacity.clamp(0.0, 1.0));
-
+      paint.color = Colors.white.withOpacity(currentOpacity.clamp(0.0, 1.0));
 
       double dx = (star.x * size.width + (animationValue * size.width * star.speed)) % size.width;
       double dy = star.y * size.height;
 
-
       if (star.size > 1.5) {
         final glowPaint = Paint()
-          ..color = Colors.white.withValues(alpha: currentOpacity * 0.3)
+          ..color = Colors.white.withOpacity(currentOpacity * 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
         canvas.drawCircle(Offset(dx, dy), star.size * 2, glowPaint);
       }
 
-
       canvas.drawCircle(Offset(dx, dy), star.size, paint);
     }
   }
-
 
   @override
   bool shouldRepaint(covariant StarfieldPainter oldDelegate) {
     return oldDelegate.animationValue != animationValue;
   }
 }
-

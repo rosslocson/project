@@ -150,7 +150,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              const Text(
                 'CREATE ACCOUNT',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -173,19 +173,19 @@ class _RegisterScreenState extends State<RegisterScreen>
                         color: kCrimsonDeep.withValues(alpha: 0.2)),
                   ),
                   child: Row(children: [
-                    Icon(Icons.error_outline,
+                    const Icon(Icons.error_outline,
                         color: kCrimsonDeep, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                         child: Text(auth.error!,
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: kCrimsonDeep,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600))),
                     GestureDetector(
                       onTap: () =>
                           context.read<AuthProvider>().clearError(),
-                      child: Icon(Icons.close,
+                      child: const Icon(Icons.close,
                           size: 20, color: kCrimsonDeep),
                     ),
                   ]),
@@ -255,7 +255,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       fieldLabel('Department'),
                       const SizedBox(height: 4),
                       DropdownButtonFormField<String>(
-                        value: _selectedDept,
+                        initialValue: _selectedDept,
                         decoration: dec,
                         hint: Text(
                             _departments.isEmpty
@@ -298,7 +298,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       fieldLabel('Position'),
                       const SizedBox(height: 4),
                       DropdownButtonFormField<String>(
-                        value: _selectedPos,
+                        initialValue: _selectedPos,
                         decoration: dec,
                         hint: Text(
                             _positions.isEmpty
@@ -454,7 +454,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/login'),
-                    child: Text('Login Now',
+                    child: const Text('Login Now',
                         style: TextStyle(
                           fontSize: 13,
                           color: kCrimsonDeep,
@@ -488,7 +488,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
               const Positioned.fill(child: GalaxyBlendMask()),
               Row(children: [
-                Expanded(
+                const Expanded(
                   flex: 5,
                   child: GalaxyLeftPanel(
                     headline: 'JOIN US NOW!',

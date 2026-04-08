@@ -4,22 +4,25 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
-import 'providers/sidebar_provider.dart';
+
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart' as dashboard;
 import 'screens/user_my_profile_screen.dart';   // view-only
 import 'screens/user_account_settings_screen.dart';       // Account Settings
+import 'screens/admin_my_profile_screen.dart';
+import 'screens/admin_account_settings_screen.dart';
 import 'screens/admin_users_screen.dart';
 import 'screens/admin_add_user_screen.dart';
 import 'screens/admin_config_screen.dart';        // departments & positions
+import 'screens/admin_dashboard_screen.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => SidebarProvider()),
+
       ],
       child: const MyApp(),
     ),
@@ -56,7 +59,7 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       routerConfig: GoRouter(
-        initialLocation: '/login', // Sets the default starting page
+        initialLocation: '/login',
         routes: [
           GoRoute(
             path: '/login',
@@ -115,6 +118,34 @@ class _MyAppState extends State<MyApp> {
             pageBuilder: (context, state) => MaterialPage<void>(
               key: state.pageKey,
               child: const ConfigScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/dashboard',
+            pageBuilder: (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminDashboardScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/profile',
+            pageBuilder: (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminMyProfileScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/account-settings',
+            pageBuilder: (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminAccountSettingsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin-dashboard',
+            pageBuilder: (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminDashboardScreen(),
             ),
           ),
         ],

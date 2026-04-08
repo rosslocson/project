@@ -88,7 +88,7 @@ class _ConfigScreenState extends State<ConfigScreen>
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Row(children: [
-          Icon(Icons.edit_outlined, color: _kCrimson, size: 20),
+          const Icon(Icons.edit_outlined, color: _kCrimson, size: 20),
           const SizedBox(width: 8),
           Text('Edit ${type[0].toUpperCase()}${type.substring(1)}'),
         ]),

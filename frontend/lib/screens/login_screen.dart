@@ -83,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen>
     if (!mounted) return;
     if (result['ok'] == true) {
       if (auth.isAdmin) {
-        context.go('/users');
+        context.go('/dashboard');
       } else {
         context.go('/home');
       }
@@ -194,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen>
                       color: kCrimsonDeep.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.lock_reset,
+                    child: const Icon(Icons.lock_reset,
                         color: kCrimsonDeep, size: 26),
                   ),
                   const SizedBox(width: 14),
@@ -312,7 +312,7 @@ class _LoginScreenState extends State<LoginScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              const Text(
                 'LOGIN TO YOUR ACCOUNT',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -380,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen>
                 const Spacer(),
                 GestureDetector(
                   onTap: _showForgotPassword,
-                  child: Text(
+                  child: const Text(
                     'Forgot Password?',
                     style: TextStyle(
                       fontSize: 13,
@@ -409,7 +409,7 @@ class _LoginScreenState extends State<LoginScreen>
                           fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/register'),
-                    child: Text('Sign Up Now',
+                    child: const Text('Sign Up Now',
                         style: TextStyle(
                           fontSize: 13,
                           color: kCrimsonDeep,
@@ -443,7 +443,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               const Positioned.fill(child: GalaxyBlendMask()),
               Row(children: [
-                Expanded(
+                const Expanded(
                   flex: 5,
                   child: GalaxyLeftPanel(
                     headline: 'HI, WELCOME!',
@@ -499,9 +499,9 @@ class _LoginScreenState extends State<LoginScreen>
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [
+              const Row(children: [
                 Icon(Icons.lock, color: kCrimsonDeep, size: 18),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text('Account temporarily locked',
                     style: TextStyle(
                         color: kCrimsonDeep,
@@ -510,13 +510,13 @@ class _LoginScreenState extends State<LoginScreen>
               ]),
               const SizedBox(height: 8),
               Row(children: [
-                Icon(Icons.timer_outlined,
+                const Icon(Icons.timer_outlined,
                     color: kCrimsonDeep, size: 16),
                 const SizedBox(width: 8),
                 Text(
                     'Try again in $_lockSecsLeft second${_lockSecsLeft != 1 ? 's' : ''}',
                     style:
-                        TextStyle(color: kCrimsonDeep, fontSize: 12)),
+                        const TextStyle(color: kCrimsonDeep, fontSize: 12)),
               ]),
               const SizedBox(height: 8),
               ClipRRect(
@@ -532,7 +532,7 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: _showForgotPassword,
-                child: Text('Forgot your password? Reset it now →',
+                child: const Text('Forgot your password? Reset it now →',
                     style: TextStyle(
                         color: kCrimsonDeep,
                         fontSize: 12,

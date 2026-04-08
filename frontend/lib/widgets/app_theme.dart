@@ -116,7 +116,7 @@ class PillDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       validator: validator,
       decoration: pillInputDecoration(),
       hint: Text(hint,

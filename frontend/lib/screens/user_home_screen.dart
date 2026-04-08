@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/sidebar_provider.dart';
-import '../widgets/sidebar.dart';
+
+import '../widgets/user_sidebar.dart';
 
 // ── Custom Hamburger Icon (Redesigned) ──────────────────────────────────────
 class HamburgerIcon extends StatelessWidget {
@@ -302,24 +302,24 @@ class GlassTopBar extends StatelessWidget {
               }
             },
             itemBuilder: (BuildContext context) => [
-              PopupMenuItem<String>(
+              const PopupMenuItem<String>(
                 value: 'profile',
                 child: Row(
                   children: [
-                    const Icon(Icons.person_outline, size: 18),
-                    const SizedBox(width: 12),
-                    const Text('View Profile'),
+                    Icon(Icons.person_outline, size: 18),
+                    SizedBox(width: 12),
+                    Text('View Profile'),
                   ],
                 ),
               ),
               const PopupMenuDivider(),
-              PopupMenuItem<String>(
+              const PopupMenuItem<String>(
                 value: 'logout',
                 child: Row(
                   children: [
-                    const Icon(Icons.logout, size: 18, color: Colors.red),
-                    const SizedBox(width: 12),
-                    const Text('Sign out', style: TextStyle(color: Colors.red)),
+                    Icon(Icons.logout, size: 18, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text('Sign out', style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
@@ -517,7 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final sidebarProvider = context.watch<SidebarProvider>();
+    bool isSidebarOpen = true;
     final user = auth.user;
 
     return Scaffold(
@@ -526,8 +526,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            width: sidebarProvider.isOpen ? 250 : 0,
-            child: sidebarProvider.isOpen ? const Sidebar(currentRoute: '/home') : null,
+            width: isSidebarOpen ? 250 : 0,
+            child: isSidebarOpen ? const UserSidebar(currentRoute: '/home') : null,
           ),
           Expanded(
             child: Stack(
@@ -541,8 +541,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     children: [
                       // Glassmorphism Topbar (Now over the stars)
                       GlassTopBar(
-                        isSidebarOpen: sidebarProvider.isOpen,
-                        onToggleSidebar: () => context.read<SidebarProvider>().toggle(),
+                        isSidebarOpen: isSidebarOpen,
+                        onToggleSidebar: () => setState(() => isSidebarOpen = !isSidebarOpen),
                         user: user,
                       ),
                       
@@ -807,7 +807,8 @@ class _InternDetailPageState extends State<InternDetailPage>
                     filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       width: double.infinity,
-                      constraints: const BoxConstraints(maxWidth: 580),
+                      // ---> CHANGED maxWidth from 580 to 800 here <---
+                      constraints: const BoxConstraints(maxWidth: 800),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1A1A24).withOpacity(0.5), // Deep sleek transparent background
                         borderRadius: BorderRadius.circular(32),
@@ -901,7 +902,8 @@ class _InternDetailPageState extends State<InternDetailPage>
 
                           // ── Info Grid / Rows ──
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            // ---> Added more horizontal padding here <---
+                            padding: const EdgeInsets.symmetric(horizontal: 40),
                             child: Column(
                               children: [
                                 _IconInfoRow(icon: Icons.school_outlined, text: intern.school),
@@ -921,7 +923,8 @@ class _InternDetailPageState extends State<InternDetailPage>
 
                           // ── Skills Sections ──
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            // ---> Added more horizontal padding here <---
+                            padding: const EdgeInsets.symmetric(horizontal: 40),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [

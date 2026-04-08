@@ -2,16 +2,14 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// Note: You must add 'image_picker: ^1.0.7' (or latest) to your pubspec.yaml
 import 'package:image_picker/image_picker.dart'; 
-import '../providers/auth_provider.dart';
-
-import '../services/api_service.dart';
-import '../widgets/user_sidebar.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
+import '../../widgets/admin_sidebar.dart';
 
 const _kCrimson = Color(0xFF7B0D1E);
 
-// ── Custom Hamburger Icon (Redesigned) ──────────────────────────────────────
+// ── Custom Hamburger Icon ────────────────────────────────────────────────────
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
 
@@ -33,10 +31,10 @@ class HamburgerIcon extends StatelessWidget {
             ),
           ),
           Container(
-            width: 14, // Shorter middle line for a modern, dynamic feel
+            width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Colors.white.withOpacity(0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -54,7 +52,7 @@ class HamburgerIcon extends StatelessWidget {
   }
 }
 
-// ── Star Data Class for Galaxy Theme ─────────────────────────────────────────
+// ── Star Data Class ─────────────────────────────────────────────────────────
 class Star {
   final double x;
   final double y;
@@ -73,17 +71,19 @@ class Star {
   });
 }
 
-class AccountSettingsScreen extends StatefulWidget {
-  const AccountSettingsScreen({super.key});
+class AdminAccountSettingsScreen extends StatefulWidget {
+  const AdminAccountSettingsScreen({super.key});
+  
   @override
-  State<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
+  State<AdminAccountSettingsScreen> createState() => _AdminAccountSettingsScreenState();
 }
 
-class _AccountSettingsScreenState extends State<AccountSettingsScreen>
+class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     with TickerProviderStateMixin {
   late TabController _tabs;
+  bool _isSidebarOpen = true;
 
-  // Department → Position mapping (from register_screen)
+  // Department → Position mapping
   static const Map<String, List<String>> _deptRoles = {
     'Business Relationship Management': [
       'Account Manager', 'Business Analyst', 'Client Relations',
@@ -108,40 +108,41 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   };
 
   List<String> _departments = [];
-  List<String> _positions   = [];
+  List<String> _positions = [];
   String? _selectedDept;
   String? _selectedPos;
 
   // Form keys
   final _profileKey = GlobalKey<FormState>();
-  final _passKey    = GlobalKey<FormState>();
+  final _passKey = GlobalKey<FormState>();
 
   // Profile controllers
   late TextEditingController _firstCtrl;
   late TextEditingController _lastCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
+  
   // Password controllers
-  final _curPassCtrl     = TextEditingController();
-  final _newPassCtrl     = TextEditingController();
+  final _curPassCtrl = TextEditingController();
+  final _newPassCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
 
   // UI state
-  bool    _savingProfile = false;
-  bool    _savingPass    = false;
+  bool _savingProfile = false;
+  bool _savingPass = false;
   String? _profileMsg;
   String? _passMsg;
-  bool    _profileSuccess = false;
-  bool    _passSuccess    = false;
-  bool    _obscureCur     = true;
-  bool    _obscureNew     = true;
-  bool    _obscureConf    = true;
+  bool _profileSuccess = false;
+  bool _passSuccess = false;
+  bool _obscureCur = true;
+  bool _obscureNew = true;
+  bool _obscureConf = true;
 
   // Avatar Upload State
   bool _isUploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
 
-  // Animation controller for galaxy background
+  // Animation controller
   late AnimationController _bgAnimController;
   final List<Star> _stars = [];
 
@@ -152,19 +153,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     _departments = _deptRoles.keys.toList();
     final user = context.read<AuthProvider>().user;
     _firstCtrl = TextEditingController(text: user?['first_name'] ?? '');
-    _lastCtrl  = TextEditingController(text: user?['last_name']  ?? '');
-    _emailCtrl = TextEditingController(text: user?['email']      ?? '');
-    _phoneCtrl = TextEditingController(text: user?['phone']      ?? '');
+    _lastCtrl = TextEditingController(text: user?['last_name'] ?? '');
+    _emailCtrl = TextEditingController(text: user?['email'] ?? '');
+    _phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
     
     // Initialize Department and Position state
     final dept = user?['department'] as String? ?? '';
-    final pos  = user?['position']   as String? ?? '';
+    final pos = user?['position'] as String? ?? '';
     
     if (dept.isNotEmpty && _departments.contains(dept)) {
       _selectedDept = dept;
       _positions = _deptRoles[dept] ?? ['Intern', 'Others'];
     } else if (dept.isNotEmpty) {
-      // Fallback in case their current dept isn't in the static list
       _selectedDept = dept;
       if (!_departments.contains(dept)) _departments.add(dept);
       _positions = [pos];
@@ -173,16 +173,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     if (pos.isNotEmpty && _positions.contains(pos)) {
       _selectedPos = pos;
     } else if (pos.isNotEmpty) {
-       // Fallback in case their current pos isn't in the static list
       _selectedPos = pos;
       if (!_positions.contains(pos)) _positions.add(pos);
     }
 
-    // Initialize Starfield
     _generateStars();
     _bgAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 150), // Very slow, ambient drift
+      duration: const Duration(seconds: 150),
     )..repeat();
   }
 
@@ -213,21 +211,19 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     super.dispose();
   }
 
-  // ── Avatar Pick & Upload Logic ─────────────────────────────────────────────
+  // ── Avatar Pick & Upload ───────────────────────────────────────────────────
   Future<void> _pickAvatar() async {
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image == null) return; // User canceled the picker
+      if (image == null) return;
 
       setState(() => _isUploadingAvatar = true);
 
-      // Call your actual ApiService here
-      final res = await ApiService.uploadAvatar(image); 
+      final res = await ApiService.uploadAvatar(image);
       
       if (!mounted) return;
       
       if (res['ok'] == true) {
-        // Update the user provider with the new avatar URL so the UI updates
         context.read<AuthProvider>().updateUserData(res['user'] ?? {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -243,7 +239,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           ),
         );
       }
-
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -259,21 +254,21 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     setState(() { _savingProfile = true; _profileMsg = null; });
     final res = await ApiService.updateProfile({
       'first_name': _firstCtrl.text.trim(),
-      'last_name':  _lastCtrl.text.trim(),
-      'phone':      _phoneCtrl.text.trim(),
+      'last_name': _lastCtrl.text.trim(),
+      'phone': _phoneCtrl.text.trim(),
       'department': _selectedDept ?? '',
-      'position':   _selectedPos  ?? '',
+      'position': _selectedPos ?? '',
     });
     if (!mounted) return;
     if (res['ok'] == true) {
       context.read<AuthProvider>().updateUserData(res['user'] ?? {});
       setState(() {
-        _profileMsg    = 'Profile updated successfully!';
+        _profileMsg = 'Profile updated successfully!';
         _profileSuccess = true;
       });
     } else {
       setState(() {
-        _profileMsg    = res['error'] ?? 'Update failed';
+        _profileMsg = res['error'] ?? 'Update failed';
         _profileSuccess = false;
       });
     }
@@ -285,7 +280,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     setState(() { _savingPass = true; _passMsg = null; });
     final res = await ApiService.changePassword({
       'current_password': _curPassCtrl.text,
-      'new_password':     _newPassCtrl.text,
+      'new_password': _newPassCtrl.text,
       'confirm_password': _confirmPassCtrl.text,
     });
     if (!mounted) return;
@@ -296,7 +291,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       setState(() { _passMsg = 'Password changed successfully!'; _passSuccess = true; });
     } else {
       setState(() {
-        _passMsg    = res['error'] ?? res['details'] ?? 'Change failed';
+        _passMsg = res['error'] ?? res['details'] ?? 'Change failed';
         _passSuccess = false;
       });
     }
@@ -311,9 +306,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           center: Alignment(-0.3, -0.2),
           radius: 1.5,
           colors: [
-            Color(0xFF3A0812), // Deep glowing nebula red
-            Color(0xFF140306), // Very dark crimson
-            Color(0xFF050505), // Pure deep space black
+            Color(0xFF3A0812),
+            Color(0xFF140306),
+            Color(0xFF050505),
           ],
           stops: [0.0, 0.5, 1.0],
         ),
@@ -332,7 +327,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Reusable Input Decoration ──────────────────────────────────────────────
   InputDecoration _getFormDecoration(String label, {IconData? prefixIcon}) {
     return InputDecoration(
       labelText: label,
@@ -360,19 +354,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    bool isSidebarOpen = true;
 
-    // Avatar URL helper logic
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
-      // If the backend returned a relative path, attach the backend server address
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl'; // Adjust to match your Go port
+        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -385,16 +375,16 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            width: isSidebarOpen ? 250 : 0,
-            child: isSidebarOpen ? const UserSidebar(currentRoute: '/account-settings') : null,
+            width: _isSidebarOpen ? 250 : 0,
+            child: _isSidebarOpen ? AdminSidebar(
+              currentRoute: '/admin/account-settings',
+              onClose: () => setState(() => _isSidebarOpen = false),
+            ) : null,
           ),
           Expanded(
             child: Stack(
               children: [
-                // Galaxy Background
                 Positioned.fill(child: _buildAnimatedGalaxyBackground()),
-                
-                // Form Content
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
@@ -404,28 +394,25 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-
-                            // ── Page header ─────────────────────
                             Row(
                               children: [
-                                if (!isSidebarOpen) ...[
-                                  // Hamburger menu
+                                if (!_isSidebarOpen) ...[
                                   Container(
                                     margin: const EdgeInsets.only(right: 16),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.05),
+                                      color: Colors.white.withOpacity(0.05),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.15),
+                                        color: Colors.white.withOpacity(0.15),
                                         width: 1,
                                       ),
                                     ),
                                     child: IconButton(
                                       padding: const EdgeInsets.all(12),
-                                      onPressed: () => setState(() => isSidebarOpen = !isSidebarOpen),
+                                      onPressed: () => setState(() => _isSidebarOpen = true),
                                       icon: const HamburgerIcon(),
                                       tooltip: 'Open Sidebar',
-                                      splashColor: Colors.white.withValues(alpha: 0.1),
+                                      splashColor: Colors.white.withOpacity(0.1),
                                       highlightColor: Colors.transparent,
                                     ),
                                   ),
@@ -444,25 +431,22 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                               ],
                             ),
                             const SizedBox(height: 20),
-
-                            // ── Avatar card ──────────────────────────────────────
                             Card(
                               elevation: 0,
-                              color: Colors.white.withValues(alpha: 0.95),
+                              color: Colors.white.withOpacity(0.95),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24)),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                                 child: Row(
                                   children: [
-                                    // Stack used here to place the edit button over the avatar
                                     Stack(
                                       alignment: Alignment.bottomRight,
                                       children: [
                                         CircleAvatar(
                                           radius: 40,
                                           backgroundColor:
-                                              _kCrimson.withValues(alpha: 0.1),
+                                              _kCrimson.withOpacity(0.1),
                                           backgroundImage: finalAvatarUrl.isNotEmpty 
                                               ? NetworkImage(finalAvatarUrl) 
                                               : null,
@@ -480,7 +464,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                                     )
                                                   : null,
                                         ),
-                                        // Edit Button Over Avatar
                                         Positioned(
                                           bottom: 0,
                                           right: 0,
@@ -496,7 +479,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                                   shape: BoxShape.circle,
                                                   border: Border.all(color: Colors.white, width: 2),
                                                 ),
-                                                child: const Icon(
+                                    child: const Icon(
                                                   Icons.camera_alt,
                                                   color: Colors.white,
                                                   size: 14,
@@ -547,7 +530,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                             decoration: BoxDecoration(
                                               color: user?['role'] == 'admin'
                                                   ? Colors.red.shade50
-                                                  : _kCrimson.withValues(alpha: 0.08),
+                                                  : _kCrimson.withOpacity(0.08),
                                               borderRadius: BorderRadius.circular(16),
                                             ),
                                             child: Text(
@@ -570,12 +553,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                               ),
                             ),
                             const SizedBox(height: 16),
-
-                            // ── Tabs card ────────────────────────────────────────
                             Expanded(
                               child: Card(
                                 elevation: 0,
-                                color: Colors.white.withValues(alpha: 0.95),
+                                color: Colors.white.withOpacity(0.95),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(24)),
                                 child: Column(
@@ -614,7 +595,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                 ),
                               ),
                             ),
-
                           ],
                         ),
                       ),
@@ -629,7 +609,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Profile form ───────────────────────────────────────────────────────────
   Widget _buildProfileForm() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
@@ -642,7 +621,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               _msgBanner(_profileMsg!, _profileSuccess),
               const SizedBox(height: 16),
             ],
-
             Row(children: [
               Expanded(child: TextFormField(
                 controller: _firstCtrl,
@@ -658,19 +636,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               )),
             ]),
-            
             const SizedBox(height: 16),
-
-            // Email takes up the full width now
             TextFormField(
               controller: _emailCtrl,
               enabled: false,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
               decoration: _getFormDecoration('Email (cannot change)', prefixIcon: Icons.email_outlined),
             ),
-            
             const SizedBox(height: 16),
-
             Row(children: [
               Expanded(
                 child: _dropdownField(
@@ -681,9 +654,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                   onChanged: (v) {
                     setState(() {
                       _selectedDept = v;
-                      // Update positions when a new department is selected
                       _positions = _deptRoles[v] ?? ['Intern', 'Others'];
-                      // Clear selected position if it isn't part of the newly loaded list
                       if (_selectedPos != null && !_positions.contains(_selectedPos)) {
                         _selectedPos = null;
                       }
@@ -704,9 +675,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                 ),
               ),
             ]),
-
             const SizedBox(height: 32),
-
             SizedBox(
               height: 48,
               width: double.infinity,
@@ -735,7 +704,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Password form ──────────────────────────────────────────────────────────
   Widget _buildPasswordForm() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
@@ -748,7 +716,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               _msgBanner(_passMsg!, _passSuccess),
               const SizedBox(height: 16),
             ],
-
             _passField(
               controller: _curPassCtrl,
               label: 'Current Password',
@@ -756,10 +723,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               onToggle: () => setState(() => _obscureCur = !_obscureCur),
               validator: (v) => v!.isEmpty ? 'Required' : null,
             ),
-            
             const SizedBox(height: 20),
-
-            _passField(
+_passField(
               controller: _newPassCtrl,
               label: 'New Password',
               obscure: _obscureNew,
@@ -769,7 +734,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                 if (!v.contains(RegExp(r'[A-Z]'))) {
                   return 'Need one uppercase letter';
                 }
-                if (!v.contains(RegExp(r'[0-9]'))) {
+if (!v.contains(RegExp(r'[0-9]'))) {
                   return 'Need one number';
                 }
                 if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
@@ -778,9 +743,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                 return null;
               },
             ),
-            
             const SizedBox(height: 20),
-
             _passField(
               controller: _confirmPassCtrl,
               label: 'Confirm New Password',
@@ -792,9 +755,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                 return null;
               },
             ),
-            
             const SizedBox(height: 32),
-
             SizedBox(
               height: 48,
               width: double.infinity,
@@ -823,7 +784,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   Widget _dropdownField({
     required String label,
     required String? value,
@@ -877,7 +837,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     required String label,
     required bool obscure,
     required VoidCallback onToggle,
-    required String? Function(String?) validator,
+  required String? Function(String?) validator,
   }) =>
       TextFormField(
         controller: controller,
@@ -925,7 +885,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       );
 }
 
-// ── Custom Painter for Starfield ─────────────────────────────────────────────
+// ── Starfield Painter ───────────────────────────────────────────────────────
 class StarfieldPainter extends CustomPainter {
   final double animationValue;
   final List<Star> stars;
@@ -940,14 +900,14 @@ class StarfieldPainter extends CustomPainter {
       double twinkle = (math.sin((animationValue * 2 * math.pi * 1.5) + star.twinklePhase) + 1.0) / 2.0;
       double currentOpacity = star.baseOpacity * (0.3 + (0.7 * twinkle));
       
-      paint.color = Colors.white.withValues(alpha: currentOpacity.clamp(0.0, 1.0));
+      paint.color = Colors.white.withOpacity(currentOpacity.clamp(0.0, 1.0));
 
       double dx = (star.x * size.width + (animationValue * size.width * star.speed)) % size.width;
       double dy = star.y * size.height;
 
       if (star.size > 1.5) {
         final glowPaint = Paint()
-          ..color = Colors.white.withValues(alpha: currentOpacity * 0.3)
+          ..color = Colors.white.withOpacity(currentOpacity * 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
         canvas.drawCircle(Offset(dx, dy), star.size * 2, glowPaint);
       }

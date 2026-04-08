@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../providers/sidebar_provider.dart';
-import 'sidebar.dart';
+// import '../providers/sidebar_provider.dart'; // Removed
 
 class AppScaffold extends StatelessWidget {
   final String title;
@@ -24,7 +22,7 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sidebarProvider = context.watch<SidebarProvider>();
+    // final sidebarProvider = context.watch<SidebarProvider>(); // Removed
     final currentRoute = GoRouterState.of(context).matchedLocation;
     
     return Scaffold(
@@ -40,7 +38,7 @@ class AppScaffold extends StatelessWidget {
               leading: showAppBar
                   ? IconButton(
                       icon: const Icon(Icons.menu, color: Color(0xFF7B0D1E)),
-                      onPressed: () => sidebarProvider.toggle(),
+                      onPressed: () {}, // Sidebar removed
                       tooltip: 'Toggle Menu',
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.white.withOpacity(0.1),
@@ -64,8 +62,8 @@ class AppScaffold extends StatelessWidget {
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            width: sidebarProvider.isOpen ? 270.0 : 0.0,
-            child: Sidebar(currentRoute: currentRoute),
+            width: 0.0, // Sidebar removed
+            child: const SizedBox(),
           ),
           Expanded(child: child),
         ],
