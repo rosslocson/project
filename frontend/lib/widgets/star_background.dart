@@ -27,9 +27,9 @@ List<Star> generateStars({int count = 200}) {
     (_) => Star(
       x: rng.nextDouble(),
       y: rng.nextDouble(),
-      size: rng.nextDouble() * 2.0 + 0.5,
-      baseOpacity: rng.nextDouble() * 0.7 + 0.3,
-      speed: rng.nextDouble() * 0.5 + 0.1,
+size: rng.nextDouble() * 1.5 + 0.3,
+baseOpacity: rng.nextDouble() * 0.4 + 0.1,
+speed: rng.nextDouble() * 0.004 + 0.001,
       twinklePhase: rng.nextDouble() * 2 * math.pi,
     ),
   );
@@ -49,8 +49,8 @@ class StarfieldPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint();
     for (final star in stars) {
-      final twinkle =
-          (math.sin((animationValue * 2 * math.pi * 5) + star.twinklePhase) +
+final twinkle =
+          (math.sin((animationValue * 2 * math.pi * 0.5) + star.twinklePhase) +
                   1.0) /
               2.0;
       final opacity =

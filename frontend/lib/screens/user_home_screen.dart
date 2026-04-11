@@ -1,445 +1,54 @@
 import 'dart:async';
-import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-
 import '../widgets/user_sidebar.dart';
+import 'user_glass_topbar.dart';
+import '../widgets/star_background.dart' as sb;
+import 'intern_widgets.dart';
 
-// ── Custom Hamburger Icon (Redesigned) ──────────────────────────────────────
-class HamburgerIcon extends StatelessWidget {
-  const HamburgerIcon({super.key});
-
+class UserHomeScreen extends StatefulWidget {
+  const UserHomeScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 14,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<UserHomeScreen> createState() => _UserHomeScreenState();
 }
 
-// ── Data model ────────────────────────────────────────────────────────────────
-class InternProfile {
-  final String name;
-  final int internNumber;
-  final String program;
-  final String school;
-  final String specialization;
-  final String email;
-  final List<String> technicalSkills;
-  final List<String> softSkills;
-  final Color avatarColor;
-  final String initials;
+class _UserHomeScreenState extends State<UserHomeScreen> with SingleTickerProviderStateMixin {
+  bool _isSidebarOpen = true;
 
-  const InternProfile({
-    required this.name,
-    required this.internNumber,
-    required this.program,
-    required this.school,
-    required this.specialization,
-    required this.email,
-    required this.technicalSkills,
-    required this.softSkills,
-    required this.avatarColor,
-    required this.initials,
-  });
-}
-
-// ── Sample data ───────────────────────────────────────────────────────────────
-const List<InternProfile> kInterns = [
-  InternProfile(
-    name: 'Jamie Reyes',
-    internNumber: 1,
-    program: 'Bachelor of Science in Computer Science',
-    school: 'University of Santo Tomas',
-    specialization: 'Web Development',
-    email: 'jamie.reyes@email.com',
-    technicalSkills: ['Flutter', 'Dart', 'Firebase', 'Git'],
-    softSkills: ['Teamwork', 'Communication', 'Adaptable'],
-    avatarColor: Color(0xFF7B1A2E),
-    initials: 'JR',
-  ),
-  InternProfile(
-    name: 'Lorraine De Castro',
-    internNumber: 2,
-    program: 'Bachelor of Science in Information Technology',
-    school: 'De La Salle University',
-    specialization: 'UI/UX Design',
-    email: 'lorraine@gmail.com',
-    technicalSkills: ['Figma', 'HTML/CSS', 'React', 'Prototyping'],
-    softSkills: ['Creativity', 'Detail-oriented', 'Time management'],
-    avatarColor: Color(0xFF4A1040),
-    initials: 'LD',
-  ),
-  InternProfile(
-    name: 'Airra De Castro',
-    internNumber: 3,
-    program: 'Bachelor of Science in Software Engineering',
-    school: 'Ateneo de Manila University',
-    specialization: 'Backend Systems',
-    email: 'airra@gmail.com',
-    technicalSkills: ['Python', 'Django', 'PostgreSQL', 'Docker'],
-    softSkills: ['Problem-solving', 'Leadership', 'Critical thinking'],
-    avatarColor: Color(0xFF1A1050),
-    initials: 'AD',
-  ),
-  InternProfile(
-    name: 'Alex Santos',
-    internNumber: 12,
-    program: 'Bachelor of Science in Information System',
-    school: 'CARD',
-    specialization: 'N/A',
-    email: 'alex@gmail.com',
-    technicalSkills: ['HTML', 'Python', 'C++'],
-    softSkills: ['Attention to detail', 'Adaptability', 'Problem-solving', 'Teamwork'],
-    avatarColor: Color(0xFF2A3A1A),
-    initials: 'AS',
-  ),
-  InternProfile(
-    name: 'Joy Mendoza',
-    internNumber: 8,
-    program: 'Bachelor of Science in Computer Engineering',
-    school: 'Mapúa University',
-    specialization: 'Embedded Systems',
-    email: 'joy.mendoza@email.com',
-    technicalSkills: ['C', 'Arduino', 'MATLAB', 'PCB Design'],
-    softSkills: ['Analytical thinking', 'Persistence', 'Collaboration'],
-    avatarColor: Color(0xFF3A2A10),
-    initials: 'JM',
-  ),
-  InternProfile(
-    name: 'Raven Cruz',
-    internNumber: 5,
-    program: 'Bachelor of Science in Data Science',
-    school: 'University of the Philippines',
-    specialization: 'Machine Learning',
-    email: 'raven.cruz@email.com',
-    technicalSkills: ['Python', 'TensorFlow', 'SQL', 'Tableau'],
-    softSkills: ['Curiosity', 'Research', 'Presentation'],
-    avatarColor: Color(0xFF0A3A3A),
-    initials: 'RC',
-  ),
-];
-
-// ── Star model ────────────────────────────────────────────────────────────────
-class Star {
-  final double x, y, size, opacity, speed, phase;
-  const Star({
-    required this.x,
-    required this.y,
-    required this.size,
-    required this.opacity,
-    required this.speed,
-    required this.phase,
-  });
-}
-
-// ── Starfield painter ─────────────────────────────────────────────────────────
-class StarfieldPainter extends CustomPainter {
-  final double animValue;
-  final List<Star> stars;
-  StarfieldPainter({required this.animValue, required this.stars});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-    for (final star in stars) {
-      final twinkle =
-          (math.sin((animValue * 2 * math.pi * 1.5) + star.phase) + 1) / 2;
-      final alpha = (star.opacity * (0.3 + 0.7 * twinkle)).clamp(0.0, 1.0);
-      paint.color = Colors.white.withOpacity(alpha);
-      final dx = (star.x * size.width +
-              animValue * size.width * star.speed) %
-          size.width;
-      final dy = star.y * size.height;
-      if (star.size > 1.5) {
-        canvas.drawCircle(
-          Offset(dx, dy),
-          star.size * 2,
-          Paint()
-            ..color = Colors.white.withOpacity(alpha * 0.25)
-            ..maskFilter =
-                const MaskFilter.blur(BlurStyle.normal, 2),
-        );
-      }
-      canvas.drawCircle(Offset(dx, dy), star.size, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant StarfieldPainter old) =>
-      old.animValue != animValue;
-}
-
-// ── Faded Topbar ──────────────────────────────────────────────────────────────
-class GlassTopBar extends StatelessWidget {
-  final bool isSidebarOpen;
-  final VoidCallback onToggleSidebar;
-  final Map<String, dynamic>? user;
-
-  const GlassTopBar({
-    super.key,
-    required this.isSidebarOpen,
-    required this.onToggleSidebar,
-    this.user,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Extract user info with fallbacks
-    final String firstName = user?['first_name'] ?? 'User';
-    final String lastName = user?['last_name'] ?? '';
-    final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
-    final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
-
-    // Avatar URL helper logic
-    String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
-    String finalAvatarUrl = '';
-    if (rawAvatarUrl.isNotEmpty) {
-      // If the backend returned a relative path, attach the backend server address
-      if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl'; // Adjust to match your Go port
-      } else {
-        finalAvatarUrl = rawAvatarUrl;
-      }
-    }
-
-    return Container(
-      // Added a bit more bottom padding so the fade has room to transition smoothly
-      padding: const EdgeInsets.only(left: 32, right: 32, top: 24, bottom: 32),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            // Matches the darkest part of your galaxy background
-            const Color(0xFF050505).withOpacity(0.95), 
-            const Color(0xFF050505).withOpacity(0.7),
-            Colors.transparent, // Fades seamlessly into the background
-          ],
-          stops: const [0.0, 0.6, 1.0], // Controls where the fade happens
-        ),
-      ),
-      child: Row(
-        children: [
-          // Hamburger Menu (Only shows if sidebar is closed)
-          if (!isSidebarOpen) ...[
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
-                  width: 1,
-                ),
-              ),
-              child: IconButton(
-                padding: const EdgeInsets.all(12),
-                onPressed: onToggleSidebar,
-                icon: const HamburgerIcon(),
-                tooltip: 'Open Sidebar',
-                splashColor: Colors.white.withOpacity(0.1),
-                highlightColor: Colors.transparent,
-              ),
-            ),
-            const SizedBox(width: 24),
-          ],
-          
-          // Welcome Message
-          Text(
-            'Welcome, $firstName',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-          ),
-          
-          const Spacer(),
-          
-          // Right Side: Username and Avatar with Dropdown Menu
-          PopupMenuButton<String>(
-            onSelected: (String choice) {
-              if (choice == 'profile') {
-                context.push('/account-settings');
-              } else if (choice == 'logout') {
-                context.read<AuthProvider>().logout();
-                context.go('/login');
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_outline, size: 18),
-                    SizedBox(width: 12),
-                    Text('View Profile'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, size: 18, color: Colors.red),
-                    SizedBox(width: 12),
-                    Text('Sign out', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Row(
-                children: [
-                  Text(
-                    fullName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: const Color(0xFFD4748A).withOpacity(0.1),
-                    backgroundImage: finalAvatarUrl.isNotEmpty
-                        ? NetworkImage(finalAvatarUrl)
-                        : null,
-                    child: finalAvatarUrl.isEmpty
-                        ? Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFD4748A), Color(0xFF4A1040)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.6),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFD4748A).withOpacity(0.4),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                )
-                              ]
-                            ),
-                            child: Center(
-                              child: Text(
-                                initials,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Dashboard Screen ──────────────────────────────────────────────────────────
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
   // Background animation
   late AnimationController _bgAnimController;
-  final List<Star> _stars = [];
+  late List<sb.Star> stars;
 
-  // Carousel controllers
+  // Page controllers
   late PageController _pageController;
   late Timer _autoScrollTimer;
+  int _currentPage = 0;
   
-  // Start the page at a very large multiple of the total intern count
-  int _currentPage = kInterns.length * 1000;
   static const double _viewportFraction = 0.55;
 
   @override
   void initState() {
     super.initState();
     
-    // Initialize Galaxy Background
-    _generateStars();
+    // Initialize controllers with the slower 600s duration from admin
     _bgAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 120), 
+      duration: const Duration(seconds: 600),
     )..repeat();
 
-    // Initialize Carousel
+    // Use shared star generator
+    stars = sb.generateStars(count: 120);
+
+    // Start page large for infinite scroll
+    _currentPage = kInterns.length * 1000;
     _pageController = PageController(
       viewportFraction: _viewportFraction,
       initialPage: _currentPage,
     );
+    
     _startAutoScroll();
-  }
-
-  void _generateStars() {
-    final rng = math.Random();
-    for (int i = 0; i < 160; i++) {
-      _stars.add(Star(
-        x: rng.nextDouble(),
-        y: rng.nextDouble(),
-        size: rng.nextDouble() * 1.8 + 0.4,
-        opacity: rng.nextDouble() * 0.6 + 0.2,
-        speed: rng.nextDouble() * 0.03 + 0.005,
-        phase: rng.nextDouble() * 2 * math.pi,
-      ));
-    }
   }
 
   void _startAutoScroll() {
@@ -478,99 +87,84 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     super.dispose();
   }
 
-  void _openDetail(InternProfile intern) {
-    _autoScrollTimer.cancel();
-    Navigator.of(context)
-        .push(PageRouteBuilder(
-          pageBuilder: (_, anim, __) => InternDetailPage(intern: intern),
-          transitionsBuilder: (_, anim, __, child) => FadeTransition(
-            opacity: anim,
-            child: child,
-          ),
-          transitionDuration: const Duration(milliseconds: 350),
-        ))
-        .then((_) {
-          if (mounted) _startAutoScroll();
-        });
-  }
-
-  Widget _buildAnimatedGalaxyBackground() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment(-0.3, -0.3),
-          radius: 1.4,
-          colors: [Color(0xFF3A0810), Color(0xFF130205), Color(0xFF050505)],
-          stops: [0.0, 0.5, 1.0],
-        ),
-      ),
-      child: AnimatedBuilder(
-        animation: _bgAnimController,
-        builder: (_, __) => CustomPaint(
-          painter: StarfieldPainter(
-              animValue: _bgAnimController.value, stars: _stars),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    bool isSidebarOpen = true;
     final user = auth.user;
 
     return Scaffold(
       body: Row(
         children: [
+          // Standard User Sidebar
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            width: isSidebarOpen ? 250 : 0,
-            child: isSidebarOpen ? const UserSidebar(currentRoute: '/home') : null,
+            width: _isSidebarOpen ? 250 : 0,
+            child: _isSidebarOpen ? const UserSidebar(currentRoute: '/home') : const SizedBox(),
           ),
+
           Expanded(
             child: Stack(
               children: [
-                // ── 1. Galaxy Background covering the entire screen ────────
-                Positioned.fill(child: _buildAnimatedGalaxyBackground()),
+                // 1. Admin's Radial Gradient Background
+                Positioned.fill(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment(-0.3, -0.3),
+                        radius: 1.4,
+                        colors: [Color(0xFF3A0810), Color(0xFF130205), Color(0xFF050505)],
+                        stops: [0.0, 0.5, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
                 
-                // ── 2. Content (Topbar and Carousel) ───────────────────────
+                // 2. Animated Galaxy Background
+                Positioned.fill(
+                  child: sb.GalaxyBackground(
+                    animation: _bgAnimController, 
+                    stars: stars,
+                  ),
+                ),
+                
+                // 3. Admin's Topbar and Content Format
                 Positioned.fill(
                   child: Column(
                     children: [
-                      // Glassmorphism Topbar (Now over the stars)
                       GlassTopBar(
-                        isSidebarOpen: isSidebarOpen,
-                        onToggleSidebar: () => setState(() => isSidebarOpen = !isSidebarOpen),
+                        key: const Key('user_topbar'),
+                        isSidebarOpen: _isSidebarOpen,
+                        onToggleSidebar: () => setState(() => _isSidebarOpen = !_isSidebarOpen),
                         user: user,
                       ),
                       
-                      // Main Content Carousel
                       Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 120),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(32), // Standardized padding like admin dashboard
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const SizedBox(height: 16),
+
                               Center(
                                 child: Column(
-                                  children: [
+                                  children: const [
                                     Text(
                                       'Meet Our Interns',
                                       style: TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white.withOpacity(0.92),
+                                        color: Colors.white,
                                         letterSpacing: 0.5,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
+                                    SizedBox(height: 6),
                                     Text(
                                       'Tap a card to view full profile',
                                       style: TextStyle(
                                         fontSize: 13,
-                                        color: Colors.white.withOpacity(0.4),
+                                        color: Colors.white70,
                                       ),
                                     ),
                                   ],
@@ -578,13 +172,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                               ),
                               const SizedBox(height: 32),
 
-                              Expanded(
+                              // Intern Carousel
+                              SizedBox(
+                                height: 320,
                                 child: PageView.builder(
                                   controller: _pageController,
                                   onPageChanged: (i) => setState(() => _currentPage = i),
                                   itemBuilder: (context, index) {
-                                    final realIndex = index % kInterns.length;
-                                    final intern = kInterns[realIndex];
+                                    final intern = kInterns[index % kInterns.length];
                                     final isCenter = index == _currentPage;
                                     
                                     return AnimatedScale(
@@ -596,7 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                                         duration: const Duration(milliseconds: 350),
                                         child: GestureDetector(
                                           onTap: () => _openDetail(intern),
-                                          child: _InternCardFront(intern: intern),
+                                          child: _InternCard(intern: intern),
                                         ),
                                       ),
                                     );
@@ -605,10 +200,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                               ),
                               const SizedBox(height: 20),
 
+                              // Arrow controls + dots
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  _ArrowButton(icon: Icons.chevron_left, onTap: _prev),
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_left, color: Colors.white, size: 32),
+                                    onPressed: _prev,
+                                  ),
                                   const SizedBox(width: 20),
                                   Row(
                                     children: List.generate(kInterns.length, (i) {
@@ -619,16 +218,17 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                                         width: active ? 20 : 6,
                                         height: 6,
                                         decoration: BoxDecoration(
-                                          color: active
-                                              ? const Color(0xFFD4748A)
-                                              : Colors.white.withOpacity(0.25),
+                                          color: active ? const Color(0xFFD4748A) : Colors.white24,
                                           borderRadius: BorderRadius.circular(3),
                                         ),
                                       );
                                     }),
                                   ),
                                   const SizedBox(width: 20),
-                                  _ArrowButton(icon: Icons.chevron_right, onTap: _next),
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right, color: Colors.white, size: 32),
+                                    onPressed: _next,
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 36),
@@ -646,44 +246,62 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       ),
     );
   }
+
+  void _openDetail(InternProfile intern) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => InternDetailPage(intern: intern),
+      ),
+    );
+  }
 }
 
-// ── Front card (carousel tile) ────────────────────────────────────────────────
-class _InternCardFront extends StatelessWidget {
+class _InternCard extends StatelessWidget {
   final InternProfile intern;
-  const _InternCardFront({required this.intern});
+  const _InternCard({required this.intern});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.14), width: 0.8),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF6B1524), Color(0xFF4A0E18)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4A0E18).withOpacity(0.4),
+            blurRadius: 32,
+            offset: const Offset(0, 16),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 160,
-            height: 160,
+            width: 140,
+            height: 140,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.92),
-              borderRadius: BorderRadius.circular(24),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
             ),
             child: Center(
               child: Text(
                 intern.initials,
-                style: TextStyle(
-                  fontSize: 52,
+                style: const TextStyle(
+                  fontSize: 54,
                   fontWeight: FontWeight.bold,
-                  color: intern.avatarColor,
+                  color: Color(0xFF6B1524),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           Text(
             intern.name,
             style: const TextStyle(
@@ -691,359 +309,17 @@ class _InternCardFront extends StatelessWidget {
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
-            'Intern ${intern.internNumber}',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.55),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Arrow button ──────────────────────────────────────────────────────────────
-class _ArrowButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _ArrowButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.10),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.8),
-        ),
-        child: Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
-      ),
-    );
-  }
-}
-
-// ── Redesigned Detail Page (Glassmorphism & Chips) ────────────────────────────
-class InternDetailPage extends StatefulWidget {
-  final InternProfile intern;
-  const InternDetailPage({super.key, required this.intern});
-  @override
-  State<InternDetailPage> createState() => _InternDetailPageState();
-}
-
-class _InternDetailPageState extends State<InternDetailPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _bgController;
-  final List<Star> _stars = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _bgController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 120),
-    )..repeat();
-    final rng = math.Random();
-    for (int i = 0; i < 160; i++) {
-      _stars.add(Star(
-        x: rng.nextDouble(),
-        y: rng.nextDouble(),
-        size: rng.nextDouble() * 1.8 + 0.4,
-        opacity: rng.nextDouble() * 0.6 + 0.2,
-        speed: rng.nextDouble() * 0.03 + 0.005,
-        phase: rng.nextDouble() * 2 * math.pi,
-      ));
-    }
-  }
-
-  @override
-  void dispose() {
-    _bgController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final intern = widget.intern;
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Galaxy background
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(-0.3, -0.3),
-                  radius: 1.4,
-                  colors: [Color(0xFF3A0810), Color(0xFF130205), Color(0xFF050505)],
-                  stops: [0.0, 0.5, 1.0],
-                ),
-              ),
-              child: AnimatedBuilder(
-                animation: _bgController,
-                builder: (_, __) => CustomPaint(
-                  painter: StarfieldPainter(
-                      animValue: _bgController.value, stars: _stars),
-                ),
-              ),
-            ),
-          ),
-          
-          // Card content with Glassmorphism
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Container(
-                      width: double.infinity,
-                      // ---> CHANGED maxWidth from 580 to 800 here <---
-                      constraints: const BoxConstraints(maxWidth: 800),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A24).withOpacity(0.5), // Deep sleek transparent background
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                            color: Colors.white.withOpacity(0.15), width: 1.5),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          
-                          // ── Top Bar (Back Button) ──
-                          Align(
-                            alignment: Alignment.topLeft,
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 16, top: 16),
-                              child: IconButton(
-                                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70),
-                                onPressed: () => Navigator.of(context).pop(),
-                                splashRadius: 24,
-                              ),
-                            ),
-                          ),
-
-                          // ── Header Profile ──
-                          Column(
-                            children: [
-                              // Glowing Avatar
-                              Container(
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: intern.avatarColor,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: intern.avatarColor.withOpacity(0.6),
-                                      blurRadius: 24,
-                                      spreadRadius: 4,
-                                    )
-                                  ],
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.8),
-                                    width: 3,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    intern.initials,
-                                    style: const TextStyle(
-                                      fontSize: 40,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                intern.name,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'Intern ${intern.internNumber}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white.withOpacity(0.8),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          // ── Divider ──
-                          Divider(color: Colors.white.withOpacity(0.1), thickness: 1, indent: 32, endIndent: 32),
-                          const SizedBox(height: 16),
-
-                          // ── Info Grid / Rows ──
-                          Padding(
-                            // ---> Added more horizontal padding here <---
-                            padding: const EdgeInsets.symmetric(horizontal: 40),
-                            child: Column(
-                              children: [
-                                _IconInfoRow(icon: Icons.school_outlined, text: intern.school),
-                                const SizedBox(height: 12),
-                                _IconInfoRow(icon: Icons.menu_book_outlined, text: intern.program),
-                                const SizedBox(height: 12),
-                                _IconInfoRow(icon: Icons.star_border_outlined, text: intern.specialization),
-                                const SizedBox(height: 12),
-                                _IconInfoRow(icon: Icons.email_outlined, text: intern.email),
-                              ],
-                            ),
-                          ),
-                          
-                          const SizedBox(height: 24),
-                          Divider(color: Colors.white.withOpacity(0.1), thickness: 1, indent: 32, endIndent: 32),
-                          const SizedBox(height: 20),
-
-                          // ── Skills Sections ──
-                          Padding(
-                            // ---> Added more horizontal padding here <---
-                            padding: const EdgeInsets.symmetric(horizontal: 40),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Technical Skills',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white70,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: intern.technicalSkills.map((skill) {
-                                    return _SkillChip(
-                                      label: skill,
-                                      color: const Color(0xFF4CA1AF), // Sleek teal accent
-                                    );
-                                  }).toList(),
-                                ),
-                                
-                                const SizedBox(height: 24),
-                                
-                                const Text(
-                                  'Soft Skills',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white70,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: intern.softSkills.map((skill) {
-                                    return _SkillChip(
-                                      label: skill,
-                                      color: const Color(0xFFD4748A), // Match landing page dot accent
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Modern Icon Info Row ──────────────────────────────────────────────────────
-class _IconInfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _IconInfoRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: Colors.white54, size: 20),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            text,
+            'Intern #${intern.internNumber}',
             style: const TextStyle(
-              fontSize: 15,
-              color: Colors.white,
-              height: 1.3,
+              fontSize: 14,
+              color: Colors.white70,
             ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Custom Skill Chip ─────────────────────────────────────────────────────────
-class _SkillChip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _SkillChip({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withOpacity(0.4),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color.withOpacity(0.9),
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
+        ],
       ),
     );
   }

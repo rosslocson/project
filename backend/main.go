@@ -77,6 +77,13 @@ func main() {
 	{
 		auth.POST("/register", h.Register)
 		auth.POST("/login", h.Login)
+
+		// Admin dashboard example (RBAC demo)
+		admin := r.Group("/api/admin")
+		admin.Use(middleware.JWTAuth(), middleware.AdminOnly())
+		{
+			admin.GET("/dashboard", h.AdminDashboard)
+		}
 		auth.POST("/forgot-password", h.ForgotPassword)
 		auth.POST("/reset-password", h.ResetPassword)
 	}

@@ -54,21 +54,12 @@ class UserSidebar extends StatelessWidget {
                   ),
                 ),
                 
-                Material(
-                  color: Colors.white.withOpacity(0.1),
-                  shape: const CircleBorder(),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () {}, // Local state handled in screen
-                    child: const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Icon(
-                        Icons.close_rounded, 
-                        color: _textLight, 
-                        size: 24,
-                      ),
-                    ),
-                  ),
+IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close_rounded, color: _textLight, size: 24),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  splashRadius: 24,
                 ),
               ],
             ),
@@ -81,8 +72,8 @@ class UserSidebar extends StatelessWidget {
               children: [
                 const _SectionLabel('MENU'),
                 _NavItem(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
+                  icon: Icons.home_rounded, // Home icon
+                  label: 'Home',            // Changed to Home
                   route: '/home',
                   current: currentRoute,
                 ),
@@ -104,7 +95,6 @@ class UserSidebar extends StatelessWidget {
 
           // Sign out
           Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Divider(color: Colors.white.withOpacity(0.15), height: 1),
               InkWell(
@@ -203,4 +193,3 @@ class _SectionLabel extends StatelessWidget {
         ),
       );
 }
-

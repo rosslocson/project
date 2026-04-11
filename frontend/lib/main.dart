@@ -7,7 +7,7 @@ import 'providers/auth_provider.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/dashboard_screen.dart' as dashboard;
+import 'screens/user_home_screen.dart';
 import 'screens/user_my_profile_screen.dart';   // view-only
 import 'screens/user_account_settings_screen.dart';       // Account Settings
 import 'screens/admin_my_profile_screen.dart';
@@ -76,10 +76,10 @@ class _MyAppState extends State<MyApp> {
             ),
           ),
           GoRoute(
-            path: '/home',
+path: '/home',
             pageBuilder: (context, state) => MaterialPage<void>(
               key: state.pageKey,
-              child: const dashboard.DashboardScreen(),
+              child: const UserHomeScreen(),
             ),
           ),
           // View-only profile

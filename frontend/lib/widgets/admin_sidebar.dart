@@ -56,17 +56,20 @@ final isAdmin = auth.isAdmin;
                   ),
                 ),
                 Material(
-                  color: Colors.white.withOpacity(0.1),
-                  shape: const CircleBorder(),
-                  clipBehavior: Clip.antiAlias,
+                  color: Colors.transparent,
                   child: InkWell(
                     onTap: onClose,
-                    child: const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Icon(
-                        Icons.close_rounded, 
-                        color: _textLight, 
-                        size: 24,
+                    child: Material(
+                      color: Colors.white.withOpacity(0.1),
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(
+                          Icons.close_rounded, 
+                          color: _textLight, 
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),
@@ -124,29 +127,31 @@ final isAdmin = auth.isAdmin;
 
           // Sign out
           Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Divider(color: Colors.white.withOpacity(0.15), height: 1),
-              InkWell(
-                onTap: () {
-                  context.read<AuthProvider>().logout();
-                  context.go('/login');
-                },
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout_rounded, color: _textLight, size: 22),
-                      SizedBox(width: 16),
-                      Text(
-                        'Sign Out',
-                        style: TextStyle(
-                          color: _textLight,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    context.read<AuthProvider>().logout();
+                    context.go('/login');
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout_rounded, color: _textLight, size: 22),
+                        SizedBox(width: 16),
+                        Text(
+                          'Sign Out',
+                          style: TextStyle(
+                            color: _textLight,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

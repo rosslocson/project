@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui'; 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart' as go;
 import 'package:provider/provider.dart';
 
 // Providers & Services
@@ -12,8 +12,8 @@ import '../services/api_service.dart';
 // Widgets
 import '../widgets/admin_sidebar.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/star_background.dart';
-import '../widgets/glass_top_bar.dart';
+import '../widgets/star_background.dart' as stars;
+import 'admin_glass_topbar.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -29,7 +29,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   List<dynamic> _activityLogs = [];
   bool _loading = true;
   late AnimationController _bgAnimController;
-  late final List<Star> _stars;
+  late final List<stars.Star> _stars;
 
   // Carousel State
   late PageController _pageController;
@@ -39,12 +39,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _stars = generateStars(count: 200);
-    _loadAll();
+    _stars = stars.generateStars(count: 120);
     _bgAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 150),
+      duration: const Duration(seconds: 600),
     )..repeat();
+    _loadAll();
 
     // Initialize Carousel
     _pageController = PageController(
@@ -124,7 +124,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       final logsRes = results[1];
       
       setState(() {
-        if (statsRes['ok'] == true) _stats = statsRes;
+        if (statsRes['ok'] == true) _stats = statsRes['data'] ?? statsRes;
         _activityLogs = (logsRes['logs'] as List?) ?? [];
         _loading = false;
       });
@@ -144,6 +144,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         .trim();
   }
 
+  // --- Updated Helper for Solid Light Cards ---
+  Widget _buildSectionCard({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF5F5), // Solid warm off-white to match stat cards
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
   Widget _buildGlowingCard({required Widget child}) {
     return Container(
       decoration: BoxDecoration(
@@ -161,7 +180,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildAnimatedGalaxyBackground() {
-    return GalaxyBackground(
+    return stars.GalaxyBackground(
       animation: _bgAnimController,
       stars: _stars,
     );
@@ -252,7 +271,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             width: isSidebarOpen ? 250 : 0,
             child: isSidebarOpen
                 ? AdminSidebar(
-                    currentRoute: GoRouterState.of(context).uri.toString(),
+                    currentRoute: go.GoRouterState.of(context).uri.toString(),
                     onClose: () => setState(() => _isSidebarOpen = false),
                   )
                 : const SizedBox(),
@@ -265,9 +284,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   child: Column(
                     children: [
                       GlassTopBar(
+                        key: const Key('admin_topbar'),
                         isSidebarOpen: isSidebarOpen,
-                        onToggleSidebar: () =>
-                            setState(() => _isSidebarOpen = !isSidebarOpen),
+                        onToggleSidebar: () => setState(() => _isSidebarOpen = !isSidebarOpen),
                         user: user,
                       ),
                       Expanded(
@@ -281,136 +300,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               _buildInternCarousel(),
                               const SizedBox(height: 32),
                               
-                              if (_loading)
-                                const Center(
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white),
-                                )
-                              else ...[
-                                LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final cols = constraints.maxWidth > 800 ? 4 : 2;
-                                    return GridView.count(
-                                      crossAxisCount: cols,
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      crossAxisSpacing: 24,
-                                      mainAxisSpacing: 24,
-                                      childAspectRatio: 1.4,
-                                      children: [
-                                        _buildGlowingCard(
-                                          child: StatCard(
-                                            title: 'Total Users',
-                                            value: '${_stats?['total_users'] ?? 0}',
-                                            icon: Icons.people,
-                                            color: const Color(0xFF6C63FF),
-                                            subtitle: 'Registered accounts',
-                                          ),
-                                        ),
-                                        _buildGlowingCard(
-                                          child: StatCard(
-                                            title: 'Active Users',
-                                            value: '${_stats?['active_users'] ?? 0}',
-                                            icon: Icons.check_circle,
-                                            color: const Color(0xFF4CAF50),
-                                            subtitle: 'Currently active',
-                                          ),
-                                        ),
-                                        _buildGlowingCard(
-                                          child: StatCard(
-                                            title: 'Admins',
-                                            value: '${_stats?['admin_users'] ?? 0}',
-                                            icon: Icons.admin_panel_settings,
-                                            color: const Color(0xFFFF6B6B),
-                                            subtitle: 'Administrator accounts',
-                                          ),
-                                        ),
-                                        _buildGlowingCard(
-                                          child: StatCard(
-                                            title: 'Inactive',
-                                            value: '${_stats?['new_users'] ?? 0}',
-                                            icon: Icons.person_off,
-                                            color: const Color(0xFFFFA726),
-                                            subtitle: 'Inactive accounts',
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
+                              Text(
+                                'Dashboard Stats',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
-                                const SizedBox(height: 40),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Recent Users',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: () => context.go('/users'),
-                                      icon: const Icon(Icons.arrow_forward,
-                                          size: 16, color: Colors.white),
-                                      label: const Text('View All',
-                                          style: TextStyle(color: Colors.white)),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.95),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: _buildRecentUsers(),
-                                  ),
-                                ),
-                                const SizedBox(height: 40),
-                                Row(
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Recent Activity',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                        ),
-                                        Text(
-                                          'All recent system activity',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.white.withOpacity(0.7),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.95),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: _buildActivityFeed(true),
-                                  ),
-                                ),
-                              ],
+                              ),
+                              const SizedBox(height: 24),
+                              
+                              _buildStatsGrid(),
+                              
+                              const SizedBox(height: 48),
+                              
+                              _buildRecentActivity(),
+                              
+                              const SizedBox(height: 48),
+                              
+                              _buildRecentUsersSection(),
                             ],
                           ),
                         ),
@@ -426,109 +333,211 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _buildRecentUsers() {
-    final users = (_stats?['recent_users'] as List?) ?? [];
-    if (users.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(
-          child: Text('No users yet', style: TextStyle(color: Colors.black87)),
+  Widget _buildStatsGrid() {
+    if (_loading || _stats == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(64.0),
+          child: CircularProgressIndicator(color: Colors.white),
         ),
       );
     }
-    return ListView.separated(
+
+    return GridView.count(
+      crossAxisCount: 4,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: users.length,
-      separatorBuilder: (_, __) =>
-          const Divider(height: 1, color: Colors.black12),
-      itemBuilder: (context, i) {
-        final u = users[i];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
-            child: Text(
-              '${u['first_name']?[0] ?? ''}${u['last_name']?[0] ?? ''}',
-              style: const TextStyle(
-                  color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
+      crossAxisSpacing: 24,
+      mainAxisSpacing: 24,
+      childAspectRatio: 1.6,
+      children: [
+        StatCard(
+          title: 'Total Users',
+          value: '${_stats!['total_users'] ?? 0}',
+          icon: Icons.people,
+          color: const Color(0xFF6C63FF),
+          subtitle: '+12% from last month',
+        ),
+        StatCard(
+          title: 'Active Users',
+          value: '${_stats!['active_users'] ?? 0}',
+          icon: Icons.check_circle,
+          color: Colors.green,
+          subtitle: '+8% this week',
+        ),
+        StatCard(
+          title: 'Admins',
+          value: '${_stats!['admins'] ?? 0}',
+          icon: Icons.admin_panel_settings,
+          color: Colors.orange,
+          subtitle: 'Team leads',
+        ),
+        StatCard(
+          title: 'Interns',
+          value: '${_stats!['interns'] ?? kInterns.length}',
+          icon: Icons.school,
+          color: Colors.purple,
+          subtitle: 'New batch',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentActivity() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Activity',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
             ),
-          ),
-          title: Text(
-            '${u['first_name']} ${u['last_name']}',
-            style: const TextStyle(
-                fontWeight: FontWeight.w600, color: Colors.black87),
-          ),
-          subtitle: Text(u['email'] ?? '',
-              style: const TextStyle(color: Colors.black54)),
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: u['role'] == 'admin'
-                  ? const Color.fromARGB(255, 255, 235, 238)
-                  : Colors.green.shade50,
-              borderRadius: BorderRadius.circular(20),
+            TextButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.more_horiz, color: Colors.white70),
+              label: const Text('View All', style: TextStyle(color: Colors.white70)),
             ),
-            child: Text(
-              u['role'] ?? 'user',
-              style: TextStyle(
-                color: u['role'] == 'admin'
-                    ? Colors.red.shade700
-                    : Colors.green.shade700,
-                fontSize: 12,
+          ],
+        ),
+        const SizedBox(height: 20),
+        _buildActivityFeed(true),
+      ],
+    );
+  }
+
+  Widget _buildRecentUsersSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Recent Users',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+        ),
+        const SizedBox(height: 20),
+        _buildRecentUsers(),
+      ],
+    );
+  }
+
+  Widget _buildRecentUsers() {
+    final users = (_stats?['recent_users'] as List?) ?? [];
+    if (users.isEmpty) {
+      return _buildSectionCard(
+        child: const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(
+            child: Text('No users yet', style: TextStyle(color: Colors.black87)),
+          ),
+        ),
+      );
+    }
+    return _buildSectionCard(
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: users.length,
+        separatorBuilder: (_, __) =>
+            const Divider(height: 1, color: Colors.black12), // Dark divider for light background
+        itemBuilder: (context, i) {
+          final u = users[i];
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+              child: Text(
+                '${u['first_name']?[0] ?? ''}${u['last_name']?[0] ?? ''}',
+                style: const TextStyle(
+                    color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
               ),
             ),
-          ),
-        );
-      },
+            title: Text(
+              '${u['first_name']} ${u['last_name']}',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600, color: Colors.black87), // Dark text for readability
+            ),
+            subtitle: Text(u['email'] ?? '',
+                style: const TextStyle(color: Colors.black54)), // Dark text for readability
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: u['role'] == 'admin'
+                    ? const Color.fromARGB(255, 255, 235, 238)
+                    : Colors.green.shade50,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                u['role'] ?? 'user',
+                style: TextStyle(
+                  color: u['role'] == 'admin'
+                      ? Colors.red.shade700
+                      : Colors.green.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildActivityFeed(bool isAdmin) {
     if (_activityLogs.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(
-          child: Text('No activity yet', style: TextStyle(color: Colors.black87)),
+      return _buildSectionCard(
+        child: const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(
+            child: Text('No activity yet', style: TextStyle(color: Colors.black87)),
+          ),
         ),
       );
     }
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _activityLogs.length,
-      separatorBuilder: (_, __) =>
-          const Divider(height: 1, color: Colors.black12),
-      itemBuilder: (context, i) {
-        final log = _activityLogs[i];
-        final action = log['action'] as String?;
-        final rawDetail = log['details'] as String? ?? action ?? '';
-        final displayText = _cleanDetail(rawDetail);
-        final logUser = log['user'] as Map<String, dynamic>?;
-        final userName = (isAdmin && logUser != null)
-            ? '${logUser['first_name'] ?? ''} ${logUser['last_name'] ?? ''}'.trim()
-            : '';
-            
-        return ListTile(
-          dense: true,
-          leading: _actionIcon(action),
-          title: Text(
-            displayText,
-            style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87),
-          ),
-          subtitle: userName.isNotEmpty
-              ? Text(userName,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54))
-              : null,
-          trailing: Text(
-            _formatDate(log['created_at'] as String?),
-            style: const TextStyle(color: Colors.black54, fontSize: 12),
-          ),
-        );
-      },
+    return _buildSectionCard(
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _activityLogs.length,
+        separatorBuilder: (_, __) =>
+            const Divider(height: 1, color: Colors.black12), // Dark divider for light background
+        itemBuilder: (context, i) {
+          final log = _activityLogs[i];
+          final action = log['action'] as String?;
+          final rawDetail = log['details'] as String? ?? action ?? '';
+          final displayText = _cleanDetail(rawDetail);
+          final logUser = log['user'] as Map<String, dynamic>?;
+          final userName = (isAdmin && logUser != null)
+              ? '${logUser['first_name'] ?? ''} ${logUser['last_name'] ?? ''}'.trim()
+              : '';
+              
+          return ListTile(
+            dense: true,
+            leading: _actionIcon(action),
+            title: Text(
+              displayText,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87), // Dark text for readability
+            ),
+            subtitle: userName.isNotEmpty
+                ? Text(userName,
+                    style: const TextStyle(fontSize: 12, color: Colors.black54)) // Dark text for readability
+                : null,
+            trailing: Text(
+              _formatDate(log['created_at'] as String?),
+              style: const TextStyle(color: Colors.black54, fontSize: 12), // Dark text for readability
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -868,7 +877,6 @@ class _InternDetailPageState extends State<InternDetailPage>
                     filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       width: double.infinity,
-                      // ---> CHANGED maxWidth from 580 to 800 here <---
                       constraints: const BoxConstraints(maxWidth: 800),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1A1A24).withOpacity(0.5), // Deep sleek transparent background
@@ -963,7 +971,7 @@ class _InternDetailPageState extends State<InternDetailPage>
 
                           // ── Info Grid / Rows ──
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 40), // slightly increased horizontal padding
+                            padding: const EdgeInsets.symmetric(horizontal: 40), 
                             child: Column(
                               children: [
                                 _IconInfoRow(icon: Icons.school_outlined, text: intern.school),
@@ -1003,7 +1011,7 @@ class _InternDetailPageState extends State<InternDetailPage>
                                   children: intern.technicalSkills.map((skill) {
                                     return _SkillChip(
                                       label: skill,
-                                      color: const Color(0xFF4CA1AF), // Sleek teal accent
+                                      color: const Color(0xFF4CA1AF), 
                                     );
                                   }).toList(),
                                 ),
@@ -1026,7 +1034,7 @@ class _InternDetailPageState extends State<InternDetailPage>
                                   children: intern.softSkills.map((skill) {
                                     return _SkillChip(
                                       label: skill,
-                                      color: const Color(0xFFD4748A), // Match landing page dot accent
+                                      color: const Color(0xFFD4748A), 
                                     );
                                   }).toList(),
                                 ),

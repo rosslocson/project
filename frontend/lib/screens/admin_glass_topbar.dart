@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 
 class HamburgerIcon extends StatelessWidget {
@@ -111,14 +111,26 @@ class GlassTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 24),
           ],
-          Text(
-            'Admin Dashboard',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Admin Dashboard',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Text(
+                'Welcome, $fullName',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white.withOpacity(0.8),
+                ),
+              ),
+            ],
           ),
           const Spacer(),
           PopupMenuButton<String>(
@@ -217,4 +229,3 @@ class GlassTopBar extends StatelessWidget {
     );
   }
 }
-

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/admin_sidebar.dart';
 
+
 const _kCrimson = Color(0xFF7B0D1E);
 
 // ── Custom Hamburger Icon (Redesigned) ──────────────────────────────────────
@@ -92,6 +93,7 @@ class _AdminMyProfileScreenState extends State<AdminMyProfileScreen>
     )..repeat();
   }
 
+
   void _generateStars() {
     final random = math.Random();
     for (int i = 0; i < 200; i++) {
@@ -143,9 +145,28 @@ class _AdminMyProfileScreenState extends State<AdminMyProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    final isAdmin = user?['role'] == 'admin';
+    return Scaffold(
+      body: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: _isSidebarOpen ? 250 : 0,
+            child: _isSidebarOpen
+                ? AdminSidebar(
+                    currentRoute: '/admin/profile',
+                    onClose: () => setState(() => _isSidebarOpen = false),
+                  )
+                : const SizedBox(),
+          ),
+          Expanded(child: _buildProfileContent(context)),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildProfileContent(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
     final first = user?['first_name'] as String? ?? '';
     final last = user?['last_name'] as String? ?? '';
     String initials = '';
@@ -163,246 +184,224 @@ class _AdminMyProfileScreenState extends State<AdminMyProfileScreen>
       }
     }
 
-    return Scaffold(
-      body: Row(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            width: _isSidebarOpen ? 250 : 0,
-            child: _isSidebarOpen ? AdminSidebar(
-              currentRoute: '/admin/profile',
-              onClose: () => setState(() => _isSidebarOpen = false),
-            ) : null,
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(child: _buildAnimatedGalaxyBackground()),
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1000),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                if (!_isSidebarOpen) ...[
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.15),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: IconButton(
-                                      padding: const EdgeInsets.all(12),
-                                      onPressed: () => setState(() => _isSidebarOpen = true),
-                                      icon: const HamburgerIcon(),
-                                      tooltip: 'Open Sidebar',
-                                      splashColor: Colors.white.withOpacity(0.1),
-                                      highlightColor: Colors.transparent,
-                                    ),
-                                  ),
-                                ],
-                                Text(
-                                  'My Profile',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
-                                ),
-                                const Spacer(),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    context.go('/admin/account-settings');
-                                  },
-                                  icon: const Icon(Icons.edit_outlined, size: 16),
-                                  label: const Text('Edit Account',
-                                      style: TextStyle(fontWeight: FontWeight.bold)),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: _kCrimson,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12)),
-                                    elevation: 0,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Card(
-                              elevation: 0,
-                              color: Colors.white.withOpacity(0.95),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24)),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 40,
-                                      backgroundColor:
-                                          _kCrimson.withOpacity(0.1),
-                                      backgroundImage: finalAvatarUrl.isNotEmpty
-                                          ? NetworkImage(finalAvatarUrl)
-                                          : null,
-                                      child: finalAvatarUrl.isEmpty
-                                          ? Text(
-                                              initials,
-                                              style: const TextStyle(
-                                                fontSize: 28,
-                                                fontWeight: FontWeight.bold,
-                                                color: _kCrimson,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 20),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            first.isEmpty && last.isEmpty
-                                              ? 'Name Not Set'
-                                              : '$first $last',
-                                            style: const TextStyle(
-                                                fontSize: 22,
-                                                letterSpacing: 0.5,
-                                                fontWeight: FontWeight.w800),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            user?['email'] ?? '',
-                                            style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 14),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Wrap(
-                                            spacing: 8,
-                                            children: [
-                                              _Badge(
-                                                label: (user?['role'] ?? 'user')
-                                                    .toUpperCase(),
-                                                color: isAdmin
-                                                    ? Colors.red.shade700
-                                                    : _kCrimson,
-                                                bg: isAdmin
-                                                    ? Colors.red.shade50
-                                                    : _kCrimson.withOpacity(
-                                                        0.08),
-                                              ),
-                                              _Badge(
-                                                label: (user?['is_active'] == true)
-                                                    ? 'ACTIVE'
-                                                    : 'INACTIVE',
-                                                color: (user?['is_active'] == true)
-                                                    ? Colors.green.shade700
-                                                    : Colors.orange.shade700,
-                                                bg: (user?['is_active'] == true)
-                                                    ? Colors.green.shade50
-                                                    : Colors.orange.shade50,
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+    return Stack(
+      children: [
+        Positioned.fill(child: _buildAnimatedGalaxyBackground()),
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1000),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        if (!_isSidebarOpen) ...[
+                          Container(
+                            margin: const EdgeInsets.only(right: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.15),
+                                width: 1,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            child: IconButton(
+                              padding: const EdgeInsets.all(12),
+                              onPressed: () => setState(() => _isSidebarOpen = true),
+                              icon: const HamburgerIcon(),
+                              tooltip: 'Open Sidebar',
+                              splashColor: Colors.white.withOpacity(0.1),
+                              highlightColor: Colors.transparent,
+                            ),
+                          ),
+                        ],
+                        Text(
+                          'My Profile',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                        ),
+                        const Spacer(),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            context.go('/admin/account-settings');
+                          },
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: const Text('Edit Account',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: _kCrimson,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Card(
+                      elevation: 0,
+                      color: Colors.white.withOpacity(0.95),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor:
+                                  _kCrimson.withOpacity(0.1),
+                              backgroundImage: finalAvatarUrl.isNotEmpty
+                                  ? NetworkImage(finalAvatarUrl)
+                                  : null,
+                              child: finalAvatarUrl.isEmpty
+                                  ? Text(
+                                      initials,
+                                      style: const TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: _kCrimson,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 20),
                             Expanded(
-                              child: Card(
-                                elevation: 0,
-                                color: Colors.white.withOpacity(0.95),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24)),
-                                child: SingleChildScrollView(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Internship Information',
-                                          style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w800,
-                                              color: _kCrimson),
-                                        ),
-                                        const SizedBox(height: 24),
-                                        _infoRow(context, [
-                                          _Field('Name', first.isEmpty && last.isEmpty ? '—' : '$first $last'),
-                                          _Field('Intern Number', user?['intern_number'] ?? '—'),
-                                        ]),
-                                        const SizedBox(height: 20),
-                                        _infoRow(context, [
-                                          _Field('Program', user?['program'] ?? '—'),
-                                          _Field('School', user?['school'] ?? '—'),
-                                        ]),
-                                        const SizedBox(height: 20),
-                                        _infoRow(context, [
-                                          _Field('Specialization', user?['specialization'] ?? '—'),
-                                          _Field('Email', user?['email'] ?? '—'),
-                                        ]),
-                                        const SizedBox(height: 24),
-                                        const Divider(),
-                                        const SizedBox(height: 20),
-                                        const Text(
-                                          'Skills & Proficiencies',
-                                          style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w800,
-                                              color: _kCrimson),
-                                        ),
-                                        const SizedBox(height: 20),
-                                        _infoRow(context, [
-                                          _Field('Technical Skills', user?['technical_skills'] ?? '—'),
-                                        ]),
-                                        const SizedBox(height: 20),
-                                        _infoRow(context, [
-                                          _Field('Soft Skills', user?['soft_skills'] ?? '—'),
-                                        ]),
-                                      ],
-                                    ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    first.isEmpty && last.isEmpty
+                                        ? 'Name Not Set'
+                                        : '$first $last',
+                                    style: const TextStyle(
+                                        fontSize: 22,
+                                        letterSpacing: 0.5,
+                                        fontWeight: FontWeight.w800),
                                   ),
-                                ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    user?['email'] ?? '',
+                                    style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      _Badge(
+                                        label: 'ADMIN',
+                                        color: Colors.red.shade700,
+                                        bg: Colors.red.shade50,
+                                      ),
+                                      _Badge(
+                                        label: (user?['is_active'] == true)
+                                            ? 'ACTIVE'
+                                            : 'INACTIVE',
+                                        color: (user?['is_active'] == true)
+                                            ? Colors.green.shade700
+                                            : Colors.orange.shade700,
+                                        bg: (user?['is_active'] == true)
+                                            ? Colors.green.shade50
+                                            : Colors.orange.shade50,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: Card(
+                        elevation: 0,
+                        color: Colors.white.withOpacity(0.95),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Internship Information',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: _kCrimson),
+                                ),
+                                const SizedBox(height: 24),
+                                _infoRow(context, [
+                                  _Field('Name', first.isEmpty && last.isEmpty ? '—' : '$first $last'),
+                                  _Field('Intern Number', user?['intern_number'] ?? '—'),
+                                ]),
+                                const SizedBox(height: 20),
+                                _infoRow(context, [
+                                  _Field('Program', user?['program'] ?? '—'),
+                                  _Field('School', user?['school'] ?? '—'),
+                                ]),
+                                const SizedBox(height: 20),
+                                _infoRow(context, [
+                                  _Field('Specialization', user?['specialization'] ?? '—'),
+                                  _Field('Email', user?['email'] ?? '—'),
+                                ]),
+                                const SizedBox(height: 24),
+                                const Divider(),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  'Skills & Proficiencies',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: _kCrimson),
+                                ),
+                                const SizedBox(height: 20),
+                                _infoRow(context, [
+                                  _Field('Technical Skills', user?['technical_skills'] ?? '—'),
+                                ]),
+                                const SizedBox(height: 20),
+                                _infoRow(context, [
+                                  _Field('Soft Skills', user?['soft_skills'] ?? '—'),
+                                ]),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
 
   Widget _infoRow(BuildContext context, List<_Field> fields) {
     return LayoutBuilder(builder: (context, constraints) {

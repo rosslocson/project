@@ -7,7 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../providers/auth_provider.dart';
 
 import '../services/api_service.dart';
-import '../widgets/user_sidebar.dart';
+import '../widgets/user_layout.dart';
+
 
 const _kCrimson = Color(0xFF7B0D1E);
 
@@ -363,8 +364,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    return UserLayout(
+      currentRoute: '/account-settings',
+      child: _buildSettingsContent(context),
+    );
+  }
+
+  Widget _buildSettingsContent(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    bool isSidebarOpen = true;
 
     // Avatar URL helper logic
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
@@ -378,256 +385,216 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       }
     }
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Row(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            width: isSidebarOpen ? 250 : 0,
-            child: isSidebarOpen ? const UserSidebar(currentRoute: '/account-settings') : null,
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                // Galaxy Background
-                Positioned.fill(child: _buildAnimatedGalaxyBackground()),
-                
-                // Form Content
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1000),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
+    return Stack(
+      children: [
+        // Galaxy Background
+        Positioned.fill(child: _buildAnimatedGalaxyBackground()),
+        
+        // Form Content
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1000),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
 
-                            // ── Page header ─────────────────────
-                            Row(
+                    // ── Page header (no hamburger - handled by layout) ──
+                    Row(
+                      children: [
+                        Text(
+                          'Account Settings',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Avatar card ──────────────────────────────────────
+                    Card(
+                      elevation: 0,
+                      color: Colors.white.withOpacity(0.95),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                        child: Row(
+                          children: [
+                            // Stack used here to place the edit button over the avatar
+                            Stack(
+                              alignment: Alignment.bottomRight,
                               children: [
-                                if (!isSidebarOpen) ...[
-                                  // Hamburger menu
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.05),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.15),
-                                        width: 1,
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor:
+                                      _kCrimson.withOpacity(0.1),
+                                  backgroundImage: finalAvatarUrl.isNotEmpty 
+                                      ? NetworkImage(finalAvatarUrl) 
+                                      : null,
+                                  child: _isUploadingAvatar
+                                      ? const CircularProgressIndicator(color: _kCrimson, strokeWidth: 3)
+                                      : finalAvatarUrl.isEmpty
+                                          ? Text(
+                                              '${(user?['first_name'] as String? ?? ' ')[0]}'
+                                              '${(user?['last_name'] as String? ?? ' ')[0]}',
+                                              style: const TextStyle(
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.bold,
+                                                color: _kCrimson,
+                                              ),
+                                            )
+                                          : null,
+                                ),
+                                // Edit Button Over Avatar
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: _isUploadingAvatar ? null : _pickAvatar,
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: _kCrimson,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2),
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
                                       ),
-                                    ),
-                                    child: IconButton(
-                                      padding: const EdgeInsets.all(12),
-                                      onPressed: () => setState(() => isSidebarOpen = !isSidebarOpen),
-                                      icon: const HamburgerIcon(),
-                                      tooltip: 'Open Sidebar',
-                                      splashColor: Colors.white.withValues(alpha: 0.1),
-                                      highlightColor: Colors.transparent,
                                     ),
                                   ),
-                                ],
-                                Text(
-                                  'Account Settings',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
-
-                            // ── Avatar card ──────────────────────────────────────
-                            Card(
-                              elevation: 0,
-                              color: Colors.white.withValues(alpha: 0.95),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24)),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                                child: Row(
-                                  children: [
-                                    // Stack used here to place the edit button over the avatar
-                                    Stack(
-                                      alignment: Alignment.bottomRight,
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 40,
-                                          backgroundColor:
-                                              _kCrimson.withValues(alpha: 0.1),
-                                          backgroundImage: finalAvatarUrl.isNotEmpty 
-                                              ? NetworkImage(finalAvatarUrl) 
-                                              : null,
-                                          child: _isUploadingAvatar
-                                              ? const CircularProgressIndicator(color: _kCrimson, strokeWidth: 3)
-                                              : finalAvatarUrl.isEmpty
-                                                  ? Text(
-                                                      '${(user?['first_name'] as String? ?? ' ')[0]}'
-                                                      '${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                      style: const TextStyle(
-                                                        fontSize: 28,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: _kCrimson,
-                                                      ),
-                                                    )
-                                                  : null,
-                                        ),
-                                        // Edit Button Over Avatar
-                                        Positioned(
-                                          bottom: 0,
-                                          right: 0,
-                                          child: Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              onTap: _isUploadingAvatar ? null : _pickAvatar,
-                                              borderRadius: BorderRadius.circular(20),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(6),
-                                                decoration: BoxDecoration(
-                                                  color: _kCrimson,
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(color: Colors.white, width: 2),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.camera_alt,
-                                                  color: Colors.white,
-                                                  size: 14,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 20),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                            style: const TextStyle(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.w800,
-                                              color: Colors.black87,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            user?['email'] ?? '',
-                                            style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500),
-                                          ),
-                                          if ((user?['department'] as String? ?? '')
-                                              .isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '${user?['department']} · ${user?['position'] ?? ''}',
-                                              style: TextStyle(
-                                                  color: Colors.grey.shade500,
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w500),
-                                            ),
-                                          ],
-                                          const SizedBox(height: 10),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: user?['role'] == 'admin'
-                                                  ? Colors.red.shade50
-                                                  : _kCrimson.withValues(alpha: 0.08),
-                                              borderRadius: BorderRadius.circular(16),
-                                            ),
-                                            child: Text(
-                                              (user?['role'] ?? 'user').toUpperCase(),
-                                              style: TextStyle(
-                                                color: user?['role'] == 'admin'
-                                                    ? Colors.red.shade700
-                                                    : _kCrimson,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w800,
-                                                letterSpacing: 1.0,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // ── Tabs card ────────────────────────────────────────
+                            const SizedBox(width: 20),
                             Expanded(
-                              child: Card(
-                                elevation: 0,
-                                color: Colors.white.withValues(alpha: 0.95),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24)),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(color: Colors.grey.shade200),
-                                        ),
-                                      ),
-                                      child: TabBar(
-                                        controller: _tabs,
-                                        labelColor: _kCrimson,
-                                        indicatorColor: _kCrimson,
-                                        indicatorWeight: 3,
-                                        unselectedLabelColor: Colors.grey.shade500,
-                                        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                                        unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                        dividerColor: Colors.transparent,
-                                        tabs: const [
-                                          Tab(text: 'Account Settings'),
-                                          Tab(text: 'Change Password'),
-                                        ],
-                                      ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.black87,
+                                      letterSpacing: 0.5,
                                     ),
-                                    Expanded(
-                                      child: TabBarView(
-                                        controller: _tabs,
-                                        children: [
-                                          _buildProfileForm(),
-                                          _buildPasswordForm(),
-                                        ],
-                                      ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    user?['email'] ?? '',
+                                    style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                  if ((user?['department'] as String? ?? '')
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${user?['department']} · ${user?['position'] ?? ''}',
+                                      style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500),
                                     ),
                                   ],
-                                ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: _kCrimson.withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Text(
+                                      'USER',
+                                      style: TextStyle(
+                                        color: _kCrimson,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-
                           ],
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+
+                    // ── Tabs card ────────────────────────────────────────
+                    Expanded(
+                      child: Card(
+                        elevation: 0,
+                        color: Colors.white.withOpacity(0.95),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        child: Column(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(color: Colors.grey.shade200),
+                                ),
+                              ),
+                              child: TabBar(
+                                controller: _tabs,
+                                labelColor: _kCrimson,
+                                indicatorColor: _kCrimson,
+                                indicatorWeight: 3,
+                                unselectedLabelColor: Colors.grey.shade500,
+                                labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                                unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                dividerColor: Colors.transparent,
+                                tabs: const [
+                                  Tab(text: 'Account Settings'),
+                                  Tab(text: 'Change Password'),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: TabBarView(
+                                controller: _tabs,
+                                children: [
+                                  _buildProfileForm(),
+                                  _buildPasswordForm(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
 
   // ── Profile form ───────────────────────────────────────────────────────────
   Widget _buildProfileForm() {
