@@ -5,7 +5,8 @@ import '../providers/auth_provider.dart';
 
 class UserSidebar extends StatelessWidget {
   final String currentRoute;
-  const UserSidebar({super.key, required this.currentRoute});
+  final VoidCallback? onClose;
+  const UserSidebar({super.key, required this.currentRoute, this.onClose});
 
   // Exact colors extracted from the design
   static const Color _bgColor = Color(0xFF460A14);
@@ -18,7 +19,7 @@ class UserSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final user = auth.user;
+    // final user = auth.user; // Keeping this in case you need it later
 
     return Container(
       width: 250,
@@ -45,6 +46,8 @@ class UserSidebar extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'UserApp',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: _textLight,
                       fontSize: 22,
@@ -54,12 +57,24 @@ class UserSidebar extends StatelessWidget {
                   ),
                 ),
                 
-IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(Icons.close_rounded, color: _textLight, size: 24),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  splashRadius: 24,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onClose,
+                    child: Material(
+                      color: Colors.white.withOpacity(0.1),
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(
+                          Icons.close_rounded, 
+                          color: _textLight, 
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -72,8 +87,8 @@ IconButton(
               children: [
                 const _SectionLabel('MENU'),
                 _NavItem(
-                  icon: Icons.home_rounded, // Home icon
-                  label: 'Home',            // Changed to Home
+                  icon: Icons.home_rounded, 
+                  label: 'Home',            
                   route: '/home',
                   current: currentRoute,
                 ),

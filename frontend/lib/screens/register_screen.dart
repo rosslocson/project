@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/star_background.dart';
 import '../widgets/app_theme.dart';
+import 'dart:math' as math;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -64,10 +65,10 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   void initState() {
     super.initState();
-    _stars = generateStars();
+_stars = _generateFastStars(); // Higher speed for lively RIGHT movement (0.01-0.05) - visible in 15s loop
     _bgCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 40),
+      duration: const Duration(seconds: 15), // FAST lively movement for register (15s loop) - stars move continuously RIGHT
     )..repeat();
   }
 
@@ -81,6 +82,21 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
     super.dispose();
   }
+
+List<Star> _generateFastStars() {
+  final rng = math.Random();
+  return List.generate(
+    200,
+    (_) => Star(
+      x: rng.nextDouble(),
+      y: rng.nextDouble(),
+      size: rng.nextDouble() * 1.5 + 0.3,
+      baseOpacity: rng.nextDouble() * 0.4 + 0.1,
+      speed: rng.nextDouble() * 0.04 + 0.01, // 4x faster for visible RIGHT movement on auth screens
+      twinklePhase: rng.nextDouble() * 2 * math.pi,
+    ),
+  );
+}
 
   void _checkStrength(String pass) {
     int score = 0;
@@ -481,53 +497,78 @@ class _RegisterScreenState extends State<RegisterScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth > 900) {
-            return Stack(children: [
-              Positioned.fill(
-                child: GalaxyBackground(
-                    animation: _bgCtrl, stars: _stars),
-              ),
-              const Positioned.fill(child: GalaxyBlendMask()),
-              Row(children: [
-                const Expanded(
-                  flex: 5,
-                  child: GalaxyLeftPanel(
-                    headline: 'JOIN US NOW!',
-                    subheadline:
-                        'Intern Data & Profile Overview\nCreate your account to start managing your workspace.',
-                  ),
-                ),
+            // Desktop Layout: 50/50 Split
+            return Row(
+              children: [
+                // Left 50% Panel
                 Expanded(
-                    flex: 6,
-                    child: _buildForm(auth, isMobile: false)),
-              ]),
-            ]);
-          } else {
-            return Stack(children: [
-              Positioned.fill(
-                child: GalaxyBackground(
-                    animation: _bgCtrl, stars: _stars),
-              ),
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
+                  child: Container(
+                    color: kCrimsonDeep, // Base solid background
+                    child: Stack(
+                      children: [
+Positioned.fill(
+                          // FIXED: Removed scaleX flip - stars now move RIGHT visibly (15s fast loop)
+                          // Original animation already moves RIGHT: (animationValue * width * speed) % width
+                          child: GalaxyBackground(
+                            animation: _bgCtrl, 
+                            stars: _stars,
+                          ),
+                        ),
+                        const Positioned.fill(
+                          child: GalaxyLeftPanel(
+                            headline: 'READY FOR LIFTOFF?',
+                            subheadline:
+                                'Launch your intern journey today.\nBuild your profile and explore the stars of our current cohort.',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  child: _buildForm(auth, isMobile: true),
                 ),
-              ),
-            ]);
+                // Right 50% Panel
+                Expanded(
+                  child: Container(
+                    color: Colors.white, // Solid white background for form
+                    child: _buildForm(auth, isMobile: false),
+                  ),
+                ),
+              ],
+            );
+          } else {
+            // Mobile Layout
+            return Stack(
+              children: [
+                Container(color: kCrimsonDeep),
+Positioned.fill(
+                  // FIXED: Removed scaleX flip - stars now move RIGHT visibly (15s fast loop)
+                  // Original animation already moves RIGHT: (animationValue * width * speed) % width
+                  child: GalaxyBackground(
+                    animation: _bgCtrl, 
+                    stars: _stars,
+                  ),
+                ),
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: _buildForm(auth, isMobile: true),
+                  ),
+                ),
+              ],
+            );
           }
         },
       ),

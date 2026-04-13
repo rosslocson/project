@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"project/backend/email"
 	"project/backend/models"
 )
 
@@ -23,7 +23,7 @@ import (
 const (
 	maxLoginAttempts = 3
 	lockDuration     = 1 * time.Minute
-	resetTokenTTL    = 15 * time.Minute
+	otpExpiry        = 5 * time.Minute
 )
 
 // ── Handler struct ───────────────────────────────────────────────────────────
@@ -133,14 +133,6 @@ func generateToken(userID uint, role models.Role) (string, error) {
 
 // ── Random token generator ───────────────────────────────────────────────────
 
-func generateResetToken() (string, error) {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
-}
-
 // ── Auth Handlers ────────────────────────────────────────────────────────────
 
 // Register moved to auth_handlers.go with service layer
@@ -158,32 +150,41 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
+	cleanEmail := strings.ToLower(strings.TrimSpace(body.Email))
 	var user models.User
-	if h.DB.Where("email = ?", strings.ToLower(body.Email)).First(&user).Error != nil {
+	if h.DB.Where("email = ?", cleanEmail).First(&user).Error != nil {
+		log.Printf("Debug: Email not found in DB: '%s'", cleanEmail)
 		// Always return success to avoid email enumeration
 		c.JSON(http.StatusOK, gin.H{"message": "If that email exists, a reset token has been sent."})
 		return
 	}
 
-	token, err := generateResetToken()
+	otp, err := email.GenerateSecureOTP()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		log.Printf("OTP generation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate OTP"})
 		return
 	}
 
-	expiry := time.Now().Add(resetTokenTTL)
-	h.DB.Model(&user).Updates(map[string]interface{}{
-		"reset_token":        token,
+	expiry := time.Now().Add(otpExpiry)
+	if err := h.DB.Model(&user).Updates(map[string]interface{}{
+		"reset_token":        otp,
 		"reset_token_expiry": expiry,
-	})
-	h.logActivity(user.ID, "PASSWORD_RESET_REQUEST", "Reset token generated", c.ClientIP())
+	}).Error; err != nil {
+		log.Printf("DB update failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store OTP"})
+		return
+	}
 
-	// In production: send token via email. Here we return it directly for dev/demo.
-	c.JSON(http.StatusOK, gin.H{
-		"message":     "Reset token generated. In production this would be emailed.",
-		"reset_token": token, // ← Remove this line in production
-		"expires_in":  "15 minutes",
-	})
+	if err := email.SendPasswordResetEmail(cleanEmail, otp); err != nil {
+		log.Printf("Email send failed for %s: %v", cleanEmail, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to send OTP email right now. Please try again later."})
+		return
+	}
+
+	h.logActivity(user.ID, "PASSWORD_RESET_OTP_SENT", "OTP sent to "+cleanEmail, c.ClientIP())
+
+	c.JSON(http.StatusOK, gin.H{"message": "If that email is registered, check your inbox for the 6-digit OTP (expires in 5 minutes)."})
 }
 
 func (h *Handler) ResetPassword(c *gin.Context) {

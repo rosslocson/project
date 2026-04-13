@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Added for input formatters
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/star_background.dart';
 import '../widgets/app_theme.dart';
+import 'dart:math' as math;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   // Reset password
   final _resetEmailCtrl = TextEditingController();
-  final _resetTokenCtrl = TextEditingController();
+  final _otpCtrl        = TextEditingController(); // Renamed from _resetTokenCtrl
   final _newPassCtrl    = TextEditingController();
   final _confPassCtrl   = TextEditingController();
 
@@ -39,10 +41,10 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _stars = generateStars();
+    _stars = _generateFastStars();
     _bgCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 40),
+      duration: const Duration(seconds: 15),
     )..repeat();
   }
 
@@ -52,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen>
     _lockTimer?.cancel();
     for (final c in [
       _emailCtrl, _passCtrl, _resetEmailCtrl,
-      _resetTokenCtrl, _newPassCtrl, _confPassCtrl,
+      _otpCtrl, _newPassCtrl, _confPassCtrl,
     ]) {
       c.dispose();
     }
@@ -97,7 +99,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ── Forgot password sheet ──────────────────────────────────────────────────
   void _showForgotPassword() {
-    String? resetToken;
     String? stepMsg;
     bool    stepLoading = false;
     int     step        = 1;
@@ -116,13 +117,10 @@ class _LoginScreenState extends State<LoginScreen>
                 _resetEmailCtrl.text.trim());
             setSheet(() => stepLoading = false);
             if (res['ok'] == true) {
-              resetToken = res['reset_token'];
               setSheet(() {
                 step    = 2;
                 stepMsg = res['message'];
-                if (resetToken != null) {
-                  _resetTokenCtrl.text = resetToken!;
-                }
+                _otpCtrl.clear();
               });
             } else {
               setSheet(() => stepMsg = res['error'] ?? 'Request failed');
@@ -130,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen>
           }
 
           Future<void> doReset() async {
-            if (_resetTokenCtrl.text.isEmpty || _newPassCtrl.text.isEmpty) {
+            if (_otpCtrl.text.isEmpty || _newPassCtrl.text.isEmpty) {
               return;
             }
             if (_newPassCtrl.text != _confPassCtrl.text) {
@@ -139,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen>
             }
             setSheet(() { stepLoading = true; stepMsg = null; });
             final res = await ApiService.resetPassword(
-                _resetTokenCtrl.text.trim(),
+                _otpCtrl.text.trim(),
                 _newPassCtrl.text,
                 _confPassCtrl.text);
             setSheet(() => stepLoading = false);
@@ -208,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen>
                       Text(
                         step == 1
                             ? 'Step 1 of 2 — Enter your email'
-                            : 'Step 2 of 2 — Set new password',
+                            : 'Step 2 of 2 — Verify OTP & set password',
                         style: TextStyle(
                             color: Colors.grey.shade500, fontSize: 12),
                       ),
@@ -243,17 +241,22 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   const SizedBox(height: 20),
                   CrimsonButton(
-                    label: 'SEND RESET TOKEN',
+                    label: 'SEND OTP',
                     onPressed: stepLoading ? null : requestReset,
                     loading: stepLoading,
                   ),
                 ] else ...[
-                  fieldLabel('Reset Token'),
+                  fieldLabel('6-Digit OTP'),
                   const SizedBox(height: 8),
                   TextFormField(
-                    controller: _resetTokenCtrl,
-                    decoration:
-                        dec.copyWith(hintText: 'Paste token from email'),
+                    controller: _otpCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6, // Restricts input to 6 characters visually
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly], // Only allows numbers
+                    decoration: dec.copyWith(
+                      hintText: 'Enter 6-digit OTP from email',
+                      counterText: '', // Hides the "0/6" counter below the text field
+                    ),
                   ),
                   const SizedBox(height: 14),
                   fieldLabel('New Password'),
@@ -313,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'LOGIN TO YOUR ACCOUNT',
+                'LOGIN',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 26,
@@ -324,7 +327,6 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               const SizedBox(height: 40),
 
-              // Banners
               if (_isLocked) ...[
                 _lockedBanner(),
                 const SizedBox(height: 20),
@@ -436,58 +438,91 @@ class _LoginScreenState extends State<LoginScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth > 900) {
-            return Stack(children: [
-              Positioned.fill(
-                child: GalaxyBackground(
-                    animation: _bgCtrl, stars: _stars),
-              ),
-              const Positioned.fill(child: GalaxyBlendMask()),
-              Row(children: [
-                const Expanded(
-                  flex: 5,
-                  child: GalaxyLeftPanel(
-                    headline: 'HI, WELCOME!',
-                    subheadline:
-                        'Intern Data & Profile Overview\nSecurely manage and monitor your workspace.',
+            return Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    color: kCrimsonDeep,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: GalaxyBackground(
+                            animation: _bgCtrl,
+                            stars: _stars,
+                          ),
+                        ),
+                        const Positioned.fill(
+                          child: GalaxyLeftPanel(
+                            headline: "BACK IN THE COSMOS.", 
+                            subheadline:
+                                'Securely access your dashboard and monitor your workspace within the InternSpace galaxy.',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Expanded(flex: 6, child: _buildForm(auth)),
-              ]),
-            ]);
-          } else {
-            return Stack(children: [
-              Positioned.fill(
-                child: GalaxyBackground(
-                    animation: _bgCtrl, stars: _stars),
-              ),
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 24),
-                  decoration: BoxDecoration(
+                Expanded(
+                  child: Container(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
+                    child: _buildForm(auth),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  child: _buildForm(auth),
                 ),
-              ),
-            ]);
+              ],
+            );
+          } else {
+            return Stack(
+              children: [
+                Container(color: kCrimsonDeep),
+                Positioned.fill(
+                  child: GalaxyBackground(
+                    animation: _bgCtrl,
+                    stars: _stars,
+                  ),
+                ),
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: _buildForm(auth),
+                  ),
+                ),
+              ],
+            );
           }
         },
       ),
     );
   }
 
-  // ── Banners ────────────────────────────────────────────────────────────────
+  List<Star> _generateFastStars() {
+    final rng = math.Random();
+    return List.generate(
+      200,
+      (_) => Star(
+        x: rng.nextDouble(),
+        y: rng.nextDouble(),
+        size: rng.nextDouble() * 1.5 + 0.3,
+        baseOpacity: rng.nextDouble() * 0.4 + 0.1,
+        speed: rng.nextDouble() * 0.04 + 0.01,
+        twinklePhase: rng.nextDouble() * 2 * math.pi,
+      ),
+    );
+  }
+
   Widget _lockedBanner() => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

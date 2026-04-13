@@ -100,7 +100,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> with SingleTickerProvid
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             width: _isSidebarOpen ? 250 : 0,
-            child: _isSidebarOpen ? const UserSidebar(currentRoute: '/home') : const SizedBox(),
+            child: _isSidebarOpen ? UserSidebar(
+              currentRoute: '/home',
+              onClose: () => setState(() => _isSidebarOpen = false),
+            ) : const SizedBox(),
           ),
 
           Expanded(

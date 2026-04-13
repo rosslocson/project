@@ -1,11 +1,21 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // ✅ Change this to your computer's IP if testing on a phone
-  static const String baseUrl = 'http://localhost:8080/api';
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:8080/api';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // Android emulator uses 10.0.2.2 to reach host machine localhost
+      return 'http://10.0.2.2:8080/api';
+    }
+    return 'http://localhost:8080/api';
+  }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();

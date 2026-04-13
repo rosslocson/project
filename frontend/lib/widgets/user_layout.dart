@@ -21,7 +21,7 @@ class UserLayout extends StatefulWidget {
 }
 
 class _UserLayoutState extends State<UserLayout> with SingleTickerProviderStateMixin {
-  final bool _isSidebarOpen = true;
+  bool _isSidebarOpen = true;
   late AnimationController _animController;
 
   @override
@@ -53,8 +53,11 @@ class _UserLayoutState extends State<UserLayout> with SingleTickerProviderStateM
             curve: Curves.easeInOut,
             width: _isSidebarOpen ? 250 : 0,
             child: _isSidebarOpen
-              ? UserSidebar(currentRoute: route)
-              : const SizedBox(),
+              ? UserSidebar(
+                    currentRoute: route,
+                    onClose: () => setState(() => _isSidebarOpen = false),
+                  )
+                : const SizedBox(),
           ),
           Expanded(
             child: widget.child,
