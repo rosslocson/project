@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen>
     if (!_formKey.currentState!.validate()) return;
     final auth   = context.read<AuthProvider>();
     final result = await auth.loginWithDetails(
-        _emailCtrl.text.trim(), _passCtrl.text);
+        _emailCtrl.text.trim(), _passCtrl.text.trim());
     if (!mounted) return;
     if (result['ok'] == true) {
       if (auth.isAdmin) {

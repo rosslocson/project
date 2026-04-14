@@ -27,7 +27,7 @@ func (h *Handler) Register(c *gin.Context) {
 	authService := services.NewAuthService(userRepo)
 
 	user, token, err := authService.Register(
-		req.FirstName, req.LastName, req.Email, req.Password,
+		req.FirstName, req.LastName, strings.TrimSpace(req.Email), req.Password,
 		req.Phone, req.Department, req.Position, models.RoleUser,
 	)
 	if err != nil {
@@ -56,12 +56,31 @@ func (h *Handler) Login(c *gin.Context) {
 	userRepo := repositories.NewUserRepository(h.DB)
 	authService := services.NewAuthService(userRepo)
 
-	user, token, err := authService.Login(req.Email, req.Password)
+	result, err := authService.Login(strings.TrimSpace(req.Email), req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		// Handle locked account
+		if result.IsLocked {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":            "Account temporarily locked",
+				"locked":           true,
+				"retry_after_secs": result.RetryAfterSecs,
+				"attempts_left":    0,
+			})
+			return
+		}
+
+		// Handle failed password
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":         result.Error.Error(),
+			"attempts_left": result.AttemptsLeft,
+		})
 		return
 	}
 
-	h.logActivity(user.ID, "LOGIN", "User logged in", c.ClientIP())
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "token": token, "user": user})
+	h.logActivity(result.User.ID, "LOGIN", "User logged in", c.ClientIP())
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Login successful",
+		"token":   result.Token,
+		"user":    result.User,
+	})
 }

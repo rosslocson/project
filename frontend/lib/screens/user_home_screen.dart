@@ -150,9 +150,9 @@ class _UserHomeScreenState extends State<UserHomeScreen> with SingleTickerProvid
                             children: [
                               const SizedBox(height: 16),
 
-                              Center(
+                              const Center(
                                 child: Column(
-                                  children: const [
+                                  children: [
                                     Text(
                                       'Meet Our Interns',
                                       style: TextStyle(
