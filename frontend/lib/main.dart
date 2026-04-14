@@ -10,7 +10,7 @@ import 'screens/register_screen.dart';
 import 'screens/user_home_screen.dart';
 import 'screens/user_my_profile_screen.dart';   // view-only
 import 'screens/user_account_settings_screen.dart';       // Account Settings
-import 'screens/admin_my_profile_screen.dart';
+
 import 'screens/admin_account_settings_screen.dart';
 import 'screens/admin_users_screen.dart';
 import 'screens/admin_add_user_screen.dart';
@@ -127,13 +127,7 @@ path: '/home',
               child: const AdminDashboardScreen(),
             ),
           ),
-          GoRoute(
-            path: '/admin/profile',
-            pageBuilder: (context, state) => MaterialPage<void>(
-              key: state.pageKey,
-              child: const AdminMyProfileScreen(),
-            ),
-          ),
+
           GoRoute(
             path: '/admin/account-settings',
             pageBuilder: (context, state) => MaterialPage<void>(

@@ -12,49 +12,6 @@ import '../widgets/user_layout.dart';
 
 const _kCrimson = Color(0xFF7B0D1E);
 
-// ── Custom Hamburger Icon (Redesigned) ──────────────────────────────────────
-class HamburgerIcon extends StatelessWidget {
-  const HamburgerIcon({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 14, // Shorter middle line for a modern, dynamic feel
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Star Data Class for Galaxy Theme ─────────────────────────────────────────
 class Star {
   final double x;

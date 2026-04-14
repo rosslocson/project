@@ -5,11 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-
 // Providers & Services
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
-
 
 // Widgets
 import '../widgets/admin_sidebar.dart';
@@ -17,15 +15,12 @@ import '../widgets/stat_card.dart';
 import '../widgets/star_background.dart';
 import 'admin_glass_topbar.dart';
 
-
 class AdminDashboardScreen extends StatefulWidget {
  const AdminDashboardScreen({super.key});
-
 
  @override
  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
-
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    with TickerProviderStateMixin {
@@ -38,12 +33,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
  late AnimationController _bgAnimController;
  late final List<Star> _stars;
 
-
  // Carousel State
  late PageController _pageController;
  late Timer _autoScrollTimer;
  int _currentPage = 0;
-
 
  @override
  void initState() {
@@ -55,15 +48,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
      duration: const Duration(seconds: 150),
    )..repeat();
 
-
-   // Initialize Carousel
+   // Initialize Carousel for Infinite Looping
+   _currentPage = kInterns.length * 1000;
    _pageController = PageController(
      viewportFraction: 0.35,
      initialPage: _currentPage,
    );
    _startAutoScroll();
  }
-
 
  @override
  void dispose() {
@@ -73,20 +65,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    super.dispose();
  }
 
-
  // --- Carousel Logic ---
  void _startAutoScroll() {
    _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
      if (!mounted) return;
-     final next = (_currentPage + 1) % kInterns.length;
-     _pageController.animateToPage(
-       next,
+     _pageController.nextPage(
        duration: const Duration(milliseconds: 600),
        curve: Curves.easeInOut,
      );
    });
  }
-
 
  void _prev() {
    _autoScrollTimer.cancel();
@@ -97,7 +85,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    _startAutoScroll();
  }
 
-
  void _next() {
    _autoScrollTimer.cancel();
    _pageController.nextPage(
@@ -106,7 +93,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    );
    _startAutoScroll();
  }
-
 
  void _openDetail(InternProfile intern) {
    _autoScrollTimer.cancel();
@@ -125,7 +111,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
  }
  // ----------------------
 
-
  Future<void> _loadAll() async {
    setState(() => _loading = true);
    try {
@@ -134,13 +119,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
        ApiService.getActivityLogs(),
      ]);
 
-
      if (!mounted) return;
-
 
      final statsRes = results[0];
      final logsRes = results[1];
-
 
      setState(() {
        if (statsRes['ok'] == true) _stats = statsRes;
@@ -153,7 +135,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    }
  }
 
-
  String _cleanDetail(String? raw) {
    if (raw == null || raw.isEmpty) return '';
    return raw
@@ -163,7 +144,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
        .replaceAll(RegExp(r'\s{2,}'), ' ')
        .trim();
  }
-
 
  Widget _buildGlowingCard({required Widget child}) {
    return Container(
@@ -181,14 +161,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    );
  }
 
-
  Widget _buildAnimatedGalaxyBackground() {
    return GalaxyBackground(
      animation: _bgAnimController,
      stars: _stars,
    );
  }
-
 
  // --- Intern Carousel Widget ---
  Widget _buildInternCarousel() {
@@ -207,10 +185,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
          height: 180,
          child: PageView.builder(
            controller: _pageController,
-           itemCount: kInterns.length,
            onPageChanged: (i) => setState(() => _currentPage = i),
            itemBuilder: (context, index) {
-             final intern = kInterns[index];
+             final intern = kInterns[index % kInterns.length];
              final isCenter = index == _currentPage;
              return AnimatedScale(
                scale: isCenter ? 1.0 : 0.85,
@@ -236,7 +213,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
            const SizedBox(width: 20),
            Row(
              children: List.generate(kInterns.length, (i) {
-               final active = i == _currentPage;
+               final active = i == (_currentPage % kInterns.length);
                return AnimatedContainer(
                  duration: const Duration(milliseconds: 300),
                  margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -244,7 +221,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                  height: 6,
                  decoration: BoxDecoration(
                    color: active
-                       ? const Color(0xFF6C63FF)
+                       ? const Color(0xFFD4748A)
                        : Colors.white.withOpacity(0.25),
                    borderRadius: BorderRadius.circular(3),
                  ),
@@ -260,13 +237,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
  }
  // ------------------------------------
 
-
  @override
  Widget build(BuildContext context) {
    final auth = context.watch<AuthProvider>();
    final user = auth.user;
    bool isSidebarOpen = _isSidebarOpen;
-
 
    return Scaffold(
      body: Row(
@@ -369,7 +344,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                ),
                                const SizedBox(height: 40),
 
-
                                // ── Recent Users ──────────────────────────
                                Row(
                                  mainAxisAlignment:
@@ -417,7 +391,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                  ),
                                ),
                                const SizedBox(height: 40),
-
 
                                // ── Recent Activity ───────────────────────
                                Row(
@@ -498,7 +471,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    );
  }
 
-
  Widget _buildRecentUsers() {
    final allUsers = (_stats?['recent_users'] as List?) ?? [];
    if (allUsers.isEmpty) {
@@ -563,7 +535,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    );
  }
 
-
  Widget _buildActivityFeed(bool isAdmin) {
    if (_activityLogs.isEmpty) {
      return const Padding(
@@ -575,13 +546,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
      );
    }
 
-
    // Show only 5 items unless "View All" is toggled
    const int previewCount = 5;
    final logsToShow = _showAllActivity
        ? _activityLogs
        : _activityLogs.take(previewCount).toList();
-
 
    return ListView.separated(
      shrinkWrap: true,
@@ -599,7 +568,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
            ? '${logUser['first_name'] ?? ''} ${logUser['last_name'] ?? ''}'
                .trim()
            : '';
-
 
        return ListTile(
          leading: _actionIcon(action),
@@ -622,7 +590,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
      },
    );
  }
-
 
  Widget _actionIcon(String? action) {
    IconData icon;
@@ -683,7 +650,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    );
  }
 
-
  String _formatDate(String? dateStr) {
    if (dateStr == null) return '';
    try {
@@ -699,9 +665,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
  }
 }
 
-
 // ── Data Models & Detail Widgets ─────────────────────────────────────────────
-
 
 class InternProfile {
  final String name;
@@ -714,7 +678,6 @@ class InternProfile {
  final List<String> softSkills;
  final Color avatarColor;
  final String initials;
-
 
  const InternProfile({
    required this.name,
@@ -729,7 +692,6 @@ class InternProfile {
    required this.initials,
  });
 }
-
 
 const List<InternProfile> kInterns = [
  InternProfile(
@@ -811,21 +773,30 @@ const List<InternProfile> kInterns = [
  ),
 ];
 
-
 // Carousel Tile
 class _InternCardFront extends StatelessWidget {
  final InternProfile intern;
  const _InternCardFront({required this.intern});
 
-
  @override
  Widget build(BuildContext context) {
    return Container(
-     margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+     margin: const EdgeInsets.symmetric(horizontal: 16),
+     padding: const EdgeInsets.all(16),
      decoration: BoxDecoration(
-       color: Colors.white.withOpacity(0.10),
-       borderRadius: BorderRadius.circular(20),
-       border: Border.all(color: Colors.white.withOpacity(0.14), width: 0.8),
+       gradient: const LinearGradient(
+         begin: Alignment.topLeft,
+         end: Alignment.bottomRight,
+         colors: [Color(0xFF6B1524), Color(0xFF4A0E18)],
+       ),
+       borderRadius: BorderRadius.circular(24),
+       boxShadow: [
+         BoxShadow(
+           color: const Color(0xFF4A0E18).withOpacity(0.4),
+           blurRadius: 32,
+           offset: const Offset(0, 16),
+         ),
+       ],
      ),
      child: Column(
        mainAxisAlignment: MainAxisAlignment.center,
@@ -834,16 +805,16 @@ class _InternCardFront extends StatelessWidget {
            width: 70,
            height: 70,
            decoration: BoxDecoration(
-             color: Colors.white.withOpacity(0.92),
+             color: Colors.white,
              borderRadius: BorderRadius.circular(18),
            ),
            child: Center(
              child: Text(
                intern.initials,
-               style: TextStyle(
+               style: const TextStyle(
                  fontSize: 28,
                  fontWeight: FontWeight.bold,
-                 color: intern.avatarColor,
+                 color: Color(0xFF6B1524),
                ),
              ),
            ),
@@ -856,13 +827,14 @@ class _InternCardFront extends StatelessWidget {
              fontWeight: FontWeight.bold,
              color: Colors.white,
            ),
+           textAlign: TextAlign.center,
          ),
          const SizedBox(height: 4),
          Text(
-           'Intern ${intern.internNumber}',
+           'Intern #${intern.internNumber}',
            style: TextStyle(
              fontSize: 12,
-             color: Colors.white.withOpacity(0.55),
+             color: Colors.white.withOpacity(0.7),
            ),
          ),
        ],
@@ -871,13 +843,11 @@ class _InternCardFront extends StatelessWidget {
  }
 }
 
-
 // ── Arrow button ──────────────────────────────────────────────────────────────
 class _ArrowButton extends StatelessWidget {
  final IconData icon;
  final VoidCallback onTap;
  const _ArrowButton({required this.icon, required this.onTap});
-
 
  @override
  Widget build(BuildContext context) {
@@ -897,7 +867,6 @@ class _ArrowButton extends StatelessWidget {
  }
 }
 
-
 // ── Redesigned Detail Page (Glassmorphism & Chips) ────────────────────────────
 class InternDetailPage extends StatefulWidget {
  final InternProfile intern;
@@ -906,12 +875,10 @@ class InternDetailPage extends StatefulWidget {
  State<InternDetailPage> createState() => _InternDetailPageState();
 }
 
-
 class _InternDetailPageState extends State<InternDetailPage>
    with SingleTickerProviderStateMixin {
  late AnimationController _bgController;
  final List<CardStar> _stars = [];
-
 
  @override
  void initState() {
@@ -933,13 +900,11 @@ class _InternDetailPageState extends State<InternDetailPage>
    }
  }
 
-
  @override
  void dispose() {
    _bgController.dispose();
    super.dispose();
  }
-
 
  @override
  Widget build(BuildContext context) {
@@ -971,7 +936,6 @@ class _InternDetailPageState extends State<InternDetailPage>
              ),
            ),
          ),
-
 
          // Card content with Glassmorphism
          SafeArea(
@@ -1008,7 +972,6 @@ class _InternDetailPageState extends State<InternDetailPage>
                              ),
                            ),
                          ),
-
 
                          // ── Header Profile ──
                          Column(
@@ -1075,14 +1038,12 @@ class _InternDetailPageState extends State<InternDetailPage>
                          ),
                          const SizedBox(height: 24),
 
-
                          Divider(
                              color: Colors.white.withOpacity(0.1),
                              thickness: 1,
                              indent: 32,
                              endIndent: 32),
                          const SizedBox(height: 16),
-
 
                          Padding(
                            padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -1107,7 +1068,6 @@ class _InternDetailPageState extends State<InternDetailPage>
                            ),
                          ),
 
-
                          const SizedBox(height: 24),
                          Divider(
                              color: Colors.white.withOpacity(0.1),
@@ -1115,7 +1075,6 @@ class _InternDetailPageState extends State<InternDetailPage>
                              indent: 32,
                              endIndent: 32),
                          const SizedBox(height: 20),
-
 
                          Padding(
                            padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -1181,15 +1140,12 @@ class _InternDetailPageState extends State<InternDetailPage>
  }
 }
 
-
 // ── Modern Icon Info Row ──────────────────────────────────────────────────────
 class _IconInfoRow extends StatelessWidget {
  final IconData icon;
  final String text;
 
-
  const _IconInfoRow({required this.icon, required this.text});
-
 
  @override
  Widget build(BuildContext context) {
@@ -1213,15 +1169,12 @@ class _IconInfoRow extends StatelessWidget {
  }
 }
 
-
 // ── Custom Skill Chip ─────────────────────────────────────────────────────────
 class _SkillChip extends StatelessWidget {
  final String label;
  final Color color;
 
-
  const _SkillChip({required this.label, required this.color});
-
 
  @override
  Widget build(BuildContext context) {
@@ -1247,7 +1200,6 @@ class _SkillChip extends StatelessWidget {
  }
 }
 
-
 class CardStar {
  final double x, y, size, opacity, speed, phase;
  const CardStar({
@@ -1260,12 +1212,10 @@ class CardStar {
  });
 }
 
-
 class CardStarfieldPainter extends CustomPainter {
  final double animValue;
  final List<CardStar> stars;
  CardStarfieldPainter({required this.animValue, required this.stars});
-
 
  @override
  void paint(Canvas canvas, Size size) {
@@ -1290,7 +1240,6 @@ class CardStarfieldPainter extends CustomPainter {
      canvas.drawCircle(Offset(dx, dy), star.size, paint);
    }
  }
-
 
  @override
  bool shouldRepaint(covariant CardStarfieldPainter old) =>

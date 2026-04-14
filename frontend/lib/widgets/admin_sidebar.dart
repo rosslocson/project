@@ -86,16 +86,10 @@ final isAdmin = auth.isAdmin;
               padding: EdgeInsets.zero,
               children: [
                 const _SectionLabel('MENU'),
-                _NavItem(
+_NavItem(
                   icon: Icons.grid_view_rounded,
                   label: 'Dashboard',
                   route: '/dashboard',
-                  current: currentRoute,
-                ),
-                _NavItem(
-                  icon: Icons.person_outline,
-                  label: 'My Profile',
-                  route: '/admin/profile',
                   current: currentRoute,
                 ),
                 _NavItem(
