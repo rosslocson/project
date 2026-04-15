@@ -30,27 +30,35 @@ class UserSidebar extends StatelessWidget {
         children: [
           // Logo / brand & Close Button
           Padding(
+            // Adjusted left padding to 20 to align with the 'MENU' label
             padding: const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _logoBoxColor,
-                    borderRadius: BorderRadius.circular(12),
+                // ──────────────────────────────────────────────────────────────
+                // Added Transform.scale to zoom the logo without moving text
+                Transform.scale(
+                  scale: 1.3, // Adjust this value to zoom more or less
+                  child: Image.asset(
+                    'assets/images/logo_file.png',
+                    height: 40,
+                    width: 48,  
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.public, color: _textLight, size: 24);
+                    },
                   ),
-                  child: const Icon(Icons.people_alt, color: _textLight, size: 24),
                 ),
-                const SizedBox(width: 16),
+                // ──────────────────────────────────────────────────────────────
+                const SizedBox(width: 12), // Increased gap between logo and text
                 
                 const Expanded(
                   child: Text(
-                    'UserApp',
+                    'InternSpace',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: _textLight,
-                      fontSize: 22,
+                      fontSize: 16, 
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
                     ),
@@ -62,7 +70,7 @@ class UserSidebar extends StatelessWidget {
                   child: InkWell(
                     onTap: onClose,
                     child: Material(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       shape: const CircleBorder(),
                       clipBehavior: Clip.antiAlias,
                       child: const Padding(
@@ -70,7 +78,7 @@ class UserSidebar extends StatelessWidget {
                         child: Icon(
                           Icons.close_rounded, 
                           color: _textLight, 
-                          size: 24,
+                          size: 20, 
                         ),
                       ),
                     ),
@@ -111,7 +119,7 @@ class UserSidebar extends StatelessWidget {
           // Sign out
           Column(
             children: [
-              Divider(color: Colors.white.withOpacity(0.15), height: 1),
+              Divider(color: Colors.white.withValues(alpha: 0.15), height: 1),
               InkWell(
                 onTap: () {
                   context.read<AuthProvider>().logout();
