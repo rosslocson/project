@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Added for input formatters
+import 'package:flutter/services.dart'; 
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -427,10 +427,22 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+// ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+
+    // A dark, cosmic gradient matching the photo's background
+    const darkCosmicGradient = BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Color(0xFF1E0A0F), // Very dark maroon
+          Color(0xFF0A0204), // Almost black
+        ],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -442,7 +454,7 @@ class _LoginScreenState extends State<LoginScreen>
               children: [
                 Expanded(
                   child: Container(
-                    color: kCrimsonDeep,
+                    decoration: darkCosmicGradient,
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -451,11 +463,53 @@ class _LoginScreenState extends State<LoginScreen>
                             stars: _stars,
                           ),
                         ),
-                        const Positioned.fill(
-                          child: GalaxyLeftPanel(
-                            headline: "BACK IN THE COSMOS.", 
-                            subheadline:
-                                'Securely access your dashboard and monitor your workspace within the InternSpace galaxy.',
+                        Positioned.fill(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/logo_file.png',
+                                height: 280, // <-- I ADJUSTED THE LOGO SIZE HERE (Increased from 200 to 280)
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // Fallback placeholder if the image path isn't set yet
+                                  return const Icon(Icons.public, size: 120, color: Colors.white);
+                                },
+                              ),
+                              
+                              const SizedBox(height: 24), // Explicit gap between logo and text
+                              
+                              const Text(
+                                "BACK IN THE COSMOS.",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                width: 40,
+                                height: 2,
+                                color: Colors.white54,
+                              ),
+                              const SizedBox(height: 16),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 64.0),
+                                child: Text(
+                                  'Securely access your dashboard and monitor your workspace\nwithin the InternSpace galaxy.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 80), // Pushes the entire centered group slightly higher up the screen
+                            ],
                           ),
                         ),
                       ],
@@ -471,9 +525,10 @@ class _LoginScreenState extends State<LoginScreen>
               ],
             );
           } else {
+            // Mobile layout
             return Stack(
               children: [
-                Container(color: kCrimsonDeep),
+                Container(decoration: darkCosmicGradient),
                 Positioned.fill(
                   child: GalaxyBackground(
                     animation: _bgCtrl,
@@ -507,7 +562,6 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
-
   List<Star> _generateFastStars() {
     final rng = math.Random();
     return List.generate(
@@ -638,3 +692,4 @@ class _LoginScreenState extends State<LoginScreen>
             ]),
       );
 }
+

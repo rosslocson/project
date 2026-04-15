@@ -491,6 +491,18 @@ List<Star> _generateFastStars() {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
+    // A dark, cosmic gradient matching the InternSpace theme
+    const darkCosmicGradient = BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Color(0xFF1E0A0F), // Very dark maroon
+          Color(0xFF0A0204), // Almost black
+        ],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ),
+    );
+
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
@@ -503,22 +515,58 @@ List<Star> _generateFastStars() {
                 // Left 50% Panel
                 Expanded(
                   child: Container(
-                    color: kCrimsonDeep, // Base solid background
+                    decoration: darkCosmicGradient,
                     child: Stack(
                       children: [
-Positioned.fill(
-                          // FIXED: Removed scaleX flip - stars now move RIGHT visibly (15s fast loop)
-                          // Original animation already moves RIGHT: (animationValue * width * speed) % width
+                        Positioned.fill(
                           child: GalaxyBackground(
-                            animation: _bgCtrl, 
+                            animation: _bgCtrl,
                             stars: _stars,
                           ),
                         ),
-                        const Positioned.fill(
-                          child: GalaxyLeftPanel(
-                            headline: 'READY FOR LIFTOFF?',
-                            subheadline:
-                                'Launch your intern journey today.\nBuild your profile and explore the stars of our current cohort.',
+                        Positioned.fill(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/logo_file.png',
+                                height: 280,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.public, size: 120, color: Colors.white);
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                              const Text(
+                                'READY FOR LIFTOFF?',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                width: 40,
+                                height: 2,
+                                color: Colors.white54,
+                              ),
+                              const SizedBox(height: 16),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 64.0),
+                                child: Text(
+                                  'Launch your intern journey today.\nBuild your profile and explore the stars of our current cohort.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 80),
+                            ],
                           ),
                         ),
                       ],
@@ -528,7 +576,7 @@ Positioned.fill(
                 // Right 50% Panel
                 Expanded(
                   child: Container(
-                    color: Colors.white, // Solid white background for form
+                    color: Colors.white,
                     child: _buildForm(auth, isMobile: false),
                   ),
                 ),
@@ -538,12 +586,10 @@ Positioned.fill(
             // Mobile Layout
             return Stack(
               children: [
-                Container(color: kCrimsonDeep),
-Positioned.fill(
-                  // FIXED: Removed scaleX flip - stars now move RIGHT visibly (15s fast loop)
-                  // Original animation already moves RIGHT: (animationValue * width * speed) % width
+                Container(decoration: darkCosmicGradient),
+                Positioned.fill(
                   child: GalaxyBackground(
-                    animation: _bgCtrl, 
+                    animation: _bgCtrl,
                     stars: _stars,
                   ),
                 ),

@@ -1,14 +1,1 @@
-# Avatar Upload/Crop/Resize Fix Progress
-
-## ✅ Plan Approved
-- [x] Backend: Image processing + validation in UploadAvatar()
-- [ ] Backend: Add resize dependency
-- [ ] Frontend: Dynamic avatar URL from ApiService.baseUrl  
-- [ ] Test: User/Admin settings → full flow
-- [ ] Backend restart & verify persistence
-
-## Current Status
-**Backend handlers/handlers.go** - Pending image processing
-**Frontend api_service.dart** - Pending URL fix
-
-**Next:** Backend implementation → restart → test → frontend polish
+# Logo Bigger Task\n## Steps:\n1. [x] Create TODO.md with plan steps\n2. [x] Edit frontend/lib/screens/login_screen.dart - increase logo height from 160 to 220\n3. [x] Update TODO.md - mark complete\n4. [x] Hot reload Flutter app to verify (manual step)

@@ -143,7 +143,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   bool _obscureConf = true;
 
   // Avatar Upload State
-  bool _isUploadingAvatar = false;
+  final bool _isUploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
   Uint8List? _localAvatarBytes;
   File? _avatarFile;
