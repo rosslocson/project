@@ -455,14 +455,32 @@ class _UserTile extends StatelessWidget {
    final isAdmin = user['role'] == 'admin';
 
 
+   final rawAvatarUrl = user['avatar_url'] as String? ?? '';
+   final finalAvatarUrl = rawAvatarUrl.isNotEmpty
+       ? (rawAvatarUrl.startsWith('http')
+           ? rawAvatarUrl
+           : 'http://127.0.0.1:8080$rawAvatarUrl')
+       : '';
+   final initials =
+       '${user['first_name']?[0] ?? ''}${user['last_name']?[0] ?? ''}'.toUpperCase();
+
    return ListTile(
      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
      leading: CircleAvatar(
-       backgroundColor: kCrimson.withOpacity(0.1),
-       child: Text(
-         '${user['first_name']?[0] ?? ''}${user['last_name']?[0] ?? ''}',
-         style: const TextStyle(color: kCrimson, fontWeight: FontWeight.bold),
-       ),
+       radius: 24,
+       backgroundColor:
+           isAdmin ? Colors.red.shade50 : Colors.blue.shade50,
+       backgroundImage:
+           finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null,
+       child: finalAvatarUrl.isEmpty
+           ? Text(
+               initials.isEmpty ? 'U' : initials,
+               style: TextStyle(
+                 color: isAdmin ? Colors.red.shade700 : Colors.blue.shade700,
+                 fontWeight: FontWeight.bold,
+               ),
+             )
+           : null,
      ),
      // ── smaller user name ──
      title: Text(

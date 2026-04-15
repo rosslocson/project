@@ -295,7 +295,7 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 	// Get the file from the multipart form (field name must be 'avatar')
 	header, err := c.FormFile("avatar")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File not provided or invalid: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No avatar file provided"})
 		return
 	}
 
@@ -329,6 +329,8 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated user"})
 		return
 	}
+
+	h.logActivity(userID, "AVATAR_UPLOAD", "Avatar uploaded: "+filename, c.ClientIP())
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Avatar uploaded successfully",

@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart'; 
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
+import 'avatar_crop_screen.dart';
 
 const _kCrimson = Color(0xFF7B0D1E);
 
@@ -141,6 +145,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   // Avatar Upload State
   bool _isUploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
+  Uint8List? _localAvatarBytes;
+  File? _avatarFile;
 
   // Animation controller
   late AnimationController _bgAnimController;
@@ -212,40 +218,106 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   }
 
   // ── Avatar Pick & Upload ───────────────────────────────────────────────────
-  Future<void> _pickAvatar() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image == null) return;
+  Future<XFile?> _cropImage(XFile file) async {
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.android &&
+            defaultTargetPlatform != TargetPlatform.iOS)) {
+      return file;
+    }
 
-      setState(() => _isUploadingAvatar = true);
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: file.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      compressFormat: ImageCompressFormat.jpg,
+      compressQuality: 90,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Avatar',
+          toolbarColor: Colors.black,
+          toolbarWidgetColor: Colors.white,
+          statusBarColor: Colors.black,
+          backgroundColor: Colors.black,
+          activeControlsWidgetColor: Colors.white,
+          dimmedLayerColor: Colors.black.withOpacity(0.75),
+          cropFrameColor: Colors.white.withOpacity(0.8),
+          cropGridColor: Colors.white24,
+          cropFrameStrokeWidth: 2,
+          cropGridStrokeWidth: 1,
+          showCropGrid: false,
+          initAspectRatio: CropAspectRatioPreset.square,
+          lockAspectRatio: true,
+          hideBottomControls: false,
+        ),
+        IOSUiSettings(
+          title: 'Crop Avatar',
+          aspectRatioLockEnabled: true,
+          rotateButtonsHidden: false,
+          rotateClockwiseButtonHidden: false,
+          aspectRatioPickerButtonHidden: true,
+          resetButtonHidden: false,
+          doneButtonTitle: 'Save',
+          cancelButtonTitle: 'Cancel',
+        ),
+      ],
+    );
 
-      final res = await ApiService.uploadAvatar(image);
-      
-      if (!mounted) return;
-      
-      if (res['ok'] == true) {
-        context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Avatar updated successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['error'] ?? 'Upload failed'), 
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
+    if (cropped == null) return null;
+    return XFile(cropped.path);
+  }
+
+  Future<void> pickAndCropAvatar() async {
+    print("Image picked");
+    final pickedFile = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
+
+    if (pickedFile == null) return;
+
+    print("Navigating to crop screen");
+    final croppedFile = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AvatarCropScreen(
+          imageFile: File(pickedFile.path),
+        ),
+      ),
+    );
+
+    print("Returned from crop screen: $croppedFile");
+    if (croppedFile == null) return;
+
+    setState(() {
+      _avatarFile = croppedFile;
+    });
+
+    print("Uploading avatar...");
+    // Upload AFTER UI update
+    final res = await ApiService.uploadAvatar(XFile(croppedFile.path));
+    print("Upload complete");
+
+    if (res['ok'] == true) {
+      await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+      setState(() {
+        _avatarFile = null; // Clear after upload
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Avatar updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
       );
-    } finally {
-      if (mounted) setState(() => _isUploadingAvatar = false);
+    } else {
+      setState(() {
+        _avatarFile = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['error'] ?? 'Upload failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -362,7 +434,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl';
+        finalAvatarUrl = '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -447,12 +519,12 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           radius: 40,
                                           backgroundColor:
                                               _kCrimson.withOpacity(0.1),
-                                          backgroundImage: finalAvatarUrl.isNotEmpty 
-                                              ? NetworkImage(finalAvatarUrl) 
-                                              : null,
+backgroundImage: _avatarFile != null
+    ? FileImage(_avatarFile!)
+    : (_localAvatarBytes != null ? MemoryImage(_localAvatarBytes!) : (finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null)) as ImageProvider,
                                           child: _isUploadingAvatar
                                               ? const CircularProgressIndicator(color: _kCrimson, strokeWidth: 3)
-                                              : finalAvatarUrl.isEmpty
+                                              : (_avatarFile == null && _localAvatarBytes == null && finalAvatarUrl.isEmpty)
                                                   ? Text(
                                                       '${(user?['first_name'] as String? ?? ' ')[0]}'
                                                       '${(user?['last_name'] as String? ?? ' ')[0]}',
@@ -470,7 +542,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           child: Material(
                                             color: Colors.transparent,
                                             child: InkWell(
-                                              onTap: _isUploadingAvatar ? null : _pickAvatar,
+                                              onTap: _isUploadingAvatar ? null : pickAndCropAvatar,
                                               borderRadius: BorderRadius.circular(20),
                                               child: Container(
                                                 padding: const EdgeInsets.all(6),

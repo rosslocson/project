@@ -105,8 +105,10 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  void updateUserData(Map<String, dynamic> data) {
+  Future<void> updateUserData(Map<String, dynamic> data) async {
     _user = {...?_user, ...data};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user', jsonEncode(_user));
     notifyListeners();
   }
 

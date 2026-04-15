@@ -1,10 +1,14 @@
-# Task: Remove admin_my_profile_screen.dart and My Profile button
+# Avatar Upload/Crop/Resize Fix Progress
 
-## TODO Steps
-- [x] Create TODO.md with plan breakdown
-- [x] Step 1: Remove import and GoRoute from frontend/lib/main.dart
-- [x] Step 2: Remove My Profile nav item from frontend/lib/widgets/admin_sidebar.dart
-- [x] Step 3: Delete frontend/lib/screens/admin_my_profile_screen.dart
-- [x] Step 4: Verify no errors (flutter analyze)
-- [x] Step 5: Mark complete
+## ✅ Plan Approved
+- [x] Backend: Image processing + validation in UploadAvatar()
+- [ ] Backend: Add resize dependency
+- [ ] Frontend: Dynamic avatar URL from ApiService.baseUrl  
+- [ ] Test: User/Admin settings → full flow
+- [ ] Backend restart & verify persistence
 
+## Current Status
+**Backend handlers/handlers.go** - Pending image processing
+**Frontend api_service.dart** - Pending URL fix
+
+**Next:** Backend implementation → restart → test → frontend polish
