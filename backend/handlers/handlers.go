@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -296,6 +297,39 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 	header, err := c.FormFile("avatar")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No avatar file provided"})
+		return
+	}
+	file, err := header.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer file.Close()
+
+	// Read first 512 bytes
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+	if n == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Empty file"})
+		return
+	}
+
+	// Detect content type
+	contentType := http.DetectContentType(buffer[:n])
+	fmt.Println("Detected content type:", contentType)
+
+	// Validate properly
+	if !strings.HasPrefix(contentType, "image/") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid type"})
+		return
+	}
+
+	if _, err := file.Seek(0, 0); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset file pointer"})
 		return
 	}
 

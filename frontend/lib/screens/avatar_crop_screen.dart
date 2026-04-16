@@ -1,13 +1,12 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:crop_your_image/crop_your_image.dart';
-import 'package:path_provider/path_provider.dart';
 
 class AvatarCropScreen extends StatefulWidget {
-  final File imageFile;
+  final Uint8List imageBytes;
+  final String? fileName;
 
-  const AvatarCropScreen({super.key, required this.imageFile});
+  const AvatarCropScreen({super.key, required this.imageBytes, this.fileName});
 
   @override
   State<AvatarCropScreen> createState() => _AvatarCropScreenState();
@@ -15,31 +14,20 @@ class AvatarCropScreen extends StatefulWidget {
 
 class _AvatarCropScreenState extends State<AvatarCropScreen> {
   final CropController _controller = CropController();
-  Uint8List? _imageBytes;
 
   @override
   void initState() {
     super.initState();
-    _loadImage();
-  }
-
-  Future<void> _loadImage() async {
-    _imageBytes = await widget.imageFile.readAsBytes();
-    setState(() {});
+    print("Crop screen opened with ${widget.imageBytes.length} bytes");
   }
 
   void _cropImage() {
+    print("🖼️ Crop button pressed");
     _controller.crop();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_imageBytes == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -50,29 +38,43 @@ class _AvatarCropScreenState extends State<AvatarCropScreen> {
         children: [
           Expanded(
             child: Crop(
-              image: _imageBytes!,
+              image: widget.imageBytes,
               controller: _controller,
               withCircleUi: true,
               onCropped: (croppedData) async {
-                final tempDir = await getTemporaryDirectory();
-                final file = File('${tempDir.path}/avatar.png');
-                await file.writeAsBytes(croppedData);
-
-                Navigator.pop(context, file); // VERY IMPORTANT
+                try {
+                  print("✂️ Image cropped, returning ${croppedData.length} bytes");
+                  
+                  print("🔙 Returning cropped bytes to previous screen");
+                  if (mounted) {
+                    Navigator.pop(context, croppedData);
+                  }
+                } catch (e) {
+                  print("❌ Error cropping image: $e");
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error cropping image: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
             ),
           ),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: _cropImage,
-                child: const Text("Save"),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _cropImage,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
-            ],
+              child: const Text("Save", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ),
-          const SizedBox(height: 20),
         ],
       ),
     );

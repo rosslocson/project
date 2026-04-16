@@ -150,22 +150,39 @@ class ApiService {
 
   static Future<Map<String, dynamic>> uploadAvatar(XFile imageFile) async {
     try {
-      var uri = Uri.parse('$baseUrl/profile/avatar');
-      var request = http.MultipartRequest('POST', uri);
+      print('📤 Starting avatar upload...');
+      print('📄 File: ${imageFile.name}');
+      
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/profile/avatar'),
+      );
 
-      // Add auth headers (without Content-Type, which http will set automatically)
+      // Add auth headers
       final headers = await _authHeadersForMultipart();
       request.headers.addAll(headers);
 
-      // Read the file as raw bytes
-      final bytes = await imageFile.readAsBytes();
+      // Add file using bytes on web, path on native platforms.
+      if (kIsWeb) {
+        final bytes = await imageFile.readAsBytes();
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'avatar',
+            bytes,
+            filename: imageFile.name.isNotEmpty ? imageFile.name : 'avatar.jpg',
+          ),
+        );
+      } else {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'avatar', // MUST MATCH BACKEND
+            imageFile.path,
+            filename: imageFile.name,
+          ),
+        );
+      }
 
-      // Attach the image file using fromBytes
-      request.files.add(http.MultipartFile.fromBytes(
-        'avatar',
-        bytes,
-        filename: imageFile.name,
-      ));
+      print('✅ File attached to request');
 
       // Send request with timeout
       final streamedResponse = await request.send().timeout(
@@ -174,24 +191,36 @@ class ApiService {
           throw Exception('Upload request timed out');
         },
       );
-      
+
       var response = await http.Response.fromStream(streamedResponse);
+
+      print('🔙 Server response - Status: ${response.statusCode}');
+      print('📋 Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
+        print('✅ Upload successful');
         return {
           'ok': true,
           'user': data['user'] ?? data,
         };
       } else {
-        print('Upload error - Status: ${response.statusCode}, Body: ${response.body}');
-        return {
-          'ok': false,
-          'error': 'Server error: ${response.statusCode} - ${response.body}',
-        };
+        print('❌ Upload error - Status: ${response.statusCode}');
+        try {
+          final errorData = jsonDecode(response.body);
+          return {
+            'ok': false,
+            'error': errorData['error'] ?? 'Server error',
+          };
+        } catch (_) {
+          return {
+            'ok': false,
+            'error': 'Server error: ${response.statusCode}',
+          };
+        }
       }
     } catch (e) {
-      print('Avatar upload exception: $e');
+      print('❌ Avatar upload exception: $e');
       return {
         'ok': false,
         'error': 'Failed to upload: ${e.toString()}',

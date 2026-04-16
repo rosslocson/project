@@ -3,9 +3,10 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
@@ -77,9 +78,10 @@ class Star {
 
 class AdminAccountSettingsScreen extends StatefulWidget {
   const AdminAccountSettingsScreen({super.key});
-  
+
   @override
-  State<AdminAccountSettingsScreen> createState() => _AdminAccountSettingsScreenState();
+  State<AdminAccountSettingsScreen> createState() =>
+      _AdminAccountSettingsScreenState();
 }
 
 class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
@@ -90,24 +92,40 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   // Department → Position mapping
   static const Map<String, List<String>> _deptRoles = {
     'Business Relationship Management': [
-      'Account Manager', 'Business Analyst', 'Client Relations',
-      'Intern', 'Others',
+      'Account Manager',
+      'Business Analyst',
+      'Client Relations',
+      'Intern',
+      'Others',
     ],
     'Project Management Office': [
-      'Project Manager', 'Project Coordinator', 'Scrum Master',
-      'Intern', 'Others',
+      'Project Manager',
+      'Project Coordinator',
+      'Scrum Master',
+      'Intern',
+      'Others',
     ],
     'Quality Assurance': [
-      'QA Engineer', 'QA Automation Tester', 'Manual Tester',
-      'Intern', 'Others',
+      'QA Engineer',
+      'QA Automation Tester',
+      'Manual Tester',
+      'Intern',
+      'Others',
     ],
     'Technical Support Department': [
-      'IT Support Specialist', 'System Administrator',
-      'Helpdesk Technician', 'Intern', 'Others',
+      'IT Support Specialist',
+      'System Administrator',
+      'Helpdesk Technician',
+      'Intern',
+      'Others',
     ],
     'Development Department': [
-      'Software Engineer', 'Frontend Developer', 'Backend Developer',
-      'UI/UX Designer', 'Intern', 'Others',
+      'Software Engineer',
+      'Frontend Developer',
+      'Backend Developer',
+      'UI/UX Designer',
+      'Intern',
+      'Others',
     ],
   };
 
@@ -125,7 +143,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   late TextEditingController _lastCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
-  
+
   // Password controllers
   final _curPassCtrl = TextEditingController();
   final _newPassCtrl = TextEditingController();
@@ -162,11 +180,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     _lastCtrl = TextEditingController(text: user?['last_name'] ?? '');
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
     _phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
-    
+
     // Initialize Department and Position state
     final dept = user?['department'] as String? ?? '';
     final pos = user?['position'] as String? ?? '';
-    
+
     if (dept.isNotEmpty && _departments.contains(dept)) {
       _selectedDept = dept;
       _positions = _deptRoles[dept] ?? ['Intern', 'Others'];
@@ -209,8 +227,13 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     _bgAnimController.dispose();
     _tabs.dispose();
     for (final c in [
-      _firstCtrl, _lastCtrl, _emailCtrl, _phoneCtrl,
-      _curPassCtrl, _newPassCtrl, _confirmPassCtrl,
+      _firstCtrl,
+      _lastCtrl,
+      _emailCtrl,
+      _phoneCtrl,
+      _curPassCtrl,
+      _newPassCtrl,
+      _confirmPassCtrl,
     ]) {
       c.dispose();
     }
@@ -218,112 +241,219 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   }
 
   // ── Avatar Pick & Upload ───────────────────────────────────────────────────
-  Future<XFile?> _cropImage(XFile file) async {
-    if (kIsWeb ||
-        (defaultTargetPlatform != TargetPlatform.android &&
-            defaultTargetPlatform != TargetPlatform.iOS)) {
-      return file;
-    }
-
-    final cropped = await ImageCropper().cropImage(
-      sourcePath: file.path,
-      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-      compressFormat: ImageCompressFormat.jpg,
-      compressQuality: 90,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      uiSettings: [
-        AndroidUiSettings(
-          toolbarTitle: 'Crop Avatar',
-          toolbarColor: Colors.black,
-          toolbarWidgetColor: Colors.white,
-          statusBarColor: Colors.black,
-          backgroundColor: Colors.black,
-          activeControlsWidgetColor: Colors.white,
-          dimmedLayerColor: Colors.black.withOpacity(0.75),
-          cropFrameColor: Colors.white.withOpacity(0.8),
-          cropGridColor: Colors.white24,
-          cropFrameStrokeWidth: 2,
-          cropGridStrokeWidth: 1,
-          showCropGrid: false,
-          initAspectRatio: CropAspectRatioPreset.square,
-          lockAspectRatio: true,
-          hideBottomControls: false,
-        ),
-        IOSUiSettings(
-          title: 'Crop Avatar',
-          aspectRatioLockEnabled: true,
-          rotateButtonsHidden: false,
-          rotateClockwiseButtonHidden: false,
-          aspectRatioPickerButtonHidden: true,
-          resetButtonHidden: false,
-          doneButtonTitle: 'Save',
-          cancelButtonTitle: 'Cancel',
-        ),
-      ],
-    );
-
-    if (cropped == null) return null;
-    return XFile(cropped.path);
-  }
-
   Future<void> pickAndCropAvatar() async {
-    print("Image picked");
-    final pickedFile = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-    );
+    try {
+      print("🔥 Edit Avatar clicked");
+      print("📸 Function started");
 
-    if (pickedFile == null) return;
+      final pickedFile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 100, // prevent corrupted compression
+      );
 
-    print("Navigating to crop screen");
-    final croppedFile = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AvatarCropScreen(
-          imageFile: File(pickedFile.path),
-        ),
-      ),
-    );
+      print("📂 Picker opened");
 
-    print("Returned from crop screen: $croppedFile");
-    if (croppedFile == null) return;
+      if (pickedFile == null) {
+        print("❌ User cancelled image selection");
+        return;
+      }
 
-    setState(() {
-      _avatarFile = croppedFile;
-    });
+      print("✅ Image selected: ${pickedFile.path}");
 
-    print("Uploading avatar...");
-    // Upload AFTER UI update
-    final res = await ApiService.uploadAvatar(XFile(croppedFile.path));
-    print("Upload complete");
+      // Validate using MIME type on actual file bytes
+      print("📂 Full path: ${pickedFile.path}");
+      print("📂 Lowercase path: ${pickedFile.path.toLowerCase()}");
 
-    if (res['ok'] == true) {
-      await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-      setState(() {
-        _avatarFile = null; // Clear after upload
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Avatar updated successfully!'),
-          backgroundColor: Colors.green,
+      final pickedFileBytes = await pickedFile.readAsBytes();
+      final mimeType =
+          lookupMimeType(pickedFile.name, headerBytes: pickedFileBytes);
+      print("📄 MIME TYPE: $mimeType");
+
+      if (mimeType == null || !mimeType.startsWith('image/')) {
+        print("❌ Invalid file type detected (MIME: $mimeType)");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Please select a valid image file (JPG, PNG, JPEG)'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      print("✅ Valid image file detected");
+
+      if (kIsWeb) {
+        print("🌐 Web detected - opening crop screen");
+        if (!mounted) return;
+
+        final croppedBytes = await Navigator.push<Uint8List>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AvatarCropScreen(
+              imageBytes: pickedFileBytes,
+              fileName: pickedFile.name,
+            ),
+          ),
+        );
+
+        print(
+            "🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
+
+        if (croppedBytes == null) {
+          print("❌ Cropping cancelled");
+          return;
+        }
+
+        if (!mounted) return;
+
+        setState(() {
+          _localAvatarBytes = croppedBytes;
+          _avatarFile = null;
+        });
+
+        final res = await ApiService.uploadAvatar(
+          XFile.fromData(croppedBytes, name: pickedFile.name),
+        );
+
+        if (!mounted) return;
+        if (res['ok'] == true) {
+          print("✅ Web upload successful");
+          await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+          setState(() {
+            _avatarFile = null;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Avatar updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          print("❌ Web upload failed: ${res['error'] ?? 'Unknown error'}");
+          setState(() {
+            _avatarFile = null;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(res['error'] ?? 'Failed to upload avatar'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      final file = File(pickedFile.path);
+
+      if (!await file.exists()) {
+        print("❌ File does not exist: ${pickedFile.path}");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('File does not exist'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final fileSize = await file.length();
+      print("✅ File verified: size=${fileSize}bytes");
+
+      print("🚀 Navigating to crop screen");
+      final croppedBytes = await Navigator.push<Uint8List>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AvatarCropScreen(
+            imageBytes: pickedFileBytes,
+            fileName: pickedFile.name,
+          ),
         ),
       );
-    } else {
+
+      print("🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
+
+      if (croppedBytes == null) {
+        print("❌ Cropping cancelled");
+        return;
+      }
+
+      if (!mounted) return;
+
+      final tempFile =
+          File('${(await getTemporaryDirectory()).path}/cropped_avatar.png');
+      await tempFile.writeAsBytes(croppedBytes);
       setState(() {
-        _avatarFile = null;
+        _avatarFile = tempFile;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res['error'] ?? 'Upload failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print("✅ UI updated with cropped image");
+
+      if (!mounted) return;
+      print("📤 Uploading avatar...");
+
+      final res = await ApiService.uploadAvatar(XFile(_avatarFile!.path));
+      print("🔙 Upload response received");
+
+      if (!mounted) return;
+
+      if (res['ok'] == true) {
+        print("✅ Upload successful");
+        await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+
+        setState(() {
+          _avatarFile = null;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Avatar updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
+        setState(() {
+          _avatarFile = null;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['error'] ?? 'Upload failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      print("❌ ERROR: $e");
+      print("📋 Stack trace: $stackTrace");
+
+      if (mounted) {
+        setState(() {
+          _avatarFile = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _saveProfile() async {
     if (!_profileKey.currentState!.validate()) return;
-    setState(() { _savingProfile = true; _profileMsg = null; });
+    setState(() {
+      _savingProfile = true;
+      _profileMsg = null;
+    });
     final res = await ApiService.updateProfile({
       'first_name': _firstCtrl.text.trim(),
       'last_name': _lastCtrl.text.trim(),
@@ -349,7 +479,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
   Future<void> _changePassword() async {
     if (!_passKey.currentState!.validate()) return;
-    setState(() { _savingPass = true; _passMsg = null; });
+    setState(() {
+      _savingPass = true;
+      _passMsg = null;
+    });
     final res = await ApiService.changePassword({
       'current_password': _curPassCtrl.text,
       'new_password': _newPassCtrl.text,
@@ -360,7 +493,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       _curPassCtrl.clear();
       _newPassCtrl.clear();
       _confirmPassCtrl.clear();
-      setState(() { _passMsg = 'Password changed successfully!'; _passSuccess = true; });
+      setState(() {
+        _passMsg = 'Password changed successfully!';
+        _passSuccess = true;
+      });
     } else {
       setState(() {
         _passMsg = res['error'] ?? res['details'] ?? 'Change failed';
@@ -402,8 +538,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   InputDecoration _getFormDecoration(String label, {IconData? prefixIcon}) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: Colors.grey.shade500, size: 18) : null,
+      labelStyle: const TextStyle(
+          fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: Colors.grey.shade500, size: 18)
+          : null,
       filled: true,
       fillColor: const Color(0xFFF9FAFB),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -434,7 +573,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
+        finalAvatarUrl =
+            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -448,10 +588,12 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             width: _isSidebarOpen ? 250 : 0,
-            child: _isSidebarOpen ? AdminSidebar(
-              currentRoute: '/admin/account-settings',
-              onClose: () => setState(() => _isSidebarOpen = false),
-            ) : null,
+            child: _isSidebarOpen
+                ? AdminSidebar(
+                    currentRoute: '/admin/account-settings',
+                    onClose: () => setState(() => _isSidebarOpen = false),
+                  )
+                : null,
           ),
           Expanded(
             child: Stack(
@@ -459,7 +601,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                 Positioned.fill(child: _buildAnimatedGalaxyBackground()),
                 Positioned.fill(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 24, horizontal: 48),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1000),
@@ -481,10 +624,12 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                     ),
                                     child: IconButton(
                                       padding: const EdgeInsets.all(12),
-                                      onPressed: () => setState(() => _isSidebarOpen = true),
+                                      onPressed: () =>
+                                          setState(() => _isSidebarOpen = true),
                                       icon: const HamburgerIcon(),
                                       tooltip: 'Open Sidebar',
-                                      splashColor: Colors.white.withOpacity(0.1),
+                                      splashColor:
+                                          Colors.white.withOpacity(0.1),
                                       highlightColor: Colors.transparent,
                                     ),
                                   ),
@@ -509,7 +654,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24)),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 32, vertical: 20),
                                 child: Row(
                                   children: [
                                     Stack(
@@ -519,18 +665,30 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           radius: 40,
                                           backgroundColor:
                                               _kCrimson.withOpacity(0.1),
-backgroundImage: _avatarFile != null
-    ? FileImage(_avatarFile!)
-    : (_localAvatarBytes != null ? MemoryImage(_localAvatarBytes!) : (finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null)) as ImageProvider,
+                                          backgroundImage: _avatarFile != null
+                                              ? FileImage(_avatarFile!)
+                                              : (_localAvatarBytes != null
+                                                  ? MemoryImage(
+                                                      _localAvatarBytes!)
+                                                  : (finalAvatarUrl.isNotEmpty
+                                                      ? NetworkImage(
+                                                          finalAvatarUrl)
+                                                      : null)) as ImageProvider,
                                           child: _isUploadingAvatar
-                                              ? const CircularProgressIndicator(color: _kCrimson, strokeWidth: 3)
-                                              : (_avatarFile == null && _localAvatarBytes == null && finalAvatarUrl.isEmpty)
+                                              ? const CircularProgressIndicator(
+                                                  color: _kCrimson,
+                                                  strokeWidth: 3)
+                                              : (_avatarFile == null &&
+                                                      _localAvatarBytes ==
+                                                          null &&
+                                                      finalAvatarUrl.isEmpty)
                                                   ? Text(
                                                       '${(user?['first_name'] as String? ?? ' ')[0]}'
                                                       '${(user?['last_name'] as String? ?? ' ')[0]}',
                                                       style: const TextStyle(
                                                         fontSize: 28,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                         color: _kCrimson,
                                                       ),
                                                     )
@@ -542,16 +700,22 @@ backgroundImage: _avatarFile != null
                                           child: Material(
                                             color: Colors.transparent,
                                             child: InkWell(
-                                              onTap: _isUploadingAvatar ? null : pickAndCropAvatar,
-                                              borderRadius: BorderRadius.circular(20),
+                                              onTap: _isUploadingAvatar
+                                                  ? null
+                                                  : pickAndCropAvatar,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
                                               child: Container(
-                                                padding: const EdgeInsets.all(6),
+                                                padding:
+                                                    const EdgeInsets.all(6),
                                                 decoration: BoxDecoration(
                                                   color: _kCrimson,
                                                   shape: BoxShape.circle,
-                                                  border: Border.all(color: Colors.white, width: 2),
+                                                  border: Border.all(
+                                                      color: Colors.white,
+                                                      width: 2),
                                                 ),
-                                    child: const Icon(
+                                                child: const Icon(
                                                   Icons.camera_alt,
                                                   color: Colors.white,
                                                   size: 14,
@@ -565,7 +729,8 @@ backgroundImage: _avatarFile != null
                                     const SizedBox(width: 20),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
@@ -584,7 +749,8 @@ backgroundImage: _avatarFile != null
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w500),
                                           ),
-                                          if ((user?['department'] as String? ?? '')
+                                          if ((user?['department'] as String? ??
+                                                  '')
                                               .isNotEmpty) ...[
                                             const SizedBox(height: 4),
                                             Text(
@@ -603,10 +769,12 @@ backgroundImage: _avatarFile != null
                                               color: user?['role'] == 'admin'
                                                   ? Colors.red.shade50
                                                   : _kCrimson.withOpacity(0.08),
-                                              borderRadius: BorderRadius.circular(16),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
                                             ),
                                             child: Text(
-                                              (user?['role'] ?? 'user').toUpperCase(),
+                                              (user?['role'] ?? 'user')
+                                                  .toUpperCase(),
                                               style: TextStyle(
                                                 color: user?['role'] == 'admin'
                                                     ? Colors.red.shade700
@@ -636,7 +804,8 @@ backgroundImage: _avatarFile != null
                                     Container(
                                       decoration: BoxDecoration(
                                         border: Border(
-                                          bottom: BorderSide(color: Colors.grey.shade200),
+                                          bottom: BorderSide(
+                                              color: Colors.grey.shade200),
                                         ),
                                       ),
                                       child: TabBar(
@@ -644,9 +813,14 @@ backgroundImage: _avatarFile != null
                                         labelColor: _kCrimson,
                                         indicatorColor: _kCrimson,
                                         indicatorWeight: 3,
-                                        unselectedLabelColor: Colors.grey.shade500,
-                                        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                                        unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                        unselectedLabelColor:
+                                            Colors.grey.shade500,
+                                        labelStyle: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700),
+                                        unselectedLabelStyle: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500),
                                         dividerColor: Colors.transparent,
                                         tabs: const [
                                           Tab(text: 'Account Settings'),
@@ -694,16 +868,20 @@ backgroundImage: _avatarFile != null
               const SizedBox(height: 16),
             ],
             Row(children: [
-              Expanded(child: TextFormField(
+              Expanded(
+                  child: TextFormField(
                 controller: _firstCtrl,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 decoration: _getFormDecoration('First Name'),
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               )),
               const SizedBox(width: 16),
-              Expanded(child: TextFormField(
+              Expanded(
+                  child: TextFormField(
                 controller: _lastCtrl,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 decoration: _getFormDecoration('Last Name'),
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               )),
@@ -712,8 +890,12 @@ backgroundImage: _avatarFile != null
             TextFormField(
               controller: _emailCtrl,
               enabled: false,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade600),
-              decoration: _getFormDecoration('Email (cannot change)', prefixIcon: Icons.email_outlined),
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade600),
+              decoration: _getFormDecoration('Email (cannot change)',
+                  prefixIcon: Icons.email_outlined),
             ),
             const SizedBox(height: 16),
             Row(children: [
@@ -727,7 +909,8 @@ backgroundImage: _avatarFile != null
                     setState(() {
                       _selectedDept = v;
                       _positions = _deptRoles[v] ?? ['Intern', 'Others'];
-                      if (_selectedPos != null && !_positions.contains(_selectedPos)) {
+                      if (_selectedPos != null &&
+                          !_positions.contains(_selectedPos)) {
                         _selectedPos = null;
                       }
                     });
@@ -739,7 +922,9 @@ backgroundImage: _avatarFile != null
                 child: _dropdownField(
                   label: 'Position',
                   value: _selectedPos,
-                  hint: _positions.isEmpty ? 'Select Dept First' : 'Select Position',
+                  hint: _positions.isEmpty
+                      ? 'Select Dept First'
+                      : 'Select Position',
                   items: _positions,
                   onChanged: _positions.isEmpty
                       ? null
@@ -767,7 +952,10 @@ backgroundImage: _avatarFile != null
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
                     : const Text('Save Changes',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            letterSpacing: 0.5)),
               ),
             ),
           ],
@@ -796,17 +984,19 @@ backgroundImage: _avatarFile != null
               validator: (v) => v!.isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 20),
-_passField(
+            _passField(
               controller: _newPassCtrl,
               label: 'New Password',
               obscure: _obscureNew,
               onToggle: () => setState(() => _obscureNew = !_obscureNew),
               validator: (v) {
-                if (v == null || v.length < 8) { return 'Min 8 characters'; }
+                if (v == null || v.length < 8) {
+                  return 'Min 8 characters';
+                }
                 if (!v.contains(RegExp(r'[A-Z]'))) {
                   return 'Need one uppercase letter';
                 }
-if (!v.contains(RegExp(r'[0-9]'))) {
+                if (!v.contains(RegExp(r'[0-9]'))) {
                   return 'Need one number';
                 }
                 if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
@@ -822,8 +1012,12 @@ if (!v.contains(RegExp(r'[0-9]'))) {
               obscure: _obscureConf,
               onToggle: () => setState(() => _obscureConf = !_obscureConf),
               validator: (v) {
-                if (v!.isEmpty) { return 'Required'; }
-                if (v != _newPassCtrl.text) { return 'Passwords do not match'; }
+                if (v!.isEmpty) {
+                  return 'Required';
+                }
+                if (v != _newPassCtrl.text) {
+                  return 'Passwords do not match';
+                }
                 return null;
               },
             ),
@@ -847,7 +1041,10 @@ if (!v.contains(RegExp(r'[0-9]'))) {
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
                     : const Text('Change Password',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            letterSpacing: 0.5)),
               ),
             ),
           ],
@@ -887,14 +1084,23 @@ if (!v.contains(RegExp(r'[0-9]'))) {
                   isDense: true,
                   hint: Text(hint,
                       style: TextStyle(
-                          color: Colors.grey[400], fontSize: 13, fontWeight: FontWeight.w500)),
+                          color: Colors.grey[400],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500)),
                   isExpanded: true,
                   icon: Icon(Icons.keyboard_arrow_down,
                       color: Colors.grey[500], size: 18),
-                  style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500),
                   items: items
-                      .map((s) =>
-                          DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis,)))
+                      .map((s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(
+                            s,
+                            overflow: TextOverflow.ellipsis,
+                          )))
                       .toList(),
                   onChanged: onChanged,
                 ),
@@ -909,17 +1115,17 @@ if (!v.contains(RegExp(r'[0-9]'))) {
     required String label,
     required bool obscure,
     required VoidCallback onToggle,
-  required String? Function(String?) validator,
+    required String? Function(String?) validator,
   }) =>
       TextFormField(
         controller: controller,
         obscureText: obscure,
         validator: validator,
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        decoration: _getFormDecoration(label, prefixIcon: Icons.lock_outline).copyWith(
+        decoration:
+            _getFormDecoration(label, prefixIcon: Icons.lock_outline).copyWith(
           suffixIcon: IconButton(
-            icon: Icon(
-                obscure ? Icons.visibility_off : Icons.visibility,
+            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
                 size: 18, color: Colors.grey.shade500),
             onPressed: onToggle,
           ),
@@ -932,24 +1138,19 @@ if (!v.contains(RegExp(r'[0-9]'))) {
           color: success ? Colors.green.shade50 : Colors.red.shade50,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: success
-                  ? Colors.green.shade200
-                  : Colors.red.shade200),
+              color: success ? Colors.green.shade200 : Colors.red.shade200),
         ),
         child: Row(
           children: [
-            Icon(
-                success ? Icons.check_circle : Icons.error_outline,
-                color: success ? Colors.green : Colors.red,
-                size: 18),
+            Icon(success ? Icons.check_circle : Icons.error_outline,
+                color: success ? Colors.green : Colors.red, size: 18),
             const SizedBox(width: 10),
             Expanded(
               child: Text(msg,
                   style: TextStyle(
                       fontSize: 13,
-                      color: success
-                          ? Colors.green.shade800
-                          : Colors.red.shade800,
+                      color:
+                          success ? Colors.green.shade800 : Colors.red.shade800,
                       fontWeight: FontWeight.w600)),
             ),
           ],
@@ -969,12 +1170,17 @@ class StarfieldPainter extends CustomPainter {
     final paint = Paint();
 
     for (var star in stars) {
-      double twinkle = (math.sin((animationValue * 2 * math.pi * 1.5) + star.twinklePhase) + 1.0) / 2.0;
+      double twinkle =
+          (math.sin((animationValue * 2 * math.pi * 1.5) + star.twinklePhase) +
+                  1.0) /
+              2.0;
       double currentOpacity = star.baseOpacity * (0.3 + (0.7 * twinkle));
-      
+
       paint.color = Colors.white.withOpacity(currentOpacity.clamp(0.0, 1.0));
 
-      double dx = (star.x * size.width + (animationValue * size.width * star.speed)) % size.width;
+      double dx =
+          (star.x * size.width + (animationValue * size.width * star.speed)) %
+              size.width;
       double dy = star.y * size.height;
 
       if (star.size > 1.5) {
