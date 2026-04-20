@@ -299,6 +299,13 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No avatar file provided"})
 		return
 	}
+
+	// Validate file size (max 5MB)
+	if header.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File size exceeds 5MB limit"})
+		return
+	}
+
 	file, err := header.Open()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to open file"})
@@ -306,7 +313,7 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// Read first 512 bytes
+	// Read first 512 bytes for content type detection
 	buffer := make([]byte, 512)
 	n, err := file.Read(buffer)
 	if err != nil && err != io.EOF {
@@ -320,14 +327,12 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 
 	// Detect content type
 	contentType := http.DetectContentType(buffer[:n])
-	fmt.Println("Detected content type:", contentType)
-
-	// Validate properly
 	if !strings.HasPrefix(contentType, "image/") {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid type"})
 		return
 	}
 
+	// Reset file pointer for saving
 	if _, err := file.Seek(0, 0); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset file pointer"})
 		return

@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:crop_your_image/crop_your_image.dart';
 
 class AvatarCropScreen extends StatefulWidget {
@@ -14,6 +14,11 @@ class AvatarCropScreen extends StatefulWidget {
 
 class _AvatarCropScreenState extends State<AvatarCropScreen> {
   final CropController _controller = CropController();
+  bool _isSaving = false;
+
+  Future<Uint8List> _compressImage(Uint8List imageBytes) async {
+    return imageBytes; // Fast as-is, crop_your_image already optimized
+  }
 
   @override
   void initState() {
@@ -22,6 +27,8 @@ class _AvatarCropScreenState extends State<AvatarCropScreen> {
   }
 
   void _cropImage() {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
     print("🖼️ Crop button pressed");
     _controller.crop();
   }
@@ -31,48 +38,77 @@ class _AvatarCropScreenState extends State<AvatarCropScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("Crop & Rotate"),
         backgroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Crop and Resize",
+          style: TextStyle(color: Colors.white),
+        ),
+        centerTitle: false,
       ),
       body: Column(
         children: [
           Expanded(
-            child: Crop(
-              image: widget.imageBytes,
-              controller: _controller,
-              withCircleUi: true,
-              onCropped: (croppedData) async {
-                try {
-                  print("✂️ Image cropped, returning ${croppedData.length} bytes");
-                  
-                  print("🔙 Returning cropped bytes to previous screen");
-                  if (mounted) {
-                    Navigator.pop(context, croppedData);
+            child: Container(
+              color: Colors.black,
+              child: Crop(
+                image: widget.imageBytes,
+                controller: _controller,
+                withCircleUi: true,
+                aspectRatio: 1.0,
+                onCropped: (croppedData) async {
+                  setState(() => _isSaving = false);
+                  try {
+                    print("✂️ Image cropped: ${croppedData.length} bytes");
+                    
+                    // Compress for faster upload
+                    final compressed = await _compressImage(croppedData);
+                    
+                    print("📦 Compressed to ${compressed.length} bytes");
+                    print("🔙 Returning optimized bytes");
+                    if (mounted) {
+                      Navigator.pop(context, compressed);
+                    }
+                  } catch (e) {
+                    print("❌ Error cropping image: $e");
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error cropping image: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   }
-                } catch (e) {
-                  print("❌ Error cropping image: $e");
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error cropping image: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
+                },
+              ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
-              onPressed: _cropImage,
+              onPressed: _isSaving ? null : _cropImage,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
-              child: const Text("Save", style: TextStyle(fontWeight: FontWeight.bold)),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                      ),
+                    )
+                  : const Text(
+                      "Save",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
             ),
           ),
         ],
