@@ -35,6 +35,7 @@ type User struct {
 	LockedUntil      *time.Time `json:"locked_until"`
 	ResetToken       string     `json:"-"`
 	ResetTokenExpiry *time.Time `json:"-"`
+	RequiredOjtHours int        `gorm:"default:486" json:"required_ojt_hours"`
 }
 
 type ActivityLog struct {

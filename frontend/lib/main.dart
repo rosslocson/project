@@ -15,6 +15,8 @@ import 'screens/admin_user_management.dart';
 import 'screens/admin_add_user.dart';
 import 'screens/admin_departments_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
+import 'screens/attendance_screen.dart';
+ 
 
 void main() {
   runApp(
@@ -134,6 +136,14 @@ class _MyAppState extends State<MyApp> {
             pageBuilder: (context, state) => MaterialPage<void>(
               key: state.pageKey,
               child: const AdminDashboardScreen(),
+            ),
+          ),
+          // Attendance page
+          GoRoute(
+            path: '/attendance',
+            pageBuilder: (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AttendanceScreen(),
             ),
           ),
         ],

@@ -31,7 +31,8 @@ class UserSidebar extends StatelessWidget {
           // Logo / brand & Close Button
           Padding(
             // Adjusted left padding to 20 to align with the 'MENU' label
-            padding: const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
+            padding:
+                const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
             child: Row(
               children: [
                 // ──────────────────────────────────────────────────────────────
@@ -41,16 +42,18 @@ class UserSidebar extends StatelessWidget {
                   child: Image.asset(
                     'assets/images/logo_file.png',
                     height: 40,
-                    width: 48,  
+                    width: 48,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.public, color: _textLight, size: 24);
+                      return const Icon(Icons.public,
+                          color: _textLight, size: 24);
                     },
                   ),
                 ),
                 // ──────────────────────────────────────────────────────────────
-                const SizedBox(width: 12), // Increased gap between logo and text
-                
+                const SizedBox(
+                    width: 12), // Increased gap between logo and text
+
                 const Expanded(
                   child: Text(
                     'InternSpace',
@@ -58,13 +61,13 @@ class UserSidebar extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: _textLight,
-                      fontSize: 16, 
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
                     ),
                   ),
                 ),
-                
+
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -76,9 +79,9 @@ class UserSidebar extends StatelessWidget {
                       child: const Padding(
                         padding: EdgeInsets.all(8.0),
                         child: Icon(
-                          Icons.close_rounded, 
-                          color: _textLight, 
-                          size: 20, 
+                          Icons.close_rounded,
+                          color: _textLight,
+                          size: 20,
                         ),
                       ),
                     ),
@@ -110,6 +113,14 @@ class UserSidebar extends StatelessWidget {
                   icon: Icons.settings_outlined,
                   label: 'Account Settings',
                   route: '/account-settings',
+                  current: currentRoute,
+                ),
+                // ── OJT / Attendance section ──────────────────────────────
+                const _SectionLabel('OJT'),
+                _NavItem(
+                  icon: Icons.access_time_rounded,
+                  label: 'Attendance',
+                  route: '/attendance',
                   current: currentRoute,
                 ),
               ],

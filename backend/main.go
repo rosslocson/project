@@ -138,8 +138,7 @@ func main() {
 	}
 
 	// Auto migrate models
-	DB.AutoMigrate(&models.User{}, &models.ActivityLog{}, &models.Department{}, &models.Position{})
-
+	DB.AutoMigrate(&models.User{}, &models.ActivityLog{}, &models.Department{}, &models.Position{}, &models.Attendance{})
 	log.Println("Database migrated successfully")
 
 	// Seed database with admin account
@@ -243,6 +242,16 @@ func main() {
 
 		// Activity logs
 		api.GET("/activity", h.GetActivityLogs)
+		api.GET("/interns", h.ListInterns)
+
+		// Attendance (intern time in/out + OJT hours tracking)
+		attendance := api.Group("/attendance")
+		{
+			attendance.POST("/time-in", h.TimeIn)
+			attendance.PATCH("/time-out", h.TimeOut)
+			attendance.GET("/summary", h.GetAttendanceSummary)
+			attendance.GET("/history", h.GetAttendanceHistory)
+		}
 	}
 
 	port := os.Getenv("PORT")

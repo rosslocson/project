@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show debugPrint, defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +16,12 @@ class ApiService {
     }
     return 'http://localhost:8080/api';
   }
+
+  /// Public alias so AttendanceService can reuse auth headers.
+  static Future<Map<String, String>> authHeaders() => _authHeaders();
+
+  /// Public alias so AttendanceService can reuse response parsing.
+  static Map<String, dynamic> parse(http.Response res) => _parse(res);
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -51,7 +57,8 @@ class ApiService {
 
   // ── Auth ──────────────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> register(
+      Map<String, dynamic> data) async {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/auth/register'),
@@ -64,7 +71,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -122,7 +130,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> updateProfile(
+      Map<String, dynamic> data) async {
     try {
       final res = await http.put(
         Uri.parse('$baseUrl/profile'),
@@ -135,7 +144,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> changePassword(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> changePassword(
+      Map<String, dynamic> data) async {
     try {
       final res = await http.put(
         Uri.parse('$baseUrl/profile/password'),
@@ -150,9 +160,9 @@ class ApiService {
 
   static Future<Map<String, dynamic>> uploadAvatar(XFile imageFile) async {
     try {
-      print('📤 Starting avatar upload...');
-      print('📄 File: ${imageFile.name}');
-      
+      debugPrint('📤 Starting avatar upload...');
+      debugPrint('📄 File: ${imageFile.name}');
+
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/profile/avatar'),
@@ -182,7 +192,7 @@ class ApiService {
         );
       }
 
-      print('✅ File attached to request');
+      debugPrint('✅ File attached to request');
 
       // Send request with timeout
       final streamedResponse = await request.send().timeout(
@@ -194,18 +204,18 @@ class ApiService {
 
       var response = await http.Response.fromStream(streamedResponse);
 
-      print('🔙 Server response - Status: ${response.statusCode}');
-      print('📋 Response body: ${response.body}');
+      debugPrint('🔙 Server response - Status: ${response.statusCode}');
+      debugPrint('📋 Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        print('✅ Upload successful');
+        debugPrint('✅ Upload successful');
         return {
           'ok': true,
           'user': data['user'] ?? data,
         };
       } else {
-        print('❌ Upload error - Status: ${response.statusCode}');
+        debugPrint('❌ Upload error - Status: ${response.statusCode}');
         try {
           final errorData = jsonDecode(response.body);
           return {
@@ -220,7 +230,7 @@ class ApiService {
         }
       }
     } catch (e) {
-      print('❌ Avatar upload exception: $e');
+      debugPrint('❌ Avatar upload exception: $e');
       return {
         'ok': false,
         'error': 'Failed to upload: ${e.toString()}',
@@ -242,6 +252,20 @@ class ApiService {
     }
   }
 
+  /// Fetches all users with role = 'user' (intern).
+  /// Hits GET /api/interns — must be accessible to authenticated non-admin users.
+  static Future<Map<String, dynamic>> getInterns() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/interns'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
   // ── Users (Admin) ─────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getUsers({String? search}) async {
@@ -255,7 +279,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> createUser(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> createUser(
+      Map<String, dynamic> data) async {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/users'),
@@ -268,7 +293,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> updateUser(int id, Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> updateUser(
+      int id, Map<String, dynamic> data) async {
     try {
       final res = await http.put(
         Uri.parse('$baseUrl/users/$id'),
@@ -308,7 +334,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> updateDepartment(int id, String name) async {
+  static Future<Map<String, dynamic>> updateDepartment(
+      int id, String name) async {
     try {
       final res = await http.put(
         Uri.parse('$baseUrl/departments/$id'),
@@ -360,7 +387,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> updatePosition(int id, String name) async {
+  static Future<Map<String, dynamic>> updatePosition(
+      int id, String name) async {
     try {
       final res = await http.put(
         Uri.parse('$baseUrl/positions/$id'),
@@ -388,7 +416,7 @@ class ApiService {
   // ── Legacy getConfig wrapper (used by register/profile dropdowns) ──────────
   static Future<Map<String, dynamic>> getConfig({required String type}) async {
     if (type == 'department') return getDepartments();
-    if (type == 'position')   return getPositions();
+    if (type == 'position') return getPositions();
     return {'ok': false, 'error': 'Unknown type'};
   }
 
@@ -406,30 +434,30 @@ class ApiService {
 
   // ── Config (departments / positions) ─────────────────────────────
 
-static Future<Map<String, dynamic>> updateConfig(int id, String name) async {
-  try {
-    final res = await http.put(
-      Uri.parse('$baseUrl/config/$id'),
-      headers: await _authHeaders(),
-      body: jsonEncode({'name': name}),
-    );
-    return _parse(res);
-  } catch (e) {
-    return {'ok': false, 'error': 'Connection error'};
+  static Future<Map<String, dynamic>> updateConfig(int id, String name) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/config/$id'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
   }
-}
 
-static Future<Map<String, dynamic>> deleteConfig(int id) async {
-  try {
-    final res = await http.delete(
-      Uri.parse('$baseUrl/config/$id'),
-      headers: await _authHeaders(),
-    );
-    return _parse(res);
-  } catch (e) {
-    return {'ok': false, 'error': 'Connection error'};
+  static Future<Map<String, dynamic>> deleteConfig(int id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/config/$id'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
   }
-}
 
   // ── Activity Logs ─────────────────────────────────────────────────────────
 
