@@ -3,7 +3,6 @@
 // Drop-in companion to your existing ApiService.
 // Handles all attendance-related API calls.
 
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_service.dart';           // your existing file
 import '../models/attendance_model.dart';

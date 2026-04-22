@@ -10,7 +10,6 @@ import '../widgets/attendance_clock_card.dart';
 import '../widgets/attendance_history_list.dart';
 import '../widgets/ojt_progress_card.dart';
 import '../widgets/user_sidebar.dart';        // your existing sidebar
-import '../widgets/star_background.dart';     // your existing background
 
 // ── Hamburger icon (copied from your users_screen.dart) ─────────────────────
 class _HamburgerIcon extends StatelessWidget {
@@ -52,8 +51,7 @@ class AttendanceScreen extends StatefulWidget {
   State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends State<AttendanceScreen>
-    with SingleTickerProviderStateMixin {
+class _AttendanceScreenState extends State<AttendanceScreen> {
   // ── State ──────────────────────────────────────────────────────────────────
   AttendanceSummary? _summary;
   List<AttendanceRecord> _history = [];
@@ -64,24 +62,15 @@ class _AttendanceScreenState extends State<AttendanceScreen>
 
   bool _isSidebarOpen = true;
 
-  late AnimationController _bgAnimController;
-  late final List<Star> _stars;
-
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _stars = generateStars(count: 200);
-    _bgAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 150),
-    )..repeat();
     _loadAll();
   }
 
   @override
   void dispose() {
-    _bgAnimController.dispose();
     super.dispose();
   }
 
@@ -162,95 +151,83 @@ class _AttendanceScreenState extends State<AttendanceScreen>
 
           // ── Main content ───────────────────────────────────────────────
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: GalaxyBackground(
-                    animation: _bgAnimController,
-                    stars: _stars,
-                  ),
-                ),
-                Positioned.fill(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Page header ──────────────────────────────────
-                        Row(
-                          children: [
-                            if (!_isSidebarOpen) ...[
-                              Container(
-                                margin: const EdgeInsets.only(right: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.15),
-                                  ),
-                                ),
-                                child: IconButton(
-                                  padding: const EdgeInsets.all(12),
-                                  onPressed: () =>
-                                      setState(() => _isSidebarOpen = true),
-                                  icon: const _HamburgerIcon(),
-                                  tooltip: 'Open Sidebar',
-                                ),
-                              ),
-                            ],
-                            Text(
-                              'My Attendance',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Page header ──────────────────────────────────
+                  Row(
+                    children: [
+                      if (!_isSidebarOpen) ...[
+                        Container(
+                          margin: const EdgeInsets.only(right: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.15),
                             ),
-                            const Spacer(),
-                            // Refresh button
-                            IconButton(
-                              onPressed: _loadAll,
-                              icon: const Icon(Icons.refresh_rounded,
-                                  color: Colors.white70),
-                              tooltip: 'Refresh',
-                            ),
-                          ],
+                          ),
+                          child: IconButton(
+                            padding: const EdgeInsets.all(12),
+                            onPressed: () =>
+                                setState(() => _isSidebarOpen = true),
+                            icon: const _HamburgerIcon(),
+                            tooltip: 'Open Sidebar',
+                          ),
                         ),
-
-                        const SizedBox(height: 24),
-
-                        // ── Clock card ───────────────────────────────────
-                        AttendanceClockCard(
-                          summary: _summary,
-                          isLoading: _actionLoading || _summaryLoading,
-                          onTimeIn: _handleTimeIn,
-                          onTimeOut: _handleTimeOut,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // ── OJT progress ─────────────────────────────────
-                        if (_summaryLoading)
-                          const Center(child: CircularProgressIndicator())
-                        else if (_summary != null)
-                          OjtProgressCard(summary: _summary!),
-
-                        const SizedBox(height: 20),
-
-                        // ── History ───────────────────────────────────────
-                        AttendanceHistoryList(
-                          records: _history,
-                          isLoading: _historyLoading,
-                        ),
-
-                        const SizedBox(height: 32),
                       ],
-                    ),
+                      Text(
+                        'My Attendance',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                      ),
+                      const Spacer(),
+                      // Refresh button
+                      IconButton(
+                        onPressed: _loadAll,
+                        icon: const Icon(Icons.refresh_rounded,
+                            color: Colors.white70),
+                        tooltip: 'Refresh',
+                      ),
+                    ],
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 24),
+
+                  // ── Clock card ───────────────────────────────────
+                  AttendanceClockCard(
+                    summary: _summary,
+                    isLoading: _actionLoading || _summaryLoading,
+                    onTimeIn: _handleTimeIn,
+                    onTimeOut: _handleTimeOut,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── OJT progress ─────────────────────────────────
+                  if (_summaryLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_summary != null)
+                    OjtProgressCard(summary: _summary!),
+
+                  const SizedBox(height: 20),
+
+                  // ── History ───────────────────────────────────────
+                  AttendanceHistoryList(
+                    records: _history,
+                    isLoading: _historyLoading,
+                  ),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           ),
         ],

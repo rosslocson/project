@@ -84,14 +84,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                               ),
                         ),
                         const Spacer(),
-                        // ── Edit Account button ──
+                        // ── Edit Profile button ──
                         ElevatedButton.icon(
                           onPressed: () {
-                            context.go('/account-settings');
+                            context.go('/edit-profile');
                           },
                           icon: const Icon(Icons.edit_outlined, size: 16),
                           label: const Text(
-                            'Edit Account',
+                            'Edit Profile',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           style: ElevatedButton.styleFrom(

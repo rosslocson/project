@@ -10,12 +10,15 @@ import 'screens/register_screen.dart';
 import 'screens/user_home_screen.dart';
 import 'screens/user_my_profile_screen.dart';
 import 'screens/user_account_settings_screen.dart';
+import 'screens/user_edit_profile_screen.dart';
 import 'screens/admin_account_settings_screen.dart';
 import 'screens/admin_user_management.dart';
 import 'screens/admin_add_user.dart';
 import 'screens/admin_departments_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'screens/attendance_screen.dart';
+
+
  
 
 void main() {
@@ -87,6 +90,13 @@ class _MyAppState extends State<MyApp> {
             pageBuilder: (context, state) => MaterialPage<void>(
               key: state.pageKey,
               child: const MyProfileScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/edit-profile',
+            pageBuilder: (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const UserEditProfileScreen(),
             ),
           ),
           GoRoute(

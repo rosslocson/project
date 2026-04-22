@@ -545,6 +545,17 @@ func (h *Handler) GetActivityLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"logs": logs})
 }
 
+// ── List Interns ─────────────────────────────────────────────────────────────
+
+func (h *Handler) ListInterns(c *gin.Context) {
+	var interns []models.User
+	h.DB.Where("role = ? AND is_active = ?", models.RoleUser, true).
+		Select("id, first_name, last_name, email, department, position, avatar_url, created_at").
+		Order("first_name asc, last_name asc").
+		Find(&interns)
+	c.JSON(http.StatusOK, gin.H{"interns": interns})
+}
+
 func (h *Handler) logActivity(userID uint, action, details, ip string) {
 	entry := models.ActivityLog{
 		UserID:    userID,

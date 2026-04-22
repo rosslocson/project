@@ -38,7 +38,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -199,34 +199,34 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   // ── Avatar Pick & Upload ───────────────────────────────────────────────────
   Future<void> pickAndCropAvatar() async {
     try {
-      print("🔥 Edit Avatar clicked");
-      print("📸 Function started");
+      debugPrint("🔥 Edit Avatar clicked");
+      debugPrint("📸 Function started");
 
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 100, // prevent corrupted compression
       );
 
-      print("📂 Picker opened");
+      debugPrint("📂 Picker opened");
 
       if (pickedFile == null) {
-        print("❌ User cancelled image selection");
+        debugPrint("❌ User cancelled image selection");
         return;
       }
 
-      print("✅ Image selected: ${pickedFile.path}");
+      debugPrint("✅ Image selected: ${pickedFile.path}");
 
       // Validate using MIME type on actual file bytes
-      print("📂 Full path: ${pickedFile.path}");
-      print("📂 Lowercase path: ${pickedFile.path.toLowerCase()}");
+      debugPrint("📂 Full path: ${pickedFile.path}");
+      debugPrint("📂 Lowercase path: ${pickedFile.path.toLowerCase()}");
 
       final pickedFileBytes = await pickedFile.readAsBytes();
       final mimeType =
           lookupMimeType(pickedFile.name, headerBytes: pickedFileBytes);
-      print("📄 MIME TYPE: $mimeType");
+      debugPrint("📄 MIME TYPE: $mimeType");
 
       if (mimeType == null || !mimeType.startsWith('image/')) {
-        print("❌ Invalid file type detected (MIME: $mimeType)");
+        debugPrint("❌ Invalid file type detected (MIME: $mimeType)");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -238,10 +238,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         return;
       }
 
-      print("✅ Valid image file detected");
+      debugPrint("✅ Valid image file detected");
 
       if (kIsWeb) {
-        print("🌐 Web detected - opening crop screen");
+        debugPrint("🌐 Web detected - opening crop screen");
         if (!mounted) return;
 
         final croppedBytes = await Navigator.push<Uint8List>(
@@ -254,11 +254,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           ),
         );
 
-        print(
+        debugPrint(
             "🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
 
         if (croppedBytes == null) {
-          print("❌ Cropping cancelled");
+          debugPrint("❌ Cropping cancelled");
           return;
         }
 
@@ -281,20 +281,21 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         });
 
         if (res['ok'] == true) {
-          print("✅ Web upload successful");
+          debugPrint("✅ Web upload successful");
+          final messenger = ScaffoldMessenger.of(context);
           await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
           setState(() {
             _avatarFile = null;
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Avatar updated successfully!'),
               backgroundColor: Colors.green,
             ),
           );
         } else {
-          print("❌ Web upload failed: ${res['error'] ?? 'Unknown error'}");
+          debugPrint("❌ Web upload failed: ${res['error'] ?? 'Unknown error'}");
           setState(() {
             _avatarFile = null;
           });
@@ -313,7 +314,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       final file = File(pickedFile.path);
 
       if (!await file.exists()) {
-        print("❌ File does not exist: ${pickedFile.path}");
+        debugPrint("❌ File does not exist: ${pickedFile.path}");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -326,9 +327,9 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       }
 
       final fileSize = await file.length();
-      print("✅ File verified: size=${fileSize}bytes");
+      debugPrint("✅ File verified: size=${fileSize}bytes");
 
-      print("🚀 Navigating to crop screen");
+      debugPrint("🚀 Navigating to crop screen");
       if (!mounted) return;
       
       final croppedBytes = await Navigator.push<Uint8List>(
@@ -341,10 +342,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         ),
       );
 
-      print("🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
+      debugPrint("🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
 
       if (croppedBytes == null) {
-        print("❌ Cropping cancelled");
+        debugPrint("❌ Cropping cancelled");
         return;
       }
 
@@ -359,13 +360,13 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         _isUploadingAvatar = true;
       });
       
-      print("✅ UI updated with cropped image");
+      debugPrint("✅ UI updated with cropped image");
 
       if (!mounted) return;
-      print("📤 Uploading avatar...");
+      debugPrint("📤 Uploading avatar...");
 
       final res = await ApiService.uploadAvatar(XFile(_avatarFile!.path));
-      print("🔙 Upload response received");
+      debugPrint("🔙 Upload response received");
 
       if (!mounted) return;
       
