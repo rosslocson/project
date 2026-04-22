@@ -231,7 +231,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         );
 
         if (!mounted) return;
-        
+
         setState(() {
           _isUploadingAvatar = false;
         });
@@ -307,7 +307,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       final tempFile =
           File('${(await getTemporaryDirectory()).path}/cropped_avatar.png');
       await tempFile.writeAsBytes(croppedBytes);
-      
+
       setState(() {
         _avatarFile = tempFile;
         _isUploadingAvatar = true;
@@ -321,7 +321,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       print("🔙 Upload response received");
 
       if (!mounted) return;
-      
+
       setState(() {
         _isUploadingAvatar = false;
       });
@@ -378,6 +378,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       _savingProfile = true;
       _profileMsg = null;
     });
+
     final res = await ApiService.updateProfile({
       'first_name': _firstCtrl.text.trim(),
       'last_name': _lastCtrl.text.trim(),
@@ -385,9 +386,21 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       'department': _selectedDept ?? '',
       'position': _selectedPos ?? '',
     });
+
     if (!mounted) return;
+
     if (res['ok'] == true) {
+      // Merge the partial update
       context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+
+      // ✅ Re-fetch the full profile so ALL fields stay in sync
+      final fresh = await ApiService.getProfile();
+      if (mounted && (fresh['ok'] == true || fresh['id'] != null)) {
+        context
+            .read<AuthProvider>()
+            .updateUserData(Map<String, dynamic>.from(fresh));
+      }
+
       setState(() {
         _profileMsg = 'Profile updated successfully!';
         _profileSuccess = true;
@@ -490,7 +503,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         // Replaced Galaxy Background with Asset Image
         Positioned.fill(
           child: Image.asset(
-'assets/images/space_background.png',
+            'assets/images/space_background.png',
             fit: BoxFit.cover,
           ),
         ),
