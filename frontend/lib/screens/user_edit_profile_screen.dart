@@ -21,7 +21,8 @@ class UserEditProfileScreen extends StatefulWidget {
 }
 
 
-class _UserEditProfileScreenState extends State<UserEditProfileScreen> {
+class _UserEditProfileScreenState extends State<UserEditProfileScreen>
+    with TickerProviderStateMixin {
  late TabController _tabs;
 
 
@@ -262,7 +263,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> {
    required void Function(String?) onChanged,
  }) =>
      DropdownButtonFormField<String>(
-       value: value,
+       initialValue: value,
        style: const TextStyle(color: Colors.white, fontSize: 14),
        dropdownColor: const Color(0xFF1A0A10),
        decoration: InputDecoration(
