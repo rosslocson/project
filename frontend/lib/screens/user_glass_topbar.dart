@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/sidebar_provider.dart';
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
@@ -46,19 +47,23 @@ class HamburgerIcon extends StatelessWidget {
 }
 
 class GlassTopBar extends StatelessWidget {
-  final bool isSidebarOpen;
-  final VoidCallback onToggleSidebar;
+  final bool? isSidebarOpen;
+  final VoidCallback? onToggleSidebar;
   final Map<String, dynamic>? user;
 
   const GlassTopBar({
     super.key,
-    required this.isSidebarOpen,
-    required this.onToggleSidebar,
+    this.isSidebarOpen,
+    this.onToggleSidebar,
     this.user,
   });
 
   @override
   Widget build(BuildContext context) {
+    final sidebar = context.watch<SidebarProvider>();
+    final sidebarOpen = isSidebarOpen ?? sidebar.isUserSidebarOpen;
+    final toggleSidebar = onToggleSidebar ?? () => sidebar.toggleUserSidebar();
+
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
     final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
@@ -68,7 +73,7 @@ class GlassTopBar extends StatelessWidget {
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl';
+        finalAvatarUrl = 'http://127.0.0.1:8080/$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -90,7 +95,7 @@ class GlassTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (!isSidebarOpen) ...[
+          if (!sidebarOpen) ...[
             Container(
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.05),
@@ -102,7 +107,7 @@ class GlassTopBar extends StatelessWidget {
               ),
               child: IconButton(
                 padding: const EdgeInsets.all(12),
-                onPressed: onToggleSidebar,
+                onPressed: toggleSidebar,
                 icon: const HamburgerIcon(),
                 tooltip: 'Open Sidebar',
                 splashColor: Colors.white.withOpacity(0.1),
@@ -115,7 +120,7 @@ class GlassTopBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Homescreen',
+                'Home',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -124,7 +129,7 @@ class GlassTopBar extends StatelessWidget {
                 ),
               ),
               Text(
-                'Welcome, $fullName',
+                'Welcome, $firstName',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.8),
@@ -181,9 +186,7 @@ class GlassTopBar extends StatelessWidget {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor: const Color(0xFFD4748A).withOpacity(0.1),
-                    backgroundImage: finalAvatarUrl.isNotEmpty
-                        ? NetworkImage(finalAvatarUrl)
-                        : null,
+                    backgroundImage: finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null,
                     child: finalAvatarUrl.isEmpty
                         ? Container(
                             width: 44,

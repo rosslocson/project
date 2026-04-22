@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/sidebar_provider.dart';
 import '../widgets/user_sidebar.dart';
 
 class HamburgerIcon extends StatelessWidget {
@@ -46,7 +47,7 @@ class HamburgerIcon extends StatelessWidget {
   }
 }
 
-class UserLayout extends StatefulWidget {
+class UserLayout extends StatelessWidget {
   final Widget child;
   final String? currentRoute;
   final String title;
@@ -59,32 +60,10 @@ class UserLayout extends StatefulWidget {
   });
 
   @override
-  State<UserLayout> createState() => _UserLayoutState();
-}
-
-class _UserLayoutState extends State<UserLayout> with SingleTickerProviderStateMixin {
-  bool _isSidebarOpen = true;
-  late AnimationController _animController;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final route = widget.currentRoute ?? GoRouterState.of(context).matchedLocation ?? '/home';
+    final sidebar = context.watch<SidebarProvider>();
+    final route = currentRoute ?? GoRouterState.of(context).matchedLocation ?? '/home';
     final user = auth.user;
 
     return Scaffold(
@@ -95,21 +74,21 @@ class _UserLayoutState extends State<UserLayout> with SingleTickerProviderStateM
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                width: _isSidebarOpen ? 250 : 0,
-                child: _isSidebarOpen
-                  ? UserSidebar(
+                width: sidebar.isUserSidebarOpen ? 250 : 0,
+                child: sidebar.isUserSidebarOpen
+                    ? UserSidebar(
                         currentRoute: route,
-                        onClose: () => setState(() => _isSidebarOpen = false),
+                        onClose: () => sidebar.setUserSidebarOpen(false),
                       )
                     : const SizedBox(),
               ),
               Expanded(
-                child: widget.child,
+                child: child,
               ),
             ],
           ),
           // Hamburger menu button when sidebar is closed
-          if (!_isSidebarOpen)
+          if (!sidebar.isUserSidebarOpen)
             Positioned(
               top: 24,
               left: 24,
@@ -124,7 +103,7 @@ class _UserLayoutState extends State<UserLayout> with SingleTickerProviderStateM
                 ),
                 child: IconButton(
                   padding: const EdgeInsets.all(12),
-                  onPressed: () => setState(() => _isSidebarOpen = true),
+                  onPressed: () => sidebar.setUserSidebarOpen(true),
                   icon: const HamburgerIcon(),
                   tooltip: 'Open Sidebar',
                   splashColor: Colors.white.withOpacity(0.1),
