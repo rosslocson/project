@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/sidebar_provider.dart';
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
@@ -46,19 +47,31 @@ class HamburgerIcon extends StatelessWidget {
 }
 
 class GlassTopBar extends StatelessWidget {
-  final bool isSidebarOpen;
-  final VoidCallback onToggleSidebar;
+  final bool? isSidebarOpen;
+  final VoidCallback? onToggleSidebar;
   final Map<String, dynamic>? user;
+  final bool isAdmin;
 
   const GlassTopBar({
     super.key,
-    required this.isSidebarOpen,
-    required this.onToggleSidebar,
+    this.isSidebarOpen,
+    this.onToggleSidebar,
     this.user,
+    this.isAdmin = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final sidebar = context.watch<SidebarProvider>();
+    final sidebarOpen = isSidebarOpen ?? (isAdmin ? sidebar.isAdminSidebarOpen : sidebar.isUserSidebarOpen);
+    final toggleSidebar = onToggleSidebar ?? () {
+      if (isAdmin) {
+        sidebar.toggleAdminSidebar();
+      } else {
+        sidebar.toggleUserSidebar();
+      }
+    };
+
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
     final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
@@ -68,7 +81,7 @@ class GlassTopBar extends StatelessWidget {
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl';
+        finalAvatarUrl = 'http://127.0.0.1:8080/$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -90,7 +103,7 @@ class GlassTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (!isSidebarOpen) ...[
+          if (!sidebarOpen) ...[
             Container(
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.05),
@@ -102,7 +115,7 @@ class GlassTopBar extends StatelessWidget {
               ),
               child: IconButton(
                 padding: const EdgeInsets.all(12),
-                onPressed: onToggleSidebar,
+                onPressed: toggleSidebar,
                 icon: const HamburgerIcon(),
                 tooltip: 'Open Sidebar',
                 splashColor: Colors.white.withOpacity(0.1),
@@ -114,9 +127,9 @@ class GlassTopBar extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Admin Dashboard',
-                style: TextStyle(
+              Text(
+                isAdmin ? 'Admin Dashboard' : 'Home',
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -124,7 +137,7 @@ class GlassTopBar extends StatelessWidget {
                 ),
               ),
               Text(
-                'Welcome, $fullName',
+                'Welcome, $firstName',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.8),
@@ -136,7 +149,11 @@ class GlassTopBar extends StatelessWidget {
           PopupMenuButton<String>(
             onSelected: (String choice) {
               if (choice == 'profile') {
-                context.push('/admin/account-settings');
+                if (isAdmin) {
+                  context.push('/admin/account-settings');
+                } else {
+                  context.go('/profile');
+                }
               } else if (choice == 'logout') {
                 context.read<AuthProvider>().logout();
                 context.go('/login');
@@ -181,9 +198,7 @@ class GlassTopBar extends StatelessWidget {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor: const Color(0xFFD4748A).withOpacity(0.1),
-                    backgroundImage: finalAvatarUrl.isNotEmpty
-                        ? NetworkImage(finalAvatarUrl)
-                        : null,
+                    backgroundImage: finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null,
                     child: finalAvatarUrl.isEmpty
                         ? Container(
                             width: 44,
@@ -229,3 +244,4 @@ class GlassTopBar extends StatelessWidget {
     );
   }
 }
+
