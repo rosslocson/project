@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
-import '../widgets/star_background.dart';
 import '../widgets/app_theme.dart';
-import 'dart:math' as math;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,44 +15,38 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
-  final _formKey   = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
-  final _passCtrl  = TextEditingController();
-  bool _obscure    = true;
+  final _passCtrl = TextEditingController();
+  bool _obscure = true;
 
   // Lockout
-  bool   _isLocked     = false;
-  int    _lockSecsLeft = 0;
-  int    _attemptsLeft = 3;
+  bool _isLocked = false;
+  int _lockSecsLeft = 0;
+  int _attemptsLeft = 3;
   Timer? _lockTimer;
 
   // Reset password
   final _resetEmailCtrl = TextEditingController();
-  final _otpCtrl        = TextEditingController(); // Renamed from _resetTokenCtrl
-  final _newPassCtrl    = TextEditingController();
-  final _confPassCtrl   = TextEditingController();
-
-  // Galaxy
-  late AnimationController _bgCtrl;
-  late List<Star> _stars;
+  final _otpCtrl = TextEditingController(); // Renamed from _resetTokenCtrl
+  final _newPassCtrl = TextEditingController();
+  final _confPassCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _stars = _generateFastStars();
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 15),
-    )..repeat();
   }
 
   @override
   void dispose() {
-    _bgCtrl.dispose();
     _lockTimer?.cancel();
     for (final c in [
-      _emailCtrl, _passCtrl, _resetEmailCtrl,
-      _otpCtrl, _newPassCtrl, _confPassCtrl,
+      _emailCtrl,
+      _passCtrl,
+      _resetEmailCtrl,
+      _otpCtrl,
+      _newPassCtrl,
+      _confPassCtrl,
     ]) {
       c.dispose();
     }
@@ -63,14 +55,23 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ── Lock countdown ─────────────────────────────────────────────────────────
   void _startLockCountdown(int seconds) {
-    setState(() { _isLocked = true; _lockSecsLeft = seconds; });
+    setState(() {
+      _isLocked = true;
+      _lockSecsLeft = seconds;
+    });
     _lockTimer?.cancel();
     _lockTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
       setState(() => _lockSecsLeft--);
       if (_lockSecsLeft <= 0) {
         t.cancel();
-        setState(() { _isLocked = false; _attemptsLeft = 3; });
+        setState(() {
+          _isLocked = false;
+          _attemptsLeft = 3;
+        });
         context.read<AuthProvider>().clearError();
       }
     });
@@ -79,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen>
   // ── Login ──────────────────────────────────────────────────────────────────
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    final auth   = context.read<AuthProvider>();
+    final auth = context.read<AuthProvider>();
     final result = await auth.loginWithDetails(
         _emailCtrl.text.trim(), _passCtrl.text.trim());
     if (!mounted) return;
@@ -100,8 +101,8 @@ class _LoginScreenState extends State<LoginScreen>
   // ── Forgot password sheet ──────────────────────────────────────────────────
   void _showForgotPassword() {
     String? stepMsg;
-    bool    stepLoading = false;
-    int     step        = 1;
+    bool stepLoading = false;
+    int step = 1;
     _resetEmailCtrl.text = _emailCtrl.text.trim();
 
     showModalBottomSheet(
@@ -112,13 +113,16 @@ class _LoginScreenState extends State<LoginScreen>
         builder: (ctx, setSheet) {
           Future<void> requestReset() async {
             if (_resetEmailCtrl.text.isEmpty) return;
-            setSheet(() { stepLoading = true; stepMsg = null; });
+            setSheet(() {
+              stepLoading = true;
+              stepMsg = null;
+            });
             final res = await ApiService.forgotPassword(
                 _resetEmailCtrl.text.trim());
             setSheet(() => stepLoading = false);
             if (res['ok'] == true) {
               setSheet(() {
-                step    = 2;
+                step = 2;
                 stepMsg = res['message'];
                 _otpCtrl.clear();
               });
@@ -135,11 +139,12 @@ class _LoginScreenState extends State<LoginScreen>
               setSheet(() => stepMsg = 'Passwords do not match');
               return;
             }
-            setSheet(() { stepLoading = true; stepMsg = null; });
+            setSheet(() {
+              stepLoading = true;
+              stepMsg = null;
+            });
             final res = await ApiService.resetPassword(
-                _otpCtrl.text.trim(),
-                _newPassCtrl.text,
-                _confPassCtrl.text);
+                _otpCtrl.text.trim(), _newPassCtrl.text, _confPassCtrl.text);
             setSheet(() => stepLoading = false);
             if (res['ok'] == true) {
               if (ctx.mounted) Navigator.pop(ctx);
@@ -151,7 +156,10 @@ class _LoginScreenState extends State<LoginScreen>
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ));
-                setState(() { _isLocked = false; _attemptsLeft = 3; });
+                setState(() {
+                  _isLocked = false;
+                  _attemptsLeft = 3;
+                });
                 _lockTimer?.cancel();
                 context.read<AuthProvider>().clearError();
               }
@@ -165,11 +173,12 @@ class _LoginScreenState extends State<LoginScreen>
           return Container(
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(32)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
             ),
             padding: EdgeInsets.only(
-              left: 32, right: 32, top: 24,
+              left: 32,
+              right: 32,
+              top: 24,
               bottom: MediaQuery.of(ctx).viewInsets.bottom + 40,
             ),
             child: Column(
@@ -178,7 +187,8 @@ class _LoginScreenState extends State<LoginScreen>
               children: [
                 Center(
                   child: Container(
-                    width: 48, height: 5,
+                    width: 48,
+                    height: 5,
                     decoration: BoxDecoration(
                         color: Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(2.5)),
@@ -189,11 +199,11 @@ class _LoginScreenState extends State<LoginScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: kCrimsonDeep.withValues(alpha: 0.1),
+                      color: kCosmicBlue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.lock_reset,
-                        color: kCrimsonDeep, size: 26),
+                        color: kCosmicBlue, size: 26),
                   ),
                   const SizedBox(width: 14),
                   Column(
@@ -201,8 +211,7 @@ class _LoginScreenState extends State<LoginScreen>
                     children: [
                       const Text('Reset Password',
                           style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold)),
+                              fontSize: 20, fontWeight: FontWeight.bold)),
                       Text(
                         step == 1
                             ? 'Step 1 of 2 — Enter your email'
@@ -240,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen>
                         hintText: 'Enter your registered email'),
                   ),
                   const SizedBox(height: 20),
-                  CrimsonButton(
+                  BlueButton(
                     label: 'SEND OTP',
                     onPressed: stepLoading ? null : requestReset,
                     loading: stepLoading,
@@ -252,7 +261,9 @@ class _LoginScreenState extends State<LoginScreen>
                     controller: _otpCtrl,
                     keyboardType: TextInputType.number,
                     maxLength: 6, // Restricts input to 6 characters visually
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly], // Only allows numbers
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly
+                    ], // Only allows numbers
                     decoration: dec.copyWith(
                       hintText: 'Enter 6-digit OTP from email',
                       counterText: '', // Hides the "0/6" counter below the text field
@@ -277,15 +288,17 @@ class _LoginScreenState extends State<LoginScreen>
                         dec.copyWith(hintText: 'Confirm new password'),
                   ),
                   const SizedBox(height: 20),
-                  CrimsonButton(
+                  BlueButton(
                     label: 'RESET PASSWORD',
                     onPressed: stepLoading ? null : doReset,
                     loading: stepLoading,
                   ),
                   const SizedBox(height: 10),
                   TextButton(
-                    onPressed: () =>
-                        setSheet(() { step = 1; stepMsg = null; }),
+                    onPressed: () => setSheet(() {
+                      step = 1;
+                      stepMsg = null;
+                    }),
                     child: Text('← Back to Email',
                         style: TextStyle(color: Colors.grey.shade600)),
                   ),
@@ -305,8 +318,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Container(
       alignment: Alignment.center,
       color: Colors.transparent,
-      padding:
-          const EdgeInsets.symmetric(horizontal: 64, vertical: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 40),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
         child: Form(
@@ -326,7 +338,6 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               const SizedBox(height: 40),
-
               if (_isLocked) ...[
                 _lockedBanner(),
                 const SizedBox(height: 20),
@@ -334,7 +345,6 @@ class _LoginScreenState extends State<LoginScreen>
                 _errorBanner(auth),
                 const SizedBox(height: 20),
               ],
-
               fieldLabel('Email Address'),
               const SizedBox(height: 6),
               TextFormField(
@@ -349,7 +359,6 @@ class _LoginScreenState extends State<LoginScreen>
                 },
               ),
               const SizedBox(height: 20),
-
               fieldLabel('Password'),
               const SizedBox(height: 6),
               TextFormField(
@@ -368,8 +377,7 @@ class _LoginScreenState extends State<LoginScreen>
                         color: const Color(0xFF9CA3AF),
                         size: 22,
                       ),
-                      onPressed: () =>
-                          setState(() => _obscure = !_obscure),
+                      onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                 ),
@@ -377,7 +385,6 @@ class _LoginScreenState extends State<LoginScreen>
                     (v == null || v.isEmpty) ? 'Password is required' : null,
               ),
               const SizedBox(height: 12),
-
               Row(children: [
                 const Spacer(),
                 GestureDetector(
@@ -393,22 +400,17 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ]),
               const SizedBox(height: 36),
-
-              CrimsonButton(
-                label: _isLocked
-                    ? 'LOCKED — WAIT ${_lockSecsLeft}s'
-                    : 'LOGIN',
+              BlueButton(
+                label: _isLocked ? 'LOCKED — WAIT ${_lockSecsLeft}s' : 'LOGIN',
                 onPressed: (auth.isLoading || _isLocked) ? null : _login,
                 loading: auth.isLoading,
               ),
               const SizedBox(height: 28),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text("Don't have an account? ",
-                      style: TextStyle(
-                          fontSize: 13, color: Color(0xFF6B7280))),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/register'),
                     child: const Text('Sign Up Now',
@@ -427,22 +429,10 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-// ── Build ──────────────────────────────────────────────────────────────────
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-
-    // A dark, cosmic gradient matching the photo's background
-    const darkCosmicGradient = BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          Color(0xFF1E0A0F), // Very dark maroon
-          Color(0xFF0A0204), // Almost black
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -454,31 +444,29 @@ class _LoginScreenState extends State<LoginScreen>
               children: [
                 Expanded(
                   child: Container(
-                    decoration: darkCosmicGradient,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/star_background.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                     child: Stack(
                       children: [
-                        Positioned.fill(
-                          child: GalaxyBackground(
-                            animation: _bgCtrl,
-                            stars: _stars,
-                          ),
-                        ),
                         Positioned.fill(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Image.asset(
                                 'assets/images/logo_file.png',
-                                height: 280, // <-- I ADJUSTED THE LOGO SIZE HERE (Increased from 200 to 280)
+                                height: 280,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   // Fallback placeholder if the image path isn't set yet
-                                  return const Icon(Icons.public, size: 120, color: Colors.white);
+                                  return const Icon(Icons.public,
+                                      size: 120, color: Colors.white);
                                 },
                               ),
-                              
-                              const SizedBox(height: 24), // Explicit gap between logo and text
-                              
+                              const SizedBox(height: 24),
                               const Text(
                                 "BACK IN THE COSMOS.",
                                 style: TextStyle(
@@ -507,8 +495,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                 ),
                               ),
-                              
-                              const SizedBox(height: 80), // Pushes the entire centered group slightly higher up the screen
+                              const SizedBox(height: 80),
                             ],
                           ),
                         ),
@@ -528,11 +515,12 @@ class _LoginScreenState extends State<LoginScreen>
             // Mobile layout
             return Stack(
               children: [
-                Container(decoration: darkCosmicGradient),
-                Positioned.fill(
-                  child: GalaxyBackground(
-                    animation: _bgCtrl,
-                    stars: _stars,
+                Container(
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/star_background.png'),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 Center(
@@ -562,28 +550,13 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
-  List<Star> _generateFastStars() {
-    final rng = math.Random();
-    return List.generate(
-      200,
-      (_) => Star(
-        x: rng.nextDouble(),
-        y: rng.nextDouble(),
-        size: rng.nextDouble() * 1.5 + 0.3,
-        baseOpacity: rng.nextDouble() * 0.4 + 0.1,
-        speed: rng.nextDouble() * 0.04 + 0.01,
-        twinklePhase: rng.nextDouble() * 2 * math.pi,
-      ),
-    );
-  }
 
   Widget _lockedBanner() => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: kCrimsonDeep.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: kCrimsonDeep.withValues(alpha: 0.2)),
+          border: Border.all(color: kCrimsonDeep.withValues(alpha: 0.2)),
         ),
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,16 +577,15 @@ class _LoginScreenState extends State<LoginScreen>
                 const SizedBox(width: 8),
                 Text(
                     'Try again in $_lockSecsLeft second${_lockSecsLeft != 1 ? 's' : ''}',
-                    style:
-                        const TextStyle(color: kCrimsonDeep, fontSize: 12)),
+                    style: const TextStyle(
+                        color: kCrimsonDeep, fontSize: 12)),
               ]),
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
                   value: _lockSecsLeft / 60,
-                  backgroundColor:
-                      kCrimsonDeep.withValues(alpha: 0.15),
+                  backgroundColor: kCrimsonDeep.withValues(alpha: 0.15),
                   color: kCrimsonDeep,
                   minHeight: 4,
                 ),
@@ -651,8 +623,7 @@ class _LoginScreenState extends State<LoginScreen>
                             fontSize: 12,
                             fontWeight: FontWeight.w500))),
                 GestureDetector(
-                  onTap: () =>
-                      context.read<AuthProvider>().clearError(),
+                  onTap: () => context.read<AuthProvider>().clearError(),
                   child: Icon(Icons.close,
                       size: 20, color: Colors.orange.shade400),
                 ),
@@ -662,15 +633,13 @@ class _LoginScreenState extends State<LoginScreen>
                 Row(children: [
                   Text('Attempts left: ',
                       style: TextStyle(
-                          color: Colors.orange.shade800,
-                          fontSize: 12)),
+                          color: Colors.orange.shade800, fontSize: 12)),
                   ...List.generate(
                       3,
                       (i) => Container(
                             width: 8,
                             height: 8,
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 3),
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: i < _attemptsLeft
@@ -692,4 +661,3 @@ class _LoginScreenState extends State<LoginScreen>
             ]),
       );
 }
-

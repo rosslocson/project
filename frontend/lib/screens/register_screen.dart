@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/star_background.dart';
 import '../widgets/app_theme.dart';
-import 'dart:math' as math;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,36 +12,52 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
-  final _formKey     = GlobalKey<FormState>();
-  final _firstCtrl   = TextEditingController();
-  final _lastCtrl    = TextEditingController();
-  final _emailCtrl   = TextEditingController();
-  final _passCtrl    = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _firstCtrl = TextEditingController();
+  final _lastCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  bool _obscurePass    = true;
+  bool _obscurePass = true;
   bool _obscureConfirm = true;
 
   // Department → Position mapping (static for registration)
   static const Map<String, List<String>> _deptRoles = {
     'Business Relationship Management': [
-      'Account Manager', 'Business Analyst', 'Client Relations',
-      'Intern', 'Others',
+      'Account Manager',
+      'Business Analyst',
+      'Client Relations',
+      'Intern',
+      'Others',
     ],
     'Project Management Office': [
-      'Project Manager', 'Project Coordinator', 'Scrum Master',
-      'Intern', 'Others',
+      'Project Manager',
+      'Project Coordinator',
+      'Scrum Master',
+      'Intern',
+      'Others',
     ],
     'Quality Assurance': [
-      'QA Engineer', 'QA Automation Tester', 'Manual Tester',
-      'Intern', 'Others',
+      'QA Engineer',
+      'QA Automation Tester',
+      'Manual Tester',
+      'Intern',
+      'Others',
     ],
     'Technical Support Department': [
-      'IT Support Specialist', 'System Administrator',
-      'Helpdesk Technician', 'Intern', 'Others',
+      'IT Support Specialist',
+      'System Administrator',
+      'Helpdesk Technician',
+      'Intern',
+      'Others',
     ],
     'Development Department': [
-      'Software Engineer', 'Frontend Developer', 'Backend Developer',
-      'UI/UX Designer', 'Intern', 'Others',
+      'Software Engineer',
+      'Frontend Developer',
+      'Backend Developer',
+      'UI/UX Designer',
+      'Intern',
+      'Others',
     ],
   };
 
@@ -54,49 +68,28 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   // Password strength
   String _passStrength = '';
-  Color  _passColor    = Colors.grey;
-  double _passValue    = 0;
+  Color _passColor = Colors.grey;
+  double _passValue = 0;
   String? _confirmError;
-
-  // Galaxy
-  late AnimationController _bgCtrl;
-  late List<Star> _stars;
 
   @override
   void initState() {
     super.initState();
-_stars = _generateFastStars(); // Higher speed for lively RIGHT movement (0.01-0.05) - visible in 15s loop
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 15), // FAST lively movement for register (15s loop) - stars move continuously RIGHT
-    )..repeat();
   }
 
   @override
   void dispose() {
-    _bgCtrl.dispose();
     for (final c in [
-      _firstCtrl, _lastCtrl, _emailCtrl, _passCtrl, _confirmCtrl,
+      _firstCtrl,
+      _lastCtrl,
+      _emailCtrl,
+      _passCtrl,
+      _confirmCtrl,
     ]) {
       c.dispose();
     }
     super.dispose();
   }
-
-List<Star> _generateFastStars() {
-  final rng = math.Random();
-  return List.generate(
-    200,
-    (_) => Star(
-      x: rng.nextDouble(),
-      y: rng.nextDouble(),
-      size: rng.nextDouble() * 1.5 + 0.3,
-      baseOpacity: rng.nextDouble() * 0.4 + 0.1,
-      speed: rng.nextDouble() * 0.04 + 0.01, // 4x faster for visible RIGHT movement on auth screens
-      twinklePhase: rng.nextDouble() * 2 * math.pi,
-    ),
-  );
-}
 
   void _checkStrength(String pass) {
     int score = 0;
@@ -107,13 +100,21 @@ List<Star> _generateFastStars() {
     if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) score++;
     setState(() {
       if (score <= 2) {
-        _passStrength = 'Weak'; _passColor = kCrimsonDeep; _passValue = 0.25;
+        _passStrength = 'Weak';
+        _passColor = kCosmicBlue;
+        _passValue = 0.25;
       } else if (score == 3) {
-        _passStrength = 'Fair'; _passColor = Colors.orange; _passValue = 0.5;
+        _passStrength = 'Fair';
+        _passColor = Colors.orange;
+        _passValue = 0.5;
       } else if (score == 4) {
-        _passStrength = 'Good'; _passColor = Colors.blue; _passValue = 0.75;
+        _passStrength = 'Good';
+        _passColor = Colors.blue;
+        _passValue = 0.75;
       } else {
-        _passStrength = 'Strong'; _passColor = Colors.green; _passValue = 1.0;
+        _passStrength = 'Strong';
+        _passColor = Colors.green;
+        _passValue = 1.0;
       }
       if (_confirmCtrl.text.isNotEmpty) {
         _confirmError =
@@ -136,13 +137,13 @@ List<Star> _generateFastStars() {
     }
     final auth = context.read<AuthProvider>();
     final ok = await auth.register({
-      'first_name':       _firstCtrl.text.trim(),
-      'last_name':        _lastCtrl.text.trim(),
-      'email':            _emailCtrl.text.trim(),
-      'password':         _passCtrl.text,
+      'first_name': _firstCtrl.text.trim(),
+      'last_name': _lastCtrl.text.trim(),
+      'email': _emailCtrl.text.trim(),
+      'password': _passCtrl.text,
       'confirm_password': _confirmCtrl.text,
-      'department':       _selectedDept ?? '',
-      'position':         _selectedPos  ?? '',
+      'department': _selectedDept ?? '',
+      'position': _selectedPos ?? '',
     });
     if (mounted && ok) context.go('/home');
   }
@@ -172,7 +173,7 @@ List<Star> _generateFastStars() {
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
-                  color: kCrimsonDeep,
+                  color: kCosmicBlue,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -183,26 +184,24 @@ List<Star> _generateFastStars() {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: kCrimsonDeep.withValues(alpha: 0.08),
+                    color: kCosmicBlue.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: kCrimsonDeep.withValues(alpha: 0.2)),
+                    border: Border.all(color: kCosmicBlue.withOpacity(0.2)),
                   ),
                   child: Row(children: [
                     const Icon(Icons.error_outline,
-                        color: kCrimsonDeep, size: 20),
+                        color: kCosmicBlue, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                         child: Text(auth.error!,
                             style: const TextStyle(
-                                color: kCrimsonDeep,
+                                color: kCosmicBlue,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600))),
                     GestureDetector(
-                      onTap: () =>
-                          context.read<AuthProvider>().clearError(),
+                      onTap: () => context.read<AuthProvider>().clearError(),
                       child: const Icon(Icons.close,
-                          size: 20, color: kCrimsonDeep),
+                          size: 20, color: kCosmicBlue),
                     ),
                   ]),
                 ),
@@ -251,8 +250,7 @@ List<Star> _generateFastStars() {
               TextFormField(
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
-                decoration:
-                    dec.copyWith(hintText: 'Enter Email Address'),
+                decoration: dec.copyWith(hintText: 'Enter Email Address'),
                 validator: (v) {
                   if (v!.isEmpty) return 'Email is required';
                   if (!v.contains('@')) return 'Enter a valid email';
@@ -274,27 +272,21 @@ List<Star> _generateFastStars() {
                         initialValue: _selectedDept,
                         decoration: dec,
                         hint: Text(
-                            _departments.isEmpty
-                                ? 'N/A'
-                                : 'Select Department',
-                            style:
-                                const TextStyle(fontSize: 13)),
+                            _departments.isEmpty ? 'N/A' : 'Select Department',
+                            style: const TextStyle(fontSize: 13)),
                         icon: Icon(Icons.keyboard_arrow_down,
                             color: Colors.grey.shade500),
                         items: _departments
                             .map((s) => DropdownMenuItem(
                                 value: s,
                                 child: Text(s,
-                                    overflow:
-                                        TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 12))))
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12))))
                             .toList(),
                         onChanged: (v) {
                           setState(() {
                             _selectedDept = v;
-                            _positions =
-                                _deptRoles[v] ?? ['Intern', 'Others'];
+                            _positions = _deptRoles[v] ?? ['Intern', 'Others'];
                             if (_selectedPos != null &&
                                 !_positions.contains(_selectedPos)) {
                               _selectedPos = null;
@@ -320,18 +312,15 @@ List<Star> _generateFastStars() {
                             _positions.isEmpty
                                 ? 'Select Dept First'
                                 : 'Select Position',
-                            style:
-                                const TextStyle(fontSize: 13)),
+                            style: const TextStyle(fontSize: 13)),
                         icon: Icon(Icons.keyboard_arrow_down,
                             color: Colors.grey.shade500),
                         items: _positions
                             .map((s) => DropdownMenuItem(
                                 value: s,
                                 child: Text(s,
-                                    overflow:
-                                        TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 12))))
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12))))
                             .toList(),
                         onChanged: _positions.isEmpty
                             ? null
@@ -449,13 +438,12 @@ List<Star> _generateFastStars() {
                 Padding(
                   padding: const EdgeInsets.only(left: 12),
                   child: Text(_confirmError!,
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.red)),
+                      style: const TextStyle(fontSize: 11, color: Colors.red)),
                 ),
               ],
               const Spacer(flex: 3),
 
-              CrimsonButton(
+              BlueButton(
                 label: 'SIGN UP',
                 onPressed: auth.isLoading ? null : _register,
                 loading: auth.isLoading,
@@ -466,14 +454,13 @@ List<Star> _generateFastStars() {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text('Already have an account? ',
-                      style: TextStyle(
-                          fontSize: 13, color: Color(0xFF6B7280))),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/login'),
                     child: const Text('Login Now',
                         style: TextStyle(
                           fontSize: 13,
-                          color: kCrimsonDeep,
+                          color: kCosmicBlue,
                           fontWeight: FontWeight.bold,
                         )),
                   ),
@@ -491,18 +478,6 @@ List<Star> _generateFastStars() {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    // A dark, cosmic gradient matching the InternSpace theme
-    const darkCosmicGradient = BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          Color(0xFF1E0A0F), // Very dark maroon
-          Color(0xFF0A0204), // Almost black
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-    );
-
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
@@ -515,15 +490,14 @@ List<Star> _generateFastStars() {
                 // Left 50% Panel
                 Expanded(
                   child: Container(
-                    decoration: darkCosmicGradient,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/star_background.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                     child: Stack(
                       children: [
-                        Positioned.fill(
-                          child: GalaxyBackground(
-                            animation: _bgCtrl,
-                            stars: _stars,
-                          ),
-                        ),
                         Positioned.fill(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -533,7 +507,8 @@ List<Star> _generateFastStars() {
                                 height: 280,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.public, size: 120, color: Colors.white);
+                                  return const Icon(Icons.public,
+                                      size: 120, color: Colors.white);
                                 },
                               ),
                               const SizedBox(height: 24),
@@ -586,11 +561,12 @@ List<Star> _generateFastStars() {
             // Mobile Layout
             return Stack(
               children: [
-                Container(decoration: darkCosmicGradient),
-                Positioned.fill(
-                  child: GalaxyBackground(
-                    animation: _bgCtrl,
-                    stars: _stars,
+                Container(
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/star_background.png'),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 Center(
@@ -602,14 +578,14 @@ List<Star> _generateFastStars() {
                       borderRadius: BorderRadius.circular(32),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
+                          color: Colors.black.withOpacity(0.2),
                           blurRadius: 30,
                           spreadRadius: 5,
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: _buildForm(auth, isMobile: true),
                   ),
                 ),

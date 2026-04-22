@@ -2,9 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/user_sidebar.dart';
+import '../widgets/user_layout.dart';
 import 'user_glass_topbar.dart';
-import '../widgets/star_background.dart' as sb;
 import 'intern_widgets.dart';
 
 class UserHomeScreen extends StatefulWidget {
@@ -13,12 +12,8 @@ class UserHomeScreen extends StatefulWidget {
   State<UserHomeScreen> createState() => _UserHomeScreenState();
 }
 
-class _UserHomeScreenState extends State<UserHomeScreen> with SingleTickerProviderStateMixin {
+class _UserHomeScreenState extends State<UserHomeScreen> {
   bool _isSidebarOpen = true;
-
-  // Background animation
-  late AnimationController _bgAnimController;
-  late List<sb.Star> stars;
 
   // Page controllers
   late PageController _pageController;
@@ -31,15 +26,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> with SingleTickerProvid
   void initState() {
     super.initState();
     
-    // Initialize controllers with the slower 600s duration from admin
-    _bgAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 600),
-    )..repeat();
-
-    // Use shared star generator
-    stars = sb.generateStars(count: 120);
-
     // Start page large for infinite scroll
     _currentPage = kInterns.length * 1000;
     _pageController = PageController(
@@ -80,168 +66,135 @@ class _UserHomeScreenState extends State<UserHomeScreen> with SingleTickerProvid
 
   @override
   void dispose() {
-    _bgAnimController.dispose();
     _pageController.dispose();
     _autoScrollTimer.cancel();
     super.dispose();
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
 
-    return Scaffold(
-      body: Row(
+    return UserLayout(
+      currentRoute: '/home',
+      child: Stack(
         children: [
-          // Standard User Sidebar
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            width: _isSidebarOpen ? 250 : 0,
-            child: _isSidebarOpen ? UserSidebar(
-              currentRoute: '/home',
-              onClose: () => setState(() => _isSidebarOpen = false),
-            ) : const SizedBox(),
+          // Fixed space background matching user_account_settings_screen.dart
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/space_background.png',
+              fit: BoxFit.cover,
+            ),
           ),
-
-          Expanded(
-            child: Stack(
-              children: [
-                // 1. Admin's Radial Gradient Background
-                Positioned.fill(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      gradient: RadialGradient(
-                        center: Alignment(-0.3, -0.3),
-                        radius: 1.4,
-                        colors: [Color(0xFF3A0810), Color(0xFF130205), Color(0xFF050505)],
-                        stops: [0.0, 0.5, 1.0],
+          // Content overlay
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
+              child: Column(
+                children: [
+                  GlassTopBar(
+                    key: const Key('user_topbar'),
+                    isSidebarOpen: _isSidebarOpen,
+                    onToggleSidebar: () => setState(() => _isSidebarOpen = !_isSidebarOpen),
+                    user: user,
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+                          const Center(
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Meet Our Interns',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                SizedBox(height: 6),
+                                Text(
+                                  'Tap a card to view full profile',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          // Intern Carousel
+                          SizedBox(
+                            height: 320,
+                            child: PageView.builder(
+                              controller: _pageController,
+                              onPageChanged: (i) => setState(() => _currentPage = i),
+                              itemBuilder: (context, index) {
+                                final intern = kInterns[index % kInterns.length];
+                                final isCenter = index == _currentPage;
+                                
+                                return AnimatedScale(
+                                  scale: isCenter ? 1.0 : 0.82,
+                                  duration: const Duration(milliseconds: 350),
+                                  curve: Curves.easeOut,
+                                  child: AnimatedOpacity(
+                                    opacity: isCenter ? 1.0 : 0.45,
+                                    duration: const Duration(milliseconds: 350),
+                                    child: GestureDetector(
+                                      onTap: () => _openDetail(intern),
+                                      child: _InternCard(intern: intern),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Arrow controls + dots
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.chevron_left, color: Colors.white, size: 32),
+                                onPressed: _prev,
+                              ),
+                              const SizedBox(width: 20),
+                              Row(
+                                children: List.generate(kInterns.length, (i) {
+                                  final active = i == (_currentPage % kInterns.length);
+                                  return AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                                    width: active ? 20 : 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: active ? const Color(0xFF4A5E9A) : Colors.white24,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  );
+                                }),
+                              ),
+                              const SizedBox(width: 20),
+                              IconButton(
+                                icon: const Icon(Icons.chevron_right, color: Colors.white, size: 32),
+                                onPressed: _next,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 36),
+                        ],
                       ),
                     ),
                   ),
-                ),
-                
-                // 2. Animated Galaxy Background
-                Positioned.fill(
-                  child: sb.GalaxyBackground(
-                    animation: _bgAnimController, 
-                    stars: stars,
-                  ),
-                ),
-                
-                // 3. Admin's Topbar and Content Format
-                Positioned.fill(
-                  child: Column(
-                    children: [
-                      GlassTopBar(
-                        key: const Key('user_topbar'),
-                        isSidebarOpen: _isSidebarOpen,
-                        onToggleSidebar: () => setState(() => _isSidebarOpen = !_isSidebarOpen),
-                        user: user,
-                      ),
-                      
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(32), // Standardized padding like admin dashboard
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 16),
-
-                              const Center(
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Meet Our Interns',
-                                      style: TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    SizedBox(height: 6),
-                                    Text(
-                                      'Tap a card to view full profile',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-
-                              // Intern Carousel
-                              SizedBox(
-                                height: 320,
-                                child: PageView.builder(
-                                  controller: _pageController,
-                                  onPageChanged: (i) => setState(() => _currentPage = i),
-                                  itemBuilder: (context, index) {
-                                    final intern = kInterns[index % kInterns.length];
-                                    final isCenter = index == _currentPage;
-                                    
-                                    return AnimatedScale(
-                                      scale: isCenter ? 1.0 : 0.82,
-                                      duration: const Duration(milliseconds: 350),
-                                      curve: Curves.easeOut,
-                                      child: AnimatedOpacity(
-                                        opacity: isCenter ? 1.0 : 0.45,
-                                        duration: const Duration(milliseconds: 350),
-                                        child: GestureDetector(
-                                          onTap: () => _openDetail(intern),
-                                          child: _InternCard(intern: intern),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Arrow controls + dots
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.chevron_left, color: Colors.white, size: 32),
-                                    onPressed: _prev,
-                                  ),
-                                  const SizedBox(width: 20),
-                                  Row(
-                                    children: List.generate(kInterns.length, (i) {
-                                      final active = i == (_currentPage % kInterns.length);
-                                      return AnimatedContainer(
-                                        duration: const Duration(milliseconds: 300),
-                                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                                        width: active ? 20 : 6,
-                                        height: 6,
-                                        decoration: BoxDecoration(
-                                          color: active ? const Color(0xFFD4748A) : Colors.white24,
-                                          borderRadius: BorderRadius.circular(3),
-                                        ),
-                                      );
-                                    }),
-                                  ),
-                                  const SizedBox(width: 20),
-                                  IconButton(
-                                    icon: const Icon(Icons.chevron_right, color: Colors.white, size: 32),
-                                    onPressed: _next,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 36),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -271,7 +224,7 @@ class _InternCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF6B1524), Color(0xFF4A0E18)],
+          colors: [Color(0xFF1A2540), Color(0xFF4A5E9A)], // Blue matching admin
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [

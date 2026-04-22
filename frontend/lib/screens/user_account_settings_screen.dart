@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
@@ -13,26 +12,7 @@ import '../services/api_service.dart';
 import '../widgets/user_layout.dart';
 import 'avatar_crop_screen.dart';
 
-const _kCrimson = Color(0xFF7B0D1E);
-
-// ── Star Data Class for Galaxy Theme ─────────────────────────────────────────
-class Star {
-  final double x;
-  final double y;
-  final double size;
-  final double baseOpacity;
-  final double speed;
-  final double twinklePhase;
-
-  Star({
-    required this.x,
-    required this.y,
-    required this.size,
-    required this.baseOpacity,
-    required this.speed,
-    required this.twinklePhase,
-  });
-}
+const _kBlue = Color(0xFF00022E);
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -41,10 +21,10 @@ class AccountSettingsScreen extends StatefulWidget {
 }
 
 class _AccountSettingsScreenState extends State<AccountSettingsScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late TabController _tabs;
 
-  // Department → Position mapping (from register_screen)
+  // Department → Position mapping
   static const Map<String, List<String>> _deptRoles = {
     'Business Relationship Management': [
       'Account Manager',
@@ -115,14 +95,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   bool _obscureConf = true;
 
   // Avatar Upload State
-  final bool _isUploadingAvatar = false;
+  bool _isUploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
   Uint8List? _localAvatarBytes;
   File? _avatarFile;
-
-  // Animation controller for galaxy background
-  late AnimationController _bgAnimController;
-  final List<Star> _stars = [];
 
   @override
   void initState() {
@@ -156,32 +132,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       _selectedPos = pos;
       if (!_positions.contains(pos)) _positions.add(pos);
     }
-
-    // Initialize Starfield
-    _generateStars();
-    _bgAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 150), // Very slow, ambient drift
-    )..repeat();
-  }
-
-  void _generateStars() {
-    final random = math.Random();
-    for (int i = 0; i < 200; i++) {
-      _stars.add(Star(
-        x: random.nextDouble(),
-        y: random.nextDouble(),
-        size: random.nextDouble() * 2.0 + 0.5,
-        baseOpacity: random.nextDouble() * 0.7 + 0.3,
-        speed: random.nextDouble() * 0.05 + 0.01,
-        twinklePhase: random.nextDouble() * 2 * math.pi,
-      ));
-    }
   }
 
   @override
   void dispose() {
-    _bgAnimController.dispose();
     _tabs.dispose();
     for (final c in [
       _firstCtrl,
@@ -203,7 +157,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       print("🔥 Edit Avatar clicked");
       print("📸 Function started");
 
-      final pickedFile = await ImagePicker().pickImage(
+      final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 100, // prevent corrupted compression
       );
@@ -269,6 +223,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         setState(() {
           _localAvatarBytes = croppedBytes;
           _avatarFile = null;
+          _isUploadingAvatar = true;
         });
 
         final res = await ApiService.uploadAvatar(
@@ -276,6 +231,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         );
 
         if (!mounted) return;
+        
+        setState(() {
+          _isUploadingAvatar = false;
+        });
+
         if (res['ok'] == true) {
           print("✅ Web upload successful");
           await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
@@ -347,8 +307,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       final tempFile =
           File('${(await getTemporaryDirectory()).path}/cropped_avatar.png');
       await tempFile.writeAsBytes(croppedBytes);
+      
       setState(() {
         _avatarFile = tempFile;
+        _isUploadingAvatar = true;
       });
       print("✅ UI updated with cropped image");
 
@@ -359,6 +321,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       print("🔙 Upload response received");
 
       if (!mounted) return;
+      
+      setState(() {
+        _isUploadingAvatar = false;
+      });
 
       if (res['ok'] == true) {
         print("✅ Upload successful");
@@ -394,6 +360,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       if (mounted) {
         setState(() {
           _avatarFile = null;
+          _isUploadingAvatar = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -463,35 +430,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     setState(() => _savingPass = false);
   }
 
-  // ── Animated Background ────────────────────────────────────────────────────
-  Widget _buildAnimatedGalaxyBackground() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment(-0.3, -0.2),
-          radius: 1.5,
-          colors: [
-            Color(0xFF3A0812), // Deep glowing nebula red
-            Color(0xFF140306), // Very dark crimson
-            Color(0xFF050505), // Pure deep space black
-          ],
-          stops: [0.0, 0.5, 1.0],
-        ),
-      ),
-      child: AnimatedBuilder(
-        animation: _bgAnimController,
-        builder: (context, child) {
-          return CustomPaint(
-            painter: StarfieldPainter(
-              animationValue: _bgAnimController.value,
-              stars: _stars,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   // ── Reusable Input Decoration ──────────────────────────────────────────────
   InputDecoration _getFormDecoration(String label, {IconData? prefixIcon}) {
     return InputDecoration(
@@ -514,7 +452,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _kCrimson, width: 1.5),
+        borderSide: const BorderSide(color: _kBlue, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -535,7 +473,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   Widget _buildSettingsContent(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
 
-// Avatar URL helper logic - dynamic backend URL
+    // Avatar URL helper logic - dynamic backend URL
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
@@ -549,8 +487,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
 
     return Stack(
       children: [
-        // Galaxy Background
-        Positioned.fill(child: _buildAnimatedGalaxyBackground()),
+        // Replaced Galaxy Background with Asset Image
+        Positioned.fill(
+          child: Image.asset(
+'assets/images/space_background.png',
+            fit: BoxFit.cover,
+          ),
+        ),
 
         // Form Content
         Positioned.fill(
@@ -572,7 +515,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                               .headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                                color: const Color.fromARGB(255, 255, 255, 255),
                                 letterSpacing: 0.5,
                               ),
                         ),
@@ -597,7 +540,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                               children: [
                                 CircleAvatar(
                                   radius: 40,
-                                  backgroundColor: _kCrimson.withOpacity(0.1),
+                                  backgroundColor: _kBlue.withOpacity(0.1),
                                   backgroundImage: _avatarFile != null
                                       ? FileImage(_avatarFile!)
                                       : (_localAvatarBytes != null
@@ -607,7 +550,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                               : null)) as ImageProvider,
                                   child: _isUploadingAvatar
                                       ? const CircularProgressIndicator(
-                                          color: _kCrimson, strokeWidth: 3)
+                                          color: _kBlue, strokeWidth: 3)
                                       : (_avatarFile == null &&
                                               _localAvatarBytes == null &&
                                               finalAvatarUrl.isEmpty)
@@ -617,7 +560,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                               style: const TextStyle(
                                                 fontSize: 28,
                                                 fontWeight: FontWeight.bold,
-                                                color: _kCrimson,
+                                                color: _kBlue,
                                               ),
                                             )
                                           : null,
@@ -636,7 +579,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
-                                          color: _kCrimson,
+                                          color: _kBlue,
                                           shape: BoxShape.circle,
                                           border: Border.all(
                                               color: Colors.white, width: 2),
@@ -690,13 +633,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: _kCrimson.withOpacity(0.08),
+                                      color: _kBlue.withOpacity(0.08),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: const Text(
                                       'USER',
                                       style: TextStyle(
-                                        color: _kCrimson,
+                                        color: _kBlue,
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: 1.0,
@@ -730,8 +673,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                               ),
                               child: TabBar(
                                 controller: _tabs,
-                                labelColor: _kCrimson,
-                                indicatorColor: _kCrimson,
+                                labelColor: _kBlue,
+                                indicatorColor: _kBlue,
                                 indicatorWeight: 3,
                                 unselectedLabelColor: Colors.grey.shade500,
                                 labelStyle: const TextStyle(
@@ -863,7 +806,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               child: ElevatedButton(
                 onPressed: _savingProfile ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kCrimson,
+                  backgroundColor: _kBlue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -953,7 +896,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               child: ElevatedButton(
                 onPressed: _savingPass ? null : _changePassword,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kCrimson,
+                  backgroundColor: _kBlue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -1082,46 +1025,4 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           ],
         ),
       );
-}
-
-// ── Custom Painter for Starfield ─────────────────────────────────────────────
-class StarfieldPainter extends CustomPainter {
-  final double animationValue;
-  final List<Star> stars;
-
-  StarfieldPainter({required this.animationValue, required this.stars});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-
-    for (var star in stars) {
-      double twinkle =
-          (math.sin((animationValue * 2 * math.pi * 1.5) + star.twinklePhase) +
-                  1.0) /
-              2.0;
-      double currentOpacity = star.baseOpacity * (0.3 + (0.7 * twinkle));
-
-      paint.color = Colors.white.withOpacity(currentOpacity.clamp(0.0, 1.0));
-
-      double dx =
-          (star.x * size.width + (animationValue * size.width * star.speed)) %
-              size.width;
-      double dy = star.y * size.height;
-
-      if (star.size > 1.5) {
-        final glowPaint = Paint()
-          ..color = Colors.white.withOpacity(currentOpacity * 0.3)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
-        canvas.drawCircle(Offset(dx, dy), star.size * 2, glowPaint);
-      }
-
-      canvas.drawCircle(Offset(dx, dy), star.size, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant StarfieldPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue;
-  }
 }

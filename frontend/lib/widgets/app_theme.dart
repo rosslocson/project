@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
 // ── Brand colours ─────────────────────────────────────────────────────────────
-const kCrimson     = Color(0xFF7B0D1E);
-const kCrimsonDeep = Color(0xFF7A1327);
-const kBgLight     = Color(0xFFF5F5FF);
-const kCardBg      = Colors.white;
+const kCosmicBlue    = Color(0xFF00022E);
+const kCrimsonDeep   = Color(0xFF00022E); // Kept for legacy, maps to blue
+const kNavyDeep      = Color(0xFF1A1F5A);
+const kGlowBlue      = Color(0xFF4C6FFF);
+const kBgLight       = Color(0xFFF5F7FF);
+const kBgGradientEnd = Color(0xFFEDEFFF);
+const kTextSecondary = Color(0xFFA0A3BD);
+const kBorderLight   = Color(0xFFE0E3F0);
+const kCardBg        = Colors.white;
 
 // ── Shared pill input decoration (auth screens) ───────────────────────────────
 InputDecoration pillInputDecoration({
@@ -17,8 +22,7 @@ InputDecoration pillInputDecoration({
       hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
       filled: true,
       fillColor: const Color(0xFFF9FAFB),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       suffixIcon: suffix,
       prefixIcon: prefix,
       enabledBorder: OutlineInputBorder(
@@ -27,16 +31,15 @@ InputDecoration pillInputDecoration({
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),
-        borderSide:
-            BorderSide(color: kCrimsonDeep.withValues(alpha: 0.5), width: 2),
+        borderSide: BorderSide(color: kCosmicBlue.withOpacity(0.5), width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide(color: Colors.red.shade300, width: 1.5),
+        borderSide: BorderSide(color: const Color(0xFF00022E).withOpacity(0.6), width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+        borderSide: const BorderSide(color: Color(0xFF00022E), width: 2),
       ),
     );
 
@@ -46,16 +49,16 @@ Widget fieldLabel(String text) => Text(
       style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF4B5563)),
+          color: Color(0xFF00022E)),
     );
 
-// ── Primary crimson button ────────────────────────────────────────────────────
-class CrimsonButton extends StatelessWidget {
+// ── Primary cosmic blue button (remapped from crimson) ────────────────────────
+class BlueButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool loading;
 
-  const CrimsonButton({
+  const BlueButton({
     super.key,
     required this.label,
     required this.onPressed,
@@ -67,11 +70,10 @@ class CrimsonButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: kCrimsonDeep,
+        backgroundColor: kCosmicBlue,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 20),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         elevation: 0,
       ).copyWith(
         elevation: WidgetStateProperty.resolveWith(
@@ -134,3 +136,4 @@ class PillDropdown extends StatelessWidget {
     );
   }
 }
+

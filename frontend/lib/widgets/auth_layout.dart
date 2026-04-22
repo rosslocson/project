@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 // ── Brand colors ──────────────────────────────────────────────────────────────
-const kCrimson      = Color(0xFF7B0D1E);
-const kCrimsonDark  = Color(0xFF560A16);
-const kCrimsonLight = Color(0xFF9B1D2E);
+const kBlue         = Color(0xFF1E40AF);
+const kBlueDark     = Color(0xFF1E2A44);
+const kBlueLight    = Color(0xFF3B82F6);
 
 // ── Full-screen split layout  ─────────────────────────────────────────────────
 // Wide: left panel (Expanded flex:1) | right panel (Expanded flex:1), full height
@@ -99,7 +99,7 @@ class _LeftPanel extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: borderRadius,
         gradient: const LinearGradient(
-          colors: [kCrimsonDark, kCrimson, kCrimsonLight],
+          colors: [kBlueDark, kBlue, kBlueLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -181,25 +181,25 @@ InputDecoration _baseDecoration({
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(25),
         borderSide: hasError
-            ? const BorderSide(color: kCrimson, width: 1.5)
+            ? const BorderSide(color: kBlue, width: 1.5)
             : BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(25),
-        borderSide: const BorderSide(color: kCrimson, width: 1.5),
+        borderSide: const BorderSide(color: kBlue, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(25),
-        borderSide: const BorderSide(color: kCrimson, width: 1.5),
+        borderSide: const BorderSide(color: kBlue, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(25),
-        borderSide: const BorderSide(color: kCrimson, width: 1.5),
+        borderSide: const BorderSide(color: kBlue, width: 1.5),
       ),
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       suffixIcon: suffixIcon,
-      errorStyle: const TextStyle(fontSize: 11, color: kCrimson),
+      errorStyle: const TextStyle(fontSize: 11, color: kBlue),
     );
 
 Widget plainTextField({
@@ -253,7 +253,7 @@ Widget passwordTextField({
       ),
     );
 
-Widget crimsonButton({
+Widget blueButton({
   required String label,
   required VoidCallback? onPressed,
   bool loading = false,
@@ -264,10 +264,10 @@ Widget crimsonButton({
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: kCrimson,
+          backgroundColor: kBlue,
           foregroundColor: Colors.white,
           elevation: 2,
-          shadowColor: kCrimson.withValues(alpha: 0.4),
+          shadowColor: kBlue.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30)),
         ),

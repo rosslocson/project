@@ -8,13 +8,13 @@ class UserSidebar extends StatelessWidget {
   final VoidCallback? onClose;
   const UserSidebar({super.key, required this.currentRoute, this.onClose});
 
-  // Exact colors extracted from the design
-  static const Color _bgColor = Color(0xFF460A14);
-  static const Color _logoBoxColor = Color(0xFF651323);
-  static const Color _activeItemBg = Color(0xFFC8A8A8);
-  static const Color _sectionLabelColor = Color(0xFFC1ADAE);
+  // Blue theme colors
+  static const Color _bgColor = Color(0xFF0A1425);
+  static const Color _logoBoxColor = Color(0xFF1A2540);
+  static const Color _activeItemBg = Color(0xFF4A5E9A);
+  static const Color _sectionLabelColor = Color(0xFF8A9ABF);
   static const Color _textLight = Colors.white;
-  static const Color _textDark = Color(0xFF460A14);
+  static const Color _textDark = Color(0xFF0A1425);
 
   @override
   Widget build(BuildContext context) {

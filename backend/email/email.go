@@ -87,7 +87,7 @@ func SendTestEmail(toEmail string) error {
 }
 
 func SendPasswordResetEmail(recipientEmail, otpCode string) error {
-	from := os.Getenv("SMTP_EMAIL")
+	from := "internspace123@gmail.com"
 	password := os.Getenv("SMTP_PASSWORD")
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
@@ -103,11 +103,7 @@ func SendPasswordResetEmail(recipientEmail, otpCode string) error {
 		smtpPort = "587"
 	}
 
-	maskedEmail := from
-	if len(from) > 4 {
-		maskedEmail = from[:2] + "..." + from[len(from)-2:]
-	}
-	log.Printf("📧 Email config loaded: SMTP_HOST=%s:%s, EMAIL=%s, Password set=%v", smtpHost, smtpPort, maskedEmail, password != "")
+	log.Printf("📧 Email config loaded: SMTP_HOST=%s:%s, fixed sender=internspace123@gmail.com, Password set=%v", smtpHost, smtpPort, password != "")
 
 	auth := smtp.PlainAuth("", from, password, smtpHost)
 

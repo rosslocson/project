@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
@@ -12,7 +11,7 @@ import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
 import 'avatar_crop_screen.dart';
 
-const _kCrimson = Color(0xFF7B0D1E);
+const _kBlue = Color(0xFF00022E);
 
 // ── Custom Hamburger Icon ────────────────────────────────────────────────────
 class HamburgerIcon extends StatelessWidget {
@@ -55,25 +54,6 @@ class HamburgerIcon extends StatelessWidget {
       ),
     );
   }
-}
-
-// ── Star Data Class ─────────────────────────────────────────────────────────
-class Star {
-  final double x;
-  final double y;
-  final double size;
-  final double baseOpacity;
-  final double speed;
-  final double twinklePhase;
-
-  Star({
-    required this.x,
-    required this.y,
-    required this.size,
-    required this.baseOpacity,
-    required this.speed,
-    required this.twinklePhase,
-  });
 }
 
 class AdminAccountSettingsScreen extends StatefulWidget {
@@ -161,14 +141,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   bool _obscureConf = true;
 
   // Avatar Upload State
-  final bool _isUploadingAvatar = false;
+  bool _isUploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
   Uint8List? _localAvatarBytes;
   File? _avatarFile;
-
-  // Animation controller
-  late AnimationController _bgAnimController;
-  final List<Star> _stars = [];
 
   @override
   void initState() {
@@ -176,6 +152,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     _tabs = TabController(length: 2, vsync: this);
     _departments = _deptRoles.keys.toList();
     final user = context.read<AuthProvider>().user;
+    
     _firstCtrl = TextEditingController(text: user?['first_name'] ?? '');
     _lastCtrl = TextEditingController(text: user?['last_name'] ?? '');
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
@@ -200,31 +177,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       _selectedPos = pos;
       if (!_positions.contains(pos)) _positions.add(pos);
     }
-
-    _generateStars();
-    _bgAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 150),
-    )..repeat();
-  }
-
-  void _generateStars() {
-    final random = math.Random();
-    for (int i = 0; i < 200; i++) {
-      _stars.add(Star(
-        x: random.nextDouble(),
-        y: random.nextDouble(),
-        size: random.nextDouble() * 2.0 + 0.5,
-        baseOpacity: random.nextDouble() * 0.7 + 0.3,
-        speed: random.nextDouble() * 0.05 + 0.01,
-        twinklePhase: random.nextDouble() * 2 * math.pi,
-      ));
-    }
   }
 
   @override
   void dispose() {
-    _bgAnimController.dispose();
     _tabs.dispose();
     for (final c in [
       _firstCtrl,
@@ -246,7 +202,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       print("🔥 Edit Avatar clicked");
       print("📸 Function started");
 
-      final pickedFile = await ImagePicker().pickImage(
+      final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 100, // prevent corrupted compression
       );
@@ -274,9 +230,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content:
-                  Text('Please select a valid image file (JPG, PNG, JPEG)'),
-              backgroundColor: Colors.red,
+              content: Text('Please select a valid image file (JPG, PNG, JPEG)'),
+              backgroundColor: Color(0xFF00022E),
             ),
           );
         }
@@ -312,6 +267,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         setState(() {
           _localAvatarBytes = croppedBytes;
           _avatarFile = null;
+          _isUploadingAvatar = true;
         });
 
         final res = await ApiService.uploadAvatar(
@@ -319,6 +275,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         );
 
         if (!mounted) return;
+        
+        setState(() {
+          _isUploadingAvatar = false;
+        });
+
         if (res['ok'] == true) {
           print("✅ Web upload successful");
           await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
@@ -341,7 +302,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(res['error'] ?? 'Failed to upload avatar'),
-                backgroundColor: Colors.red,
+                backgroundColor: const Color(0xFF00022E),
               ),
             );
           }
@@ -357,7 +318,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('File does not exist'),
-              backgroundColor: Colors.red,
+              backgroundColor: Color(0xFF00022E),
             ),
           );
         }
@@ -368,6 +329,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       print("✅ File verified: size=${fileSize}bytes");
 
       print("🚀 Navigating to crop screen");
+      if (!mounted) return;
+      
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
         MaterialPageRoute(
@@ -390,9 +353,12 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       final tempFile =
           File('${(await getTemporaryDirectory()).path}/cropped_avatar.png');
       await tempFile.writeAsBytes(croppedBytes);
+      
       setState(() {
         _avatarFile = tempFile;
+        _isUploadingAvatar = true;
       });
+      
       print("✅ UI updated with cropped image");
 
       if (!mounted) return;
@@ -402,6 +368,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       print("🔙 Upload response received");
 
       if (!mounted) return;
+      
+      setState(() {
+        _isUploadingAvatar = false;
+      });
 
       if (res['ok'] == true) {
         print("✅ Upload successful");
@@ -437,11 +407,12 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       if (mounted) {
         setState(() {
           _avatarFile = null;
+          _isUploadingAvatar = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFF00022E),
           ),
         );
       }
@@ -506,31 +477,16 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     setState(() => _savingPass = false);
   }
 
-  // ── Animated Background ────────────────────────────────────────────────────
-  Widget _buildAnimatedGalaxyBackground() {
+  // ── Space Background ───────────────────────────────────────────────────────
+  Widget _buildSpaceBackground() {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment(-0.3, -0.2),
-          radius: 1.5,
-          colors: [
-            Color(0xFF3A0812),
-            Color(0xFF140306),
-            Color(0xFF050505),
-          ],
-          stops: [0.0, 0.5, 1.0],
+        image: DecorationImage(
+          image: AssetImage('assets/images/space_background.png'),
+          fit: BoxFit.cover,
         ),
-      ),
-      child: AnimatedBuilder(
-        animation: _bgAnimController,
-        builder: (context, child) {
-          return CustomPaint(
-            painter: StarfieldPainter(
-              animationValue: _bgAnimController.value,
-              stars: _stars,
-            ),
-          );
-        },
       ),
     );
   }
@@ -556,11 +512,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _kCrimson, width: 1.5),
+        borderSide: const BorderSide(color: _kBlue, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.red.shade300, width: 1),
+        borderSide: BorderSide(color: const Color(0xFF00022E).withOpacity(0.6), width: 1),
       ),
     );
   }
@@ -598,7 +554,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           Expanded(
             child: Stack(
               children: [
-                Positioned.fill(child: _buildAnimatedGalaxyBackground()),
+                Positioned.fill(child: _buildSpaceBackground()),
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -641,7 +597,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                       .headlineMedium
                                       ?.copyWith(
                                         fontWeight: FontWeight.w800,
-                                        color: Colors.white,
+                                        color: const Color.fromARGB(255, 255, 255, 255),
                                         letterSpacing: 0.5,
                                       ),
                                 ),
@@ -664,7 +620,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                         CircleAvatar(
                                           radius: 40,
                                           backgroundColor:
-                                              _kCrimson.withOpacity(0.1),
+                                              _kBlue.withOpacity(0.1),
                                           backgroundImage: _avatarFile != null
                                               ? FileImage(_avatarFile!)
                                               : (_localAvatarBytes != null
@@ -673,10 +629,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                   : (finalAvatarUrl.isNotEmpty
                                                       ? NetworkImage(
                                                           finalAvatarUrl)
-                                                      : null)) as ImageProvider,
+                                                      : null)) as ImageProvider?,
                                           child: _isUploadingAvatar
                                               ? const CircularProgressIndicator(
-                                                  color: _kCrimson,
+                                                  color: _kBlue,
                                                   strokeWidth: 3)
                                               : (_avatarFile == null &&
                                                       _localAvatarBytes ==
@@ -689,7 +645,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                         fontSize: 28,
                                                         fontWeight:
                                                             FontWeight.bold,
-                                                        color: _kCrimson,
+                                                        color: _kBlue,
                                                       ),
                                                     )
                                                   : null,
@@ -709,7 +665,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                 padding:
                                                     const EdgeInsets.all(6),
                                                 decoration: BoxDecoration(
-                                                  color: _kCrimson,
+                                                  color: _kBlue,
                                                   shape: BoxShape.circle,
                                                   border: Border.all(
                                                       color: Colors.white,
@@ -766,9 +722,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 12, vertical: 4),
                                             decoration: BoxDecoration(
-                                              color: user?['role'] == 'admin'
-                                                  ? Colors.red.shade50
-                                                  : _kCrimson.withOpacity(0.08),
+                                              color: _kBlue.withOpacity(0.08),
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                             ),
@@ -776,9 +730,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                               (user?['role'] ?? 'user')
                                                   .toUpperCase(),
                                               style: TextStyle(
-                                                color: user?['role'] == 'admin'
-                                                    ? Colors.red.shade700
-                                                    : _kCrimson,
+                                                color: _kBlue.withOpacity(0.9),
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w800,
                                                 letterSpacing: 1.0,
@@ -810,8 +762,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                       ),
                                       child: TabBar(
                                         controller: _tabs,
-                                        labelColor: _kCrimson,
-                                        indicatorColor: _kCrimson,
+                                        labelColor: _kBlue,
+                                        indicatorColor: _kBlue,
                                         indicatorWeight: 3,
                                         unselectedLabelColor:
                                             Colors.grey.shade500,
@@ -939,7 +891,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
               child: ElevatedButton(
                 onPressed: _savingProfile ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kCrimson,
+                  backgroundColor: _kBlue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -1028,7 +980,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
               child: ElevatedButton(
                 onPressed: _savingPass ? null : _changePassword,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _kCrimson,
+                  backgroundColor: _kBlue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -1156,46 +1108,4 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           ],
         ),
       );
-}
-
-// ── Starfield Painter ───────────────────────────────────────────────────────
-class StarfieldPainter extends CustomPainter {
-  final double animationValue;
-  final List<Star> stars;
-
-  StarfieldPainter({required this.animationValue, required this.stars});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-
-    for (var star in stars) {
-      double twinkle =
-          (math.sin((animationValue * 2 * math.pi * 1.5) + star.twinklePhase) +
-                  1.0) /
-              2.0;
-      double currentOpacity = star.baseOpacity * (0.3 + (0.7 * twinkle));
-
-      paint.color = Colors.white.withOpacity(currentOpacity.clamp(0.0, 1.0));
-
-      double dx =
-          (star.x * size.width + (animationValue * size.width * star.speed)) %
-              size.width;
-      double dy = star.y * size.height;
-
-      if (star.size > 1.5) {
-        final glowPaint = Paint()
-          ..color = Colors.white.withOpacity(currentOpacity * 0.3)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
-        canvas.drawCircle(Offset(dx, dy), star.size * 2, glowPaint);
-      }
-
-      canvas.drawCircle(Offset(dx, dy), star.size, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant StarfieldPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue;
-  }
 }

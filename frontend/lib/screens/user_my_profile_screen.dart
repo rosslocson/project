@@ -1,115 +1,19 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/user_layout.dart';
 
-
-
-const _kCrimson = Color(0xFF7B0D1E);
-
-
-
-// ── Star Data Class for Galaxy Theme ─────────────────────────────────────────
-class Star {
-  final double x;
-  final double y;
-  final double size;
-  final double baseOpacity;
-  final double speed;
-  final double twinklePhase;
-
-
-  Star({
-    required this.x,
-    required this.y,
-    required this.size,
-    required this.baseOpacity,
-    required this.speed,
-    required this.twinklePhase,
-  });
-}
-
+const _kBlue = Color(0xFF00022E);
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
-
 
   @override
   State<MyProfileScreen> createState() => _MyProfileScreenState();
 }
 
-
-class _MyProfileScreenState extends State<MyProfileScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _bgAnimController;
-  final List<Star> _stars = [];
-
-
-  @override
-  void initState() {
-    super.initState();
-    _generateStars();
-    _bgAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 150),
-    )..repeat();
-  }
-
-
-  void _generateStars() {
-    final random = math.Random();
-    for (int i = 0; i < 200; i++) {
-      _stars.add(Star(
-        x: random.nextDouble(),
-        y: random.nextDouble(),
-        size: random.nextDouble() * 2.0 + 0.5,
-        baseOpacity: random.nextDouble() * 0.7 + 0.3,
-        speed: random.nextDouble() * 0.05 + 0.01,
-        twinklePhase: random.nextDouble() * 2 * math.pi,
-      ));
-    }
-  }
-
-
-  @override
-  void dispose() {
-    _bgAnimController.dispose();
-    super.dispose();
-  }
-
-
-  // ── Animated Background ────────────────────────────────────────────────────
-  Widget _buildAnimatedGalaxyBackground() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment(-0.3, -0.2),
-          radius: 1.5,
-          colors: [
-            Color(0xFF3A0812), // Deep glowing nebula red
-            Color(0xFF140306), // Very dark crimson
-            Color(0xFF050505), // Pure deep space black
-          ],
-          stops: [0.0, 0.5, 1.0],
-        ),
-      ),
-      child: AnimatedBuilder(
-        animation: _bgAnimController,
-        builder: (context, child) {
-          return CustomPaint(
-            painter: StarfieldPainter(
-              animationValue: _bgAnimController.value,
-              stars: _stars,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-
+class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return UserLayout(
@@ -141,8 +45,17 @@ class _MyProfileScreenState extends State<MyProfileScreen>
 
     return Stack(
       children: [
-        // Galaxy Background
-        Positioned.fill(child: _buildAnimatedGalaxyBackground()),
+        // Static Asset Background
+        Positioned.fill(
+          child: Image.asset(
+            'assets/images/space_background.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(color: Colors.black);
+            },
+          ),
+        ),
 
         // Profile Content (Non-scrollable, now with fixed overflow stripe)
         Positioned.fill(
@@ -176,18 +89,18 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                           onPressed: () {
                             context.go('/account-settings');
                           },
-                          // Pen/pencil icon instead of gear
                           icon: const Icon(Icons.edit_outlined, size: 16),
-                          // Label text changed to 'Edit Account'
-                          label: const Text('Edit Account',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: const Text(
+                            'Edit Account',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
-                            foregroundColor: _kCrimson,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
+                            foregroundColor: _kBlue,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             elevation: 0,
                           ),
                         ),
@@ -195,13 +108,13 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                     ),
                     const SizedBox(height: 20),
 
-
                     // ── Avatar + name card ───────────────────────────────
                     Card(
                       elevation: 0,
                       color: Colors.white.withOpacity(0.95),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24)),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                         child: Row(
@@ -209,8 +122,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                           children: [
                             CircleAvatar(
                               radius: 40,
-                              backgroundColor:
-                                  _kCrimson.withOpacity(0.1),
+                              backgroundColor: _kBlue.withOpacity(0.1),
                               backgroundImage: finalAvatarUrl.isNotEmpty
                                   ? NetworkImage(finalAvatarUrl)
                                   : null,
@@ -220,7 +132,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                       style: const TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
-                                        color: _kCrimson,
+                                        color: _kBlue,
                                         letterSpacing: 0.5,
                                       ),
                                     )
@@ -233,20 +145,22 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                 children: [
                                   Text(
                                     first.isEmpty && last.isEmpty
-                                      ? 'Name Not Set'
-                                      : '$first $last',
+                                        ? 'Name Not Set'
+                                        : '$first $last',
                                     style: const TextStyle(
-                                        fontSize: 22,
-                                        letterSpacing: 0.5,
-                                        fontWeight: FontWeight.w800),
+                                      fontSize: 22,
+                                      letterSpacing: 0.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     user?['email'] ?? '',
                                     style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14),
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                   const SizedBox(height: 10),
                                   Wrap(
@@ -254,8 +168,8 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                     children: [
                                       _Badge(
                                         label: 'USER',
-                                        color: _kCrimson,
-                                        bg: _kCrimson.withOpacity(0.08),
+                                        color: _kBlue,
+                                        bg: _kBlue.withOpacity(0.08),
                                       ),
                                       _Badge(
                                         label: (user?['is_active'] == true)
@@ -279,14 +193,14 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                     ),
                     const SizedBox(height: 16),
 
-
                     // ── Main Info card with FIX for vertical overflow ──
                     Expanded(
                       child: Card(
                         elevation: 0,
                         color: Colors.white.withOpacity(0.95),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
                         // This SingleChildScrollView fixes the internal overflow
                         child: SingleChildScrollView(
                           child: Padding(
@@ -297,51 +211,45 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                 const Text(
                                   'Internship Information',
                                   style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: _kCrimson),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: _kBlue,
+                                  ),
                                 ),
                                 const SizedBox(height: 24),
-                               
                                 _infoRow(context, [
                                   _Field('Name', first.isEmpty && last.isEmpty ? '—' : '$first $last'),
                                   _Field('Intern Number', user?['intern_number'] ?? '—'),
                                 ]),
                                 const SizedBox(height: 20),
-                               
                                 _infoRow(context, [
                                   _Field('Program', user?['program'] ?? '—'),
                                   _Field('School', user?['school'] ?? '—'),
                                 ]),
                                 const SizedBox(height: 20),
-                               
                                 _infoRow(context, [
                                   _Field('Specialization', user?['specialization'] ?? '—'),
                                   _Field('Email', user?['email'] ?? '—'),
                                 ]),
-                               
                                 const SizedBox(height: 24),
                                 const Divider(),
                                 const SizedBox(height: 20),
-                               
                                 const Text(
                                   'Skills & Proficiencies',
                                   style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: _kCrimson),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: _kBlue,
+                                  ),
                                 ),
                                 const SizedBox(height: 20),
-                               
                                 _infoRow(context, [
                                   _Field('Technical Skills', user?['technical_skills'] ?? '—'),
                                 ]),
                                 const SizedBox(height: 20),
-                               
                                 _infoRow(context, [
                                   _Field('Soft Skills', user?['soft_skills'] ?? '—'),
                                 ]),
-                               
                               ],
                             ),
                           ),
@@ -358,8 +266,6 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     );
   }
 
-
-
   Widget _infoRow(BuildContext context, List<_Field> fields) {
     return LayoutBuilder(builder: (context, constraints) {
       if (constraints.maxWidth > 400) {
@@ -371,8 +277,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
           }
         }
         return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: rowChildren);
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: rowChildren,
+        );
       }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,28 +294,31 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   }
 }
 
-
 class _Badge extends StatelessWidget {
   final String label;
   final Color color;
   final Color bg;
-  const _Badge({required this.label, required this.color, required this.bg});
 
+  const _Badge({required this.label, required this.color, required this.bg});
 
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-            color: bg, borderRadius: BorderRadius.circular(16)),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.0,
-                color: color)),
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.0,
+            color: color,
+          ),
+        ),
       );
 }
-
 
 class _Field {
   final String label;
@@ -416,73 +326,31 @@ class _Field {
   const _Field(this.label, this.value);
 }
 
-
 class _FieldTile extends StatelessWidget {
   final _Field field;
   const _FieldTile(this.field);
-
 
   @override
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(field.label,
-              style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w600)),
+          Text(
+            field.label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(field.value,
-              style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87)),
+          Text(
+            field.value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
         ],
       );
 }
-
-
-// ── Custom Painter for Starfield ─────────────────────────────────────────────
-class StarfieldPainter extends CustomPainter {
-  final double animationValue;
-  final List<Star> stars;
-
-
-  StarfieldPainter({required this.animationValue, required this.stars});
-
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint();
-
-
-    for (var star in stars) {
-      double twinkle = (math.sin((animationValue * 2 * math.pi * 1.5) + star.twinklePhase) + 1.0) / 2.0;
-      double currentOpacity = star.baseOpacity * (0.3 + (0.7 * twinkle));
-     
-      paint.color = Colors.white.withValues(alpha: currentOpacity.clamp(0.0, 1.0));
-
-
-      double dx = (star.x * size.width + (animationValue * size.width * star.speed)) % size.width;
-      double dy = star.y * size.height;
-
-
-      if (star.size > 1.5) {
-        final glowPaint = Paint()
-          ..color = Colors.white.withValues(alpha: currentOpacity * 0.3)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
-        canvas.drawCircle(Offset(dx, dy), star.size * 2, glowPaint);
-      }
-
-
-      canvas.drawCircle(Offset(dx, dy), star.size, paint);
-    }
-  }
-
-
-  @override
-  bool shouldRepaint(covariant StarfieldPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue;
-  }
-}
-

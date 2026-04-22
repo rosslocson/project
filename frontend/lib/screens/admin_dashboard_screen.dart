@@ -12,7 +12,7 @@ import '../services/api_service.dart';
 // Widgets
 import '../widgets/admin_sidebar.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/star_background.dart';
+
 import 'admin_glass_topbar.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -30,8 +30,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
  bool _loading = true;
  bool _showAllActivity = false;
  bool _showAllUsers = false;
- late AnimationController _bgAnimController;
- late final List<Star> _stars;
+
 
  // Carousel State
  late PageController _pageController;
@@ -40,15 +39,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
  @override
  void initState() {
-   super.initState();
-   _stars = generateStars(count: 200);
-   _loadAll();
-   _bgAnimController = AnimationController(
-     vsync: this,
-     duration: const Duration(seconds: 150),
-   )..repeat();
+  super.initState();
+  _loadAll();
 
-   // Initialize Carousel for Infinite Looping
+  // Initialize Carousel for Infinite Looping
    _currentPage = kInterns.length * 1000;
    _pageController = PageController(
      viewportFraction: 0.35,
@@ -57,9 +51,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    _startAutoScroll();
  }
 
- @override
+  @override
  void dispose() {
-   _bgAnimController.dispose();
    _pageController.dispose();
    _autoScrollTimer.cancel();
    super.dispose();
@@ -161,13 +154,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
    );
  }
 
- Widget _buildAnimatedGalaxyBackground() {
-   return GalaxyBackground(
-     animation: _bgAnimController,
-     stars: _stars,
-   );
- }
-
  // --- Intern Carousel Widget ---
  Widget _buildInternCarousel() {
    return Column(
@@ -260,10 +246,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
          Expanded(
            child: Stack(
              children: [
-               Positioned.fill(child: _buildAnimatedGalaxyBackground()),
-               Positioned.fill(
-                 child: Column(
-                   children: [
+                   Positioned.fill(
+                     child: Container(
+                       width: double.infinity,
+                       height: double.infinity,
+                       decoration: const BoxDecoration(
+                         image: DecorationImage(
+                           image: AssetImage('assets/images/space_background.png'),
+fit: BoxFit.cover,
+                         ),
+                       ),
+                     ),
+                   ),
+                   Positioned.fill(
+                     child: Column(
+                       children: [
                      GlassTopBar(
                        isSidebarOpen: isSidebarOpen,
                        onToggleSidebar: () =>
@@ -304,7 +301,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                            value:
                                                '${_stats?['total_users'] ?? 0}',
                                            icon: Icons.people,
-                                           color: const Color(0xFF6C63FF),
+color: const Color(0xFFDBE9F4),
                                            subtitle: 'Registered accounts',
                                          ),
                                        ),
@@ -314,7 +311,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                            value:
                                                '${_stats?['active_users'] ?? 0}',
                                            icon: Icons.check_circle,
-                                           color: const Color(0xFF4CAF50),
+color: const Color(0xFFDBE9F4),
                                            subtitle: 'Currently active',
                                          ),
                                        ),
@@ -324,7 +321,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                            value:
                                                '${_stats?['admin_users'] ?? 0}',
                                            icon: Icons.admin_panel_settings,
-                                           color: const Color(0xFFFF6B6B),
+color: const Color(0xFFDBE9F4),
                                            subtitle: 'Administrator accounts',
                                          ),
                                        ),
@@ -334,7 +331,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                            value:
                                                '${_stats?['new_users'] ?? 0}',
                                            icon: Icons.person_off,
-                                           color: const Color(0xFFFFA726),
+color: const Color(0xFFDBE9F4),
                                            subtitle: 'Inactive accounts',
                                          ),
                                        ),
@@ -515,7 +512,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
            decoration: BoxDecoration(
              color: u['role'] == 'admin'
-                 ? const Color.fromARGB(255, 255, 235, 238)
+                 ? const Color(0xFFDBE9F4)
                  : Colors.green.shade50,
              borderRadius: BorderRadius.circular(20),
            ),
@@ -784,10 +781,10 @@ class _InternCardFront extends StatelessWidget {
      margin: const EdgeInsets.symmetric(horizontal: 16),
      padding: const EdgeInsets.all(16),
      decoration: BoxDecoration(
-       gradient: const LinearGradient(
+  gradient: const LinearGradient(
          begin: Alignment.topLeft,
          end: Alignment.bottomRight,
-         colors: [Color(0xFF6B1524), Color(0xFF4A0E18)],
+         colors: [Color(0xFF1A2540), Color(0xFF4A5E9A)], // Blue carousel
        ),
        borderRadius: BorderRadius.circular(24),
        boxShadow: [

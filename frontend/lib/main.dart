@@ -8,13 +8,12 @@ import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/user_home_screen.dart';
-import 'screens/user_my_profile_screen.dart';   // view-only
-import 'screens/user_account_settings_screen.dart';       // Account Settings
-
+import 'screens/user_my_profile_screen.dart';
+import 'screens/user_account_settings_screen.dart';
 import 'screens/admin_account_settings_screen.dart';
-import 'screens/admin_users_screen.dart';
-import 'screens/admin_add_user_screen.dart';
-import 'screens/admin_config_screen.dart';        // departments & positions
+import 'screens/admin_user_management.dart';
+import 'screens/admin_add_user.dart';
+import 'screens/admin_departments_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 
 void main() {
@@ -22,7 +21,6 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-
       ],
       child: const MyApp(),
     ),
@@ -43,7 +41,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7B0D1E),
+          seedColor: const Color(0xFF00022E),
           brightness: Brightness.light,
         ),
         textTheme: GoogleFonts.poppinsTextTheme(),
@@ -76,13 +74,12 @@ class _MyAppState extends State<MyApp> {
             ),
           ),
           GoRoute(
-path: '/home',
+            path: '/home',
             pageBuilder: (context, state) => MaterialPage<void>(
               key: state.pageKey,
               child: const UserHomeScreen(),
             ),
           ),
-          // View-only profile
           GoRoute(
             path: '/profile',
             pageBuilder: (context, state) => MaterialPage<void>(
@@ -90,7 +87,6 @@ path: '/home',
               child: const MyProfileScreen(),
             ),
           ),
-          // Edit profile
           GoRoute(
             path: '/account-settings',
             pageBuilder: (context, state) => MaterialPage<void>(
@@ -112,7 +108,6 @@ path: '/home',
               child: const AddUserScreen(),
             ),
           ),
-          // Departments & positions config page
           GoRoute(
             path: '/config',
             pageBuilder: (context, state) => MaterialPage<void>(
@@ -127,7 +122,6 @@ path: '/home',
               child: const AdminDashboardScreen(),
             ),
           ),
-
           GoRoute(
             path: '/admin/account-settings',
             pageBuilder: (context, state) => MaterialPage<void>(
@@ -147,3 +141,4 @@ path: '/home',
     );
   }
 }
+
