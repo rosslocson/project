@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/user_layout.dart';
-import '../services/api_service.dart ';
+import '../services/api_service.dart';
 
 const _kBlue = Color(0xFF00022E);
 
