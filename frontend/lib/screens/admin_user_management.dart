@@ -1,3 +1,4 @@
+import 'dart:async'; // Added for the debounce timer
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -65,6 +66,7 @@ class _UsersScreenState extends State<UsersScreen> {
   List<dynamic> _users = [];
   bool _loading = true;
   final _searchCtrl = TextEditingController();
+  Timer? _debounce; // Added Timer for real-time typing search
 
   @override
   void initState() {
@@ -75,6 +77,7 @@ class _UsersScreenState extends State<UsersScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _debounce?.cancel(); // Cancel timer when widget is disposed
     super.dispose();
   }
 
@@ -217,6 +220,55 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
+  // Helper widget to build a table section
+  Widget _buildUserSection(String title, List<dynamic> sectionUsers) {
+    if (sectionUsers.isEmpty) return const SizedBox.shrink(); // Extra safety fallback
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white70,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: ListView.separated(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: sectionUsers.length,
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 1, indent: 20),
+              itemBuilder: (context, i) {
+                final u = sectionUsers[i];
+                return _UserTile(
+                  key: ValueKey(_toInt(u['id'])),
+                  user: u,
+                  onToggle: () => _toggleActive(u),
+                  onDelete: () => _deleteUser(u),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Unused variables kept in case they are used in adjacent scope/components
@@ -225,21 +277,23 @@ class _UsersScreenState extends State<UsersScreen> {
     final user = auth.user;
     final isSidebarOpen = sidebar.isAdminSidebarOpen;
 
+    // Filter users into Admins and Intern Accounts
+    final admins = _users.where((u) => u['role'] == 'admin').toList();
+    final internUsers = _users.where((u) => u['role'] != 'admin').toList();
+
     // OVERRIDE: Wrap AdminLayout in a Theme to force the background dark
-    // This prevents white bars if AdminLayout uses a Scaffold or SafeArea internally
     return Theme(
       data: Theme.of(context).copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A0A14), // Dark space color
+        scaffoldBackgroundColor: const Color(0xFF0A0A14), 
       ),
       child: AdminLayout(
         title: 'User Management',
         currentRoute: GoRouterState.of(context).matchedLocation ?? '/users',
-        // OVERRIDE: Swapped Stack for a robust Container that forces double.infinity
         child: Container(
           width: double.infinity,
           height: double.infinity,
           decoration: const BoxDecoration(
-            color: Color(0xFF0A0A14), // Fallback color under the image
+            color: Color(0xFF0A0A14),
             image: DecorationImage(
               image: AssetImage('assets/images/space_background.png'),
               fit: BoxFit.cover,
@@ -271,14 +325,24 @@ class _UsersScreenState extends State<UsersScreen> {
                     hintText: 'Search by name or email...',
                     hintStyle: TextStyle(
                         color: Colors.grey.shade500, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    
+                    // Added IconButton to make the magnifying glass clickable
+                    prefixIcon: IconButton(
+                      icon: const Icon(Icons.search, color: Colors.grey),
+                      onPressed: () {
+                        // Cancel the auto-search timer if it's running so we don't double-search
+                        if (_debounce?.isActive ?? false) _debounce!.cancel();
+                        _loadUsers(search: _searchCtrl.text);
+                      },
+                    ),
+                    
                     suffixIcon: _searchCtrl.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, color: Colors.grey),
                             onPressed: () {
                               _searchCtrl.clear();
                               _loadUsers();
-                              setState(() {});
+                              setState(() {}); // Updates the clear button
                             },
                           )
                         : null,
@@ -289,61 +353,57 @@ class _UsersScreenState extends State<UsersScreen> {
                     filled: true,
                     fillColor: Colors.white,
                   ),
-                  onChanged: (v) => setState(() {}),
+                  onChanged: (v) {
+                    setState(() {}); // Updates the clear button visibility immediately
+                    
+                    // Cancel the previous timer if user is still typing
+                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                    
+                    // Start a new timer. It will only search 300ms AFTER they stop typing.
+                    _debounce = Timer(const Duration(milliseconds: 300), () {
+                      _loadUsers(search: v); 
+                    });
+                  },
                   onSubmitted: (v) => _loadUsers(search: v),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 24),
 
-                // ── User list card ───────────────────
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: _loading
-                      ? const Padding(
-                          padding: EdgeInsets.all(48),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : _users.isEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.all(48),
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.people_outline,
-                                        size: 56,
-                                        color: Colors.grey.shade300),
-                                    const SizedBox(height: 12),
-                                    Text('No users found',
-                                        style: TextStyle(
-                                            color: Colors.grey.shade500)),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: ListView.separated(
-                                padding: EdgeInsets.zero,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _users.length,
-                                separatorBuilder: (_, __) =>
-                                    const Divider(height: 1, indent: 20),
-                                itemBuilder: (context, i) {
-                                  final u = _users[i];
-                                  return _UserTile(
-                                    key: ValueKey(_toInt(u['id'])),
-                                    user: u,
-                                    onToggle: () => _toggleActive(u),
-                                    onDelete: () => _deleteUser(u),
-                                  );
-                                },
-                              ),
-                            ),
-                ),
+                // ── Tables ───────────────────────────
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.all(48),
+                    child: Center(
+                        child: CircularProgressIndicator(color: Colors.white)),
+                  )
+                else if (_users.isEmpty)
+                  // Shows a global fallback ONLY when absolutely no users are found at all
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.all(48),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.people_outline,
+                              size: 56, color: Colors.grey.shade300),
+                          const SizedBox(height: 12),
+                          Text('No users found. Try a different name or email.',
+                              style: TextStyle(color: Colors.grey.shade500)),
+                        ],
+                      ),
+                    ),
+                  )
+                else ...[
+                  // Conditionally render tables to completely hide empty sections
+                  if (admins.isNotEmpty)
+                    _buildUserSection('Administrators', admins),
+                  
+                  if (internUsers.isNotEmpty)
+                    _buildUserSection('Interns', internUsers),
+                ],
               ],
             ),
           ),
@@ -440,7 +500,7 @@ class _UserTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              isAdmin ? 'Admin' : 'User',
+              isAdmin ? 'Admin' : 'Intern',
               style: TextStyle(
                 fontSize: 11,
                 color: isAdmin ? Colors.red.shade700 : Colors.blue.shade700,

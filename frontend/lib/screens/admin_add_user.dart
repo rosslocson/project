@@ -32,8 +32,6 @@ class _AddUserScreenState extends State<AddUserScreen>
   List<String> _departments = [];
   List<String> _positions = [];
 
-  final bool _isSidebarOpen = true;
-
   @override
   void initState() {
     super.initState();

@@ -230,7 +230,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
     return AdminLayout(
       title: 'Admin Dashboard',
-      currentRoute: GoRouterState.of(context).matchedLocation ?? '/dashboard',
+      currentRoute: GoRouterState.of(context).matchedLocation,
       child: Stack(
         children: [
           Positioned.fill(

@@ -1,7 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/auth_provider.dart';
 import '../providers/sidebar_provider.dart';
 import '../widgets/admin_sidebar.dart';
 
@@ -62,10 +61,8 @@ class AdminLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
     final sidebar = context.watch<SidebarProvider>();
-    final route = currentRoute ?? GoRouterState.of(context).matchedLocation ?? '/dashboard';
-    final user = auth.user;
+    final route = currentRoute ?? GoRouterState.of(context).matchedLocation;
 
     return Scaffold(
       body: Stack(

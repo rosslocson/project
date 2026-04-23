@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
-import '../providers/sidebar_provider.dart';
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
@@ -62,18 +61,6 @@ class GlassTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sidebar = context.watch<SidebarProvider>();
-    final sidebarOpen = isSidebarOpen ??
-        (isAdmin ? sidebar.isAdminSidebarOpen : sidebar.isUserSidebarOpen);
-    final toggleSidebar = onToggleSidebar ??
-        () {
-          if (isAdmin) {
-            sidebar.toggleAdminSidebar();
-          } else {
-            sidebar.toggleUserSidebar();
-          }
-        };
-
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
     final String fullName =

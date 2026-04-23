@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 // import '../providers/sidebar_provider.dart'; // Removed
 
 class AppScaffold extends StatelessWidget {
@@ -23,7 +22,6 @@ class AppScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // final sidebarProvider = context.watch<SidebarProvider>(); // Removed
-    final currentRoute = GoRouterState.of(context).matchedLocation;
     
     return Scaffold(
       // drawer: Sidebar(currentRoute: currentRoute), // removed hamburger opens drawer

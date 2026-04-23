@@ -11,7 +11,6 @@ class AdminSidebar extends StatelessWidget {
 
 
   static const Color _bgColor = Color(0xFF0A1425); // Dark blue bg
-  static const Color _logoBoxColor = Color(0xFF1A2540);
   static const Color _activeItemBg = Color(0xFF4A5E9A); // Blue active
   static const Color _sectionLabelColor = Color(0xFF8A9ABF); // Light blue label
   static const Color _textLight = Colors.white;
@@ -20,9 +19,7 @@ class AdminSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-final isAdmin = auth.isAdmin;
-
-    final user = auth.user;
+    final isAdmin = auth.isAdmin;
 
     return Container(
       width: 250,

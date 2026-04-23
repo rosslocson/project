@@ -15,7 +15,6 @@ class UserSidebar extends StatelessWidget {
 
    // Blue theme colors
  static const Color _bgColor = Color(0xFF00022E);
- static const Color _logoBoxColor = Color(0xFF1A1F5A);
  static const Color _activeItemBg = Color(0xFF4C6FFF);
  static const Color _sectionLabelColor = Color(0xFF8A9DBF);
  static const Color _textLight = Colors.white;
@@ -24,9 +23,6 @@ class UserSidebar extends StatelessWidget {
 
  @override
  Widget build(BuildContext context) {
-   final auth = context.watch<AuthProvider>();
-   final user = auth.user;
-
 
    return Container(
      width: 250,
