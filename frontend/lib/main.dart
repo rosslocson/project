@@ -8,7 +8,7 @@ import 'providers/sidebar_provider.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/user_home_screen.dart';
+import 'screens/user_homescreen.dart';
 import 'screens/user_my_profile_screen.dart';
 import 'screens/user_account_settings_screen.dart';
 import 'screens/user_edit_profile_screen.dart';

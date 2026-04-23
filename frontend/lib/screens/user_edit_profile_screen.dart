@@ -162,13 +162,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
             .updateUserData(Map<String, dynamic>.from(fresh));
       }
 
-      if (mounted)
+      if (mounted) {
         setState(() => _successMsg = 'Profile updated successfully!');
+      }
     } else {
       // ✅ Now actually surfaces errors
-      if (mounted)
+      if (mounted) {
         setState(() => _errorMsg =
             res['error'] ?? res['details'] ?? 'Save failed. Please try again.');
+      }
     }
   }
 
