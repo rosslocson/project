@@ -194,6 +194,10 @@ func main() {
 		}
 		auth.POST("/forgot-password", h.ForgotPassword)
 		auth.POST("/reset-password", h.ResetPassword)
+
+		r.GET("/api/departments", h.ListDepartments)
+		r.GET("/api/positions", h.ListPositions)
+
 	}
 
 	// Protected routes
@@ -210,7 +214,7 @@ func main() {
 		api.GET("/dashboard/stats", h.GetDashboardStats)
 
 		// Departments — public read, admin write/edit/delete
-		api.GET("/departments", h.ListDepartments)
+		//api.GET("/departments", h.ListDepartments)
 		depts := api.Group("/departments")
 		depts.Use(middleware.AdminOnly())
 		{
@@ -220,7 +224,7 @@ func main() {
 		}
 
 		// Positions — public read, admin write/edit/delete
-		api.GET("/positions", h.ListPositions)
+		//api.GET("/positions", h.ListPositions)
 		positions := api.Group("/positions")
 		positions.Use(middleware.AdminOnly())
 		{

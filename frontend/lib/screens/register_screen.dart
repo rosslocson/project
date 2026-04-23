@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/app_theme.dart';
+// Add your API service import:
+import '../services/api_service.dart'; // adjust path as needed
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -21,50 +25,13 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscurePass = true;
   bool _obscureConfirm = true;
 
-  // Department → Position mapping (static for registration)
-  static const Map<String, List<String>> _deptRoles = {
-    'Business Relationship Management': [
-      'Account Manager',
-      'Business Analyst',
-      'Client Relations',
-      'Intern',
-      'Others',
-    ],
-    'Project Management Office': [
-      'Project Manager',
-      'Project Coordinator',
-      'Scrum Master',
-      'Intern',
-      'Others',
-    ],
-    'Quality Assurance': [
-      'QA Engineer',
-      'QA Automation Tester',
-      'Manual Tester',
-      'Intern',
-      'Others',
-    ],
-    'Technical Support Department': [
-      'IT Support Specialist',
-      'System Administrator',
-      'Helpdesk Technician',
-      'Intern',
-      'Others',
-    ],
-    'Development Department': [
-      'Software Engineer',
-      'Frontend Developer',
-      'Backend Developer',
-      'UI/UX Designer',
-      'Intern',
-      'Others',
-    ],
-  };
-
-  List<String> get _departments => _deptRoles.keys.toList();
-  List<String> _positions = [];
+  // ── Dynamic departments from DB ──────────────────────────────────────────
+  List<String> _departments = [];
+  bool _loadingDepts = true;
   String? _selectedDept;
-  String? _selectedPos;
+
+  // Position is always fixed to "Intern" on registration
+  final String _defaultPosition = 'Intern';
 
   // Password strength
   String _passStrength = '';
@@ -75,6 +42,36 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   void initState() {
     super.initState();
+    _fetchDepartments();
+  }
+
+  Future<void> _fetchDepartments() async {
+    try {
+      final res = await http.get(
+        Uri.parse('${ApiService.baseUrl}/departments'),
+        headers: {'Content-Type': 'application/json'}, // no auth token
+      ).timeout(const Duration(seconds: 10));
+
+      debugPrint('Departments status: ${res.statusCode}');
+      debugPrint('Departments body: ${res.body}');
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final List items = data['items'] ?? [];
+        if (mounted) {
+          setState(() {
+            _departments =
+                items.map<String>((d) => d['name'] as String).toList();
+            _loadingDepts = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loadingDepts = false);
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch departments: $e');
+      if (mounted) setState(() => _loadingDepts = false);
+    }
   }
 
   @override
@@ -143,12 +140,12 @@ class _RegisterScreenState extends State<RegisterScreen>
       'password': _passCtrl.text,
       'confirm_password': _confirmCtrl.text,
       'department': _selectedDept ?? '',
-      'position': _selectedPos ?? '',
+      'position': _defaultPosition, // always "Intern"
     });
     if (mounted && ok) context.go('/home');
   }
 
-  // ── Form ───────────────────────────────────────────────────────────────────
+  // ── Form ─────────────────────────────────────────────────────────────────
   Widget _buildForm(AuthProvider auth, {required bool isMobile}) {
     final dec = pillInputDecoration();
 
@@ -200,8 +197,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 fontWeight: FontWeight.w600))),
                     GestureDetector(
                       onTap: () => context.read<AuthProvider>().clearError(),
-                      child: const Icon(Icons.close,
-                          size: 20, color: kCosmicBlue),
+                      child:
+                          const Icon(Icons.close, size: 20, color: kCosmicBlue),
                     ),
                   ]),
                 ),
@@ -259,7 +256,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
               const Spacer(flex: 1),
 
-              // Department + Position
+              // Department (dynamic) + Position (fixed: Intern)
               Row(children: [
                 Expanded(
                   child: Column(
@@ -268,36 +265,36 @@ class _RegisterScreenState extends State<RegisterScreen>
                     children: [
                       fieldLabel('Department'),
                       const SizedBox(height: 4),
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedDept,
-                        decoration: dec,
-                        hint: Text(
-                            _departments.isEmpty ? 'N/A' : 'Select Department',
-                            style: const TextStyle(fontSize: 13)),
-                        icon: Icon(Icons.keyboard_arrow_down,
-                            color: Colors.grey.shade500),
-                        items: _departments
-                            .map((s) => DropdownMenuItem(
-                                value: s,
-                                child: Text(s,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12))))
-                            .toList(),
-                        onChanged: (v) {
-                          setState(() {
-                            _selectedDept = v;
-                            _positions = _deptRoles[v] ?? ['Intern', 'Others'];
-                            if (_selectedPos != null &&
-                                !_positions.contains(_selectedPos)) {
-                              _selectedPos = null;
-                            }
-                          });
-                        },
-                      ),
+                      _loadingDepts
+                          ? _shimmerDropdown(dec)
+                          : DropdownButtonFormField<String>(
+                              value: _selectedDept,
+                              decoration: dec,
+                              hint: Text(
+                                _departments.isEmpty
+                                    ? 'None available'
+                                    : 'Select Department',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              icon: Icon(Icons.keyboard_arrow_down,
+                                  color: Colors.grey.shade500),
+                              items: _departments
+                                  .map((s) => DropdownMenuItem(
+                                      value: s,
+                                      child: Text(s,
+                                          overflow: TextOverflow.ellipsis,
+                                          style:
+                                              const TextStyle(fontSize: 12))))
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setState(() => _selectedDept = v),
+                            ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 12),
+
+                // Position — always "Intern", shown as a disabled field
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,26 +302,26 @@ class _RegisterScreenState extends State<RegisterScreen>
                     children: [
                       fieldLabel('Position'),
                       const SizedBox(height: 4),
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedPos,
-                        decoration: dec,
-                        hint: Text(
-                            _positions.isEmpty
-                                ? 'Select Dept First'
-                                : 'Select Position',
-                            style: const TextStyle(fontSize: 13)),
-                        icon: Icon(Icons.keyboard_arrow_down,
-                            color: Colors.grey.shade500),
-                        items: _positions
-                            .map((s) => DropdownMenuItem(
-                                value: s,
-                                child: Text(s,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12))))
-                            .toList(),
-                        onChanged: _positions.isEmpty
-                            ? null
-                            : (v) => setState(() => _selectedPos = v),
+                      IgnorePointer(
+                        child: DropdownButtonFormField<String>(
+                          value: _defaultPosition,
+                          decoration: dec.copyWith(
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                          ),
+                          icon: Icon(Icons.keyboard_arrow_down,
+                              color: Colors.grey.shade300),
+                          items: [
+                            DropdownMenuItem(
+                              value: _defaultPosition,
+                              child: Text(
+                                _defaultPosition,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                          onChanged: null,
+                        ),
                       ),
                     ],
                   ),
@@ -357,18 +354,12 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ),
                 validator: (v) {
-                  if (v == null || v.length < 8) {
-                    return 'Min 8 characters';
-                  }
-                  if (!v.contains(RegExp(r'[A-Z]'))) {
+                  if (v == null || v.length < 8) return 'Min 8 characters';
+                  if (!v.contains(RegExp(r'[A-Z]')))
                     return 'Need one uppercase letter';
-                  }
-                  if (!v.contains(RegExp(r'[0-9]'))) {
-                    return 'Need one number';
-                  }
-                  if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+                  if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
+                  if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
                     return 'Need one special character';
-                  }
                   return null;
                 },
               ),
@@ -418,18 +409,15 @@ class _RegisterScreenState extends State<RegisterScreen>
                         color: const Color(0xFF9CA3AF),
                         size: 20,
                       ),
-                      onPressed: () => setState(
-                          () => _obscureConfirm = !_obscureConfirm),
+                      onPressed: () =>
+                          setState(() => _obscureConfirm = !_obscureConfirm),
                     ),
                   ),
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty) {
+                  if (v == null || v.isEmpty)
                     return 'Please confirm your password';
-                  }
-                  if (v != _passCtrl.text) {
-                    return 'Passwords do not match';
-                  }
+                  if (v != _passCtrl.text) return 'Passwords do not match';
                   return null;
                 },
               ),
@@ -473,7 +461,21 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  /// Placeholder shimmer-style widget while departments load
+  Widget _shimmerDropdown(InputDecoration dec) {
+    return DropdownButtonFormField<String>(
+      decoration: dec.copyWith(
+        filled: true,
+        fillColor: Colors.grey.shade100,
+      ),
+      hint: const Text('Loading...', style: TextStyle(fontSize: 13)),
+      icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade300),
+      items: const [],
+      onChanged: null,
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -484,10 +486,8 @@ class _RegisterScreenState extends State<RegisterScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth > 900) {
-            // Desktop Layout: 50/50 Split
             return Row(
               children: [
-                // Left 50% Panel
                 Expanded(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -506,10 +506,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 'assets/images/logo_file.png',
                                 height: 280,
                                 fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.public,
-                                      size: 120, color: Colors.white);
-                                },
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.public,
+                                        size: 120, color: Colors.white),
                               ),
                               const SizedBox(height: 24),
                               const Text(
@@ -523,10 +522,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                               ),
                               const SizedBox(height: 16),
                               Container(
-                                width: 40,
-                                height: 2,
-                                color: Colors.white54,
-                              ),
+                                  width: 40, height: 2, color: Colors.white54),
                               const SizedBox(height: 16),
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 64.0),
@@ -548,7 +544,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                     ),
                   ),
                 ),
-                // Right 50% Panel
                 Expanded(
                   child: Container(
                     color: Colors.white,
@@ -558,7 +553,6 @@ class _RegisterScreenState extends State<RegisterScreen>
               ],
             );
           } else {
-            // Mobile Layout
             return Stack(
               children: [
                 Container(
