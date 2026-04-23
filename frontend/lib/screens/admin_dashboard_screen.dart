@@ -14,6 +14,9 @@ import '../widgets/admin_layout.dart';
 import '../widgets/stat_card.dart';
 import 'admin_glass_topbar.dart';
 
+// Reuse the shared InternProfile model and widgets from intern_widgets.dart
+import 'intern_widgets.dart';
+
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -23,41 +26,82 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     with TickerProviderStateMixin {
-  // Sidebar state is now managed by SidebarProvider
   Map<String, dynamic>? _stats;
   List<dynamic> _activityLogs = [];
   bool _loading = true;
   bool _showAllActivity = false;
   bool _showAllUsers = false;
 
-  // Carousel State
+  // Dynamic intern list
+  List<InternProfile> _interns = [];
+  bool _loadingInterns = true;
+  String? _internsError;
+
+  // Carousel
   late PageController _pageController;
-  late Timer _autoScrollTimer;
+  Timer? _autoScrollTimer;
   int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(viewportFraction: 0.35, initialPage: 0);
     _loadAll();
-
-    // Initialize Carousel for Infinite Looping
-    _currentPage = kInterns.length * 1000;
-    _pageController = PageController(
-      viewportFraction: 0.35,
-      initialPage: _currentPage,
-    );
-    _startAutoScroll();
+    _fetchInterns();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _autoScrollTimer.cancel();
+    _autoScrollTimer?.cancel();
     super.dispose();
   }
 
-  // --- Carousel Logic ---
+  // ── Intern fetching ──────────────────────────────────────────────
+
+  Future<void> _fetchInterns() async {
+    setState(() {
+      _loadingInterns = true;
+      _internsError = null;
+    });
+
+    final res = await ApiService.getInterns();
+
+    if (!mounted) return;
+
+    if (res['ok'] == true) {
+      final raw = res['users'] ?? res['interns'] ?? res['data'] ?? [];
+      final List<InternProfile> loaded = (raw as List)
+          .map((j) => InternProfile.fromJson(j as Map<String, dynamic>))
+          .toList();
+
+      setState(() {
+        _interns = loaded;
+        _loadingInterns = false;
+        _currentPage = loaded.isNotEmpty ? loaded.length * 1000 : 0;
+      });
+
+      if (_interns.isNotEmpty) {
+        _pageController.dispose();
+        _pageController = PageController(
+          viewportFraction: 0.35,
+          initialPage: _currentPage,
+        );
+        _startAutoScroll();
+      }
+    } else {
+      setState(() {
+        _internsError = res['error'] ?? 'Failed to load interns';
+        _loadingInterns = false;
+      });
+    }
+  }
+
+  // ── Carousel logic ───────────────────────────────────────────────
+
   void _startAutoScroll() {
+    _autoScrollTimer?.cancel();
+    if (_interns.isEmpty) return;
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (!mounted) return;
       _pageController.nextPage(
@@ -68,7 +112,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _prev() {
-    _autoScrollTimer.cancel();
+    _autoScrollTimer?.cancel();
     _pageController.previousPage(
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
@@ -77,7 +121,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _next() {
-    _autoScrollTimer.cancel();
+    _autoScrollTimer?.cancel();
     _pageController.nextPage(
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
@@ -86,21 +130,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _openDetail(InternProfile intern) {
-    _autoScrollTimer.cancel();
+    _autoScrollTimer?.cancel();
     Navigator.of(context)
         .push(PageRouteBuilder(
       pageBuilder: (_, anim, __) => InternDetailPage(intern: intern),
-      transitionsBuilder: (_, anim, __, child) => FadeTransition(
-        opacity: anim,
-        child: child,
-      ),
+      transitionsBuilder: (_, anim, __, child) =>
+          FadeTransition(opacity: anim, child: child),
       transitionDuration: const Duration(milliseconds: 350),
     ))
         .then((_) {
       if (mounted) _startAutoScroll();
     });
   }
-  // ----------------------
+
+  // ── Data loading ─────────────────────────────────────────────────
 
   Future<void> _loadAll() async {
     setState(() => _loading = true);
@@ -152,7 +195,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  // --- Intern Carousel Widget ---
+  // ── Intern carousel section ──────────────────────────────────────
+
   Widget _buildInternCarousel() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,61 +209,114 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               ),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 180,
-          child: PageView.builder(
-            controller: _pageController,
-            onPageChanged: (i) => setState(() => _currentPage = i),
-            itemBuilder: (context, index) {
-              final intern = kInterns[index % kInterns.length];
-              final isCenter = index == _currentPage;
-              return AnimatedScale(
-                scale: isCenter ? 1.0 : 0.85,
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeOut,
-                child: AnimatedOpacity(
-                  opacity: isCenter ? 1.0 : 0.45,
-                  duration: const Duration(milliseconds: 350),
-                  child: GestureDetector(
-                    onTap: () => _openDetail(intern),
-                    child: _InternCardFront(intern: intern),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+        _buildCarouselBody(),
         const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _ArrowButton(icon: Icons.chevron_left, onTap: _prev),
-            const SizedBox(width: 20),
-            Row(
-              children: List.generate(kInterns.length, (i) {
-                final active = i == (_currentPage % kInterns.length);
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: active ? 16 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: active
-                        ? const Color.fromARGB(255, 118, 115, 200)
-                        : Colors.white.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(width: 20),
-            _ArrowButton(icon: Icons.chevron_right, onTap: _next),
-          ],
-        ),
+        if (!_loadingInterns && _interns.isNotEmpty) _buildDotNavigation(),
       ],
     );
   }
-  // ------------------------------------
+
+  Widget _buildCarouselBody() {
+    if (_loadingInterns) {
+      return const SizedBox(
+        height: 180,
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.white54),
+        ),
+      );
+    }
+
+    if (_internsError != null) {
+      return SizedBox(
+        height: 180,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white54, size: 40),
+              const SizedBox(height: 8),
+              Text(_internsError!,
+                  style: const TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _fetchInterns,
+                icon: const Icon(Icons.refresh, color: Colors.white70),
+                label: const Text('Retry',
+                    style: TextStyle(color: Colors.white70)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_interns.isEmpty) {
+      return const SizedBox(
+        height: 180,
+        child: Center(
+          child: Text('No interns found.',
+              style: TextStyle(color: Colors.white54, fontSize: 15)),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 180,
+      child: PageView.builder(
+        controller: _pageController,
+        onPageChanged: (i) => setState(() => _currentPage = i),
+        itemBuilder: (context, index) {
+          final intern = _interns[index % _interns.length];
+          final isCenter = index == _currentPage;
+          return AnimatedScale(
+            scale: isCenter ? 1.0 : 0.85,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+            child: AnimatedOpacity(
+              opacity: isCenter ? 1.0 : 0.45,
+              duration: const Duration(milliseconds: 350),
+              child: GestureDetector(
+                onTap: () => _openDetail(intern),
+                child: _InternCardFront(intern: intern),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDotNavigation() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _ArrowButton(icon: Icons.chevron_left, onTap: _prev),
+        const SizedBox(width: 20),
+        Row(
+          children: List.generate(_interns.length, (i) {
+            final active = i == (_currentPage % _interns.length);
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: active ? 16 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: active
+                    ? const Color.fromARGB(255, 118, 115, 200)
+                    : Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(width: 20),
+        _ArrowButton(icon: Icons.chevron_right, onTap: _next),
+      ],
+    );
+  }
+
+  // ── Build ────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -235,8 +332,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         children: [
           Positioned.fill(
             child: Container(
-              width: double.infinity,
-              height: double.infinity,
               decoration: const BoxDecoration(
                 image: DecorationImage(
                   image: AssetImage('assets/images/space_background.png'),
@@ -263,7 +358,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       const SizedBox(height: 32),
                       if (_loading)
                         const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
+                          child:
+                              CircularProgressIndicator(color: Colors.white),
                         )
                       else ...[
                         LayoutBuilder(
@@ -319,7 +415,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         ),
                         const SizedBox(height: 40),
 
-                        // ── Recent Users ───────────────
+                        // ── Recent Users ───────────────────────────
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -363,7 +459,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         ),
                         const SizedBox(height: 40),
 
-                        // ── Recent Activity ─────────────
+                        // ── Recent Activity ────────────────────────
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -389,7 +485,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                 ),
                               ],
                             ),
-                            // "View All" button — only show if there are more than 5 logs
                             if (_activityLogs.length > 5)
                               TextButton.icon(
                                 onPressed: () => setState(() =>
@@ -418,7 +513,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             borderRadius: BorderRadius.circular(16),
                             child: _buildActivityFeed(true),
                           ),
-                        ), // <-- THIS IS THE MISSING BRACKET THAT WAS CAUSING THE ERROR!
+                        ),
                       ],
                     ],
                   ),
@@ -437,7 +532,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       return const Padding(
         padding: EdgeInsets.all(24),
         child: Center(
-          child: Text('No users yet', style: TextStyle(color: Colors.black87)),
+          child:
+              Text('No users yet', style: TextStyle(color: Colors.black87)),
         ),
       );
     }
@@ -453,25 +549,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           const Divider(height: 1, color: Colors.black12),
       itemBuilder: (context, i) {
         final u = users[i];
-
-        // Safely extract names and get the first character only if it's not empty
         final fName = u['first_name']?.toString() ?? '';
         final lName = u['last_name']?.toString() ?? '';
         final initials =
             '${fName.isNotEmpty ? fName[0] : ''}${lName.isNotEmpty ? lName[0] : ''}'
                 .toUpperCase();
+        final avatarUrl = u['avatar_url']?.toString();
 
         return ListTile(
           leading: CircleAvatar(
             backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
-            child: Text(
-              initials.isEmpty ? 'U' : initials,
-              style: const TextStyle(
-                  color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
-            ),
+            backgroundImage:
+                (avatarUrl != null && avatarUrl.isNotEmpty)
+                    ? NetworkImage(avatarUrl)
+                    : null,
+            child: (avatarUrl == null || avatarUrl.isEmpty)
+                ? Text(
+                    initials.isEmpty ? 'U' : initials,
+                    style: const TextStyle(
+                        color: Color(0xFF6C63FF),
+                        fontWeight: FontWeight.bold),
+                  )
+                : null,
           ),
           title: Text(
-            '${u['first_name']} ${u['last_name']}'.trim(),
+            '$fName $lName'.trim(),
             style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -480,7 +582,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           subtitle: Text(u['email'] ?? '',
               style: const TextStyle(fontSize: 11, color: Colors.black54)),
           trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: u['role'] == 'admin'
                   ? const Color(0xFFDBE9F4)
@@ -508,13 +611,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       return const Padding(
         padding: EdgeInsets.all(24),
         child: Center(
-          child:
-              Text('No activity yet', style: TextStyle(color: Colors.black87)),
+          child: Text('No activity yet',
+              style: TextStyle(color: Colors.black87)),
         ),
       );
     }
 
-    // Show only 5 items unless "View All" is toggled
     const int previewCount = 5;
     final logsToShow = _showAllActivity
         ? _activityLogs
@@ -548,11 +650,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ),
           subtitle: userName.isNotEmpty
               ? Text(userName,
-                  style: const TextStyle(fontSize: 11, color: Colors.black54))
+                  style:
+                      const TextStyle(fontSize: 11, color: Colors.black54))
               : null,
           trailing: Text(
             _formatDate(log['created_at'] as String?),
-            style: const TextStyle(color: Colors.black54, fontSize: 11),
+            style:
+                const TextStyle(color: Colors.black54, fontSize: 11),
           ),
         );
       },
@@ -633,115 +737,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 }
 
-// ── Data Models & Detail Widgets ─────────────────────────────────
+// ── Carousel card (admin style) ───────────────────────────────────
 
-class InternProfile {
-  final String name;
-  final int internNumber;
-  final String program;
-  final String school;
-  final String specialization;
-  final String email;
-  final List<String> technicalSkills;
-  final List<String> softSkills;
-  final Color avatarColor;
-  final String initials;
-
-  const InternProfile({
-    required this.name,
-    required this.internNumber,
-    required this.program,
-    required this.school,
-    required this.specialization,
-    required this.email,
-    required this.technicalSkills,
-    required this.softSkills,
-    required this.avatarColor,
-    required this.initials,
-  });
-}
-
-const List<InternProfile> kInterns = [
-  InternProfile(
-    name: 'Jamie Reyes',
-    internNumber: 1,
-    program: 'Bachelor of Science in Computer Science',
-    school: 'University of Santo Tomas',
-    specialization: 'Web Development',
-    email: 'jamie.reyes@email.com',
-    technicalSkills: ['Flutter', 'Dart', 'Firebase', 'Git'],
-    softSkills: ['Teamwork', 'Communication', 'Adaptable'],
-    avatarColor: Color(0xFF7B1A2E),
-    initials: 'JR',
-  ),
-  InternProfile(
-    name: 'Lorraine De Castro',
-    internNumber: 2,
-    program: 'Bachelor of Science in Information Technology',
-    school: 'De La Salle University',
-    specialization: 'UI/UX Design',
-    email: 'lorraine@gmail.com',
-    technicalSkills: ['Figma', 'HTML/CSS', 'React', 'Prototyping'],
-    softSkills: ['Creativity', 'Detail-oriented', 'Time management'],
-    avatarColor: Color(0xFF4A1040),
-    initials: 'LD',
-  ),
-  InternProfile(
-    name: 'Airra De Castro',
-    internNumber: 3,
-    program: 'Bachelor of Science in Software Engineering',
-    school: 'Ateneo de Manila University',
-    specialization: 'Backend Systems',
-    email: 'airra@gmail.com',
-    technicalSkills: ['Python', 'Django', 'PostgreSQL', 'Docker'],
-    softSkills: ['Problem-solving', 'Leadership', 'Critical thinking'],
-    avatarColor: Color(0xFF1A1050),
-    initials: 'AD',
-  ),
-  InternProfile(
-    name: 'Alex Santos',
-    internNumber: 12,
-    program: 'Bachelor of Science in Information System',
-    school: 'CARD',
-    specialization: 'N/A',
-    email: 'alex@gmail.com',
-    technicalSkills: ['HTML', 'Python', 'C++'],
-    softSkills: [
-      'Attention to detail',
-      'Adaptability',
-      'Problem-solving',
-      'Teamwork'
-    ],
-    avatarColor: Color(0xFF2A3A1A),
-    initials: 'AS',
-  ),
-  InternProfile(
-    name: 'Joy Mendoza',
-    internNumber: 8,
-    program: 'Bachelor of Science in Computer Engineering',
-    school: 'Mapúa University',
-    specialization: 'Embedded Systems',
-    email: 'joy.mendoza@email.com',
-    technicalSkills: ['C', 'Arduino', 'MATLAB', 'PCB Design'],
-    softSkills: ['Analytical thinking', 'Persistence', 'Collaboration'],
-    avatarColor: Color(0xFF3A2A10),
-    initials: 'JM',
-  ),
-  InternProfile(
-    name: 'Raven Cruz',
-    internNumber: 5,
-    program: 'Bachelor of Science in Data Science',
-    school: 'University of the Philippines',
-    specialization: 'Machine Learning',
-    email: 'raven.cruz@email.com',
-    technicalSkills: ['Python', 'TensorFlow', 'SQL', 'Tableau'],
-    softSkills: ['Curiosity', 'Research', 'Presentation'],
-    avatarColor: Color(0xFF0A3A3A),
-    initials: 'RC',
-  ),
-];
-
-// Carousel Tile
 class _InternCardFront extends StatelessWidget {
   final InternProfile intern;
   const _InternCardFront({required this.intern});
@@ -755,7 +752,7 @@ class _InternCardFront extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1A2540), Color(0xFF4A5E9A)], // Blue carousel
+          colors: [Color(0xFF1A2540), Color(0xFF4A5E9A)],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
@@ -769,23 +766,12 @@ class _InternCardFront extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Center(
-              child: Text(
-                intern.initials,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0A1425),
-                ),
-              ),
-            ),
+          // Real avatar photo or initials fallback
+          InternAvatar(
+            intern: intern,
+            size: 70,
+            borderRadius: 18,
+            fontSize: 28,
           ),
           const SizedBox(height: 12),
           Text(
@@ -796,6 +782,8 @@ class _InternCardFront extends StatelessWidget {
               color: Colors.white,
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
@@ -812,6 +800,7 @@ class _InternCardFront extends StatelessWidget {
 }
 
 // ── Arrow button ──────────────────────────────────────────────────
+
 class _ArrowButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -827,305 +816,11 @@ class _ArrowButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.10),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.8),
+          border:
+              Border.all(color: Colors.white.withOpacity(0.2), width: 0.8),
         ),
-        child: Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
-      ),
-    );
-  }
-}
-
-// ── Redesigned Detail Page (Glassmorphism & Chips) ────────────────
-class InternDetailPage extends StatefulWidget {
-  final InternProfile intern;
-  const InternDetailPage({super.key, required this.intern});
-  @override
-  State<InternDetailPage> createState() => _InternDetailPageState();
-}
-
-class _InternDetailPageState extends State<InternDetailPage> {
-  @override
-  Widget build(BuildContext context) {
-    final intern = widget.intern;
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Galaxy background (Now Static)
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(-0.3, -0.3),
-                  radius: 1.4,
-                  colors: [
-                    Color(0xFF0A1425),
-                    Color.fromARGB(255, 4, 2, 19),
-                    Color(0xFF050505)
-                  ],
-                  stops: [0.0, 0.5, 1.0],
-                ),
-              ),
-            ),
-          ),
-
-          // Card content with Glassmorphism
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Container(
-                      width: double.infinity,
-                      constraints: const BoxConstraints(maxWidth: 800),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A24).withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                            color: Colors.white.withOpacity(0.15), width: 1.5),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // ── Top Bar (Back Button) ──
-                          Align(
-                            alignment: Alignment.topLeft,
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 16, top: 16),
-                              child: IconButton(
-                                icon: const Icon(Icons.arrow_back_ios_new,
-                                    color: Colors.white70),
-                                onPressed: () => Navigator.of(context).pop(),
-                                splashRadius: 24,
-                              ),
-                            ),
-                          ),
-
-                          // ── Header Profile ──
-                          Column(
-                            children: [
-                              Container(
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: intern.avatarColor,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          intern.avatarColor.withOpacity(0.6),
-                                      blurRadius: 24,
-                                      spreadRadius: 4,
-                                    )
-                                  ],
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.8),
-                                    width: 3,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    intern.initials,
-                                    style: const TextStyle(
-                                      fontSize: 40,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                intern.name,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'Intern ${intern.internNumber}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white.withOpacity(0.8),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          Divider(
-                              color: Colors.white.withOpacity(0.1),
-                              thickness: 1,
-                              indent: 32,
-                              endIndent: 32),
-                          const SizedBox(height: 16),
-
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 40),
-                            child: Column(
-                              children: [
-                                _IconInfoRow(
-                                    icon: Icons.school_outlined,
-                                    text: intern.school),
-                                const SizedBox(height: 12),
-                                _IconInfoRow(
-                                    icon: Icons.menu_book_outlined,
-                                    text: intern.program),
-                                const SizedBox(height: 12),
-                                _IconInfoRow(
-                                    icon: Icons.star_border_outlined,
-                                    text: intern.specialization),
-                                const SizedBox(height: 12),
-                                _IconInfoRow(
-                                    icon: Icons.email_outlined,
-                                    text: intern.email),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-                          Divider(
-                              color: Colors.white.withOpacity(0.1),
-                              thickness: 1,
-                              indent: 32,
-                              endIndent: 32),
-                          const SizedBox(height: 20),
-
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 40),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Technical Skills',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white70,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: intern.technicalSkills.map((skill) {
-                                    return _SkillChip(
-                                      label: skill,
-                                      color: const Color(0xFF4CA1AF),
-                                    );
-                                  }).toList(),
-                                ),
-                                const SizedBox(height: 24),
-                                const Text(
-                                  'Soft Skills',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white70,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: intern.softSkills.map((skill) {
-                                    return _SkillChip(
-                                      label: skill,
-                                      color: const Color(0xFFD4748A),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Modern Icon Info Row ──────────────────────────────────────────
-class _IconInfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _IconInfoRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: Colors.white54, size: 20),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Colors.white,
-              height: 1.3,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Custom Skill Chip ─────────────────────────────────────────────
-class _SkillChip extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _SkillChip({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withOpacity(0.4),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color.withOpacity(0.9),
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
+        child:
+            Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
       ),
     );
   }
