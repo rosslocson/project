@@ -7,6 +7,51 @@ import '../../widgets/app_theme.dart';
 import '../../widgets/user_sidebar.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HamburgerIcon — custom hamburger menu icon
+// ─────────────────────────────────────────────────────────────────────────────
+class HamburgerIcon extends StatelessWidget {
+  const HamburgerIcon({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 22,
+      height: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 22,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: 14,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: 22,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UserEditProfileScreen — dedicated Edit Profile page
 // Two sections:
 //   1. Academic Info  (dept, position, school, program, specialization,
@@ -22,6 +67,7 @@ class UserEditProfileScreen extends StatefulWidget {
 class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     with TickerProviderStateMixin {
   late TabController _tabs;
+  bool _sidebarVisible = true;
 
   // ── Academic Info ──────────────────────────────────────────────────────────
   final _academicKey = GlobalKey<FormState>();
@@ -461,132 +507,164 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(children: [
-        const UserSidebar(currentRoute: '/edit-profile'),
-        Expanded(
-            child: Stack(children: [
-          Positioned.fill(
-              child: Image.asset(
-            'assets/images/space_background.png',
-            fit: BoxFit.cover,
-          )),
-          Positioned.fill(
-            child: Column(children: [
-              // ── Top bar ──────────────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.fromLTRB(32, 24, 32, 20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      const Color(0xFF050505).withOpacity(0.95),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-                child: const Row(children: [
-                  Text('Edit Profile',
-                      style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                ]),
+      body: Stack(
+        children: [
+          Row(children: [
+            if (_sidebarVisible)
+              UserSidebar(
+                currentRoute: '/edit-profile',
+                onClose: () => setState(() => _sidebarVisible = false),
               ),
-
-              // ── Card ─────────────────────────────────────────────────────
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-                  child: Container(
+            Expanded(
+                child: Stack(children: [
+              Positioned.fill(
+                  child: Image.asset(
+                'assets/images/space_background.png',
+                fit: BoxFit.cover,
+              )),
+              Positioned.fill(
+                child: Column(children: [
+                  // ── Top bar ──────────────────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 20),
                     decoration: BoxDecoration(
-                      color: Colors.white, // Updated to White
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          const Color(0xFF050505).withOpacity(0.95),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
-                    child: Column(children: [
-                      // Feedback banners
-                      if (_successMsg != null)
-                        _banner(_successMsg!, success: true),
-                      if (_errorMsg != null)
-                        _banner(_errorMsg!, success: false),
-
-                      // Tabs (Height Reduced)
-                      SizedBox(
-                        height: 55, // Fixed smaller height for the TabBar
-                        child: TabBar(
-                          controller: _tabs,
-                          labelColor: Colors.black, // Dark text for selected tab
-                          unselectedLabelColor: Colors.grey.shade500,
-                          indicatorColor: kCrimsonDeep,
-                          indicatorWeight: 3,
-                          dividerColor: Colors.grey.shade200,
-                          tabs: const [
-                            Tab(
-                                iconMargin: EdgeInsets.only(bottom: 4), // Reduces gap
-                                icon: Icon(Icons.school_outlined, size: 18),
-                                text: 'Academic Info'),
-                            Tab(
-                                iconMargin: EdgeInsets.only(bottom: 4), // Reduces gap
-                                icon: Icon(Icons.stars_outlined, size: 18),
-                                text: 'Skills'),
-                          ],
-                        ),
-                      ),
-
-                      // Tab views
-                      Expanded(
-                        child: TabBarView(
-                          controller: _tabs,
-                          children: [
-                            _buildAcademicTab(),
-                            _buildSkillsTab(),
-                          ],
-                        ),
-                      ),
-
-                      // Save button
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _saving ? null : _save,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: kCrimsonDeep,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              elevation: 0,
-                            ),
-                            child: _saving
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                        color: Colors.white, strokeWidth: 2))
-                                : const Text('SAVE CHANGES',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.8)),
-                          ),
-                        ),
-                      ),
+                    child: const Row(children: [
+                      Text('Edit Profile',
+                          style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                     ]),
                   ),
+
+                  // ── Card ─────────────────────────────────────────────────────
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white, // Updated to White
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(children: [
+                          // Feedback banners
+                          if (_successMsg != null)
+                            _banner(_successMsg!, success: true),
+                          if (_errorMsg != null)
+                            _banner(_errorMsg!, success: false),
+
+                          // Tabs (Height Reduced)
+                          SizedBox(
+                            height: 55, // Fixed smaller height for the TabBar
+                            child: TabBar(
+                              controller: _tabs,
+                              labelColor: Colors.black, // Dark text for selected tab
+                              unselectedLabelColor: Colors.grey.shade500,
+                              indicatorColor: kCrimsonDeep,
+                              indicatorWeight: 3,
+                              dividerColor: Colors.grey.shade200,
+                              tabs: const [
+                                Tab(
+                                    iconMargin: EdgeInsets.only(bottom: 4), // Reduces gap
+                                    icon: Icon(Icons.school_outlined, size: 18),
+                                    text: 'Academic Info'),
+                                Tab(
+                                    iconMargin: EdgeInsets.only(bottom: 4), // Reduces gap
+                                    icon: Icon(Icons.stars_outlined, size: 18),
+                                    text: 'Skills'),
+                              ],
+                            ),
+                          ),
+
+                          // Tab views
+                          Expanded(
+                            child: TabBarView(
+                              controller: _tabs,
+                              children: [
+                                _buildAcademicTab(),
+                                _buildSkillsTab(),
+                              ],
+                            ),
+                          ),
+
+                          // Save button
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _saving ? null : _save,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: kCrimsonDeep,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                child: _saving
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white, strokeWidth: 2))
+                                    : const Text('SAVE CHANGES',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.8)),
+                              ),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            ])),
+          ]),
+          // Hamburger menu button when sidebar is closed
+          if (!_sidebarVisible)
+            Positioned(
+              top: 24,
+              left: 24,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.15),
+                    width: 1,
+                  ),
+                ),
+                child: IconButton(
+                  padding: const EdgeInsets.all(12),
+                  onPressed: () => setState(() => _sidebarVisible = true),
+                  icon: const HamburgerIcon(),
+                  tooltip: 'Open Sidebar',
+                  splashColor: Colors.white.withOpacity(0.1),
+                  highlightColor: Colors.transparent,
                 ),
               ),
-            ]),
-          ),
-        ])),
-      ]),
+            ),
+        ],
+      ),
     );
   }
 
