@@ -17,7 +17,7 @@ import 'screens/admin_user_management.dart';
 import 'screens/admin_add_user.dart';
 import 'screens/admin_departments_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
-import 'screens/attendance_screen.dart';
+import 'screens/user_attendance_screen.dart';
 
 
  

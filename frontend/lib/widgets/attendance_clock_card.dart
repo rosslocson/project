@@ -1,8 +1,3 @@
-// lib/widgets/attendance_clock_card.dart
-//
-// Card with the Time In / Time Out button + today's session info.
-// Stateless — parent passes in the summary and callbacks.
-
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
 
@@ -30,14 +25,14 @@ class AttendanceClockCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF460A14), Color(0xFF7B1A2E)],
+          colors: [Color(0xFF00022E), Color(0xFF1A1F5A)], // Replaced with Cosmic Blue and Deep Navy
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF460A14).withOpacity(0.35),
+            color: const Color(0xFF00022E).withOpacity(0.35), // Updated shadow color
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -141,14 +136,14 @@ class AttendanceClockCard extends StatelessWidget {
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Color(0xFF460A14),
+                  color: Color(0xFF00022E), // Updated loading indicator color
                 ),
               )
             : const Icon(Icons.logout_rounded),
         label: Text(isLoading ? 'Processing...' : 'Time Out'),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF460A14),
+          foregroundColor: const Color(0xFF00022E), // Updated text/icon color
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -166,14 +161,14 @@ class AttendanceClockCard extends StatelessWidget {
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Color(0xFF460A14),
+                color: Color(0xFF00022E), // Updated loading indicator color
               ),
             )
           : const Icon(Icons.login_rounded),
       label: Text(isLoading ? 'Processing...' : 'Time In'),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF460A14),
+        foregroundColor: const Color(0xFF00022E), // Updated text/icon color
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
