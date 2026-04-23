@@ -3,6 +3,11 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import '../services/api_service.dart';
 
+// ── Brand colors ──────────────────────────────────────────────────────────────
+const kBlue = Color(0xFF1E40AF);
+const kBlueDark = Color(0xFF1E2A44);
+const kBlueLight = Color(0xFF3B82F6);
+
 class InternProfile {
   final int id;
   final String name;
@@ -237,15 +242,9 @@ class _InternDetailPageState extends State<InternDetailPage>
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(-0.3, -0.3),
-                  radius: 1.4,
-                  colors: [
-                    Color(0xFF3A0810),
-                    Color(0xFF130205),
-                    Color(0xFF050505)
-                  ],
-                  stops: [0.0, 0.5, 1.0],
+                image: DecorationImage(
+                  image: AssetImage('assets/images/space_background.png'),
+                  fit: BoxFit.cover,
                 ),
               ),
               child: AnimatedBuilder(
@@ -262,15 +261,16 @@ class _InternDetailPageState extends State<InternDetailPage>
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                // ── Equal padding on all four sides ──────────────────────────
+                padding: const EdgeInsets.all(16),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(32),
                   child: BackdropFilter(
                     filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       width: double.infinity,
-                      constraints: const BoxConstraints(maxWidth: 800),
+                      // ── Wider max width ───────────────────────────────────
+                      constraints: const BoxConstraints(maxWidth: 1100),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1A1A24).withOpacity(0.5),
                         borderRadius: BorderRadius.circular(32),
