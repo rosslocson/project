@@ -21,29 +21,25 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _loadFromStorage() async {
     final prefs = await SharedPreferences.getInstance();
     final userStr = prefs.getString('user');
-    final token   = prefs.getString('token');
+    final token = prefs.getString('token');
     if (userStr != null && token != null) {
       _user = jsonDecode(userStr);
       notifyListeners();
-      await refreshProfile();
+      await refreshProfile(); // fetch fresh data on app start
     }
   }
 
-  // ── loginWithDetails: returns raw response map so LoginScreen
-  //    can read locked/attempts_left fields ─────────────────────────────────
-
-  Future<Map<String, dynamic>> loginWithDetails(String email, String password) async {
+  Future<Map<String, dynamic>> loginWithDetails(
+      String email, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-
     try {
       final res = await ApiService.login(email, password);
       if (res['ok'] == true) {
         _user = res['user'];
         await ApiService.saveToken(res['token']);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user', jsonEncode(_user));
+        await _persistUser();
       } else {
         _error = res['error'] ?? 'Login failed';
       }
@@ -57,8 +53,6 @@ class AuthProvider extends ChangeNotifier {
       return {'ok': false, 'error': _error};
     }
   }
-
-  // ── Kept for compatibility ───────────────────────────────────────────────
 
   Future<bool> login(String email, String password) async {
     final res = await loginWithDetails(email, password);
@@ -74,8 +68,7 @@ class AuthProvider extends ChangeNotifier {
       if (res['ok'] == true) {
         _user = res['user'];
         await ApiService.saveToken(res['token']);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user', jsonEncode(_user));
+        await _persistUser();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -96,30 +89,45 @@ class AuthProvider extends ChangeNotifier {
   Future<void> refreshProfile() async {
     try {
       final res = await ApiService.getProfile();
-      if (res['ok'] == true) {
-        _user = res;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user', jsonEncode(_user));
+
+      // ✅ GetProfile returns the user object directly (no 'ok' wrapper).
+      // We detect a valid response by checking for 'id' field.
+      if (res['id'] != null) {
+        // ✅ Merge into existing user so no fields are lost
+        _user = {...?_user, ...res};
+        await _persistUser();
         notifyListeners();
       }
     } catch (_) {}
   }
 
+  // Called after any successful save — merges partial update into full user
   Future<void> updateUserData(Map<String, dynamic> data) async {
+    // ✅ Always merge, never replace
     _user = {...?_user, ...data};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user', jsonEncode(_user));
+    await _persistUser();
     notifyListeners();
   }
 
   Future<void> logout() async {
     await ApiService.clearToken();
     _user = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user');
+    await prefs.remove('token');
     notifyListeners();
   }
 
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // ── Private helpers ──────────────────────────────────────────────────────
+
+  Future<void> _persistUser() async {
+    if (_user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user', jsonEncode(_user));
   }
 }

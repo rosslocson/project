@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/user_layout.dart';
+import '../services/api_service.dart';
 
 const _kBlue = Color(0xFF00022E);
 
@@ -37,7 +38,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     if (rawAvatarUrl.isNotEmpty) {
       // If the backend returned a relative path, attach the backend server address
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl'; // Adjust to match your Go port
+        finalAvatarUrl =
+            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -97,7 +99,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: _kBlue,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -116,7 +119,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 20),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -204,7 +208,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         // This SingleChildScrollView fixes the internal overflow
                         child: SingleChildScrollView(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 40, vertical: 32),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -218,8 +223,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 ),
                                 const SizedBox(height: 24),
                                 _infoRow(context, [
-                                  _Field('Name', first.isEmpty && last.isEmpty ? '—' : '$first $last'),
-                                  _Field('Intern Number', user?['intern_number'] ?? '—'),
+                                  _Field(
+                                      'Name',
+                                      first.isEmpty && last.isEmpty
+                                          ? '—'
+                                          : '$first $last'),
+                                  _Field('Intern Number',
+                                      user?['intern_number'] ?? '—'),
                                 ]),
                                 const SizedBox(height: 20),
                                 _infoRow(context, [
@@ -228,7 +238,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 ]),
                                 const SizedBox(height: 20),
                                 _infoRow(context, [
-                                  _Field('Specialization', user?['specialization'] ?? '—'),
+                                  _Field('Specialization',
+                                      user?['specialization'] ?? '—'),
                                   _Field('Email', user?['email'] ?? '—'),
                                 ]),
                                 const SizedBox(height: 24),
@@ -244,11 +255,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 ),
                                 const SizedBox(height: 20),
                                 _infoRow(context, [
-                                  _Field('Technical Skills', user?['technical_skills'] ?? '—'),
+                                  _Field('Technical Skills',
+                                      user?['technical_skills'] ?? '—'),
                                 ]),
                                 const SizedBox(height: 20),
                                 _infoRow(context, [
-                                  _Field('Soft Skills', user?['soft_skills'] ?? '—'),
+                                  _Field('Soft Skills',
+                                      user?['soft_skills'] ?? '—'),
                                 ]),
                               ],
                             ),
