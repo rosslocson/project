@@ -1,3 +1,4 @@
+import 'dart:async'; // Added for the debounce timer
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
@@ -434,6 +435,7 @@ class _ItemTab extends StatefulWidget {
 class _ItemTabState extends State<_ItemTab> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  Timer? _debounce; // Added Timer for real-time typing search
 
   static const _kBarColor = Color(0xFFEEF2F5);
 
@@ -451,6 +453,7 @@ class _ItemTabState extends State<_ItemTab> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _debounce?.cancel(); // Cancel timer when widget is disposed
     super.dispose();
   }
 
@@ -656,9 +659,18 @@ class _ItemTabState extends State<_ItemTab> {
                 decoration: InputDecoration(
                   hintText: widget.searchHint,
                   hintStyle: _hintStyle,
-                  prefixIcon:
-                      Icon(Icons.search, color: Colors.grey.shade400, size: 18),
-                  suffixIcon: _searchQuery.isNotEmpty
+                  
+                  // Updated to make the magnifying glass clickable
+                  prefixIcon: IconButton(
+                    icon: Icon(Icons.search, color: Colors.grey.shade400, size: 18),
+                    onPressed: () {
+                      if (_debounce?.isActive ?? false) _debounce!.cancel();
+                      setState(() => _searchQuery = _searchCtrl.text.trim());
+                    },
+                  ),
+                  
+                  // Changed to look directly at _searchCtrl.text so the UI feels more responsive
+                  suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
                           icon: Icon(Icons.clear,
                               color: Colors.grey.shade400, size: 18),
@@ -677,7 +689,21 @@ class _ItemTabState extends State<_ItemTab> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
-                onChanged: (v) => setState(() => _searchQuery = v.trim()),
+                onChanged: (v) {
+                  setState(() {}); // Updates the clear button visibility immediately
+                  
+                  // Cancel the previous timer if user is still typing
+                  if (_debounce?.isActive ?? false) _debounce!.cancel();
+                  
+                  // Start a new timer. It will only search 300ms AFTER they stop typing.
+                  _debounce = Timer(const Duration(milliseconds: 300), () {
+                    setState(() => _searchQuery = v.trim());
+                  });
+                },
+                onSubmitted: (v) {
+                  if (_debounce?.isActive ?? false) _debounce!.cancel();
+                  setState(() => _searchQuery = v.trim());
+                },
               ),
             ),
             const SizedBox(width: 12),
