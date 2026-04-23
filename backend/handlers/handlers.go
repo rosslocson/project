@@ -61,13 +61,31 @@ type ChangePasswordRequest struct {
 	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
 
+// ── Replace your UpdateProfileRequest struct ──────────────────────────────────
+
 type UpdateProfileRequest struct {
+	// Account Settings fields
 	FirstName  string `json:"first_name"`
 	LastName   string `json:"last_name"`
 	Phone      string `json:"phone"`
 	Department string `json:"department"`
 	Position   string `json:"position"`
-	Bio        string `json:"bio"`
+
+	// Edit Profile fields
+	School         string `json:"school"`
+	Program        string `json:"program"`
+	Specialization string `json:"specialization"`
+	YearLevel      string `json:"year_level"`
+	InternNumber   string `json:"intern_number"`
+	StartDate      string `json:"start_date"`
+	EndDate        string `json:"end_date"`
+
+	// Skills fields
+	Bio             string `json:"bio"`
+	TechnicalSkills string `json:"technical_skills"`
+	SoftSkills      string `json:"soft_skills"`
+	LinkedIn        string `json:"linked_in"`
+	GitHub          string `json:"git_hub"`
 }
 
 type CreateUserRequest struct {
@@ -242,6 +260,8 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// ── Replace your UpdateProfile handler ───────────────────────────────────────
+
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	var req UpdateProfileRequest
@@ -249,18 +269,84 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	h.DB.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
-		"first_name": req.FirstName,
-		"last_name":  req.LastName,
-		"phone":      req.Phone,
-		"department": req.Department,
-		"position":   req.Position,
-		"bio":        req.Bio,
-	})
-	h.logActivity(userID, "UPDATE_PROFILE", "Profile updated", c.ClientIP())
+
+	// Fetch current user first so we only overwrite fields that were sent
 	var user models.User
-	h.DB.First(&user, userID)
-	c.JSON(http.StatusOK, gin.H{"message": "Profile updated", "user": user})
+	if err := h.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Only overwrite a field if the request actually sent a non-empty value.
+	// This prevents AccountSettings from blanking out Edit Profile fields
+	// and vice versa.
+	updates := map[string]interface{}{}
+
+	// Account Settings fields
+	if req.FirstName != "" {
+		updates["first_name"] = req.FirstName
+	}
+	if req.LastName != "" {
+		updates["last_name"] = req.LastName
+	}
+	if req.Phone != "" {
+		updates["phone"] = req.Phone
+	}
+	// Department/Position are always written (can be set to empty intentionally)
+	updates["department"] = req.Department
+	updates["position"] = req.Position
+
+	// Edit Profile fields — only write if sent
+	if req.School != "" {
+		updates["school"] = req.School
+	}
+	if req.Program != "" {
+		updates["program"] = req.Program
+	}
+	if req.Specialization != "" {
+		updates["specialization"] = req.Specialization
+	}
+	if req.YearLevel != "" {
+		updates["year_level"] = req.YearLevel
+	}
+	if req.InternNumber != "" {
+		updates["intern_number"] = req.InternNumber
+	}
+	if req.StartDate != "" {
+		updates["start_date"] = req.StartDate
+	}
+	if req.EndDate != "" {
+		updates["end_date"] = req.EndDate
+	}
+
+	// Skills fields
+	if req.Bio != "" {
+		updates["bio"] = req.Bio
+	}
+	if req.TechnicalSkills != "" {
+		updates["technical_skills"] = req.TechnicalSkills
+	}
+	if req.SoftSkills != "" {
+		updates["soft_skills"] = req.SoftSkills
+	}
+	if req.LinkedIn != "" {
+		updates["linked_in"] = req.LinkedIn
+	}
+	if req.GitHub != "" {
+		updates["git_hub"] = req.GitHub
+	}
+
+	if err := h.DB.Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	h.logActivity(userID, "UPDATE_PROFILE", "Profile updated", c.ClientIP())
+
+	// Return the full fresh user so Flutter always has the complete picture
+	var updated models.User
+	h.DB.First(&updated, userID)
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "Profile updated", "user": updated})
 }
 
 func (h *Handler) ChangePassword(c *gin.Context) {
