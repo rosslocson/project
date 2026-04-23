@@ -104,10 +104,10 @@ class _ConfigScreenState extends State<ConfigScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Row(children: [
-          const Icon(Icons.edit_outlined, color: _kBlue, size: 20),
-          const SizedBox(width: 8),
-          const Text('Edit Department'),
+        title: const Row(children: [
+          Icon(Icons.edit_outlined, color: _kBlue, size: 20),
+          SizedBox(width: 8),
+          Text('Edit Department'),
         ]),
         content: TextField(
           controller: ctrl,
@@ -355,17 +355,17 @@ class _ConfigScreenState extends State<ConfigScreen>
                                         fontWeight: FontWeight.w500,
                                       ),
                                       dividerColor: Colors.transparent,
-                                      tabs: [
+                                      tabs: const [
                                         Tab(
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
                                             children: [
-                                              const Icon(
+                                              Icon(
                                                   Icons.business_outlined,
                                                   size: 16),
-                                              const SizedBox(width: 6),
-                                              const Text('Departments'),
+                                              SizedBox(width: 6),
+                                              Text('Departments'),
                                             ],
                                           ),
                                         ),
