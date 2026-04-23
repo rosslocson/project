@@ -1,13 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../providers/auth_provider.dart';
-
 import '../services/api_service.dart';
 import '../widgets/user_layout.dart';
 import 'avatar_crop_screen.dart';
@@ -24,48 +25,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
 
-  // Department → Position mapping
-  static const Map<String, List<String>> _deptRoles = {
-    'Business Relationship Management': [
-      'Account Manager',
-      'Business Analyst',
-      'Client Relations',
-      'Intern',
-      'Others',
-    ],
-    'Project Management Office': [
-      'Project Manager',
-      'Project Coordinator',
-      'Scrum Master',
-      'Intern',
-      'Others',
-    ],
-    'Quality Assurance': [
-      'QA Engineer',
-      'QA Automation Tester',
-      'Manual Tester',
-      'Intern',
-      'Others',
-    ],
-    'Technical Support Department': [
-      'IT Support Specialist',
-      'System Administrator',
-      'Helpdesk Technician',
-      'Intern',
-      'Others',
-    ],
-    'Development Department': [
-      'Software Engineer',
-      'Frontend Developer',
-      'Backend Developer',
-      'UI/UX Designer',
-      'Intern',
-      'Others',
-    ],
-  };
-
+  // ── Dynamic dept/position lists ──────────────────────────────────────────
   List<String> _departments = [];
   List<String> _positions = [];
+  bool _loadingDepts = true;
+  bool _loadingPositions = false;
   String? _selectedDept;
   String? _selectedPos;
 
@@ -78,6 +42,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   late TextEditingController _lastCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
+
   // Password controllers
   final _curPassCtrl = TextEditingController();
   final _newPassCtrl = TextEditingController();
@@ -94,7 +59,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   bool _obscureNew = true;
   bool _obscureConf = true;
 
-  // Avatar Upload State
+  // Avatar state
   bool _isUploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
   Uint8List? _localAvatarBytes;
@@ -104,34 +69,21 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
-    _departments = _deptRoles.keys.toList();
+
     final user = context.read<AuthProvider>().user;
     _firstCtrl = TextEditingController(text: user?['first_name'] ?? '');
     _lastCtrl = TextEditingController(text: user?['last_name'] ?? '');
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
     _phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
 
-    // Initialize Department and Position state
-    final dept = user?['department'] as String? ?? '';
-    final pos = user?['position'] as String? ?? '';
+    _selectedDept = (user?['department'] as String? ?? '').isEmpty
+        ? null
+        : user?['department'] as String?;
+    _selectedPos = (user?['position'] as String? ?? '').isEmpty
+        ? null
+        : user?['position'] as String?;
 
-    if (dept.isNotEmpty && _departments.contains(dept)) {
-      _selectedDept = dept;
-      _positions = _deptRoles[dept] ?? ['Intern', 'Others'];
-    } else if (dept.isNotEmpty) {
-      // Fallback in case their current dept isn't in the static list
-      _selectedDept = dept;
-      if (!_departments.contains(dept)) _departments.add(dept);
-      _positions = [pos];
-    }
-
-    if (pos.isNotEmpty && _positions.contains(pos)) {
-      _selectedPos = pos;
-    } else if (pos.isNotEmpty) {
-      // Fallback in case their current pos isn't in the static list
-      _selectedPos = pos;
-      if (!_positions.contains(pos)) _positions.add(pos);
-    }
+    _fetchDepartments();
   }
 
   @override
@@ -151,55 +103,87 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     super.dispose();
   }
 
-  // ── Avatar Pick & Upload Logic ─────────────────────────────────────────────
+  // ── Fetch departments (authenticated) ────────────────────────────────────
+  Future<void> _fetchDepartments() async {
+    try {
+      final res = await ApiService.getDepartments();
+      if (!mounted) return;
+      if (res['ok'] == true) {
+        final List items = res['items'] ?? [];
+        final depts = items.map<String>((d) => d['name'] as String).toList();
+        setState(() {
+          _departments = depts;
+          _loadingDepts = false;
+          // Validate saved dept still exists
+          if (_selectedDept != null && !_departments.contains(_selectedDept)) {
+            _departments.add(_selectedDept!);
+          }
+        });
+        // Load positions for the already-selected department
+        if (_selectedDept != null) {
+          await _fetchPositions(_selectedDept!);
+        }
+      } else {
+        setState(() => _loadingDepts = false);
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch departments: $e');
+      if (mounted) setState(() => _loadingDepts = false);
+    }
+  }
+
+  // ── Fetch positions (authenticated) ──────────────────────────────────────
+  Future<void> _fetchPositions(String department) async {
+    setState(() => _loadingPositions = true);
+    try {
+      final res = await ApiService.getPositions();
+      if (!mounted) return;
+      if (res['ok'] == true) {
+        final List items = res['items'] ?? [];
+        final allPositions =
+            items.map<String>((p) => p['name'] as String).toList();
+        setState(() {
+          _positions = allPositions;
+          _loadingPositions = false;
+          // Validate saved position still exists
+          if (_selectedPos != null && !_positions.contains(_selectedPos)) {
+            _positions.add(_selectedPos!);
+          }
+        });
+      } else {
+        setState(() => _loadingPositions = false);
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch positions: $e');
+      if (mounted) setState(() => _loadingPositions = false);
+    }
+  }
+
+  // ── Avatar Pick & Upload ──────────────────────────────────────────────────
   Future<void> pickAndCropAvatar() async {
     try {
-      print("🔥 Edit Avatar clicked");
-      print("📸 Function started");
-
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 100, // prevent corrupted compression
+        imageQuality: 100,
       );
-
-      print("📂 Picker opened");
-
-      if (pickedFile == null) {
-        print("❌ User cancelled image selection");
-        return;
-      }
-
-      print("✅ Image selected: ${pickedFile.path}");
-
-      // Validate using MIME type on actual file bytes
-      print("📂 Full path: ${pickedFile.path}");
-      print("📂 Lowercase path: ${pickedFile.path.toLowerCase()}");
+      if (pickedFile == null) return;
 
       final pickedFileBytes = await pickedFile.readAsBytes();
       final mimeType =
           lookupMimeType(pickedFile.name, headerBytes: pickedFileBytes);
-      print("📄 MIME TYPE: $mimeType");
 
       if (mimeType == null || !mimeType.startsWith('image/')) {
-        print("❌ Invalid file type detected (MIME: $mimeType)");
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content:
-                  Text('Please select a valid image file (JPG, PNG, JPEG)'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Please select a valid image file (JPG, PNG, JPEG)'),
+            backgroundColor: Colors.red,
+          ));
         }
         return;
       }
 
-      print("✅ Valid image file detected");
-
       if (kIsWeb) {
-        print("🌐 Web detected - opening crop screen");
         if (!mounted) return;
-
         final croppedBytes = await Navigator.push<Uint8List>(
           context,
           MaterialPageRoute(
@@ -209,16 +193,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
             ),
           ),
         );
-
-        print(
-            "🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
-
-        if (croppedBytes == null) {
-          print("❌ Cropping cancelled");
-          return;
-        }
-
-        if (!mounted) return;
+        if (croppedBytes == null || !mounted) return;
 
         setState(() {
           _localAvatarBytes = croppedBytes;
@@ -227,64 +202,30 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         });
 
         final res = await ApiService.uploadAvatar(
-          XFile.fromData(croppedBytes, name: pickedFile.name),
-        );
-
+            XFile.fromData(croppedBytes, name: pickedFile.name));
         if (!mounted) return;
-
-        setState(() {
-          _isUploadingAvatar = false;
-        });
+        setState(() => _isUploadingAvatar = false);
 
         if (res['ok'] == true) {
-          print("✅ Web upload successful");
           await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-          setState(() {
-            _avatarFile = null;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Avatar updated successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Avatar updated successfully!'),
+            backgroundColor: Colors.green,
+          ));
         } else {
-          print("❌ Web upload failed: ${res['error'] ?? 'Unknown error'}");
-          setState(() {
-            _avatarFile = null;
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(res['error'] ?? 'Failed to upload avatar'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+          setState(() => _localAvatarBytes = null);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(res['error'] ?? 'Failed to upload avatar'),
+            backgroundColor: Colors.red,
+          ));
         }
         return;
       }
 
+      // Native
       final file = File(pickedFile.path);
+      if (!await file.exists()) return;
 
-      if (!await file.exists()) {
-        print("❌ File does not exist: ${pickedFile.path}");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('File does not exist'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
-      final fileSize = await file.length();
-      print("✅ File verified: size=${fileSize}bytes");
-
-      print("🚀 Navigating to crop screen");
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
         MaterialPageRoute(
@@ -294,15 +235,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           ),
         ),
       );
-
-      print("🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
-
-      if (croppedBytes == null) {
-        print("❌ Cropping cancelled");
-        return;
-      }
-
-      if (!mounted) return;
+      if (croppedBytes == null || !mounted) return;
 
       final tempFile =
           File('${(await getTemporaryDirectory()).path}/cropped_avatar.png');
@@ -312,66 +245,40 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         _avatarFile = tempFile;
         _isUploadingAvatar = true;
       });
-      print("✅ UI updated with cropped image");
-
-      if (!mounted) return;
-      print("📤 Uploading avatar...");
 
       final res = await ApiService.uploadAvatar(XFile(_avatarFile!.path));
-      print("🔙 Upload response received");
-
       if (!mounted) return;
-
-      setState(() {
-        _isUploadingAvatar = false;
-      });
+      setState(() => _isUploadingAvatar = false);
 
       if (res['ok'] == true) {
-        print("✅ Upload successful");
         await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-
-        setState(() {
-          _avatarFile = null;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Avatar updated successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        setState(() => _avatarFile = null);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Avatar updated successfully!'),
+          backgroundColor: Colors.green,
+        ));
       } else {
-        print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
-        setState(() {
-          _avatarFile = null;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['error'] ?? 'Upload failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _avatarFile = null);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(res['error'] ?? 'Upload failed'),
+          backgroundColor: Colors.red,
+        ));
       }
-    } catch (e, stackTrace) {
-      print("❌ ERROR: $e");
-      print("📋 Stack trace: $stackTrace");
-
+    } catch (e) {
       if (mounted) {
         setState(() {
           _avatarFile = null;
           _isUploadingAvatar = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ));
       }
     }
   }
 
+  // ── Save Profile ──────────────────────────────────────────────────────────
   Future<void> _saveProfile() async {
     if (!_profileKey.currentState!.validate()) return;
     setState(() {
@@ -390,17 +297,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     if (!mounted) return;
 
     if (res['ok'] == true) {
-      // Merge the partial update
       context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-
-      // ✅ Re-fetch the full profile so ALL fields stay in sync
       final fresh = await ApiService.getProfile();
       if (mounted && (fresh['ok'] == true || fresh['id'] != null)) {
         context
             .read<AuthProvider>()
             .updateUserData(Map<String, dynamic>.from(fresh));
       }
-
       setState(() {
         _profileMsg = 'Profile updated successfully!';
         _profileSuccess = true;
@@ -414,6 +317,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     setState(() => _savingProfile = false);
   }
 
+  // ── Change Password ───────────────────────────────────────────────────────
   Future<void> _changePassword() async {
     if (!_passKey.currentState!.validate()) return;
     setState(() {
@@ -443,7 +347,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     setState(() => _savingPass = false);
   }
 
-  // ── Reusable Input Decoration ──────────────────────────────────────────────
+  // ── Input Decoration ──────────────────────────────────────────────────────
   InputDecoration _getFormDecoration(String label, {IconData? prefixIcon}) {
     return InputDecoration(
       labelText: label,
@@ -454,7 +358,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           : null,
       filled: true,
       fillColor: const Color(0xFFF9FAFB),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -474,7 +379,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return UserLayout(
@@ -486,57 +391,55 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   Widget _buildSettingsContent(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
 
-    // Avatar URL helper logic - dynamic backend URL
-    String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
-    String finalAvatarUrl = '';
-    if (rawAvatarUrl.isNotEmpty) {
-      if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl =
-            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
-      } else {
-        finalAvatarUrl = rawAvatarUrl;
-      }
+    final rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+    final finalAvatarUrl = rawAvatarUrl.isEmpty
+        ? ''
+        : rawAvatarUrl.startsWith('http')
+            ? rawAvatarUrl
+            : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
+
+    // Null-safe avatar image provider
+    ImageProvider? avatarImage;
+    if (_avatarFile != null) {
+      avatarImage = FileImage(_avatarFile!);
+    } else if (_localAvatarBytes != null) {
+      avatarImage = MemoryImage(_localAvatarBytes!);
+    } else if (finalAvatarUrl.isNotEmpty) {
+      avatarImage = NetworkImage(finalAvatarUrl);
     }
 
     return Stack(
       children: [
-        // Replaced Galaxy Background with Asset Image
         Positioned.fill(
           child: Image.asset(
             'assets/images/space_background.png',
             fit: BoxFit.cover,
           ),
         ),
-
-        // Form Content
         Positioned.fill(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
+            padding:
+                const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1000),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // ── Page header (no hamburger - handled by layout) ──
-                    Row(
-                      children: [
-                        Text(
-                          'Account Settings',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: const Color.fromARGB(255, 255, 255, 255),
-                                letterSpacing: 0.5,
-                              ),
-                        ),
-                      ],
+                    Text(
+                      'Account Settings',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Avatar card ──────────────────────────────────────
+                    // ── Avatar card ────────────────────────────────────
                     Card(
                       elevation: 0,
                       color: Colors.white.withOpacity(0.95),
@@ -547,26 +450,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                             horizontal: 32, vertical: 20),
                         child: Row(
                           children: [
-                            // Stack used here to place the edit button over the avatar
                             Stack(
                               alignment: Alignment.bottomRight,
                               children: [
                                 CircleAvatar(
                                   radius: 40,
                                   backgroundColor: _kBlue.withOpacity(0.1),
-                                  backgroundImage: _avatarFile != null
-                                      ? FileImage(_avatarFile!)
-                                      : (_localAvatarBytes != null
-                                          ? MemoryImage(_localAvatarBytes!)
-                                          : (finalAvatarUrl.isNotEmpty
-                                              ? NetworkImage(finalAvatarUrl)
-                                              : null)) as ImageProvider,
+                                  backgroundImage: avatarImage,
                                   child: _isUploadingAvatar
                                       ? const CircularProgressIndicator(
                                           color: _kBlue, strokeWidth: 3)
-                                      : (_avatarFile == null &&
-                                              _localAvatarBytes == null &&
-                                              finalAvatarUrl.isEmpty)
+                                      : avatarImage == null
                                           ? Text(
                                               '${(user?['first_name'] as String? ?? ' ')[0]}'
                                               '${(user?['last_name'] as String? ?? ' ')[0]}',
@@ -578,7 +472,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                             )
                                           : null,
                                 ),
-                                // Edit Button Over Avatar
                                 Positioned(
                                   bottom: 0,
                                   right: 0,
@@ -588,7 +481,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                       onTap: _isUploadingAvatar
                                           ? null
                                           : pickAndCropAvatar,
-                                      borderRadius: BorderRadius.circular(20),
+                                      borderRadius:
+                                          BorderRadius.circular(20),
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
@@ -597,11 +491,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                           border: Border.all(
                                               color: Colors.white, width: 2),
                                         ),
-                                        child: const Icon(
-                                          Icons.camera_alt,
-                                          color: Colors.white,
-                                          size: 14,
-                                        ),
+                                        child: const Icon(Icons.camera_alt,
+                                            color: Colors.white, size: 14),
                                       ),
                                     ),
                                   ),
@@ -649,15 +540,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                       color: _kBlue.withOpacity(0.08),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
-                                    child: const Text(
-                                      'USER',
-                                      style: TextStyle(
-                                        color: _kBlue,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1.0,
-                                      ),
-                                    ),
+                                    child: const Text('USER',
+                                        style: TextStyle(
+                                          color: _kBlue,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.0,
+                                        )),
                                   ),
                                 ],
                               ),
@@ -668,7 +557,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                     ),
                     const SizedBox(height: 16),
 
-                    // ── Tabs card ────────────────────────────────────────
+                    // ── Tabs card ──────────────────────────────────────
                     Expanded(
                       child: Card(
                         elevation: 0,
@@ -680,9 +569,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                             Container(
                               decoration: BoxDecoration(
                                 border: Border(
-                                  bottom:
-                                      BorderSide(color: Colors.grey.shade200),
-                                ),
+                                    bottom: BorderSide(
+                                        color: Colors.grey.shade200)),
                               ),
                               child: TabBar(
                                 controller: _tabs,
@@ -691,9 +579,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                 indicatorWeight: 3,
                                 unselectedLabelColor: Colors.grey.shade500,
                                 labelStyle: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w700),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700),
                                 unselectedLabelStyle: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500),
                                 dividerColor: Colors.transparent,
                                 tabs: const [
                                   Tab(text: 'Account Settings'),
@@ -724,7 +614,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Profile form ───────────────────────────────────────────────────────────
+  // ── Profile form ──────────────────────────────────────────────────────────
   Widget _buildProfileForm() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
@@ -738,29 +628,31 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               const SizedBox(height: 16),
             ],
 
+            // First + Last name
             Row(children: [
               Expanded(
-                  child: TextFormField(
-                controller: _firstCtrl,
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                decoration: _getFormDecoration('First Name'),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
-              )),
+                child: TextFormField(
+                  controller: _firstCtrl,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500),
+                  decoration: _getFormDecoration('First Name'),
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                ),
+              ),
               const SizedBox(width: 16),
               Expanded(
-                  child: TextFormField(
-                controller: _lastCtrl,
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                decoration: _getFormDecoration('Last Name'),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
-              )),
+                child: TextFormField(
+                  controller: _lastCtrl,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500),
+                  decoration: _getFormDecoration('Last Name'),
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                ),
+              ),
             ]),
-
             const SizedBox(height: 16),
 
-            // Email takes up the full width now
+            // Email (read-only)
             TextFormField(
               controller: _emailCtrl,
               enabled: false,
@@ -771,51 +663,53 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               decoration: _getFormDecoration('Email (cannot change)',
                   prefixIcon: Icons.email_outlined),
             ),
-
             const SizedBox(height: 16),
 
+            // Department + Position
             Row(children: [
               Expanded(
-                child: _dropdownField(
-                  label: 'Department',
-                  value: _selectedDept,
-                  hint: _departments.isEmpty ? 'N/A' : 'Select Department',
-                  items: _departments,
-                  onChanged: (v) {
-                    setState(() {
-                      _selectedDept = v;
-                      // Update positions when a new department is selected
-                      _positions = _deptRoles[v] ?? ['Intern', 'Others'];
-                      // Clear selected position if it isn't part of the newly loaded list
-                      if (_selectedPos != null &&
-                          !_positions.contains(_selectedPos)) {
-                        _selectedPos = null;
-                      }
-                    });
-                  },
-                ),
+                child: _loadingDepts
+                    ? _loadingDropdown('Department')
+                    : _dropdownField(
+                        label: 'Department',
+                        value: _selectedDept,
+                        hint: _departments.isEmpty
+                            ? 'None available'
+                            : 'Select Department',
+                        items: _departments,
+                        onChanged: (v) async {
+                          setState(() {
+                            _selectedDept = v;
+                            _selectedPos = null;
+                            _positions = [];
+                          });
+                          if (v != null) await _fetchPositions(v);
+                        },
+                      ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _dropdownField(
-                  label: 'Position',
-                  value: _selectedPos,
-                  hint: _positions.isEmpty
-                      ? 'Select Dept First'
-                      : 'Select Position',
-                  items: _positions,
-                  onChanged: _positions.isEmpty
-                      ? null
-                      : (v) => setState(() => _selectedPos = v),
-                ),
+                child: _loadingPositions
+                    ? _loadingDropdown('Position')
+                    : _dropdownField(
+                        label: 'Position',
+                        value: _selectedPos,
+                        hint: _selectedDept == null
+                            ? 'Select Dept First'
+                            : _positions.isEmpty
+                                ? 'None available'
+                                : 'Select Position',
+                        items: _positions,
+                        onChanged: _positions.isEmpty
+                            ? null
+                            : (v) => setState(() => _selectedPos = v),
+                      ),
               ),
             ]),
-
             const SizedBox(height: 32),
 
             SizedBox(
               height: 48,
-              width: double.infinity,
               child: ElevatedButton(
                 onPressed: _savingProfile ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
@@ -844,7 +738,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Password form ──────────────────────────────────────────────────────────
+  // ── Password form ─────────────────────────────────────────────────────────
   Widget _buildPasswordForm() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
@@ -871,18 +765,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               obscure: _obscureNew,
               onToggle: () => setState(() => _obscureNew = !_obscureNew),
               validator: (v) {
-                if (v == null || v.length < 8) {
-                  return 'Min 8 characters';
-                }
-                if (!v.contains(RegExp(r'[A-Z]'))) {
+                if (v == null || v.length < 8) return 'Min 8 characters';
+                if (!v.contains(RegExp(r'[A-Z]')))
                   return 'Need one uppercase letter';
-                }
-                if (!v.contains(RegExp(r'[0-9]'))) {
-                  return 'Need one number';
-                }
-                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+                if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
+                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
                   return 'Need one special character';
-                }
                 return null;
               },
             ),
@@ -893,19 +781,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               obscure: _obscureConf,
               onToggle: () => setState(() => _obscureConf = !_obscureConf),
               validator: (v) {
-                if (v!.isEmpty) {
-                  return 'Required';
-                }
-                if (v != _newPassCtrl.text) {
-                  return 'Passwords do not match';
-                }
+                if (v!.isEmpty) return 'Required';
+                if (v != _newPassCtrl.text) return 'Passwords do not match';
                 return null;
               },
             ),
             const SizedBox(height: 32),
             SizedBox(
               height: 48,
-              width: double.infinity,
               child: ElevatedButton(
                 onPressed: _savingPass ? null : _changePassword,
                 style: ElevatedButton.styleFrom(
@@ -934,7 +817,34 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /// Shown while API call is in-flight
+  Widget _loadingDropdown(String label) => Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Row(
+          children: [
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black38,
+                    fontWeight: FontWeight.w500)),
+            const Spacer(),
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kBlue),
+            ),
+          ],
+        ),
+      );
+
   Widget _dropdownField({
     required String label,
     required String? value,
@@ -979,10 +889,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                   items: items
                       .map((s) => DropdownMenuItem(
                           value: s,
-                          child: Text(
-                            s,
-                            overflow: TextOverflow.ellipsis,
-                          )))
+                          child:
+                              Text(s, overflow: TextOverflow.ellipsis)))
                       .toList(),
                   onChanged: onChanged,
                 ),
@@ -1003,9 +911,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         controller: controller,
         obscureText: obscure,
         validator: validator,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        decoration:
-            _getFormDecoration(label, prefixIcon: Icons.lock_outline).copyWith(
+        style:
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        decoration: _getFormDecoration(label,
+                prefixIcon: Icons.lock_outline)
+            .copyWith(
           suffixIcon: IconButton(
             icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
                 size: 18, color: Colors.grey.shade500),
@@ -1015,24 +925,32 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       );
 
   Widget _msgBanner(String msg, bool success) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: success ? Colors.green.shade50 : Colors.red.shade50,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: success ? Colors.green.shade200 : Colors.red.shade200),
+              color: success
+                  ? Colors.green.shade200
+                  : Colors.red.shade200),
         ),
         child: Row(
           children: [
-            Icon(success ? Icons.check_circle : Icons.error_outline,
-                color: success ? Colors.green : Colors.red, size: 18),
+            Icon(
+                success
+                    ? Icons.check_circle
+                    : Icons.error_outline,
+                color: success ? Colors.green : Colors.red,
+                size: 18),
             const SizedBox(width: 10),
             Expanded(
               child: Text(msg,
                   style: TextStyle(
                       fontSize: 13,
-                      color:
-                          success ? Colors.green.shade800 : Colors.red.shade800,
+                      color: success
+                          ? Colors.green.shade800
+                          : Colors.red.shade800,
                       fontWeight: FontWeight.w600)),
             ),
           ],
