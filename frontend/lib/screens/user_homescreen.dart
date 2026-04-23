@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
 import '../widgets/user_layout.dart';
 import 'user_glass_topbar.dart';
 import 'intern_widgets.dart';
@@ -15,6 +16,11 @@ class UserHomeScreen extends StatefulWidget {
 class _UserHomeScreenState extends State<UserHomeScreen> {
   bool _isSidebarOpen = true;
 
+  // Intern data
+  List<InternProfile> _interns = [];
+  bool _loadingInterns = true;
+  String? _internsError;
+
   // Carousel
   late PageController _pageController;
   Timer? _autoScrollTimer;
@@ -25,20 +31,57 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Start page large for infinite scroll
-    _currentPage = kInterns.length * 1000;
+    _currentPage = 0;
     _pageController = PageController(
       viewportFraction: _viewportFraction,
       initialPage: _currentPage,
     );
+    _fetchInterns();
+  }
 
-    _startAutoScroll();
+  Future<void> _fetchInterns() async {
+    setState(() {
+      _loadingInterns = true;
+      _internsError = null;
+    });
+
+    final res = await ApiService.getInterns();
+
+    if (!mounted) return;
+
+    if (res['ok'] == true) {
+      final raw = res['users'] ?? res['interns'] ?? res['data'] ?? [];
+      final List<InternProfile> loaded = (raw as List)
+          .map((j) => InternProfile.fromJson(j as Map<String, dynamic>))
+          .toList();
+
+      setState(() {
+        _interns = loaded;
+        _loadingInterns = false;
+        // Reset page to a large offset for infinite scroll
+        _currentPage = loaded.isNotEmpty ? loaded.length * 1000 : 0;
+      });
+
+      if (_interns.isNotEmpty) {
+        // Rebuild controller with correct initial page now that we know count
+        _pageController.dispose();
+        _pageController = PageController(
+          viewportFraction: _viewportFraction,
+          initialPage: _currentPage,
+        );
+        _startAutoScroll();
+      }
+    } else {
+      setState(() {
+        _internsError = res['error'] ?? 'Failed to load interns';
+        _loadingInterns = false;
+      });
+    }
   }
 
   void _startAutoScroll() {
     _autoScrollTimer?.cancel();
-    if (kInterns.isEmpty) return;
+    if (_interns.isEmpty) return;
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (!mounted) return;
       _pageController.nextPage(
@@ -131,69 +174,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        SizedBox(
-                          height: 320,
-                          child: PageView.builder(
-                            controller: _pageController,
-                            onPageChanged: (i) =>
-                                setState(() => _currentPage = i),
-                            itemBuilder: (context, index) {
-                              final intern = kInterns[index % kInterns.length];
-                              final isCenter = index == _currentPage;
-
-                              return AnimatedScale(
-                                scale: isCenter ? 1.0 : 0.82,
-                                duration: const Duration(milliseconds: 350),
-                                curve: Curves.easeOut,
-                                child: AnimatedOpacity(
-                                  opacity: isCenter ? 1.0 : 0.45,
-                                  duration: const Duration(milliseconds: 350),
-                                  child: GestureDetector(
-                                    onTap: () => _openDetail(intern),
-                                    child: _InternCard(intern: intern),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.chevron_left,
-                                  color: Colors.white, size: 32),
-                              onPressed: _prev,
-                            ),
-                            const SizedBox(width: 20),
-                            Row(
-                              children: List.generate(kInterns.length, (i) {
-                                final active =
-                                    i == (_currentPage % kInterns.length);
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  margin:
-                                      const EdgeInsets.symmetric(horizontal: 3),
-                                  width: active ? 20 : 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: active
-                                        ? const Color(0xFF4A5E9A)
-                                        : Colors.white24,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                );
-                              }),
-                            ),
-                            const SizedBox(width: 20),
-                            IconButton(
-                              icon: const Icon(Icons.chevron_right,
-                                  color: Colors.white, size: 32),
-                              onPressed: _next,
-                            ),
-                          ],
-                        ),
+                        _buildCarouselSection(),
                         const SizedBox(height: 36),
                       ],
                     ),
@@ -207,6 +188,125 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     );
   }
 
+  Widget _buildCarouselSection() {
+    // Loading state
+    if (_loadingInterns) {
+      return const SizedBox(
+        height: 320,
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.white54),
+        ),
+      );
+    }
+
+    // Error state
+    if (_internsError != null) {
+      return SizedBox(
+        height: 320,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white54, size: 48),
+              const SizedBox(height: 12),
+              Text(
+                _internsError!,
+                style: const TextStyle(color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: _fetchInterns,
+                icon: const Icon(Icons.refresh, color: Colors.white70),
+                label: const Text('Retry',
+                    style: TextStyle(color: Colors.white70)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Empty state
+    if (_interns.isEmpty) {
+      return const SizedBox(
+        height: 320,
+        child: Center(
+          child: Text(
+            'No interns found.',
+            style: TextStyle(color: Colors.white54, fontSize: 16),
+          ),
+        ),
+      );
+    }
+
+    // Carousel
+    return Column(
+      children: [
+        SizedBox(
+          height: 320,
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (i) => setState(() => _currentPage = i),
+            itemBuilder: (context, index) {
+              final intern = _interns[index % _interns.length];
+              final isCenter = index == _currentPage;
+
+              return AnimatedScale(
+                scale: isCenter ? 1.0 : 0.82,
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOut,
+                child: AnimatedOpacity(
+                  opacity: isCenter ? 1.0 : 0.45,
+                  duration: const Duration(milliseconds: 350),
+                  child: GestureDetector(
+                    onTap: () => _openDetail(intern),
+                    child: _InternCard(intern: intern),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left,
+                  color: Colors.white, size: 32),
+              onPressed: _prev,
+            ),
+            const SizedBox(width: 20),
+            Row(
+              children: List.generate(_interns.length, (i) {
+                final active = i == (_currentPage % _interns.length);
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: active ? 20 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: active
+                        ? const Color(0xFF4A5E9A)
+                        : Colors.white24,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(width: 20),
+            IconButton(
+              icon: const Icon(Icons.chevron_right,
+                  color: Colors.white, size: 32),
+              onPressed: _next,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   void _openDetail(InternProfile intern) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -215,6 +315,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     );
   }
 }
+
+// ── Intern Card ───────────────────────────────────────────────────────────────
 
 class _InternCard extends StatelessWidget {
   final InternProfile intern;
@@ -246,6 +348,7 @@ class _InternCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Shows real avatar photo if avatarUrl is set, else initials
               InternAvatar(intern: intern),
               const SizedBox(height: 24),
               Text(
@@ -272,79 +375,3 @@ class _InternCard extends StatelessWidget {
     );
   }
 }
-
-// ── Interns ─────────────────────────────────
-
-const List<InternProfile> kInterns = [
-  InternProfile(
-    id: 1,
-    name: 'Jamie Reyes',
-    internNumber: 1,
-    program: 'Bachelor of Science in Computer Science',
-    school: 'University of Santo Tomas',
-    specialization: 'Web Development',
-    email: 'jamie.reyes@email.com',
-    technicalSkills: ['Flutter', 'Dart', 'Firebase', 'Git'],
-    softSkills: ['Teamwork', 'Communication', 'Adaptable'],
-  ),
-  InternProfile(
-    id: 2,
-    name: 'Lorraine De Castro',
-    internNumber: 2,
-    program: 'Bachelor of Science in Information Technology',
-    school: 'De La Salle University',
-    specialization: 'UI/UX Design',
-    email: 'lorraine@gmail.com',
-    technicalSkills: ['Figma', 'HTML/CSS', 'React', 'Prototyping'],
-    softSkills: ['Creativity', 'Detail-oriented', 'Time management'],
-  ),
-  InternProfile(
-    id: 3,
-    name: 'Airra De Castro',
-    internNumber: 3,
-    program: 'Bachelor of Science in Software Engineering',
-    school: 'Ateneo de Manila University',
-    specialization: 'Backend Systems',
-    email: 'airra@gmail.com',
-    technicalSkills: ['Python', 'Django', 'PostgreSQL', 'Docker'],
-    softSkills: ['Problem-solving', 'Leadership', 'Critical thinking'],
-  ),
-  InternProfile(
-    id: 12,
-    name: 'Alex Santos',
-    internNumber: 12,
-    program: 'Bachelor of Science in Information System',
-    school: 'CARD',
-    specialization: 'N/A',
-    email: 'alex@gmail.com',
-    technicalSkills: ['HTML', 'Python', 'C++'],
-    softSkills: [
-      'Attention to detail',
-      'Adaptability',
-      'Problem-solving',
-      'Teamwork'
-    ],
-  ),
-  InternProfile(
-    id: 8,
-    name: 'Joy Mendoza',
-    internNumber: 8,
-    program: 'Bachelor of Science in Computer Engineering',
-    school: 'Mapúa University',
-    specialization: 'Embedded Systems',
-    email: 'joy.mendoza@email.com',
-    technicalSkills: ['C', 'Arduino', 'MATLAB', 'PCB Design'],
-    softSkills: ['Analytical thinking', 'Persistence', 'Collaboration'],
-  ),
-  InternProfile(
-    id: 5,
-    name: 'Raven Cruz',
-    internNumber: 5,
-    program: 'Bachelor of Science in Data Science',
-    school: 'University of the Philippines',
-    specialization: 'Machine Learning',
-    email: 'raven.cruz@email.com',
-    technicalSkills: ['Python', 'TensorFlow', 'SQL', 'Tableau'],
-    softSkills: ['Curiosity', 'Research', 'Presentation'],
-  ),
-];
