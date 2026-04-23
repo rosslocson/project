@@ -205,7 +205,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   height: 6,
                   decoration: BoxDecoration(
                     color: active
-                        ? const Color(0xFFD4748A)
+                        ? const Color.fromARGB(255, 118, 115, 200)
                         : Colors.white.withOpacity(0.25),
                     borderRadius: BorderRadius.circular(3),
                   ),
@@ -782,7 +782,7 @@ class _InternCardFront extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF6B1524),
+                  color: Color(0xFF0A1425),
                 ),
               ),
             ),
@@ -858,8 +858,8 @@ class _InternDetailPageState extends State<InternDetailPage> {
                   center: Alignment(-0.3, -0.3),
                   radius: 1.4,
                   colors: [
-                    Color(0xFF3A0810),
-                    Color(0xFF130205),
+                    Color(0xFF0A1425),
+                    Color.fromARGB(255, 4, 2, 19),
                     Color(0xFF050505)
                   ],
                   stops: [0.0, 0.5, 1.0],

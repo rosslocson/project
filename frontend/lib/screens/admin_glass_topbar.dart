@@ -63,25 +63,29 @@ class GlassTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sidebar = context.watch<SidebarProvider>();
-    final sidebarOpen = isSidebarOpen ?? (isAdmin ? sidebar.isAdminSidebarOpen : sidebar.isUserSidebarOpen);
-    final toggleSidebar = onToggleSidebar ?? () {
-      if (isAdmin) {
-        sidebar.toggleAdminSidebar();
-      } else {
-        sidebar.toggleUserSidebar();
-      }
-    };
+    final sidebarOpen = isSidebarOpen ??
+        (isAdmin ? sidebar.isAdminSidebarOpen : sidebar.isUserSidebarOpen);
+    final toggleSidebar = onToggleSidebar ??
+        () {
+          if (isAdmin) {
+            sidebar.toggleAdminSidebar();
+          } else {
+            sidebar.toggleUserSidebar();
+          }
+        };
 
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
-    final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
-    final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
+    final String fullName =
+        lastName.isEmpty ? firstName : '$firstName $lastName';
+    final String initials =
+        firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080/$rawAvatarUrl';
+        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -103,27 +107,6 @@ class GlassTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (!sidebarOpen) ...[
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
-                  width: 1,
-                ),
-              ),
-              child: IconButton(
-                padding: const EdgeInsets.all(12),
-                onPressed: toggleSidebar,
-                icon: const HamburgerIcon(),
-                tooltip: 'Open Sidebar',
-                splashColor: Colors.white.withOpacity(0.1),
-                highlightColor: Colors.transparent,
-              ),
-            ),
-            const SizedBox(width: 24),
-          ],
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -198,30 +181,35 @@ class GlassTopBar extends StatelessWidget {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor: const Color(0xFFD4748A).withOpacity(0.1),
-                    backgroundImage: finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null,
+                    backgroundImage: finalAvatarUrl.isNotEmpty
+                        ? NetworkImage(finalAvatarUrl)
+                        : null,
                     child: finalAvatarUrl.isEmpty
                         ? Container(
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFD4748A), Color(0xFF4A1040)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.6),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFD4748A).withOpacity(0.4),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                )
-                              ]
-                            ),
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFFD4748A),
+                                    Color(0xFF4A1040)
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.6),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFD4748A)
+                                        .withOpacity(0.4),
+                                    blurRadius: 12,
+                                    spreadRadius: 2,
+                                  )
+                                ]),
                             child: Center(
                               child: Text(
                                 initials,
@@ -244,4 +232,3 @@ class GlassTopBar extends StatelessWidget {
     );
   }
 }
-
