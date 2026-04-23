@@ -200,14 +200,14 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     }
   }
 
-  // ── Shared field helpers ───────────────────────────────────────────────────
+  // ── Shared field helpers (Updated for Light Theme) ─────────────────────────
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(text,
-            style: TextStyle(
+            style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.75))),
+                color: Colors.black87)),
       );
 
   Widget _field({
@@ -221,19 +221,18 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         controller: ctrl,
         maxLines: maxLines,
         keyboardType: keyboardType,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+        style: const TextStyle(color: Colors.black, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
+          hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
           suffixIcon: suffix,
           filled: true,
-          fillColor: Colors.white.withOpacity(0.08),
+          fillColor: const Color(0xFFF3F4F6), // Light grey fill for inputs
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+            borderSide: BorderSide(color: Colors.grey.shade300),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -251,16 +250,16 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   }) =>
       DropdownButtonFormField<String>(
         initialValue: value,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
-        dropdownColor: const Color(0xFF1A0A10),
+        style: const TextStyle(color: Colors.black, fontSize: 14),
+        dropdownColor: Colors.white,
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.white.withOpacity(0.08),
+          fillColor: const Color(0xFFF3F4F6),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+            borderSide: BorderSide(color: Colors.grey.shade300),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -269,17 +268,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           ),
         ),
         hint: Text(hint,
-            style:
-                TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13)),
-        icon: Icon(Icons.keyboard_arrow_down,
-            color: Colors.white.withOpacity(0.5)),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+        icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
         items: items
             .map((s) => DropdownMenuItem(
                   value: s,
                   child: Text(s,
                       overflow: TextOverflow.ellipsis,
                       style:
-                          const TextStyle(color: Colors.white, fontSize: 13)),
+                          const TextStyle(color: Colors.black, fontSize: 13)),
                 ))
             .toList(),
         onChanged: items.isEmpty ? null : onChanged,
@@ -292,11 +289,10 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
               style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white)),
+                  color: Colors.black)),
           const SizedBox(height: 4),
           Text(sub,
-              style: TextStyle(
-                  fontSize: 12, color: Colors.white.withOpacity(0.5))),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
         ]),
       );
 
@@ -311,7 +307,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                 'Your school, program, department, and internship details'),
             if (_configLoading)
               const Center(
-                  child: CircularProgressIndicator(color: Colors.white))
+                  child: CircularProgressIndicator(color: kCrimsonDeep))
             else ...[
               Row(children: [
                 Expanded(
@@ -387,7 +383,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                       hint: 'YYYY-MM-DD',
                       suffix: IconButton(
                         icon: Icon(Icons.calendar_today,
-                            size: 18, color: Colors.white.withOpacity(0.5)),
+                            size: 18, color: Colors.grey.shade600),
                         onPressed: () => _pickDate(_startCtrl),
                       ),
                     ),
@@ -403,7 +399,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                       hint: 'YYYY-MM-DD',
                       suffix: IconButton(
                         icon: Icon(Icons.calendar_today,
-                            size: 18, color: Colors.white.withOpacity(0.5)),
+                            size: 18, color: Colors.grey.shade600),
                         onPressed: () => _pickDate(_endCtrl),
                       ),
                     ),
@@ -437,7 +433,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
               padding: const EdgeInsets.only(top: 4, left: 2),
               child: Text('Separate each skill with a comma',
                   style: TextStyle(
-                      fontSize: 11, color: Colors.white.withOpacity(0.35))),
+                      fontSize: 11, color: Colors.grey.shade600)),
             ),
             const SizedBox(height: 16),
             _label('Soft Skills'),
@@ -464,27 +460,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    final firstName = user?['first_name'] as String? ?? 'User';
-    final initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
-
     return Scaffold(
       body: Row(children: [
         const UserSidebar(currentRoute: '/edit-profile'),
         Expanded(
             child: Stack(children: [
           Positioned.fill(
-              child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF00022E), // kCosmicBlue
-                  Color(0xFF1A1F5A), // kNavyDeep
-                ],
-              ),
-            ),
+              child: Image.asset(
+            'assets/images/space_background.png',
+            fit: BoxFit.cover,
           )),
           Positioned.fill(
             child: Column(children: [
@@ -501,39 +485,12 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                     ],
                   ),
                 ),
-                child: Row(children: [
-                  GestureDetector(
-                    onTap: () => context.go('/profile'),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(10),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.15)),
-                      ),
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          color: Colors.white, size: 16),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Text('Edit Profile',
+                child: const Row(children: [
+                  Text('Edit Profile',
                       style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.white)),
-                  const Spacer(),
-                  Text(firstName,
-                      style: TextStyle(
-                          fontSize: 15, color: Colors.white.withOpacity(0.85))),
-                  const SizedBox(width: 12),
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: kCrimsonDeep.withOpacity(0.6),
-                    child: Text(initials,
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
                 ]),
               ),
 
@@ -543,10 +500,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                   padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: Colors.white, // Updated to White
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.12), width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(children: [
                       // Feedback banners
@@ -555,22 +517,27 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                       if (_errorMsg != null)
                         _banner(_errorMsg!, success: false),
 
-                      // Tabs
-                      TabBar(
-                        controller: _tabs,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white.withOpacity(0.4),
-                        indicatorColor: kCrimsonDeep,
-                        indicatorWeight: 3,
-                        dividerColor: Colors.white.withOpacity(0.08),
-                        tabs: const [
-                          Tab(
-                              icon: Icon(Icons.school_outlined, size: 18),
-                              text: 'Academic Info'),
-                          Tab(
-                              icon: Icon(Icons.stars_outlined, size: 18),
-                              text: 'Skills'),
-                        ],
+                      // Tabs (Height Reduced)
+                      SizedBox(
+                        height: 55, // Fixed smaller height for the TabBar
+                        child: TabBar(
+                          controller: _tabs,
+                          labelColor: Colors.black, // Dark text for selected tab
+                          unselectedLabelColor: Colors.grey.shade500,
+                          indicatorColor: kCrimsonDeep,
+                          indicatorWeight: 3,
+                          dividerColor: Colors.grey.shade200,
+                          tabs: const [
+                            Tab(
+                                iconMargin: EdgeInsets.only(bottom: 4), // Reduces gap
+                                icon: Icon(Icons.school_outlined, size: 18),
+                                text: 'Academic Info'),
+                            Tab(
+                                iconMargin: EdgeInsets.only(bottom: 4), // Reduces gap
+                                icon: Icon(Icons.stars_outlined, size: 18),
+                                text: 'Skills'),
+                          ],
+                        ),
                       ),
 
                       // Tab views
@@ -638,20 +605,19 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         ),
         child: Row(children: [
           Icon(success ? Icons.check_circle_outline : Icons.error_outline,
-              color: success ? Colors.green.shade300 : Colors.red.shade300,
+              color: success ? Colors.green.shade600 : Colors.red.shade600,
               size: 18),
           const SizedBox(width: 10),
           Expanded(
               child: Text(msg,
                   style: TextStyle(
                       color:
-                          success ? Colors.green.shade200 : Colors.red.shade200,
+                          success ? Colors.green.shade800 : Colors.red.shade800,
                       fontSize: 13))),
           GestureDetector(
             onTap: () =>
                 setState(() => success ? _successMsg = null : _errorMsg = null),
-            child: Icon(Icons.close,
-                size: 16, color: Colors.white.withOpacity(0.4)),
+            child: const Icon(Icons.close, size: 16, color: Colors.black54),
           ),
         ]),
       );
