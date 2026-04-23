@@ -180,7 +180,7 @@ class GlassTopBar extends StatelessWidget {
                   const SizedBox(width: 16),
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: const Color(0xFFD4748A).withOpacity(0.1),
+                    backgroundColor: const Color.fromARGB(255, 205, 210, 251).withOpacity(0.1),
                     backgroundImage: finalAvatarUrl.isNotEmpty
                         ? NetworkImage(finalAvatarUrl)
                         : null,
@@ -192,8 +192,8 @@ class GlassTopBar extends StatelessWidget {
                                 shape: BoxShape.circle,
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xFFD4748A),
-                                    Color(0xFF4A1040)
+                                    Color.fromARGB(255, 116, 116, 212),
+                                    Color.fromARGB(255, 16, 19, 74)
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -204,7 +204,7 @@ class GlassTopBar extends StatelessWidget {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFD4748A)
+                                    color: const Color.fromARGB(255, 122, 116, 212)
                                         .withOpacity(0.4),
                                     blurRadius: 12,
                                     spreadRadius: 2,
