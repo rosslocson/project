@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/sidebar_provider.dart';
+import '../services/api_service.dart';
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
@@ -66,18 +67,17 @@ class GlassTopBar extends StatelessWidget {
 
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
-    final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
-    final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
+    final String fullName =
+        lastName.isEmpty ? firstName : '$firstName $lastName';
+    final String initials =
+        firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
-    String finalAvatarUrl = '';
-    if (rawAvatarUrl.isNotEmpty) {
-      if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080/$rawAvatarUrl';
-      } else {
-        finalAvatarUrl = rawAvatarUrl;
-      }
-    }
+    final String finalAvatarUrl = rawAvatarUrl.isEmpty
+        ? ''
+        : rawAvatarUrl.startsWith('http')
+            ? rawAvatarUrl
+            : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
 
     return Container(
       padding: const EdgeInsets.only(left: 32, right: 32, top: 24, bottom: 32),
@@ -186,30 +186,35 @@ class GlassTopBar extends StatelessWidget {
                   CircleAvatar(
                     radius: 22,
                     backgroundColor: const Color(0xFFD4748A).withOpacity(0.1),
-                    backgroundImage: finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null,
+                    backgroundImage: finalAvatarUrl.isNotEmpty
+                        ? NetworkImage(finalAvatarUrl)
+                        : null,
                     child: finalAvatarUrl.isEmpty
                         ? Container(
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFD4748A), Color(0xFF4A1040)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.6),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFD4748A).withOpacity(0.4),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                )
-                              ]
-                            ),
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFFD4748A),
+                                    Color(0xFF4A1040)
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.6),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFD4748A)
+                                        .withOpacity(0.4),
+                                    blurRadius: 12,
+                                    spreadRadius: 2,
+                                  )
+                                ]),
                             child: Center(
                               child: Text(
                                 initials,
