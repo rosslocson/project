@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import '../services/api_service.dart';
 
 class InternProfile {
   final int id;
@@ -89,8 +90,31 @@ class InternAvatar extends StatelessWidget {
     this.fontSize = 54,
   });
 
+  /// Resolves a raw avatar path into a full URL, matching the logic in
+  /// UserAvatar so both widgets behave identically.
+  String? get _resolvedAvatarUrl {
+    final raw = intern.avatarUrl?.trim();
+    if (raw == null || raw.isEmpty) return null;
+
+    // Already absolute — use as-is
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+
+    // Strip /api suffix from baseUrl to reach the server root
+    // e.g. "http://localhost:8080/api" → "http://localhost:8080"
+    final serverRoot = ApiService.baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+
+    // Handle both "uploads/abc.jpg" and "/uploads/abc.jpg"
+    final cleanRaw = raw.startsWith('/') ? raw.substring(1) : raw;
+    final resolved = '$serverRoot/$cleanRaw';
+
+    debugPrint('🖼️ InternAvatar resolved: $resolved');
+    return resolved;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final url = _resolvedAvatarUrl;
+
     return Container(
       width: size,
       height: size,
@@ -99,15 +123,31 @@ class InternAvatar extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       clipBehavior: Clip.antiAlias,
-      child: intern.avatarUrl != null && intern.avatarUrl!.isNotEmpty
+      child: url != null
           ? Image.network(
-              intern.avatarUrl!,
+              url,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _InitialsFallback(
-                initials: intern.initials,
-                color: intern.avatarColor,
-                fontSize: fontSize,
-              ),
+              errorBuilder: (_, error, __) {
+                debugPrint('❌ InternAvatar load failed for $url — $error');
+                return _InitialsFallback(
+                  initials: intern.initials,
+                  color: intern.avatarColor,
+                  fontSize: fontSize,
+                );
+              },
+              loadingBuilder: (_, child, progress) {
+                if (progress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: progress.expectedTotalBytes != null
+                        ? progress.cumulativeBytesLoaded /
+                            progress.expectedTotalBytes!
+                        : null,
+                    color: const Color(0xFF7B1A2E),
+                    strokeWidth: 2,
+                  ),
+                );
+              },
             )
           : _InitialsFallback(
               initials: intern.initials,
@@ -131,19 +171,21 @@ class _InitialsFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        initials,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: FontWeight.bold,
-          color: color,
+    return Container(
+      color: const Color(0xFFF2F2F2),
+      child: Center(
+        child: Text(
+          initials,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
       ),
     );
   }
 }
-
 // ── Detail Page ───────────────────────────────────────────────────────────────
 
 class InternDetailPage extends StatefulWidget {
