@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart'; // Added for sleek iOS-style switches
+import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -45,6 +45,17 @@ int _toInt(dynamic v) {
   return (v as num).toInt();
 }
 
+// Robust parsing for booleans coming from SQL/Go APIs
+bool _isArchived(dynamic user) {
+  final val = user['is_archived'];
+  return val == true || val == 1 || val == 'true';
+}
+
+bool _isActive(dynamic user) {
+  final val = user['is_active'];
+  return val == true || val == 1 || val == 'true';
+}
+
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
   @override
@@ -57,7 +68,6 @@ class _UsersScreenState extends State<UsersScreen> {
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
   
-  // Default filter is now 'All'
   String _filterStatus = 'All';
 
   @override
@@ -105,29 +115,26 @@ class _UsersScreenState extends State<UsersScreen> {
     ));
   }
 
-  // Gets the current logged in user ID dynamically
   int _getCurrentUserId() {
     final authUser = context.read<AuthProvider>().user;
     if (authUser == null) return 0;
     return _toInt(authUser is Map ? authUser['id'] : (authUser as dynamic).id);
   }
 
-  // Returns number of active, unarchived admins
   int get _activeAdminCount {
     return _users.where((u) => 
       u['role'] == 'admin' && 
-      (u['is_active'] == true) && 
-      (u['is_archived'] != true)
+      _isActive(u) && 
+      !_isArchived(u)
     ).length;
   }
 
   Future<void> _toggleActive(Map<String, dynamic> user) async {
     final id = _toInt(user['id']);
     final isAdmin = user['role'] == 'admin';
-    final current = user['is_active'] as bool? ?? false;
+    final current = _isActive(user);
     final next = !current;
 
-    // Rule: Cannot deactivate the last active admin
     if (isAdmin && current == true && _activeAdminCount <= 1) {
       _showError('Action denied: At least one active admin must remain.');
       return;
@@ -145,16 +152,14 @@ class _UsersScreenState extends State<UsersScreen> {
     final id = _toInt(user['id']);
     final currentUserId = _getCurrentUserId();
     final isAdmin = user['role'] == 'admin';
-    final isActive = user['is_active'] as bool? ?? false;
+    final isActive = _isActive(user);
     final name = '${user['first_name']} ${user['last_name']}';
 
-    // Rule: Cannot archive self
     if (id == currentUserId) {
       _showError('You cannot archive your own account.');
       return;
     }
 
-    // Rule: Cannot archive the last active admin
     if (isAdmin && isActive && _activeAdminCount <= 1) {
       _showError('Action denied: At least one active admin must remain.');
       return;
@@ -216,14 +221,25 @@ class _UsersScreenState extends State<UsersScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    // Call update API setting is_archived to true
+    // Optimistic UI Update: Move to archive visually right away
+    setState(() {
+      user['is_archived'] = true;
+      user['is_active'] = false;
+    });
+
     final res = await ApiService.updateUser(id, {'is_archived': true, 'is_active': false}); 
     if (!mounted) return;
 
     if (res['ok'] == true) {
       _showSuccess('$name has been archived.');
-      await _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
+      // Background reload to sync with server
+      _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
     } else {
+      // Revert optimistic update on error
+      setState(() {
+        user['is_archived'] = false;
+        user['is_active'] = isActive;
+      });
       _showError('Archive failed: ${res['error'] ?? 'Unknown error'}');
     }
   }
@@ -232,14 +248,21 @@ class _UsersScreenState extends State<UsersScreen> {
     final id = _toInt(user['id']);
     final name = '${user['first_name']} ${user['last_name']}';
 
-    // Call update API setting is_archived to false
+    // Optimistic UI Update
+    setState(() {
+      user['is_archived'] = false;
+    });
+
     final res = await ApiService.updateUser(id, {'is_archived': false});
     if (!mounted) return;
 
     if (res['ok'] == true) {
       _showSuccess('$name has been restored.');
-      await _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
+      _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
     } else {
+      setState(() {
+        user['is_archived'] = true;
+      });
       _showError('Restore failed: ${res['error'] ?? 'Unknown error'}');
     }
   }
@@ -277,8 +300,7 @@ class _UsersScreenState extends State<UsersScreen> {
                 return _UserTile(
                   key: ValueKey(_toInt(u['id'])),
                   user: u,
-                  // Use the actual user state for styling, rather than the global filter state
-                  isArchivedView: u['is_archived'] == true, 
+                  isArchivedView: _isArchived(u), 
                   isCurrentUser: _toInt(u['id']) == _getCurrentUserId(),
                   onToggle: () => _toggleActive(u),
                   onArchive: () => _archiveUser(u),
@@ -299,9 +321,9 @@ class _UsersScreenState extends State<UsersScreen> {
 
     // Calculate dynamic counts
     final int allCount = _users.length;
-    final int activeCount = _users.where((u) => u['is_active'] == true && u['is_archived'] != true).length;
-    final int inactiveCount = _users.where((u) => u['is_active'] != true && u['is_archived'] != true).length;
-    final int archivedCount = _users.where((u) => u['is_archived'] == true).length;
+    final int activeCount = _users.where((u) => _isActive(u) && !_isArchived(u)).length;
+    final int inactiveCount = _users.where((u) => !_isActive(u) && !_isArchived(u)).length;
+    final int archivedCount = _users.where((u) => _isArchived(u)).length;
 
     final tabs = [
       {'id': 'All', 'label': 'All', 'count': allCount},
@@ -310,26 +332,23 @@ class _UsersScreenState extends State<UsersScreen> {
       {'id': 'Archived', 'label': 'Archived', 'count': archivedCount},
     ];
 
-    // 1. Filter out users based on selected status (All, Active, Inactive, Archived)
     final filteredUsers = _users.where((u) {
-      final isArchived = u['is_archived'] == true;
-      final isActive = u['is_active'] == true;
+      final isArchived = _isArchived(u);
+      final isActive = _isActive(u);
 
       if (_filterStatus == 'Archived') return isArchived;
       if (_filterStatus == 'Active') return !isArchived && isActive;
       if (_filterStatus == 'Inactive') return !isArchived && !isActive;
-      return true; // For 'All', allow everything
+      return true; 
     }).toList();
 
-    // 2. Separate into Admins & Interns
     final admins = filteredUsers.where((u) => u['role'] == 'admin').toList();
     final internUsers = filteredUsers.where((u) => u['role'] != 'admin').toList();
 
-    // 3. Rule: Logged-in User is always at the top of their respective list
     int sortSelfToTop(dynamic a, dynamic b) {
       if (_toInt(a['id']) == currentUserId) return -1;
       if (_toInt(b['id']) == currentUserId) return 1;
-      return 0; // retain original order for others
+      return 0; 
     }
     admins.sort(sortSelfToTop);
     internUsers.sort(sortSelfToTop);
@@ -344,11 +363,7 @@ class _UsersScreenState extends State<UsersScreen> {
         child: Container(
           width: double.infinity, height: double.infinity,
           decoration: const BoxDecoration(
-            color: Color(0xFF0A0A14),
-            image: DecorationImage(
-              image: AssetImage('assets/images/space_background.png'),
-              fit: BoxFit.cover,
-            ),
+            color: Color(0xFF0A0A14), // Solid dark background, removing starfield imagery
           ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(32),
@@ -406,7 +421,7 @@ class _UsersScreenState extends State<UsersScreen> {
                 // ── Filter Pill Group (All / Active / Inactive / Archived) ──────────
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08), // Soft glass background
+                    color: Colors.white.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(30),
                   ),
                   padding: const EdgeInsets.all(6),
@@ -513,7 +528,7 @@ class _UserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = user['is_active'] as bool? ?? false;
+    final isActive = _isActive(user);
     final isAdmin = user['role'] == 'admin';
 
     final rawAvatarUrl = user['avatar_url'] as String? ?? '';
@@ -525,7 +540,6 @@ class _UserTile extends StatelessWidget {
     final String lName = user['last_name'] ?? '';
     final initials = '${fName.isNotEmpty ? fName[0] : ''}${lName.isNotEmpty ? lName[0] : ''}'.toUpperCase();
 
-    // Grey out tile completely if archived
     final opacity = isArchivedView ? 0.5 : 1.0;
 
     return Opacity(

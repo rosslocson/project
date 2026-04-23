@@ -29,6 +29,7 @@ type User struct {
 	AvatarURL        string     `json:"avatar_url"`
 	Role             Role       `json:"role"               gorm:"default:'user'"`
 	IsActive         bool       `json:"is_active"          gorm:"default:true"`
+	IsArchived       bool       `json:"is_archived"        gorm:"default:false"`
 	LastLoginAt      *time.Time `json:"last_login_at"`
 	Bio              string     `json:"bio"`
 	FailedLoginCount int        `json:"failed_login_count" gorm:"default:0"`

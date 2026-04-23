@@ -96,6 +96,12 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 		return result, result.Error
 	}
 
+	if user.IsArchived {
+		log.Printf("⚠️ Login failed: Account is archived for %s", email)
+		result.Error = errors.New("account archived")
+		return result, result.Error
+	}
+
 	// Check if account is locked
 	if user.LockedUntil != nil && time.Now().Before(*user.LockedUntil) {
 		retryAfter := int(user.LockedUntil.Sub(time.Now()).Seconds())

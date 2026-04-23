@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url VARCHAR,
     role VARCHAR DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     is_active BOOLEAN DEFAULT true,
+    is_archived BOOLEAN DEFAULT false,
     last_login_at TIMESTAMP WITH TIME ZONE,
     bio TEXT,
     failed_login_count INTEGER DEFAULT 0,

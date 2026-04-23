@@ -557,6 +557,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		Position   *string      `json:"position"`
 		Role       *models.Role `json:"role"`
 		IsActive   *bool        `json:"is_active"`
+		IsArchived *bool        `json:"is_archived"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -584,10 +585,13 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	if body.IsActive != nil {
 		user.IsActive = *body.IsActive
 	}
+	if body.IsArchived != nil {
+		user.IsArchived = *body.IsArchived
+	}
 	// Save updates ALL fields including booleans
 	h.DB.Save(&user)
 	adminID := c.GetUint("user_id")
-	h.logActivity(adminID, "UPDATE_USER", fmt.Sprintf("Admin updated user %s (active=%v)", user.Email, user.IsActive), c.ClientIP())
+	h.logActivity(adminID, "UPDATE_USER", fmt.Sprintf("Admin updated user %s (active=%v, archived=%v)", user.Email, user.IsActive, user.IsArchived), c.ClientIP())
 	c.JSON(http.StatusOK, gin.H{"message": "User updated", "user": user})
 }
 
