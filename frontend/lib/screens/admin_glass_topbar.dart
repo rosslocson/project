@@ -107,7 +107,7 @@ class GlassTopBar extends StatelessWidget {
                 ),
               ),
               Text(
-                'Welcome, $firstName'!,
+                'Welcome, $firstName',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.8),

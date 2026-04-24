@@ -411,7 +411,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     required void Function(String?) onChanged,
   }) =>
       DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         style: const TextStyle(color: Colors.black, fontSize: 14),
         dropdownColor: Colors.white,
         decoration: InputDecoration(

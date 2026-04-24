@@ -481,8 +481,9 @@ class _UsersScreenState extends State<UsersScreen> {
                                       icon: const Icon(Icons.search,
                                           color: Colors.grey),
                                       onPressed: () {
-                                        if (_debounce?.isActive ?? false)
+                                        if (_debounce?.isActive ?? false) {
                                           _debounce!.cancel();
+                                        }
                                         _loadUsers(search: _searchCtrl.text);
                                       },
                                     ),
@@ -506,8 +507,9 @@ class _UsersScreenState extends State<UsersScreen> {
                                   ),
                                   onChanged: (v) {
                                     setState(() {});
-                                    if (_debounce?.isActive ?? false)
+                                    if (_debounce?.isActive ?? false) {
                                       _debounce!.cancel();
+                                    }
                                     _debounce = Timer(
                                         const Duration(milliseconds: 300), () {
                                       _loadUsers(search: v);
