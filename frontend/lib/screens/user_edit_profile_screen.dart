@@ -5,9 +5,6 @@ import '../../services/api_service.dart';
 import '../../widgets/app_theme.dart';
 import '../../widgets/user_sidebar.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HamburgerIcon — custom hamburger menu icon
-// ─────────────────────────────────────────────────────────────────────────────
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
 
@@ -50,13 +47,6 @@ class HamburgerIcon extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UserEditProfileScreen — dedicated Edit Profile page
-// Two sections:
-//   1. Academic Info  (dept, position, school, program, specialization,
-//                      year level, intern number, start/end dates)
-//   2. Skills         (bio, technical skills, soft skills, LinkedIn, GitHub)
-// ─────────────────────────────────────────────────────────────────────────────
 class UserEditProfileScreen extends StatefulWidget {
   const UserEditProfileScreen({super.key});
   @override
@@ -68,7 +58,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   late TabController _tabs;
   bool _sidebarVisible = true;
 
-  // ── Academic Info ──────────────────────────────────────────────────────────
   final _academicKey = GlobalKey<FormState>();
   List<String> _departments = [];
   List<String> _positions = [];
@@ -83,7 +72,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   late TextEditingController _startCtrl;
   late TextEditingController _endCtrl;
 
-  // ── Skills ─────────────────────────────────────────────────────────────────
   final _skillsKey = GlobalKey<FormState>();
   late TextEditingController _bioCtrl;
   late TextEditingController _techSkillsCtrl;
@@ -91,7 +79,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   late TextEditingController _linkedinCtrl;
   late TextEditingController _githubCtrl;
 
-  // UI state
   bool _saving = false;
   String? _successMsg;
   String? _errorMsg;
@@ -174,7 +161,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       _errorMsg = null;
     });
 
-    final res = await ApiService.updateProfile({
+    final payload = {
       'department': _selectedDept ?? '',
       'position': _selectedPos ?? '',
       'school': _schoolCtrl.text.trim(),
@@ -189,32 +176,36 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       'soft_skills': _softSkillsCtrl.text.trim(),
       'linked_in': _linkedinCtrl.text.trim(),
       'git_hub': _githubCtrl.text.trim(),
-    });
+    };
+
+    final res = await ApiService.updateProfile(payload);
 
     if (!mounted) return;
-    setState(() => _saving = false);
 
     if (res['ok'] == true) {
-      context
-          .read<AuthProvider>()
-          .updateUserData(Map<String, dynamic>.from(res['user'] ?? {}));
+      final auth = context.read<AuthProvider>();
 
-      // ✅ Always re-fetch to guarantee MyProfileScreen sees latest data
-      final fresh = await ApiService.getProfile();
-      if (mounted && (fresh['ok'] == true || fresh['id'] != null)) {
-        context
-            .read<AuthProvider>()
-            .updateUserData(Map<String, dynamic>.from(fresh));
-      }
+      // ✅ Step 1: Manually merge what we sent — we KNOW these are now saved
+      // in the DB, so optimistically update local state immediately.
+      await auth.updateUserData(payload);
+
+      // ✅ Step 2: Also pull fresh from server (gets updated_at, avatar, etc.)
+      await auth.refreshProfile();
 
       if (mounted) {
-        setState(() => _successMsg = 'Profile updated successfully!');
+        setState(() {
+          _saving = false;
+          _successMsg = 'Profile updated successfully!';
+        });
       }
     } else {
-      // ✅ Now actually surfaces errors
       if (mounted) {
-        setState(() => _errorMsg =
-            res['error'] ?? res['details'] ?? 'Save failed. Please try again.');
+        setState(() {
+          _saving = false;
+          _errorMsg = res['error'] ??
+              res['details'] ??
+              'Save failed. Please try again.';
+        });
       }
     }
   }
@@ -245,7 +236,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     }
   }
 
-  // ── Shared field helpers (Updated for Light Theme) ─────────────────────────
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(text,
@@ -272,7 +262,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
           suffixIcon: suffix,
           filled: true,
-          fillColor: const Color(0xFFF3F4F6), // Light grey fill for inputs
+          fillColor: const Color(0xFFF3F4F6),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           enabledBorder: OutlineInputBorder(
@@ -341,7 +331,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         ]),
       );
 
-  // ── Tab 1: Academic Info ───────────────────────────────────────────────────
   Widget _buildAcademicTab() => SingleChildScrollView(
         padding: const EdgeInsets.all(28),
         child: Form(
@@ -454,7 +443,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         ),
       );
 
-  // ── Tab 2: Skills ──────────────────────────────────────────────────────────
   Widget _buildSkillsTab() => SingleChildScrollView(
         padding: const EdgeInsets.all(28),
         child: Form(
@@ -477,8 +465,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
             Padding(
               padding: const EdgeInsets.only(top: 4, left: 2),
               child: Text('Separate each skill with a comma',
-                  style: TextStyle(
-                      fontSize: 11, color: Colors.grey.shade600)),
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
             ),
             const SizedBox(height: 16),
             _label('Soft Skills'),
@@ -502,7 +489,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         ),
       );
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -523,7 +509,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
               )),
               Positioned.fill(
                 child: Column(children: [
-                  // ── Top bar ──────────────────────────────────────────────────
+                  // Top bar
                   Container(
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 20),
                     decoration: BoxDecoration(
@@ -545,13 +531,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                     ]),
                   ),
 
-                  // ── Card ─────────────────────────────────────────────────────
+                  // Card
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white, // Updated to White
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -562,36 +548,31 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                           ],
                         ),
                         child: Column(children: [
-                          // Feedback banners
                           if (_successMsg != null)
                             _banner(_successMsg!, success: true),
                           if (_errorMsg != null)
                             _banner(_errorMsg!, success: false),
-
-                          // Tabs (Height Reduced)
                           SizedBox(
-                            height: 55, // Fixed smaller height for the TabBar
+                            height: 55,
                             child: TabBar(
                               controller: _tabs,
-                              labelColor: Colors.black, // Dark text for selected tab
+                              labelColor: Colors.black,
                               unselectedLabelColor: Colors.grey.shade500,
                               indicatorColor: kCrimsonDeep,
                               indicatorWeight: 3,
                               dividerColor: Colors.grey.shade200,
                               tabs: const [
                                 Tab(
-                                    iconMargin: EdgeInsets.only(bottom: 4), // Reduces gap
+                                    iconMargin: EdgeInsets.only(bottom: 4),
                                     icon: Icon(Icons.school_outlined, size: 18),
                                     text: 'Academic Info'),
                                 Tab(
-                                    iconMargin: EdgeInsets.only(bottom: 4), // Reduces gap
+                                    iconMargin: EdgeInsets.only(bottom: 4),
                                     icon: Icon(Icons.stars_outlined, size: 18),
                                     text: 'Skills'),
                               ],
                             ),
                           ),
-
-                          // Tab views
                           Expanded(
                             child: TabBarView(
                               controller: _tabs,
@@ -601,8 +582,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                               ],
                             ),
                           ),
-
-                          // Save button
                           Padding(
                             padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
                             child: SizedBox(
@@ -612,7 +591,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: kCrimsonDeep,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12)),
                                   elevation: 0,
@@ -622,7 +602,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                         height: 20,
                                         width: 20,
                                         child: CircularProgressIndicator(
-                                            color: Colors.white, strokeWidth: 2))
+                                            color: Colors.white,
+                                            strokeWidth: 2))
                                     : const Text('SAVE CHANGES',
                                         style: TextStyle(
                                             fontWeight: FontWeight.w800,
@@ -638,7 +619,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
               ),
             ])),
           ]),
-          // Hamburger menu button when sidebar is closed
           if (!_sidebarVisible)
             Positioned(
               top: 24,

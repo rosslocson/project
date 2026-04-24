@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
@@ -25,7 +26,7 @@ class AuthProvider extends ChangeNotifier {
     if (userStr != null && token != null) {
       _user = jsonDecode(userStr);
       notifyListeners();
-      await refreshProfile(); // fetch fresh data on app start
+      await refreshProfile();
     }
   }
 
@@ -34,12 +35,16 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
+
     try {
       final res = await ApiService.login(email, password);
       if (res['ok'] == true) {
         _user = res['user'];
         await ApiService.saveToken(res['token']);
         await _persistUser();
+        // ✅ Fetch full profile immediately after login so extended
+        // fields (school, bio, skills, etc.) are available right away
+        await refreshProfile();
       } else {
         _error = res['error'] ?? 'Login failed';
       }
@@ -63,12 +68,15 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
+
     try {
       final res = await ApiService.register(data);
       if (res['ok'] == true) {
         _user = res['user'];
         await ApiService.saveToken(res['token']);
         await _persistUser();
+        // ✅ Same as login — fetch full profile after register
+        await refreshProfile();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -89,21 +97,23 @@ class AuthProvider extends ChangeNotifier {
   Future<void> refreshProfile() async {
     try {
       final res = await ApiService.getProfile();
+      debugPrint('🔄 refreshProfile response keys: ${res.keys.toList()}');
 
-      // ✅ GetProfile returns the user object directly (no 'ok' wrapper).
-      // We detect a valid response by checking for 'id' field.
       if (res['id'] != null) {
-        // ✅ Merge into existing user so no fields are lost
+        // ✅ Server data wins — spread LAST so it overwrites any stale
+        // locally-cached values. This is the single source of truth.
         _user = {...?_user, ...res};
         await _persistUser();
         notifyListeners();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('⚠️ refreshProfile error: $e');
+    }
   }
 
-  // Called after any successful save — merges partial update into full user
+  // ✅ Kept for compatibility but now only used for non-profile data
+  // (e.g. avatar_url updates). Profile fields always come via refreshProfile.
   Future<void> updateUserData(Map<String, dynamic> data) async {
-    // ✅ Always merge, never replace
     _user = {...?_user, ...data};
     await _persistUser();
     notifyListeners();
@@ -122,8 +132,6 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
-
-  // ── Private helpers ──────────────────────────────────────────────────────
 
   Future<void> _persistUser() async {
     if (_user == null) return;
