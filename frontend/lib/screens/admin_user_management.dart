@@ -23,16 +23,23 @@ class HamburgerIcon extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            width: 22, height: 2.5,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(2)),
+            width: 22,
+            height: 2.5,
+            decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(2)),
           ),
           Container(
-            width: 14, height: 2.5,
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), borderRadius: BorderRadius.circular(2)),
+            width: 14,
+            height: 2.5,
+            decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(2)),
           ),
           Container(
-            width: 22, height: 2.5,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(2)),
+            width: 22,
+            height: 2.5,
+            decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(2)),
           ),
         ],
       ),
@@ -67,7 +74,7 @@ class _UsersScreenState extends State<UsersScreen> {
   bool _loading = true;
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
-  
+
   String _filterStatus = 'All';
 
   @override
@@ -122,11 +129,9 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   int get _activeAdminCount {
-    return _users.where((u) => 
-      u['role'] == 'admin' && 
-      _isActive(u) && 
-      !_isArchived(u)
-    ).length;
+    return _users
+        .where((u) => u['role'] == 'admin' && _isActive(u) && !_isArchived(u))
+        .length;
   }
 
   Future<void> _toggleActive(Map<String, dynamic> user) async {
@@ -174,13 +179,14 @@ class _UsersScreenState extends State<UsersScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF4A5E9A).withOpacity(0.1), 
-              borderRadius: BorderRadius.circular(8)
-            ),
-            child: const Icon(Icons.archive_outlined, color: Color(0xFF4A5E9A), size: 22),
+                color: const Color(0xFF4A5E9A).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.archive_outlined,
+                color: Color(0xFF4A5E9A), size: 22),
           ),
           const SizedBox(width: 12),
-          const Text('Archive User', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Archive User',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -191,20 +197,24 @@ class _UsersScreenState extends State<UsersScreen> {
                 style: const TextStyle(color: Colors.black87, fontSize: 14),
                 children: [
                   const TextSpan(text: 'Are you sure you want to archive '),
-                  TextSpan(text: name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  TextSpan(
+                      text: name,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const TextSpan(text: '?'),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            Text('This user will be hidden from active lists and unable to log in, but their data will be preserved.',
+            Text(
+                'This user will be hidden from active lists and unable to log in, but their data will be preserved.',
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.black87))),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.black87))),
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(ctx, true),
             icon: const Icon(Icons.archive_outlined, size: 16),
@@ -212,7 +222,8 @@ class _UsersScreenState extends State<UsersScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4A5E9A),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           ),
         ],
@@ -227,7 +238,8 @@ class _UsersScreenState extends State<UsersScreen> {
       user['is_active'] = false;
     });
 
-    final res = await ApiService.updateUser(id, {'is_archived': true, 'is_active': false}); 
+    final res = await ApiService.updateUser(
+        id, {'is_archived': true, 'is_active': false});
     if (!mounted) return;
 
     if (res['ok'] == true) {
@@ -278,7 +290,9 @@ class _UsersScreenState extends State<UsersScreen> {
           child: Text(
             title,
             style: const TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white70,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white70,
             ),
           ),
         ),
@@ -300,7 +314,7 @@ class _UsersScreenState extends State<UsersScreen> {
                 return _UserTile(
                   key: ValueKey(_toInt(u['id'])),
                   user: u,
-                  isArchivedView: _isArchived(u), 
+                  isArchivedView: _isArchived(u),
                   isCurrentUser: _toInt(u['id']) == _getCurrentUserId(),
                   onToggle: () => _toggleActive(u),
                   onArchive: () => _archiveUser(u),
@@ -321,8 +335,10 @@ class _UsersScreenState extends State<UsersScreen> {
 
     // Calculate dynamic counts
     final int allCount = _users.length;
-    final int activeCount = _users.where((u) => _isActive(u) && !_isArchived(u)).length;
-    final int inactiveCount = _users.where((u) => !_isActive(u) && !_isArchived(u)).length;
+    final int activeCount =
+        _users.where((u) => _isActive(u) && !_isArchived(u)).length;
+    final int inactiveCount =
+        _users.where((u) => !_isActive(u) && !_isArchived(u)).length;
     final int archivedCount = _users.where((u) => _isArchived(u)).length;
 
     final tabs = [
@@ -339,17 +355,19 @@ class _UsersScreenState extends State<UsersScreen> {
       if (_filterStatus == 'Archived') return isArchived;
       if (_filterStatus == 'Active') return !isArchived && isActive;
       if (_filterStatus == 'Inactive') return !isArchived && !isActive;
-      return true; 
+      return true;
     }).toList();
 
     final admins = filteredUsers.where((u) => u['role'] == 'admin').toList();
-    final internUsers = filteredUsers.where((u) => u['role'] != 'admin').toList();
+    final internUsers =
+        filteredUsers.where((u) => u['role'] != 'admin').toList();
 
     int sortSelfToTop(dynamic a, dynamic b) {
       if (_toInt(a['id']) == currentUserId) return -1;
       if (_toInt(b['id']) == currentUserId) return 1;
-      return 0; 
+      return 0;
     }
+
     admins.sort(sortSelfToTop);
     internUsers.sort(sortSelfToTop);
 
@@ -361,9 +379,11 @@ class _UsersScreenState extends State<UsersScreen> {
         title: 'User Management',
         currentRoute: GoRouterState.of(context).matchedLocation ?? '/users',
         child: Container(
-          width: double.infinity, height: double.infinity,
+          width: double.infinity,
+          height: double.infinity,
           decoration: const BoxDecoration(
-            color: Color(0xFF0A0A14), // Solid dark background, removing starfield imagery
+            color: Color(
+                0xFF0A0A14), // Solid dark background, removing starfield imagery
           ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(32),
@@ -373,7 +393,8 @@ class _UsersScreenState extends State<UsersScreen> {
                 Text(
                   'User Management',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold, color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                 ),
                 const SizedBox(height: 24),
@@ -384,7 +405,8 @@ class _UsersScreenState extends State<UsersScreen> {
                   style: const TextStyle(color: Colors.black87, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Search by name or email...',
-                    hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                    hintStyle:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 13),
                     prefixIcon: IconButton(
                       icon: const Icon(Icons.search, color: Colors.grey),
                       onPressed: () {
@@ -398,14 +420,16 @@ class _UsersScreenState extends State<UsersScreen> {
                             onPressed: () {
                               _searchCtrl.clear();
                               _loadUsers();
-                              setState(() {}); 
+                              setState(() {});
                             },
                           )
                         : null,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
                     ),
-                    filled: true, fillColor: Colors.white,
+                    filled: true,
+                    fillColor: Colors.white,
                   ),
                   onChanged: (v) {
                     setState(() {});
@@ -440,12 +464,15 @@ class _UsersScreenState extends State<UsersScreen> {
                             curve: Curves.easeOut,
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF4A5E9A) : Colors.transparent,
+                              color: isSelected
+                                  ? const Color(0xFF4A5E9A)
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(24),
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: const Color(0xFF4A5E9A).withOpacity(0.4),
+                                        color: const Color(0xFF4A5E9A)
+                                            .withOpacity(0.4),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       )
@@ -456,8 +483,11 @@ class _UsersScreenState extends State<UsersScreen> {
                             child: Text(
                               '$label ($count)',
                               style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.white70,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color:
+                                    isSelected ? Colors.white : Colors.white70,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
                                 fontSize: 13,
                               ),
                             ),
@@ -473,7 +503,8 @@ class _UsersScreenState extends State<UsersScreen> {
                 if (_loading)
                   const Padding(
                     padding: EdgeInsets.all(48),
-                    child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                    child: Center(
+                        child: CircularProgressIndicator(color: Colors.white)),
                   )
                 else if (admins.isEmpty && internUsers.isEmpty)
                   Container(
@@ -486,7 +517,8 @@ class _UsersScreenState extends State<UsersScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.people_outline, size: 56, color: Colors.grey.shade300),
+                          Icon(Icons.people_outline,
+                              size: 56, color: Colors.grey.shade300),
                           const SizedBox(height: 12),
                           Text('No users found in this category.',
                               style: TextStyle(color: Colors.grey.shade500)),
@@ -495,8 +527,10 @@ class _UsersScreenState extends State<UsersScreen> {
                     ),
                   )
                 else ...[
-                  if (admins.isNotEmpty) _buildUserSection('Administrators', admins),
-                  if (internUsers.isNotEmpty) _buildUserSection('Interns', internUsers),
+                  if (admins.isNotEmpty)
+                    _buildUserSection('Administrators', admins),
+                  if (internUsers.isNotEmpty)
+                    _buildUserSection('Interns', internUsers),
                 ],
               ],
             ),
@@ -533,12 +567,16 @@ class _UserTile extends StatelessWidget {
 
     final rawAvatarUrl = user['avatar_url'] as String? ?? '';
     final finalAvatarUrl = rawAvatarUrl.isNotEmpty
-        ? (rawAvatarUrl.startsWith('http') ? rawAvatarUrl : 'http://127.0.0.1:8080$rawAvatarUrl')
+        ? (rawAvatarUrl.startsWith('http')
+            ? rawAvatarUrl
+            : 'http://127.0.0.1:8080$rawAvatarUrl')
         : '';
 
     final String fName = user['first_name'] ?? '';
     final String lName = user['last_name'] ?? '';
-    final initials = '${fName.isNotEmpty ? fName[0] : ''}${lName.isNotEmpty ? lName[0] : ''}'.toUpperCase();
+    final initials =
+        '${fName.isNotEmpty ? fName[0] : ''}${lName.isNotEmpty ? lName[0] : ''}'
+            .toUpperCase();
 
     final opacity = isArchivedView ? 0.5 : 1.0;
 
@@ -550,13 +588,18 @@ class _UserTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: isAdmin ? Colors.indigo.shade50 : Colors.blue.shade50,
-              backgroundImage: finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null,
+              backgroundColor:
+                  isAdmin ? Colors.indigo.shade50 : Colors.blue.shade50,
+              backgroundImage: finalAvatarUrl.isNotEmpty
+                  ? NetworkImage(finalAvatarUrl)
+                  : null,
               child: finalAvatarUrl.isEmpty
                   ? Text(
                       initials.isEmpty ? 'U' : initials,
                       style: TextStyle(
-                        color: isAdmin ? Colors.indigo.shade700 : Colors.blue.shade700,
+                        color: isAdmin
+                            ? Colors.indigo.shade700
+                            : Colors.blue.shade700,
                         fontWeight: FontWeight.bold,
                       ),
                     )
@@ -564,11 +607,14 @@ class _UserTile extends StatelessWidget {
             ),
             if (isCurrentUser)
               Positioned(
-                bottom: 0, right: 0,
+                bottom: 0,
+                right: 0,
                 child: Container(
-                  width: 14, height: 14,
+                  width: 14,
+                  height: 14,
                   decoration: BoxDecoration(
-                    color: Colors.green, shape: BoxShape.circle,
+                    color: Colors.green,
+                    shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
                 ),
@@ -580,17 +626,28 @@ class _UserTile extends StatelessWidget {
             Text(
               '${user['first_name']} ${user['last_name']}',
               style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: isArchivedView ? Colors.grey.shade700 : (isActive ? Colors.black87 : Colors.grey),
-                decoration: (!isActive && !isArchivedView) ? TextDecoration.lineThrough : null,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isArchivedView
+                    ? Colors.grey.shade700
+                    : (isActive ? Colors.black87 : Colors.grey),
+                decoration: (!isActive && !isArchivedView)
+                    ? TextDecoration.lineThrough
+                    : null,
               ),
             ),
             if (isCurrentUser) ...[
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4)),
-                child: Text('You', style: TextStyle(fontSize: 10, color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(4)),
+                child: Text('You',
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold)),
               )
             ]
           ],
@@ -599,11 +656,19 @@ class _UserTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(user['email'] ?? '',
-                style: TextStyle(fontSize: 11, color: isArchivedView ? Colors.grey.shade500 : (isActive ? Colors.black54 : Colors.grey.shade400))),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: isArchivedView
+                        ? Colors.grey.shade500
+                        : (isActive ? Colors.black54 : Colors.grey.shade400))),
             if ((user['department'] as String? ?? '').isNotEmpty)
               Text(
                 '${user['department']} · ${user['position'] ?? ''}',
-                style: TextStyle(fontSize: 10, color: isArchivedView ? Colors.grey.shade400 : (isActive ? Colors.black38 : Colors.grey.shade400)),
+                style: TextStyle(
+                    fontSize: 10,
+                    color: isArchivedView
+                        ? Colors.grey.shade400
+                        : (isActive ? Colors.black38 : Colors.grey.shade400)),
               ),
           ],
         ),
@@ -619,8 +684,10 @@ class _UserTile extends StatelessWidget {
               child: Text(
                 isAdmin ? 'Admin' : 'Intern',
                 style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w600,
-                  color: isAdmin ? Colors.indigo.shade700 : Colors.blue.shade700,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color:
+                      isAdmin ? Colors.indigo.shade700 : Colors.blue.shade700,
                 ),
               ),
             ),
@@ -629,25 +696,36 @@ class _UserTile extends StatelessWidget {
             if (isArchivedView)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(20)),
-                child: Text('Archived', style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20)),
+                child: Text('Archived',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold)),
               )
             else
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFF4A5E9A).withOpacity(0.1) : Colors.grey.shade200,
+                  color: isActive
+                      ? const Color(0xFF4A5E9A).withOpacity(0.1)
+                      : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   isActive ? 'Active' : 'Inactive',
                   style: TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w600,
-                    color: isActive ? const Color(0xFF4A5E9A) : Colors.grey.shade600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isActive
+                        ? const Color(0xFF4A5E9A)
+                        : Colors.grey.shade600,
                   ),
                 ),
               ),
-            
+
             const SizedBox(width: 12),
 
             // Sleek Cupertino Toggle switch
@@ -681,32 +759,37 @@ class _UserTile extends StatelessWidget {
                   child: IconButton(
                     iconSize: 18,
                     padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.unarchive_rounded, color: Color(0xFF4A5E9A)),
+                    icon: const Icon(Icons.unarchive_rounded,
+                        color: Color(0xFF4A5E9A)),
                     onPressed: onRestore,
                   ),
                 ),
               )
             else
               Tooltip(
-                message: isCurrentUser ? 'Cannot archive yourself' : 'Archive user',
+                message:
+                    isCurrentUser ? 'Cannot archive yourself' : 'Archive user',
                 child: Container(
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: isCurrentUser ? Colors.transparent : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isCurrentUser ? Colors.transparent : Colors.grey.shade200,
-                      width: 1,
-                    )
-                  ),
+                      color: isCurrentUser
+                          ? Colors.transparent
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isCurrentUser
+                            ? Colors.transparent
+                            : Colors.grey.shade200,
+                        width: 1,
+                      )),
                   child: IconButton(
                     iconSize: 18,
                     padding: EdgeInsets.zero,
-                    icon: Icon(
-                      Icons.archive_outlined, 
-                      color: isCurrentUser ? Colors.grey.shade300 : Colors.blueGrey.shade400
-                    ),
+                    icon: Icon(Icons.archive_outlined,
+                        color: isCurrentUser
+                            ? Colors.grey.shade300
+                            : Colors.blueGrey.shade400),
                     onPressed: isCurrentUser ? null : onArchive,
                   ),
                 ),
