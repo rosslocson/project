@@ -377,7 +377,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       });
 
       if (res['ok'] == true) {
-        print("✅ Upload successful");
+        //print("✅ Upload successful");
         await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
 
         setState(() {
@@ -391,7 +391,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           ),
         );
       } else {
-        print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
+        //print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
         setState(() {
           _avatarFile = null;
         });
@@ -404,8 +404,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         );
       }
     } catch (e, stackTrace) {
-      print("❌ ERROR: $e");
-      print("📋 Stack trace: $stackTrace");
+      //print("❌ ERROR: $e");
+      //print("📋 Stack trace: $stackTrace");
 
       if (mounted) {
         setState(() {
