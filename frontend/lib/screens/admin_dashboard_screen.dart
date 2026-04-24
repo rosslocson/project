@@ -357,8 +357,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       const SizedBox(height: 32),
                       if (_loading)
                         const Center(
-                          child:
-                              CircularProgressIndicator(color: Colors.white),
+                          child: CircularProgressIndicator(color: Colors.white),
                         )
                       else ...[
                         LayoutBuilder(
@@ -486,8 +485,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             ),
                             if (_activityLogs.length > 5)
                               TextButton.icon(
-                                onPressed: () => setState(() =>
-                                    _showAllActivity = !_showAllActivity),
+                                onPressed: () => setState(
+                                    () => _showAllActivity = !_showAllActivity),
                                 icon: Icon(
                                   _showAllActivity
                                       ? Icons.expand_less
@@ -531,8 +530,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       return const Padding(
         padding: EdgeInsets.all(24),
         child: Center(
-          child:
-              Text('No users yet', style: TextStyle(color: Colors.black87)),
+          child: Text('No users yet', style: TextStyle(color: Colors.black87)),
         ),
       );
     }
@@ -550,29 +548,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         final u = users[i];
         final fName = u['first_name']?.toString() ?? '';
         final lName = u['last_name']?.toString() ?? '';
+        final displayName = [fName, lName].where((s) => s.isNotEmpty).join(' ');
+        final titleText = displayName.isNotEmpty
+            ? displayName
+            : (u['name']?.toString() ??
+                u['email']?.toString() ??
+                'Unknown user');
         final initials =
             '${fName.isNotEmpty ? fName[0] : ''}${lName.isNotEmpty ? lName[0] : ''}'
                 .toUpperCase();
-        final avatarUrl = u['avatar_url']?.toString();
+        final rawAvatarUrl = u['avatar_url']?.toString().trim() ?? '';
+        final avatarUrl = rawAvatarUrl.isNotEmpty
+            ? (rawAvatarUrl.startsWith('http')
+                ? rawAvatarUrl
+                : 'http://127.0.0.1:8080$rawAvatarUrl')
+            : null;
 
         return ListTile(
           leading: CircleAvatar(
+            radius: 22,
             backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
-            backgroundImage:
-                (avatarUrl != null && avatarUrl.isNotEmpty)
-                    ? NetworkImage(avatarUrl)
-                    : null,
-            child: (avatarUrl == null || avatarUrl.isEmpty)
+            foregroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl == null
                 ? Text(
                     initials.isEmpty ? 'U' : initials,
                     style: const TextStyle(
-                        color: Color(0xFF6C63FF),
-                        fontWeight: FontWeight.bold),
+                        color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
                   )
                 : null,
           ),
           title: Text(
-            '$fName $lName'.trim(),
+            titleText,
             style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -581,8 +587,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           subtitle: Text(u['email'] ?? '',
               style: const TextStyle(fontSize: 11, color: Colors.black54)),
           trailing: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: u['role'] == 'admin'
                   ? const Color(0xFFDBE9F4)
@@ -610,8 +615,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       return const Padding(
         padding: EdgeInsets.all(24),
         child: Center(
-          child: Text('No activity yet',
-              style: TextStyle(color: Colors.black87)),
+          child:
+              Text('No activity yet', style: TextStyle(color: Colors.black87)),
         ),
       );
     }
@@ -649,13 +654,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ),
           subtitle: userName.isNotEmpty
               ? Text(userName,
-                  style:
-                      const TextStyle(fontSize: 11, color: Colors.black54))
+                  style: const TextStyle(fontSize: 11, color: Colors.black54))
               : null,
           trailing: Text(
             _formatDate(log['created_at'] as String?),
-            style:
-                const TextStyle(color: Colors.black54, fontSize: 11),
+            style: const TextStyle(color: Colors.black54, fontSize: 11),
           ),
         );
       },
@@ -815,11 +818,9 @@ class _ArrowButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.10),
           shape: BoxShape.circle,
-          border:
-              Border.all(color: Colors.white.withOpacity(0.2), width: 0.8),
+          border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.8),
         ),
-        child:
-            Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
+        child: Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
       ),
     );
   }
