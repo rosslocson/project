@@ -334,12 +334,12 @@ class _InternCard extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF1A2540), Color(0xFF4A5E9A)],
+              colors: [Color(0xFF1E1B4B), Color(0xFF4C1D95)],
             ),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF4A0E18).withOpacity(0.4),
+                color: const Color(0xFF0F172A).withOpacity(0.4),
                 blurRadius: 32,
                 offset: const Offset(0, 16),
               ),
