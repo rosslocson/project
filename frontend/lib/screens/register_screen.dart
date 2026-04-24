@@ -181,9 +181,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: kCosmicBlue.withOpacity(0.08),
+                    color: kCosmicBlue.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: kCosmicBlue.withOpacity(0.2)),
+                    border: Border.all(color: kCosmicBlue.withValues(alpha: 0.2)),
                   ),
                   child: Row(children: [
                     const Icon(Icons.error_outline,
@@ -575,7 +575,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       borderRadius: BorderRadius.circular(32),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 30,
                           spreadRadius: 5,
                         ),

@@ -27,7 +27,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -111,7 +111,7 @@ class GlassTopBar extends StatelessWidget {
                       'Welcome, $firstName',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -162,7 +162,7 @@ class GlassTopBar extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -170,7 +170,7 @@ class GlassTopBar extends StatelessWidget {
                           radius: 22,
                           backgroundColor:
                               const Color.fromARGB(255, 205, 210, 251)
-                                  .withOpacity(0.1),
+                                  .withValues(alpha: 0.1),
                           backgroundImage: finalAvatarUrl.isNotEmpty
                               ? NetworkImage(finalAvatarUrl)
                               : null,
@@ -189,14 +189,14 @@ class GlassTopBar extends StatelessWidget {
                                       end: Alignment.bottomRight,
                                     ),
                                     border: Border.all(
-                                      color: Colors.white.withOpacity(0.6),
+                                      color: Colors.white.withValues(alpha: 0.6),
                                       width: 2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
                                         color: const Color.fromARGB(
                                                 255, 122, 116, 212)
-                                            .withOpacity(0.4),
+                                            .withValues(alpha: 0.4),
                                         blurRadius: 12,
                                         spreadRadius: 2,
                                       ),
@@ -230,16 +230,16 @@ class GlassTopBar extends StatelessWidget {
               top: 16,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.15)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: IconButton(
                   padding: const EdgeInsets.all(12),
                   onPressed: onToggleSidebar,
                   icon: const HamburgerIcon(),
                   tooltip: 'Open Sidebar',
-                  splashColor: Colors.white.withOpacity(0.1),
+                  splashColor: Colors.white.withValues(alpha: 0.1),
                   highlightColor: Colors.transparent,
                 ),
               ),

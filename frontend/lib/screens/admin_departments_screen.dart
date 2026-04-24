@@ -30,7 +30,7 @@ class _HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -297,10 +297,10 @@ class _ConfigScreenState extends State<ConfigScreen>
                                 top: 28,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
+                                    color: Colors.white.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                        color: Colors.white.withOpacity(0.15)),
+                                        color: Colors.white.withValues(alpha: 0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
@@ -308,7 +308,7 @@ class _ConfigScreenState extends State<ConfigScreen>
                                         setState(() => _isSidebarOpen = true),
                                     icon: const _HamburgerIcon(),
                                     tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withOpacity(0.1),
+                                    splashColor: Colors.white.withValues(alpha: 0.1),
                                     highlightColor: Colors.transparent,
                                   ),
                                 ),
@@ -325,7 +325,7 @@ class _ConfigScreenState extends State<ConfigScreen>
                               left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.95),
+                              color: Colors.white.withValues(alpha: 0.95),
                               borderRadius: BorderRadius.circular(24),
                             ),
                             child: ClipRRect(
@@ -427,7 +427,7 @@ class _ItemTabState extends State<_ItemTab> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
+                      color: Colors.black.withValues(alpha: 0.18),
                       blurRadius: 32,
                       offset: const Offset(0, 8),
                     ),
@@ -442,7 +442,7 @@ class _ItemTabState extends State<_ItemTab> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _kBlue.withOpacity(0.08),
+                            color: _kBlue.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(Icons.business_outlined,
@@ -493,7 +493,7 @@ class _ItemTabState extends State<_ItemTab> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide:
-                              BorderSide(color: _kBlue.withOpacity(0.5)),
+                              BorderSide(color: _kBlue.withValues(alpha: 0.5)),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
@@ -553,7 +553,7 @@ class _ItemTabState extends State<_ItemTab> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _kBlue,
                               foregroundColor: Colors.white,
-                              disabledBackgroundColor: _kBlue.withOpacity(0.6),
+                              disabledBackgroundColor: _kBlue.withValues(alpha: 0.6),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12)),
@@ -597,7 +597,7 @@ class _ItemTabState extends State<_ItemTab> {
             color: _kBarColor,
             border: Border(
                 bottom:
-                    BorderSide(color: _kBlue.withOpacity(0.15), width: 0.5)),
+                    BorderSide(color: _kBlue.withValues(alpha: 0.15), width: 0.5)),
           ),
           child: Row(children: [
             Expanded(
@@ -719,7 +719,7 @@ class _ItemTabState extends State<_ItemTab> {
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   leading: CircleAvatar(
                     radius: 16,
-                    backgroundColor: _kBlue.withOpacity(0.08),
+                    backgroundColor: _kBlue.withValues(alpha: 0.08),
                     child: Text(
                       name.isNotEmpty ? name[0].toUpperCase() : '?',
                       style: const TextStyle(

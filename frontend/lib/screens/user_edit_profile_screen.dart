@@ -290,7 +290,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     required void Function(String?) onChanged,
   }) =>
       DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         style: const TextStyle(color: Colors.black, fontSize: 14),
         dropdownColor: Colors.white,
         decoration: InputDecoration(
@@ -370,7 +370,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                     _label('Position'),
                     IgnorePointer(
                       child: DropdownButtonFormField<String>(
-                        value: _defaultPosition,
+                        initialValue: _defaultPosition,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.grey.shade100,

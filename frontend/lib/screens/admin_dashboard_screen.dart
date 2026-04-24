@@ -186,7 +186,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.white.withOpacity(0.12),
+            color: Colors.white.withValues(alpha: 0.12),
             blurRadius: 12,
             spreadRadius: 0.5,
           ),
@@ -305,7 +305,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               decoration: BoxDecoration(
                 color: active
                     ? const Color.fromARGB(255, 118, 115, 200)
-                    : Colors.white.withOpacity(0.25),
+                    : Colors.white.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.circular(3),
               ),
             );
@@ -449,7 +449,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         const SizedBox(height: 16),
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
+                            color: Colors.white.withValues(alpha: 0.95),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: ClipRRect(
@@ -480,7 +480,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   'All recent system activity',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -506,7 +506,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         const SizedBox(height: 16),
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
+                            color: Colors.white.withValues(alpha: 0.95),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: ClipRRect(
@@ -569,7 +569,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         return ListTile(
           leading: CircleAvatar(
             radius: 22,
-            backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+            backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
             foregroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
             child: avatarUrl == null
                 ? Text(
@@ -721,7 +721,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     }
     return CircleAvatar(
       radius: 16,
-      backgroundColor: color.withOpacity(0.1),
+      backgroundColor: color.withValues(alpha: 0.1),
       child: Icon(icon, size: 16, color: color),
     );
   }
@@ -761,7 +761,7 @@ class _InternCardFront extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.4),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.4),
             blurRadius: 32,
             offset: const Offset(0, 16),
           ),
@@ -794,7 +794,7 @@ class _InternCardFront extends StatelessWidget {
             'Intern #${intern.internNumber}',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -818,11 +818,11 @@ class _ArrowButton extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withValues(alpha: 0.10),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.8),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 0.8),
         ),
-        child: Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
+        child: Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 22),
       ),
     );
   }

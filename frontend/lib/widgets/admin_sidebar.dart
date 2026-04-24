@@ -68,7 +68,7 @@ class AdminSidebar extends StatelessWidget {
                   child: InkWell(
                     onTap: onClose,
                     child: Material(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       shape: const CircleBorder(),
                       clipBehavior: Clip.antiAlias,
                       child: const Padding(
@@ -131,7 +131,7 @@ _NavItem(
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Divider(color: Colors.white.withOpacity(0.15), height: 1),
+              Divider(color: Colors.white.withValues(alpha: 0.15), height: 1),
               Material(
                 color: Colors.transparent,
                 child: InkWell(
