@@ -64,13 +64,13 @@ class InternProfile {
       id: json['id'] as int,
       name: fullName.isNotEmpty ? fullName : 'Unnamed Intern',
       internNumber: json['id'] as int,
-      program: (json['department'] ?? '').toString().trim().isNotEmpty
-          ? json['department']
-          : 'No Department',
+      program: (json['program'] ?? '').toString().trim().isNotEmpty
+          ? json['program']
+          : 'N/A',
       school: '',
-      specialization: (json['position'] ?? '').toString().trim().isNotEmpty
-          ? json['position']
-          : 'No Position',
+      specialization: (json['specialization'] ?? '').toString().trim().isNotEmpty
+          ? json['specialization']
+          : 'N/A',
       email: json['email'] ?? '',
       technicalSkills: [],
       softSkills: [],
