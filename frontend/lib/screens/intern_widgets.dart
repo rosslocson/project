@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import '../services/api_service.dart';
 
+
 // ── Brand colors ──────────────────────────────────────────────────────────────
 const kBlue = Color(0xFF1E40AF);
 const kBlueDark = Color(0xFF1E2A44);
@@ -56,27 +57,32 @@ class InternProfile {
   }
 
   factory InternProfile.fromJson(Map<String, dynamic> json) {
-    final firstName = (json['first_name'] ?? '').toString().trim();
-    final lastName = (json['last_name'] ?? '').toString().trim();
-    final fullName = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
+  final firstName = (json['first_name'] ?? '').toString().trim();
+  final lastName  = (json['last_name']  ?? '').toString().trim();
+  final fullName  = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
 
-    return InternProfile(
-      id: json['id'] as int,
-      name: fullName.isNotEmpty ? fullName : 'Unnamed Intern',
-      internNumber: json['id'] as int,
-      program: (json['program'] ?? '').toString().trim().isNotEmpty
-          ? json['program']
-          : 'N/A',
-      school: '',
-      specialization: (json['specialization'] ?? '').toString().trim().isNotEmpty
-          ? json['specialization']
-          : 'N/A',
-      email: json['email'] ?? '',
-      technicalSkills: [],
-      softSkills: [],
-      avatarUrl: json['avatar_url'],
-    );
+  // Helper to safely parse a JSON array of strings
+  List<String> parseStringList(dynamic value) {
+    if (value == null) return [];
+    if (value is List) return value.map((e) => e.toString()).toList();
+    // Some APIs return a comma-separated string instead of an array
+    if (value is String && value.isNotEmpty) return value.split(',').map((s) => s.trim()).toList();
+    return [];
   }
+
+  return InternProfile(
+    id:             json['id'] as int,
+    name:           fullName.isNotEmpty ? fullName : 'Unnamed Intern',
+    internNumber:   json['id'] as int,
+    program:        (json['program']        ?? '').toString().trim().isNotEmpty ? json['program']        : 'N/A',
+    school:         (json['school']         ?? '').toString().trim().isNotEmpty ? json['school']         : 'N/A',  // ← was hardcoded ''
+    specialization: (json['specialization'] ?? '').toString().trim().isNotEmpty ? json['specialization'] : 'N/A',
+    email:          json['email'] ?? '',
+    technicalSkills: parseStringList(json['technical_skills']),  // ← was hardcoded []
+    softSkills:      parseStringList(json['soft_skills']),       // ← was hardcoded []
+    avatarUrl:      json['avatar_url'],
+  );
+}
 }
 
 // ── Avatar widget: real photo or initials fallback ────────────────────────────
