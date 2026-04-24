@@ -15,6 +15,63 @@ class MyProfileScreen extends StatefulWidget {
 }
 
 class _MyProfileScreenState extends State<MyProfileScreen> {
+  bool _loading = true;
+  String? _fetchError;
+
+  @override
+  void initState() {
+    super.initState();
+    // Always fetch fresh data from the server on every screen load.
+    // Never rely solely on the AuthProvider in-memory cache — it may be
+    // empty or stale after a sign-out / sign-in cycle.
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _fetchError = null;
+    });
+
+    try {
+      final res = await ApiService.getProfile();
+      if (!mounted) return;
+
+      // Accept the response only when it carries a real user id.
+      if (res['id'] != null) {
+        await context
+            .read<AuthProvider>()
+            .updateUserData(Map<String, dynamic>.from(res));
+        if (mounted) setState(() => _loading = false);
+      } else if (res['ok'] == true && res['data'] != null) {
+        // Handle backends that wrap the user in { ok: true, data: {...} }
+        await context.read<AuthProvider>().updateUserData(
+            Map<String, dynamic>.from(res['data'] as Map<String, dynamic>));
+        if (mounted) setState(() => _loading = false);
+      } else {
+        // Server returned something unexpected — surface the error.
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _fetchError =
+                'Could not load your profile from the server. '
+                'Showing cached data.';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('MyProfileScreen _fetchProfile error: $e');
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _fetchError =
+              'Network error. Check your connection and tap Retry.';
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return UserLayout(
@@ -24,6 +81,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   }
 
   Widget _buildProfileContent(BuildContext context) {
+    // After _fetchProfile() finishes it calls updateUserData(), which
+    // triggers a notifyListeners() in AuthProvider, so watch() will rebuild
+    // with fresh data automatically.
     final user = context.watch<AuthProvider>().user;
 
     final first = user?['first_name'] as String? ?? '';
@@ -36,7 +96,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
-      // If the backend returned a relative path, attach the backend server address
       if (!rawAvatarUrl.startsWith('http')) {
         finalAvatarUrl =
             '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
@@ -47,19 +106,18 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
     return Stack(
       children: [
-        // Static Asset Background
+        // ── Background ──────────────────────────────────────────────────────
         Positioned.fill(
           child: Image.asset(
             'assets/images/space_background.png',
             fit: BoxFit.cover,
             alignment: Alignment.center,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: Colors.black);
-            },
+            errorBuilder: (context, error, stackTrace) =>
+                Container(color: Colors.black),
           ),
         ),
 
-        // Profile Content (Non-scrollable, now with fixed overflow stripe)
+        // ── Content ─────────────────────────────────────────────────────────
         Positioned.fill(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
@@ -71,7 +129,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // ── Header row (no hamburger - handled by layout) ──
+                    // ── Header ───────────────────────────────────────────────
                     Row(
                       children: [
                         Text(
@@ -86,11 +144,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                               ),
                         ),
                         const Spacer(),
-                        // ── Edit Profile button ──
                         ElevatedButton.icon(
-                          onPressed: () {
-                            context.go('/edit-profile');
-                          },
+                          onPressed: () => context.go('/edit-profile'),
                           icon: const Icon(Icons.edit_outlined, size: 16),
                           label: const Text(
                             'Edit Profile',
@@ -111,7 +166,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Avatar + name card ───────────────────────────────
+                    // ── Fetch-error / retry banner ────────────────────────────
+                    if (_fetchError != null) _retryBanner(_fetchError!),
+                    if (_fetchError != null) const SizedBox(height: 12),
+
+                    // ── Avatar + name card ────────────────────────────────────
                     Card(
                       elevation: 0,
                       color: Colors.white.withOpacity(0.95),
@@ -124,23 +183,32 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            // Show a small spinner inside the avatar while loading
                             CircleAvatar(
                               radius: 40,
                               backgroundColor: _kBlue.withOpacity(0.1),
-                              backgroundImage: finalAvatarUrl.isNotEmpty
+                              backgroundImage: (!_loading &&
+                                      finalAvatarUrl.isNotEmpty)
                                   ? NetworkImage(finalAvatarUrl)
                                   : null,
-                              child: finalAvatarUrl.isEmpty
-                                  ? Text(
-                                      initials,
-                                      style: const TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                        color: _kBlue,
-                                        letterSpacing: 0.5,
-                                      ),
+                              child: _loading
+                                  ? const SizedBox(
+                                      width: 28,
+                                      height: 28,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: _kBlue),
                                     )
-                                  : null,
+                                  : (finalAvatarUrl.isEmpty
+                                      ? Text(
+                                          initials.isEmpty ? '?' : initials,
+                                          style: const TextStyle(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.bold,
+                                            color: _kBlue,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        )
+                                      : null),
                             ),
                             const SizedBox(width: 20),
                             Expanded(
@@ -148,9 +216,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    first.isEmpty && last.isEmpty
-                                        ? 'Name Not Set'
-                                        : '$first $last',
+                                    _loading
+                                        ? '…'
+                                        : (first.isEmpty && last.isEmpty
+                                            ? 'Name Not Set'
+                                            : '$first $last'),
                                     style: const TextStyle(
                                       fontSize: 22,
                                       letterSpacing: 0.5,
@@ -159,7 +229,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    user?['email'] ?? '',
+                                    _loading ? '' : (user?['email'] ?? ''),
                                     style: TextStyle(
                                       color: Colors.grey.shade600,
                                       fontWeight: FontWeight.w500,
@@ -167,27 +237,29 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 8,
-                                    children: [
-                                      _Badge(
-                                        label: 'USER',
-                                        color: _kBlue,
-                                        bg: _kBlue.withOpacity(0.08),
-                                      ),
-                                      _Badge(
-                                        label: (user?['is_active'] == true)
-                                            ? 'ACTIVE'
-                                            : 'INACTIVE',
-                                        color: (user?['is_active'] == true)
-                                            ? Colors.green.shade700
-                                            : Colors.orange.shade700,
-                                        bg: (user?['is_active'] == true)
-                                            ? Colors.green.shade50
-                                            : Colors.orange.shade50,
-                                      ),
-                                    ],
-                                  ),
+                                  if (!_loading)
+                                    Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        _Badge(
+                                          label: 'USER',
+                                          color: _kBlue,
+                                          bg: _kBlue.withOpacity(0.08),
+                                        ),
+                                        _Badge(
+                                          label: (user?['is_active'] == true)
+                                              ? 'ACTIVE'
+                                              : 'INACTIVE',
+                                          color:
+                                              (user?['is_active'] == true)
+                                                  ? Colors.green.shade700
+                                                  : Colors.orange.shade700,
+                                          bg: (user?['is_active'] == true)
+                                              ? Colors.green.shade50
+                                              : Colors.orange.shade50,
+                                        ),
+                                      ],
+                                    ),
                                 ],
                               ),
                             ),
@@ -197,7 +269,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ── Main Info card with FIX for vertical overflow ──
+                    // ── Main info card ────────────────────────────────────────
                     Expanded(
                       child: Card(
                         elevation: 0,
@@ -205,68 +277,103 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
-                        // This SingleChildScrollView fixes the internal overflow
-                        child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 40, vertical: 32),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Internship Information',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    color: _kBlue,
+                        child: _loading
+                            ? const Center(
+                                child: CircularProgressIndicator(color: _kBlue))
+                            : SingleChildScrollView(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 40, vertical: 32),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Internship Information',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: _kBlue,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _infoRow(context, [
+                                        _Field(
+                                            'Name',
+                                            first.isEmpty && last.isEmpty
+                                                ? '—'
+                                                : '$first $last'),
+                                        _Field('Intern Number',
+                                            _val(user, 'intern_number')),
+                                      ]),
+                                      const SizedBox(height: 20),
+                                      _infoRow(context, [
+                                        _Field('Department',
+                                            _val(user, 'department')),
+                                        _Field('Position',
+                                            _val(user, 'position')),
+                                      ]),
+                                      const SizedBox(height: 20),
+                                      _infoRow(context, [
+                                        _Field(
+                                            'Program', _val(user, 'program')),
+                                        _Field('School', _val(user, 'school')),
+                                      ]),
+                                      const SizedBox(height: 20),
+                                      _infoRow(context, [
+                                        _Field('Specialization',
+                                            _val(user, 'specialization')),
+                                        _Field('Year Level',
+                                            _val(user, 'year_level')),
+                                      ]),
+                                      const SizedBox(height: 20),
+                                      _infoRow(context, [
+                                        _Field('Internship Start',
+                                            _val(user, 'start_date')),
+                                        _Field('Internship End',
+                                            _val(user, 'end_date')),
+                                      ]),
+                                      const SizedBox(height: 20),
+                                      _infoRow(context, [
+                                        _Field(
+                                            'Email', _val(user, 'email')),
+                                      ]),
+                                      const SizedBox(height: 24),
+                                      const Divider(),
+                                      const SizedBox(height: 20),
+                                      const Text(
+                                        'Skills & Profile',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: _kBlue,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _infoRow(context, [
+                                        _Field('Bio', _val(user, 'bio')),
+                                      ]),
+                                      const SizedBox(height: 20),
+                                      _infoRow(context, [
+                                        _Field('Technical Skills',
+                                            _val(user, 'technical_skills')),
+                                      ]),
+                                      const SizedBox(height: 20),
+                                      _infoRow(context, [
+                                        _Field('Soft Skills',
+                                            _val(user, 'soft_skills')),
+                                      ]),
+                                      const SizedBox(height: 20),
+                                      _infoRow(context, [
+                                        _Field('LinkedIn',
+                                            _val(user, 'linked_in')),
+                                        _Field(
+                                            'GitHub', _val(user, 'git_hub')),
+                                      ]),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 24),
-                                _infoRow(context, [
-                                  _Field(
-                                      'Name',
-                                      first.isEmpty && last.isEmpty
-                                          ? '—'
-                                          : '$first $last'),
-                                  _Field('Intern Number',
-                                      user?['intern_number'] ?? '—'),
-                                ]),
-                                const SizedBox(height: 20),
-                                _infoRow(context, [
-                                  _Field('Program', user?['program'] ?? '—'),
-                                  _Field('School', user?['school'] ?? '—'),
-                                ]),
-                                const SizedBox(height: 20),
-                                _infoRow(context, [
-                                  _Field('Specialization',
-                                      user?['specialization'] ?? '—'),
-                                  _Field('Email', user?['email'] ?? '—'),
-                                ]),
-                                const SizedBox(height: 24),
-                                const Divider(),
-                                const SizedBox(height: 20),
-                                const Text(
-                                  'Skills & Proficiencies',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    color: _kBlue,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                _infoRow(context, [
-                                  _Field('Technical Skills',
-                                      user?['technical_skills'] ?? '—'),
-                                ]),
-                                const SizedBox(height: 20),
-                                _infoRow(context, [
-                                  _Field('Soft Skills',
-                                      user?['soft_skills'] ?? '—'),
-                                ]),
-                              ],
-                            ),
-                          ),
-                        ),
+                              ),
                       ),
                     ),
                   ],
@@ -279,6 +386,45 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     );
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /// Safe field reader — returns '—' instead of null/empty string.
+  String _val(Map<String, dynamic>? user, String key) {
+    final v = user?[key];
+    if (v == null) return '—';
+    final s = v.toString().trim();
+    return s.isEmpty ? '—' : s;
+  }
+
+  Widget _retryBanner(String msg) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.orange.withOpacity(0.4)),
+        ),
+        child: Row(children: [
+          Icon(Icons.wifi_off_rounded, color: Colors.orange.shade700, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Text(msg,
+                  style:
+                      TextStyle(color: Colors.orange.shade900, fontSize: 12))),
+          TextButton(
+            onPressed: _fetchProfile,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange.shade800,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Retry',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+        ]),
+      );
+
   Widget _infoRow(BuildContext context, List<_Field> fields) {
     return LayoutBuilder(builder: (context, constraints) {
       if (constraints.maxWidth > 400) {
@@ -290,9 +436,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           }
         }
         return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: rowChildren,
-        );
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: rowChildren);
       }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,6 +451,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     });
   }
 }
+
+// ── Shared widgets ─────────────────────────────────────────────────────────────
 
 class _Badge extends StatelessWidget {
   final String label;
