@@ -46,6 +46,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     });
 
     final res = await ApiService.getInterns();
+    debugPrint('🔍 INTERNS KEYS: ${res.keys.toList()}');
+    debugPrint('🔍 INTERNS FULL: $res');
 
     if (!mounted) return;
 
@@ -273,8 +275,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left,
-                  color: Colors.white, size: 32),
+              icon:
+                  const Icon(Icons.chevron_left, color: Colors.white, size: 32),
               onPressed: _prev,
             ),
             const SizedBox(width: 20),
@@ -287,9 +289,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   width: active ? 20 : 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: active
-                        ? const Color(0xFF4A5E9A)
-                        : Colors.white24,
+                    color: active ? const Color(0xFF4A5E9A) : Colors.white24,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 );
@@ -339,7 +339,7 @@ class _InternCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.4),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.4),
                 blurRadius: 32,
                 offset: const Offset(0, 16),
               ),

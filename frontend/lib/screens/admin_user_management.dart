@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
-import '../providers/sidebar_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
 
@@ -32,7 +31,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(2)),
           ),
           Container(
@@ -179,7 +178,7 @@ class _UsersScreenState extends State<UsersScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: const Color(0xFF4A5E9A).withOpacity(0.1),
+                color: const Color(0xFF4A5E9A).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8)),
             child: const Icon(Icons.archive_outlined,
                 color: Color(0xFF4A5E9A), size: 22),
@@ -294,7 +293,7 @@ class _UsersScreenState extends State<UsersScreen> {
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
+            color: Colors.white.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(24),
           ),
           child: ClipRRect(
@@ -436,10 +435,10 @@ class _UsersScreenState extends State<UsersScreen> {
                                 top: 28,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
+                                    color: Colors.white.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                        color: Colors.white.withOpacity(0.15)),
+                                        color: Colors.white.withValues(alpha: 0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
@@ -447,7 +446,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                         setState(() => _isSidebarOpen = true),
                                     icon: const HamburgerIcon(),
                                     tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withOpacity(0.1),
+                                    splashColor: Colors.white.withValues(alpha: 0.1),
                                     highlightColor: Colors.transparent,
                                   ),
                                 ),
@@ -522,7 +521,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                 // ── Filter Pill Group ────────────────
                                 Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.08),
+                                    color: Colors.white.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                   padding: const EdgeInsets.all(6),
@@ -554,7 +553,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                                       BoxShadow(
                                                         color: const Color(
                                                                 0xFF4A5E9A)
-                                                            .withOpacity(0.4),
+                                                            .withValues(alpha: 0.4),
                                                         blurRadius: 8,
                                                         offset:
                                                             const Offset(0, 2),
@@ -594,7 +593,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                 else if (admins.isEmpty && internUsers.isEmpty)
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.95),
+                                      color: Colors.white.withValues(alpha: 0.95),
                                       borderRadius: BorderRadius.circular(24),
                                     ),
                                     padding: const EdgeInsets.all(48),
@@ -842,7 +841,7 @@ class _UserTile extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4A5E9A).withOpacity(0.1),
+                    color: const Color(0xFF4A5E9A).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: IconButton(

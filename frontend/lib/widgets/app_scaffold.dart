@@ -39,7 +39,7 @@ class AppScaffold extends StatelessWidget {
                       onPressed: () {}, // Sidebar removed
                       tooltip: 'Toggle Menu',
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.1),
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),

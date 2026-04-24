@@ -29,7 +29,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -85,30 +85,6 @@ class AdminLayout extends StatelessWidget {
               ),
             ],
           ),
-          // Hamburger menu button when sidebar is closed
-          if (!sidebar.isAdminSidebarOpen)
-            Positioned(
-              top: 24,
-              left: 24,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.15),
-                    width: 1,
-                  ),
-                ),
-                child: IconButton(
-                  padding: const EdgeInsets.all(12),
-                  onPressed: () => sidebar.setAdminSidebarOpen(true),
-                  icon: const HamburgerIcon(),
-                  tooltip: 'Open Sidebar',
-                  splashColor: Colors.white.withOpacity(0.1),
-                  highlightColor: Colors.transparent,
-                ),
-              ),
-            ),
         ],
       ),
     );

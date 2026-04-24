@@ -31,7 +31,7 @@ class _HamburgerIcon extends StatelessWidget {
         width: w,
         height: 2.5,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(opacity),
+          color: Colors.white.withValues(alpha: opacity),
           borderRadius: BorderRadius.circular(2),
         ),
       );
@@ -171,10 +171,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               Container(
                                 margin: const EdgeInsets.only(right: 16),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
+                                  color: Colors.white.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: Colors.white.withOpacity(0.15),
+                                    color: Colors.white.withValues(alpha: 0.15),
                                   ),
                                 ),
                                 child: IconButton(

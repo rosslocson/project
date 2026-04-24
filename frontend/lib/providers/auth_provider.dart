@@ -23,9 +23,20 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final userStr = prefs.getString('user');
     final token = prefs.getString('token');
-    if (userStr != null && token != null) {
-      _user = jsonDecode(userStr);
-      notifyListeners();
+
+    if (userStr != null) {
+      try {
+        _user = jsonDecode(userStr) as Map<String, dynamic>;
+        notifyListeners();
+        debugPrint('📦 _loadFromStorage: restored ${_user!.keys.length} keys from cache');
+        debugPrint('📦 cached keys: ${_user!.keys.toList()}');
+      } catch (_) {
+        await prefs.remove('user');
+        debugPrint('💥 _loadFromStorage: cache corrupted, cleared');
+      }
+    }
+
+    if (token != null && token.isNotEmpty) {
       await refreshProfile();
     }
   }
@@ -38,16 +49,21 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final res = await ApiService.login(email, password);
+
       if (res['ok'] == true) {
-        _user = res['user'];
+        // Save token FIRST so refreshProfile() is authenticated
         await ApiService.saveToken(res['token']);
+
+        _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
         await _persistUser();
-        // ✅ Fetch full profile immediately after login so extended
-        // fields (school, bio, skills, etc.) are available right away
+        notifyListeners();
+
+        // Fetch the full profile now that the token is saved
         await refreshProfile();
       } else {
         _error = res['error'] ?? 'Login failed';
       }
+
       _isLoading = false;
       notifyListeners();
       return res;
@@ -71,12 +87,15 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final res = await ApiService.register(data);
+
       if (res['ok'] == true) {
-        _user = res['user'];
         await ApiService.saveToken(res['token']);
+        _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
         await _persistUser();
-        // ✅ Same as login — fetch full profile after register
+        notifyListeners();
+
         await refreshProfile();
+
         _isLoading = false;
         notifyListeners();
         return true;
@@ -97,22 +116,58 @@ class AuthProvider extends ChangeNotifier {
   Future<void> refreshProfile() async {
     try {
       final res = await ApiService.getProfile();
-      debugPrint('🔄 refreshProfile response keys: ${res.keys.toList()}');
 
-      if (res['id'] != null) {
-        // ✅ Server data wins — spread LAST so it overwrites any stale
-        // locally-cached values. This is the single source of truth.
-        _user = {...?_user, ...res};
-        await _persistUser();
-        notifyListeners();
+      // ── DIAGNOSTIC — remove these prints once the bug is confirmed fixed ─
+      debugPrint('🔄 refreshProfile raw response: $res');
+      debugPrint('🔄 refreshProfile keys: ${res.keys.toList()}');
+      if (res['data'] != null) debugPrint('⚠️  server wraps data under "data" key');
+      if (res['user'] != null) debugPrint('⚠️  server wraps data under "user" key');
+      for (final k in [
+        'linked_in', 'linkedin', 'git_hub', 'github',
+        'bio', 'technical_skills', 'soft_skills',
+        'school', 'program', 'department', 'position'
+      ]) {
+        if (res.containsKey(k)) debugPrint('  field "$k" = ${res[k]}');
       }
-    } catch (e) {
-      debugPrint('⚠️ refreshProfile error: $e');
+      // ─────────────────────────────────────────────────────────────────────
+
+      // Handle backends that wrap the user in { data: {...} } or { user: {...} }
+      Map<String, dynamic> profile;
+      if (res['id'] != null) {
+        profile = res;
+      } else if (res['data'] is Map && (res['data'] as Map)['id'] != null) {
+        profile = Map<String, dynamic>.from(res['data'] as Map);
+        debugPrint('🔄 unwrapped profile from res["data"]');
+      } else if (res['user'] is Map && (res['user'] as Map)['id'] != null) {
+        profile = Map<String, dynamic>.from(res['user'] as Map);
+        debugPrint('🔄 unwrapped profile from res["user"]');
+      } else {
+        debugPrint('⚠️ refreshProfile: no id found — skipping merge. Full response: $res');
+        return;
+      }
+
+      // FIX: Only merge keys whose server value is non-null.
+      // When a backend returns null for extended fields (bio, school, etc.)
+      // on a fresh login response, those nulls must NOT overwrite the
+      // correctly saved values in the local cache.
+      final merged = Map<String, dynamic>.from(_user ?? {});
+      for (final entry in profile.entries) {
+        if (entry.value != null) {
+          merged[entry.key] = entry.value;
+        } else {
+          debugPrint('  ⚠️ server null for "${entry.key}" — keeping cached value');
+        }
+      }
+
+      _user = merged;
+      await _persistUser();
+      notifyListeners();
+      debugPrint('✅ refreshProfile complete — ${_user!.keys.length} keys in user');
+    } catch (e, st) {
+      debugPrint('⚠️ refreshProfile error: $e\n$st');
     }
   }
 
-  // ✅ Kept for compatibility but now only used for non-profile data
-  // (e.g. avatar_url updates). Profile fields always come via refreshProfile.
   Future<void> updateUserData(Map<String, dynamic> data) async {
     _user = {...?_user, ...data};
     await _persistUser();
@@ -136,6 +191,10 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _persistUser() async {
     if (_user == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user', jsonEncode(_user));
+    try {
+      await prefs.setString('user', jsonEncode(_user));
+    } catch (e) {
+      debugPrint('⚠️ _persistUser encode error: $e');
+    }
   }
 }

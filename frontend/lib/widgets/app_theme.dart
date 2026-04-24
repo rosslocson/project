@@ -31,11 +31,11 @@ InputDecoration pillInputDecoration({
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide(color: kCosmicBlue.withOpacity(0.5), width: 2),
+        borderSide: BorderSide(color: kCosmicBlue.withValues(alpha: 0.5), width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide(color: const Color(0xFF00022E).withOpacity(0.6), width: 1.5),
+        borderSide: BorderSide(color: const Color(0xFF00022E).withValues(alpha: 0.6), width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),

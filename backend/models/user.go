@@ -37,6 +37,18 @@ type User struct {
 	ResetToken       string     `json:"-"`
 	ResetTokenExpiry *time.Time `json:"-"`
 	RequiredOjtHours int        `gorm:"default:486" json:"required_ojt_hours"`
+
+	School          string `json:"school"`
+	Program         string `json:"program"`
+	Specialization  string `json:"specialization"`
+	YearLevel       string `json:"year_level"`
+	InternNumber    string `json:"intern_number"`
+	StartDate       string `json:"start_date"`
+	EndDate         string `json:"end_date"`
+	TechnicalSkills string `json:"technical_skills"`
+	SoftSkills      string `json:"soft_skills"`
+	LinkedIn        string `json:"linked_in"`
+	GitHub          string `json:"git_hub"`
 }
 
 type ActivityLog struct {

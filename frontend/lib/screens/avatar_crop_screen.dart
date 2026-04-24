@@ -23,13 +23,13 @@ class _AvatarCropScreenState extends State<AvatarCropScreen> {
   @override
   void initState() {
     super.initState();
-    print("Crop screen opened with ${widget.imageBytes.length} bytes");
+    //print("Crop screen opened with ${widget.imageBytes.length} bytes");
   }
 
   void _cropImage() {
     if (_isSaving) return;
     setState(() => _isSaving = true);
-    print("🖼️ Crop button pressed");
+    //print("🖼️ Crop button pressed");
     _controller.crop();
   }
 
@@ -62,18 +62,18 @@ class _AvatarCropScreenState extends State<AvatarCropScreen> {
                 onCropped: (croppedData) async {
                   setState(() => _isSaving = false);
                   try {
-                    print("✂️ Image cropped: ${croppedData.length} bytes");
+                    //print("✂️ Image cropped: ${croppedData.length} bytes");
                     
                     // Compress for faster upload
                     final compressed = await _compressImage(croppedData);
                     
-                    print("📦 Compressed to ${compressed.length} bytes");
-                    print("🔙 Returning optimized bytes");
+                    //print("📦 Compressed to ${compressed.length} bytes");
+                    //print("🔙 Returning optimized bytes");
                     if (mounted) {
                       Navigator.pop(context, compressed);
                     }
                   } catch (e) {
-                    print("❌ Error cropping image: $e");
+                    //print("❌ Error cropping image: $e");
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

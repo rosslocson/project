@@ -280,9 +280,12 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	// Only overwrite a field if the request actually sent a non-empty value.
 	// This prevents AccountSettings from blanking out Edit Profile fields
 	// and vice versa.
+	// Replace the updates map section in UpdateProfile
 	updates := map[string]interface{}{}
 
-	// Account Settings fields
+	// Only write fields that were explicitly sent (non-empty)
+	// If you need to allow clearing a field, the Flutter side must send a
+	// sentinel like " " or handle it separately
 	if req.FirstName != "" {
 		updates["first_name"] = req.FirstName
 	}
@@ -292,11 +295,17 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	if req.Phone != "" {
 		updates["phone"] = req.Phone
 	}
-	// Department/Position are always written (can be set to empty intentionally)
-	updates["department"] = req.Department
-	updates["position"] = req.Position
 
-	// Edit Profile fields — only write if sent
+	// ✅ Department/Position: only write if the key was actually in the JSON.
+	// Use pointers in the request struct instead so you can distinguish
+	// "not sent" from "intentionally empty":
+	if req.Department != "" {
+		updates["department"] = req.Department
+	}
+	if req.Position != "" {
+		updates["position"] = req.Position
+	}
+
 	if req.School != "" {
 		updates["school"] = req.School
 	}
@@ -318,8 +327,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	if req.EndDate != "" {
 		updates["end_date"] = req.EndDate
 	}
-
-	// Skills fields
 	if req.Bio != "" {
 		updates["bio"] = req.Bio
 	}
@@ -640,7 +647,9 @@ func (h *Handler) GetActivityLogs(c *gin.Context) {
 func (h *Handler) ListInterns(c *gin.Context) {
 	var interns []models.User
 	h.DB.Where("role = ? AND is_active = ?", models.RoleUser, true).
-		Select("id, first_name, last_name, email, department, position, avatar_url, created_at").
+		Select(`id, first_name, last_name, email, department, position, 
+                avatar_url, school, program, specialization, 
+                technical_skills, soft_skills, created_at`).
 		Order("first_name asc, last_name asc").
 		Find(&interns)
 	c.JSON(http.StatusOK, gin.H{"interns": interns})

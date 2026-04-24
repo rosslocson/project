@@ -55,10 +55,8 @@ func (h *Handler) Login(c *gin.Context) {
 
 	userRepo := repositories.NewUserRepository(h.DB)
 	authService := services.NewAuthService(userRepo)
-
 	result, err := authService.Login(strings.TrimSpace(req.Email), req.Password)
 	if err != nil {
-		// Handle locked account
 		if result.IsLocked {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":            "Account temporarily locked",
@@ -68,8 +66,6 @@ func (h *Handler) Login(c *gin.Context) {
 			})
 			return
 		}
-
-		// Handle failed password
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":         result.Error.Error(),
 			"attempts_left": result.AttemptsLeft,
@@ -77,10 +73,17 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	// ✅ Re-fetch full user from DB — result.User only has auth fields,
+	// not school/program/skills etc. This is why data was stale after re-login.
+	fullUser, err := userRepo.GetByID(result.User.ID)
+	if err != nil {
+		fullUser = result.User // non-fatal fallback
+	}
+
 	h.logActivity(result.User.ID, "LOGIN", "User logged in", c.ClientIP())
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
 		"token":   result.Token,
-		"user":    result.User,
+		"user":    fullUser, // ✅ complete profile, not the stripped auth copy
 	})
 }

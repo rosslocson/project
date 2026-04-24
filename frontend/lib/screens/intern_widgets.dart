@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import '../services/api_service.dart';
 
+
 // ── Brand colors ──────────────────────────────────────────────────────────────
 const kBlue = Color(0xFF1E40AF);
 const kBlueDark = Color(0xFF1E2A44);
@@ -56,27 +57,32 @@ class InternProfile {
   }
 
   factory InternProfile.fromJson(Map<String, dynamic> json) {
-    final firstName = (json['first_name'] ?? '').toString().trim();
-    final lastName = (json['last_name'] ?? '').toString().trim();
-    final fullName = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
+  final firstName = (json['first_name'] ?? '').toString().trim();
+  final lastName  = (json['last_name']  ?? '').toString().trim();
+  final fullName  = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
 
-    return InternProfile(
-      id: json['id'] as int,
-      name: fullName.isNotEmpty ? fullName : 'Unnamed Intern',
-      internNumber: json['id'] as int,
-      program: (json['department'] ?? '').toString().trim().isNotEmpty
-          ? json['department']
-          : 'No Department',
-      school: '',
-      specialization: (json['position'] ?? '').toString().trim().isNotEmpty
-          ? json['position']
-          : 'No Position',
-      email: json['email'] ?? '',
-      technicalSkills: [],
-      softSkills: [],
-      avatarUrl: json['avatar_url'],
-    );
+  // Helper to safely parse a JSON array of strings
+  List<String> parseStringList(dynamic value) {
+    if (value == null) return [];
+    if (value is List) return value.map((e) => e.toString()).toList();
+    // Some APIs return a comma-separated string instead of an array
+    if (value is String && value.isNotEmpty) return value.split(',').map((s) => s.trim()).toList();
+    return [];
   }
+
+  return InternProfile(
+    id:             json['id'] as int,
+    name:           fullName.isNotEmpty ? fullName : 'Unnamed Intern',
+    internNumber:   json['id'] as int,
+    program:        (json['program']        ?? '').toString().trim().isNotEmpty ? json['program']        : 'N/A',
+    school:         (json['school']         ?? '').toString().trim().isNotEmpty ? json['school']         : 'N/A',  // ← was hardcoded ''
+    specialization: (json['specialization'] ?? '').toString().trim().isNotEmpty ? json['specialization'] : 'N/A',
+    email:          json['email'] ?? '',
+    technicalSkills: parseStringList(json['technical_skills']),  // ← was hardcoded []
+    softSkills:      parseStringList(json['soft_skills']),       // ← was hardcoded []
+    avatarUrl:      json['avatar_url'],
+  );
+}
 }
 
 // ── Avatar widget: real photo or initials fallback ────────────────────────────
@@ -272,10 +278,10 @@ class _InternDetailPageState extends State<InternDetailPage>
                       // ── Wider max width ───────────────────────────────────
                       constraints: const BoxConstraints(maxWidth: 1100),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A24).withOpacity(0.5),
+                        color: const Color(0xFF1A1A24).withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(32),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           width: 1.5,
                         ),
                       ),
@@ -322,7 +328,7 @@ class _InternDetailPageState extends State<InternDetailPage>
                                   'Intern #${intern.internNumber}',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                 ),
                                 const SizedBox(height: 32),
@@ -426,10 +432,10 @@ class _InfoRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: Colors.white.withOpacity(0.8), size: 20),
+            child: Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -440,7 +446,7 @@ class _InfoRow extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -471,9 +477,9 @@ class _SkillChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Text(
         skill,
@@ -513,7 +519,7 @@ class StarfieldPainter extends CustomPainter {
       final twinkle =
           (math.sin((animValue * 2 * math.pi * 1.5) + star.phase) + 1) / 2;
       final alpha = (star.opacity * (0.3 + 0.7 * twinkle)).clamp(0.0, 1.0);
-      paint.color = Colors.white.withOpacity(alpha);
+      paint.color = Colors.white.withValues(alpha: alpha);
       final dx = (star.x * size.width + animValue * size.width * star.speed) %
           size.width;
       final dy = star.y * size.height;
@@ -522,7 +528,7 @@ class StarfieldPainter extends CustomPainter {
           Offset(dx, dy),
           star.size * 2,
           Paint()
-            ..color = Colors.white.withOpacity(alpha * 0.25)
+            ..color = Colors.white.withValues(alpha: alpha * 0.25)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
         );
       }

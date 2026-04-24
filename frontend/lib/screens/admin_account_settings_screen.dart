@@ -377,7 +377,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       });
 
       if (res['ok'] == true) {
-        print("✅ Upload successful");
+        //print("✅ Upload successful");
         await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
 
         setState(() {
@@ -391,7 +391,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           ),
         );
       } else {
-        print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
+        //print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
         setState(() {
           _avatarFile = null;
         });
@@ -404,8 +404,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         );
       }
     } catch (e, stackTrace) {
-      print("❌ ERROR: $e");
-      print("📋 Stack trace: $stackTrace");
+      //print("❌ ERROR: $e");
+      //print("📋 Stack trace: $stackTrace");
 
       if (mounted) {
         setState(() {
@@ -506,7 +506,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-            color: const Color(0xFF00022E).withOpacity(0.6), width: 1),
+            color: const Color(0xFF00022E).withValues(alpha: 0.6), width: 1),
       ),
     );
   }
@@ -591,10 +591,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                 top: 28,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
+                                    color: Colors.white.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                        color: Colors.white.withOpacity(0.15)),
+                                        color: Colors.white.withValues(alpha: 0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
@@ -602,7 +602,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                         setState(() => _isSidebarOpen = true),
                                     icon: const HamburgerIcon(),
                                     tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withOpacity(0.1),
+                                    splashColor: Colors.white.withValues(alpha: 0.1),
                                     highlightColor: Colors.transparent,
                                   ),
                                 ),
@@ -619,7 +619,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                               left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.95),
+                              color: Colors.white.withValues(alpha: 0.95),
                               borderRadius: BorderRadius.circular(24),
                             ),
                             child: ClipRRect(
@@ -645,7 +645,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             CircleAvatar(
                                               radius: 40,
                                               backgroundColor:
-                                                  _kBlue.withOpacity(0.1),
+                                                  _kBlue.withValues(alpha: 0.1),
                                               backgroundImage: _avatarFile !=
                                                       null
                                                   ? FileImage(_avatarFile!)
@@ -759,7 +759,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                         vertical: 4),
                                                 decoration: BoxDecoration(
                                                   color:
-                                                      _kBlue.withOpacity(0.08),
+                                                      _kBlue.withValues(alpha: 0.08),
                                                   borderRadius:
                                                       BorderRadius.circular(16),
                                                 ),
@@ -768,7 +768,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                       .toUpperCase(),
                                                   style: TextStyle(
                                                     color:
-                                                        _kBlue.withOpacity(0.9),
+                                                        _kBlue.withValues(alpha: 0.9),
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w800,
                                                     letterSpacing: 1.0,

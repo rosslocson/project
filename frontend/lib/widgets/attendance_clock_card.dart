@@ -32,7 +32,7 @@ class AttendanceClockCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00022E).withOpacity(0.35), // Updated shadow color
+            color: const Color(0xFF00022E).withValues(alpha: 0.35), // Updated shadow color
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -113,14 +113,14 @@ class AttendanceClockCard extends StatelessWidget {
         icon: const Icon(Icons.check_circle_rounded),
         label: const Text('Completed for Today'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white.withOpacity(0.15),
+          backgroundColor: Colors.white.withValues(alpha: 0.15),
           foregroundColor: Colors.white70,
-          disabledBackgroundColor: Colors.white.withOpacity(0.1),
+          disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
           disabledForegroundColor: Colors.white60,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
           ),
         ),
       );
@@ -216,9 +216,9 @@ class _TimeChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withOpacity(0.15)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

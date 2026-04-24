@@ -19,9 +19,6 @@ import 'screens/admin_departments_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'screens/user_attendance_screen.dart';
 
-
- 
-
 void main() {
   runApp(
     MultiProvider(
