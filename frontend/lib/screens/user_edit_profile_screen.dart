@@ -60,13 +60,12 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
   final _academicKey = GlobalKey<FormState>();
   List<String> _departments = [];
-  List<String> _positions = [];
+  final String _defaultPosition = 'Intern';
 
   // FIX: Single loading flag for the entire init sequence
   bool _initialLoading = true;
 
   String? _selectedDept;
-  String? _selectedPos;
 
   late TextEditingController _schoolCtrl;
   late TextEditingController _programCtrl;
@@ -112,9 +111,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     _githubCtrl = TextEditingController(text: user['git_hub'] ?? '');
 
     final dept = user['department'] as String? ?? '';
-    final pos = user['position'] as String? ?? '';
+
     _selectedDept = dept.isNotEmpty ? dept : null;
-    _selectedPos = pos.isNotEmpty ? pos : null;
 
     // ✅ Only fetch dropdown configs in the background — no full profile re-fetch
     _loadConfig();
@@ -144,31 +142,20 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
   // ✅ Replace _initScreenData with this leaner version
   Future<void> _loadConfig() async {
-    final results = await Future.wait([
-      ApiService.getConfig(type: 'department'),
-      ApiService.getConfig(type: 'position'),
-    ]);
+    final result = await ApiService.getConfig(type: 'department');
     if (!mounted) return;
 
-    final depts = (results[0]['items'] as List? ?? [])
-        .map((e) => e['name'] as String)
-        .toList();
-    final positions = (results[1]['items'] as List? ?? [])
+    final depts = (result['items'] as List? ?? [])
         .map((e) => e['name'] as String)
         .toList();
 
-    // Preserve saved values even if not in list
     if (_selectedDept != null && !depts.contains(_selectedDept!)) {
       depts.add(_selectedDept!);
-    }
-    if (_selectedPos != null && !positions.contains(_selectedPos!)) {
-      positions.add(_selectedPos!);
     }
 
     setState(() {
       _departments = depts;
-      _positions = positions;
-      _initialLoading = false; // rename this to _configLoading for clarity
+      _initialLoading = false;
     });
   }
 
@@ -181,7 +168,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
     final payload = {
       'department': _selectedDept ?? '',
-      'position': _selectedPos ?? '',
+      'position': _defaultPosition,
       'school': _schoolCtrl.text.trim(),
       'program': _programCtrl.text.trim(),
       'specialization': _specCtrl.text.trim(),
@@ -372,25 +359,44 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                       items: _departments,
                       onChanged: (v) => setState(() {
                         _selectedDept = v;
-                        _selectedPos = null;
                       }),
                     ),
                   ])),
               const SizedBox(width: 16),
               Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     _label('Position'),
-                    _dropdown(
-                      value: _selectedPos,
-                      hint: _positions.isEmpty
-                          ? 'Select Dept First'
-                          : 'Select Position',
-                      items: _positions,
-                      onChanged: (v) => setState(() => _selectedPos = v),
+                    IgnorePointer(
+                      child: DropdownButtonFormField<String>(
+                        value: _defaultPosition,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        icon: Icon(Icons.keyboard_arrow_down,
+                            color: Colors.grey.shade300),
+                        items: [
+                          DropdownMenuItem(
+                            value: _defaultPosition,
+                            child: Text(_defaultPosition,
+                                style: const TextStyle(
+                                    color: Colors.black54, fontSize: 13)),
+                          ),
+                        ],
+                        onChanged: null,
+                      ),
                     ),
-                  ])),
+                  ],
+                ),
+              ),
             ]),
             const SizedBox(height: 16),
             _label('School / University'),
