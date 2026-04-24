@@ -62,8 +62,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   List<String> _departments = [];
   List<String> _positions = [];
 
+  // FIX: Single loading flag for the entire init sequence
   bool _initialLoading = true;
-  String? _initError;
 
   String? _selectedDept;
   String? _selectedPos;
@@ -92,23 +92,32 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
 
-    _schoolCtrl = TextEditingController();
-    _programCtrl = TextEditingController();
-    _specCtrl = TextEditingController();
-    _yearCtrl = TextEditingController();
-    _internNumCtrl = TextEditingController();
-    _startCtrl = TextEditingController();
-    _endCtrl = TextEditingController();
-    _bioCtrl = TextEditingController();
-    _techSkillsCtrl = TextEditingController();
-    _softSkillsCtrl = TextEditingController();
-    _linkedinCtrl = TextEditingController();
-    _githubCtrl = TextEditingController();
+    // ✅ Populate immediately from cached provider (like file 2)
+    // This is why fields were blank on re-login — file 1 waited on a server
+    // fetch before populating, so a slow/failed fetch = empty fields.
+    final user = context.read<AuthProvider>().user ?? {};
 
-    // Always fetch fresh data from the server on screen load.
-    // We intentionally do NOT pre-populate from AuthProvider cache here
-    // because that cache may be stale (e.g. after sign-out / sign-in).
-    _initScreenData();
+    _schoolCtrl = TextEditingController(text: user['school'] ?? '');
+    _programCtrl = TextEditingController(text: user['program'] ?? '');
+    _specCtrl = TextEditingController(text: user['specialization'] ?? '');
+    _yearCtrl = TextEditingController(text: user['year_level'] ?? '');
+    _internNumCtrl = TextEditingController(text: user['intern_number'] ?? '');
+    _startCtrl = TextEditingController(text: user['start_date'] ?? '');
+    _endCtrl = TextEditingController(text: user['end_date'] ?? '');
+    _bioCtrl = TextEditingController(text: user['bio'] ?? '');
+    _techSkillsCtrl =
+        TextEditingController(text: user['technical_skills'] ?? '');
+    _softSkillsCtrl = TextEditingController(text: user['soft_skills'] ?? '');
+    _linkedinCtrl = TextEditingController(text: user['linked_in'] ?? '');
+    _githubCtrl = TextEditingController(text: user['git_hub'] ?? '');
+
+    final dept = user['department'] as String? ?? '';
+    final pos = user['position'] as String? ?? '';
+    _selectedDept = dept.isNotEmpty ? dept : null;
+    _selectedPos = pos.isNotEmpty ? pos : null;
+
+    // ✅ Only fetch dropdown configs in the background — no full profile re-fetch
+    _loadConfig();
   }
 
   @override
@@ -133,137 +142,34 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     super.dispose();
   }
 
-  /// -----------------------------------------------------------------------
-  /// ROOT FIX: Pull the user's profile directly from the server every time
-  /// this screen initialises. Never rely on the in-memory AuthProvider cache
-  /// as the primary data source — the cache may have been wiped by a
-  /// sign-out/sign-in cycle and not yet re-hydrated.
-  /// -----------------------------------------------------------------------
-  Future<void> _initScreenData() async {
+  // ✅ Replace _initScreenData with this leaner version
+  Future<void> _loadConfig() async {
+    final results = await Future.wait([
+      ApiService.getConfig(type: 'department'),
+      ApiService.getConfig(type: 'position'),
+    ]);
     if (!mounted) return;
-    setState(() {
-      _initialLoading = true;
-      _initError = null;
-    });
 
-    try {
-      // ── Step 1: Fetch fresh profile from server ──────────────────────────
-      // ApiService.getProfile() must hit your backend with the current
-      // session token. After a fresh login the token is valid, so this
-      // should always return up-to-date data.
-      final profileRes = await ApiService.getProfile();
-      if (!mounted) return;
+    final depts = (results[0]['items'] as List? ?? [])
+        .map((e) => e['name'] as String)
+        .toList();
+    final positions = (results[1]['items'] as List? ?? [])
+        .map((e) => e['name'] as String)
+        .toList();
 
-      // Treat the response as authoritative only when it carries an id.
-      // Some backends wrap in { ok, data } — adjust the key if needed.
-      Map<String, dynamic> freshUser = {};
-      if (profileRes['id'] != null) {
-        freshUser = Map<String, dynamic>.from(profileRes);
-      } else if (profileRes['ok'] == true && profileRes['data'] != null) {
-        // Handle { ok: true, data: { ...user } } shape
-        freshUser = Map<String, dynamic>.from(
-            profileRes['data'] as Map<String, dynamic>);
-      } else {
-        // The server returned something unexpected — treat as an error so
-        // we don't silently show an empty form.
-        throw Exception(
-            'Unexpected profile response: ${profileRes.toString()}');
-      }
-
-      // Keep the AuthProvider in sync so the rest of the app is current.
-      if (mounted) {
-        await context.read<AuthProvider>().updateUserData(freshUser);
-      }
-      if (!mounted) return;
-
-      // ── Step 2: Fetch dropdown options in parallel ────────────────────────
-      final results = await Future.wait([
-        ApiService.getConfig(type: 'department'),
-        ApiService.getConfig(type: 'position'),
-      ]);
-      if (!mounted) return;
-
-      final depts = ((results[0]['items'] as List?) ?? [])
-          .map((e) => e['name'] as String)
-          .toList();
-
-      final positions = ((results[1]['items'] as List?) ?? [])
-          .map((e) => e['name'] as String)
-          .toList();
-
-      final savedDept = (freshUser['department'] as String? ?? '').isEmpty
-          ? null
-          : freshUser['department'] as String;
-      final savedPos = (freshUser['position'] as String? ?? '').isEmpty
-          ? null
-          : freshUser['position'] as String;
-
-      // Keep saved values even if they aren't in the current dropdown list.
-      if (savedDept != null && !depts.contains(savedDept)) depts.add(savedDept);
-      if (savedPos != null && !positions.contains(savedPos)) {
-        positions.add(savedPos);
-      }
-
-      // ── Step 3: Populate all controllers from server data ─────────────────
-      setState(() {
-        _departments = depts;
-        _positions = positions;
-        _selectedDept = savedDept;
-        _selectedPos = savedPos;
-
-        _schoolCtrl.text = freshUser['school'] as String? ?? '';
-        _programCtrl.text = freshUser['program'] as String? ?? '';
-        _specCtrl.text = freshUser['specialization'] as String? ?? '';
-        _yearCtrl.text = freshUser['year_level'] as String? ?? '';
-        _internNumCtrl.text = freshUser['intern_number'] as String? ?? '';
-        _startCtrl.text = freshUser['start_date'] as String? ?? '';
-        _endCtrl.text = freshUser['end_date'] as String? ?? '';
-        _bioCtrl.text = freshUser['bio'] as String? ?? '';
-        _techSkillsCtrl.text = freshUser['technical_skills'] as String? ?? '';
-        _softSkillsCtrl.text = freshUser['soft_skills'] as String? ?? '';
-        _linkedinCtrl.text = freshUser['linked_in'] as String? ?? '';
-        _githubCtrl.text = freshUser['git_hub'] as String? ?? '';
-
-        _initialLoading = false;
-      });
-    } catch (e) {
-      debugPrint('EditProfile _initScreenData error: $e');
-      if (!mounted) return;
-
-      // ── Fallback: show what the AuthProvider cached (may be empty after ──
-      // ── a fresh login if the provider wasn't persisted to disk). ─────────
-      // We surface the error so the user knows something went wrong,
-      // rather than silently showing an empty / stale form.
-      final user =
-          Map<String, dynamic>.from(context.read<AuthProvider>().user ?? {});
-
-      final dept = (user['department'] as String? ?? '');
-      final pos = (user['position'] as String? ?? '');
-
-      setState(() {
-        _selectedDept = dept.isEmpty ? null : dept;
-        _selectedPos = pos.isEmpty ? null : pos;
-
-        _schoolCtrl.text = user['school'] as String? ?? '';
-        _programCtrl.text = user['program'] as String? ?? '';
-        _specCtrl.text = user['specialization'] as String? ?? '';
-        _yearCtrl.text = user['year_level'] as String? ?? '';
-        _internNumCtrl.text = user['intern_number'] as String? ?? '';
-        _startCtrl.text = user['start_date'] as String? ?? '';
-        _endCtrl.text = user['end_date'] as String? ?? '';
-        _bioCtrl.text = user['bio'] as String? ?? '';
-        _techSkillsCtrl.text = user['technical_skills'] as String? ?? '';
-        _softSkillsCtrl.text = user['soft_skills'] as String? ?? '';
-        _linkedinCtrl.text = user['linked_in'] as String? ?? '';
-        _githubCtrl.text = user['git_hub'] as String? ?? '';
-
-        _initialLoading = false;
-        // Show the error prominently so it isn't swallowed silently.
-        _initError =
-            'Could not load your latest profile from the server. '
-            'Showing cached data. Pull down to retry.';
-      });
+    // Preserve saved values even if not in list
+    if (_selectedDept != null && !depts.contains(_selectedDept!)) {
+      depts.add(_selectedDept!);
     }
+    if (_selectedPos != null && !positions.contains(_selectedPos!)) {
+      positions.add(_selectedPos!);
+    }
+
+    setState(() {
+      _departments = depts;
+      _positions = positions;
+      _initialLoading = false; // rename this to _configLoading for clarity
+    });
   }
 
   Future<void> _save() async {
@@ -290,45 +196,33 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       'git_hub': _githubCtrl.text.trim(),
     };
 
-    try {
-      final res = await ApiService.updateProfile(payload);
-      if (!mounted) return;
+    final res = await ApiService.updateProfile(payload);
 
-      if (res['ok'] == true) {
-        final auth = context.read<AuthProvider>();
+    if (!mounted) return;
 
-        // 1. Optimistically merge the payload we just sent.
-        await auth.updateUserData(payload);
+    if (res['ok'] == true) {
+      final auth = context.read<AuthProvider>();
 
-        // 2. Pull the canonical server copy so everything is in sync.
-        //    This is the call that ensures the next screen that reads
-        //    AuthProvider.user gets the persisted server data.
-        await auth.refreshProfile();
+      // FIX: Merge the payload we just saved optimistically
+      await auth.updateUserData(payload);
 
-        if (mounted) {
-          setState(() {
-            _saving = false;
-            _successMsg = 'Profile updated successfully!';
-            _errorMsg = null;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _saving = false;
-            _errorMsg = res['error'] ??
-                res['details'] ??
-                'Save failed. Please try again.';
-            _successMsg = null;
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('EditProfile _save error: $e');
+      // FIX: Then pull the canonical server copy so My Profile is fully in sync
+      await auth.refreshProfile();
+
       if (mounted) {
         setState(() {
           _saving = false;
-          _errorMsg = 'Network error. Please check your connection and retry.';
+          _successMsg = 'Profile updated successfully!';
+          _errorMsg = null;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _errorMsg = res['error'] ??
+              res['details'] ??
+              'Save failed. Please try again.';
           _successMsg = null;
         });
       }
@@ -360,8 +254,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       setState(() {});
     }
   }
-
-  // ── UI Helpers ────────────────────────────────────────────────────────────
 
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
@@ -411,7 +303,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     required void Function(String?) onChanged,
   }) =>
       DropdownButtonFormField<String>(
-        initialValue: value,
+        value: value,
         style: const TextStyle(color: Colors.black, fontSize: 14),
         dropdownColor: Colors.white,
         decoration: InputDecoration(
@@ -457,8 +349,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
         ]),
       );
-
-  // ── Tabs ─────────────────────────────────────────────────────────────────
 
   Widget _buildAcademicTab() => SingleChildScrollView(
         padding: const EdgeInsets.all(28),
@@ -613,8 +503,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         ),
       );
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -635,7 +523,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
               )),
               Positioned.fill(
                 child: Column(children: [
-                  // ── Top bar ───────────────────────────────────────────────
+                  // Top bar
                   Container(
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 20),
                     decoration: BoxDecoration(
@@ -657,7 +545,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                     ]),
                   ),
 
-                  // ── Main card ─────────────────────────────────────────────
+                  // Card
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
@@ -673,20 +561,16 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                             ),
                           ],
                         ),
+                        // FIX: Show a loader while fetching fresh data from server
                         child: _initialLoading
                             ? const Center(
                                 child: CircularProgressIndicator(
                                     color: kCrimsonDeep))
                             : Column(children: [
-                                // ── Init error banner (retry available) ───────
-                                if (_initError != null)
-                                  _retryBanner(_initError!),
-
                                 if (_successMsg != null)
                                   _banner(_successMsg!, success: true),
                                 if (_errorMsg != null)
                                   _banner(_errorMsg!, success: false),
-
                                 SizedBox(
                                   height: 55,
                                   child: TabBar(
@@ -787,38 +671,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       ),
     );
   }
-
-  // ── Banners ───────────────────────────────────────────────────────────────
-
-  /// Shown when the initial server fetch fails. Includes a Retry button.
-  Widget _retryBanner(String msg) => Container(
-        margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.orange.withOpacity(0.4)),
-        ),
-        child: Row(children: [
-          Icon(Icons.wifi_off_rounded, color: Colors.orange.shade700, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-              child: Text(msg,
-                  style: TextStyle(
-                      color: Colors.orange.shade900, fontSize: 12))),
-          TextButton(
-            onPressed: _initScreenData,
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.orange.shade800,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text('Retry',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-          ),
-        ]),
-      );
 
   Widget _banner(String msg, {required bool success}) => Container(
         margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
