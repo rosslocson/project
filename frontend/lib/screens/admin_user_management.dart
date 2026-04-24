@@ -545,7 +545,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                                 vertical: 10),
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? const Color(0xFF4A5E9A)
+                                                  ? const Color(0xFF00022E)
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(24),
@@ -792,12 +792,12 @@ class _UserTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: Colors.orange.shade50, // UPDATED: Orange Background
                     borderRadius: BorderRadius.circular(20)),
                 child: Text('Archived',
                     style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade700,
+                        color: Colors.orange.shade800, // UPDATED: Orange Text
                         fontWeight: FontWeight.bold)),
               )
             else
@@ -805,8 +805,8 @@ class _UserTile extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isActive
-                      ? const Color(0xFF4A5E9A).withOpacity(0.1)
-                      : Colors.grey.shade200,
+                      ? Colors.green.shade50 // UPDATED: Green Background
+                      : Colors.yellow.shade100, // UPDATED: Yellow Background
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -815,8 +815,8 @@ class _UserTile extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: isActive
-                        ? const Color(0xFF4A5E9A)
-                        : Colors.grey.shade600,
+                        ? Colors.green.shade800 // UPDATED: Green Text
+                        : Colors.yellow.shade900, // UPDATED: Yellow Text
                   ),
                 ),
               ),
@@ -828,7 +828,7 @@ class _UserTile extends StatelessWidget {
                   scale: 0.8,
                   child: CupertinoSwitch(
                     value: isActive,
-                    activeTrackColor: const Color(0xFF4A5E9A),
+                    activeTrackColor: const Color(0xFF00022E),
                     inactiveTrackColor: Colors.grey.shade300,
                     onChanged: (_) => onToggle(),
                   ),

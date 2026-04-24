@@ -172,7 +172,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     if (raw == null || raw.isEmpty) return '';
     return raw
         .replaceAll(RegExp(r'\s*\(id=\d+\)'), '')
-        .replaceAll(RegExp(r'\s*\(active=\w+\)'), '')
+        // Updated regex to catch both active and archived fields
+        .replaceAll(RegExp(r'\s*\(active=\w+(?:,\s*archived=\w+)?\)'), '')
+        .replaceAll(RegExp(r'\s*\(archived=\w+\)'), '')
         .replaceAll(RegExp(r':\s*[\w.+-]+@[\w.-]+\.\w+'), '')
         .replaceAll(RegExp(r'\s{2,}'), ' ')
         .trim();
