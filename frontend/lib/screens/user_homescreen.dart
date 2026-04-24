@@ -339,7 +339,7 @@ class _InternCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.4),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.4),
                 blurRadius: 32,
                 offset: const Offset(0, 16),
               ),

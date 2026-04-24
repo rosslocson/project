@@ -27,9 +27,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   List<String> _departments = [];
   //List<String> _positions = [];
   bool _loadingDepts = true;
-  bool _loadingPositions = false;
+  //bool _loadingPositions = false;
   String? _selectedDept;
-  String? _selectedPos;
+  //String? _selectedPos;
 
   // Form keys
   final _profileKey = GlobalKey<FormState>();
@@ -434,7 +434,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                     // ── Avatar card ────────────────────────────────────
                     Card(
                       elevation: 0,
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha:0.95),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24)),
                       child: Padding(
@@ -447,7 +447,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                               children: [
                                 CircleAvatar(
                                   radius: 40,
-                                  backgroundColor: _kBlue.withOpacity(0.1),
+                                  backgroundColor: _kBlue.withValues(alpha:0.1),
                                   backgroundImage: avatarImage,
                                   child: _isUploadingAvatar
                                       ? const CircularProgressIndicator(
@@ -528,7 +528,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: _kBlue.withOpacity(0.08),
+                                      color: _kBlue.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: const Text('USER',
@@ -552,7 +552,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                     Expanded(
                       child: Card(
                         elevation: 0,
-                        color: Colors.white.withOpacity(0.95),
+                        color: Colors.white.withValues(alpha: 0.95),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24)),
                         child: Column(

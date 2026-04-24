@@ -29,7 +29,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -278,7 +278,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide:
-                BorderSide(color: kCrimsonDeep.withOpacity(0.8), width: 1.5),
+                BorderSide(color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
           ),
         ),
       );
@@ -305,7 +305,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide:
-                BorderSide(color: kCrimsonDeep.withOpacity(0.8), width: 1.5),
+                BorderSide(color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
           ),
         ),
         hint: Text(hint,
@@ -537,7 +537,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          const Color(0xFF050505).withOpacity(0.95),
+                          const Color(0xFF050505).withValues(alpha: 0.95),
                           Colors.transparent,
                         ],
                       ),
@@ -561,7 +561,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -656,10 +656,10 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
               left: 24,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     width: 1,
                   ),
                 ),
@@ -668,7 +668,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                   onPressed: () => setState(() => _sidebarVisible = true),
                   icon: const HamburgerIcon(),
                   tooltip: 'Open Sidebar',
-                  splashColor: Colors.white.withOpacity(0.1),
+                  splashColor: Colors.white.withValues(alpha: 0.1),
                   highlightColor: Colors.transparent,
                 ),
               ),
@@ -683,13 +683,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: success
-              ? Colors.green.withOpacity(0.15)
-              : Colors.red.withOpacity(0.15),
+              ? Colors.green.withValues(alpha: 0.15)
+              : Colors.red.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
               color: success
-                  ? Colors.green.withOpacity(0.4)
-                  : Colors.red.withOpacity(0.4)),
+                  ? Colors.green.withValues(alpha: 0.4)
+                  : Colors.red.withValues(alpha: 0.4)),
         ),
         child: Row(children: [
           Icon(success ? Icons.check_circle_outline : Icons.error_outline,

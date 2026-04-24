@@ -173,7 +173,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                     // ── Avatar + name card ────────────────────────────────────
                     Card(
                       elevation: 0,
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
@@ -186,7 +186,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                             // Show a small spinner inside the avatar while loading
                             CircleAvatar(
                               radius: 40,
-                              backgroundColor: _kBlue.withOpacity(0.1),
+                              backgroundColor: _kBlue.withValues(alpha: 0.1),
                               backgroundImage: (!_loading &&
                                       finalAvatarUrl.isNotEmpty)
                                   ? NetworkImage(finalAvatarUrl)
@@ -244,7 +244,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                         _Badge(
                                           label: 'USER',
                                           color: _kBlue,
-                                          bg: _kBlue.withOpacity(0.08),
+                                          bg: _kBlue.withValues(alpha: 0.08),
                                         ),
                                         _Badge(
                                           label: (user?['is_active'] == true)
@@ -273,7 +273,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                     Expanded(
                       child: Card(
                         elevation: 0,
-                        color: Colors.white.withOpacity(0.95),
+                        color: Colors.white.withValues(alpha: 0.95),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
@@ -399,9 +399,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   Widget _retryBanner(String msg) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.12),
+          color: Colors.orange.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.orange.withOpacity(0.4)),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
         ),
         child: Row(children: [
           Icon(Icons.wifi_off_rounded, color: Colors.orange.shade700, size: 18),
