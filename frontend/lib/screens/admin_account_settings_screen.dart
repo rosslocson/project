@@ -110,9 +110,9 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   };
 
   List<String> _departments = [];
-  List<String> _positions = [];
+  /*List<String> _positions = [];*/
   String? _selectedDept;
-  String? _selectedPos;
+  /*String? _selectedPos;*/
 
   // Form keys
   final _profileKey = GlobalKey<FormState>();
@@ -160,23 +160,23 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
     // Initialize Department and Position state
     final dept = user?['department'] as String? ?? '';
-    final pos = user?['position'] as String? ?? '';
+    /*final pos = user?['position'] as String? ?? '';*/
 
     if (dept.isNotEmpty && _departments.contains(dept)) {
       _selectedDept = dept;
-      _positions = _deptRoles[dept] ?? ['Intern', 'Others'];
+      /*_positions = _deptRoles[dept] ?? ['Intern', 'Others'];*/
     } else if (dept.isNotEmpty) {
       _selectedDept = dept;
       if (!_departments.contains(dept)) _departments.add(dept);
-      _positions = [pos];
+      /*_positions = [pos];*/
     }
 
-    if (pos.isNotEmpty && _positions.contains(pos)) {
+    /*if (pos.isNotEmpty && _positions.contains(pos)) {
       _selectedPos = pos;
     } else if (pos.isNotEmpty) {
       _selectedPos = pos;
       if (!_positions.contains(pos)) _positions.add(pos);
-    }
+    }*/
   }
 
   @override
@@ -377,7 +377,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       });
 
       if (res['ok'] == true) {
-        //print("✅ Upload successful");
+        print("✅ Upload successful");
         await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
 
         setState(() {
@@ -391,7 +391,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           ),
         );
       } else {
-        //print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
+        print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
         setState(() {
           _avatarFile = null;
         });
@@ -404,8 +404,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         );
       }
     } catch (e, stackTrace) {
-      //print("❌ ERROR: $e");
-      //print("📋 Stack trace: $stackTrace");
+      print("❌ ERROR: $e");
+      print("📋 Stack trace: $stackTrace");
 
       if (mounted) {
         setState(() {
@@ -433,7 +433,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       'last_name': _lastCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
       'department': _selectedDept ?? '',
-      'position': _selectedPos ?? '',
+      /*'position': _selectedPos ?? '',*/
     });
     if (!mounted) return;
     if (res['ok'] == true) {
@@ -506,7 +506,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-            color: const Color(0xFF00022E).withValues(alpha: 0.6), width: 1),
+            color: const Color(0xFF00022E).withOpacity(0.6), width: 1),
       ),
     );
   }
@@ -591,10 +591,10 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                 top: 28,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.05),
+                                    color: Colors.white.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.15)),
+                                        color: Colors.white.withOpacity(0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
@@ -602,7 +602,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                         setState(() => _isSidebarOpen = true),
                                     icon: const HamburgerIcon(),
                                     tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withValues(alpha: 0.1),
+                                    splashColor: Colors.white.withOpacity(0.1),
                                     highlightColor: Colors.transparent,
                                   ),
                                 ),
@@ -619,7 +619,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                               left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.95),
+                              color: Colors.white.withOpacity(0.95),
                               borderRadius: BorderRadius.circular(24),
                             ),
                             child: ClipRRect(
@@ -645,7 +645,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             CircleAvatar(
                                               radius: 40,
                                               backgroundColor:
-                                                  _kBlue.withValues(alpha: 0.1),
+                                                  _kBlue.withOpacity(0.1),
                                               backgroundImage: _avatarFile !=
                                                       null
                                                   ? FileImage(_avatarFile!)
@@ -742,7 +742,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                   .isNotEmpty) ...[
                                                 const SizedBox(height: 4),
                                                 Text(
-                                                  '${user?['department']} · ${user?['position'] ?? ''}',
+                                                  '${user?['department']}',
                                                   style: TextStyle(
                                                       color:
                                                           Colors.grey.shade500,
@@ -759,7 +759,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                         vertical: 4),
                                                 decoration: BoxDecoration(
                                                   color:
-                                                      _kBlue.withValues(alpha: 0.08),
+                                                      _kBlue.withOpacity(0.08),
                                                   borderRadius:
                                                       BorderRadius.circular(16),
                                                 ),
@@ -768,7 +768,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                       .toUpperCase(),
                                                   style: TextStyle(
                                                     color:
-                                                        _kBlue.withValues(alpha: 0.9),
+                                                        _kBlue.withOpacity(0.9),
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w800,
                                                     letterSpacing: 1.0,
@@ -839,200 +839,224 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   }
 
   Widget _buildProfileForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-      child: Form(
-        key: _profileKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_profileMsg != null) ...[
-              _msgBanner(_profileMsg!, _profileSuccess),
-              const SizedBox(height: 16),
-            ],
-            Row(children: [
-              Expanded(
-                  child: TextFormField(
-                controller: _firstCtrl,
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                decoration: _getFormDecoration('First Name'),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
-              )),
-              const SizedBox(width: 16),
-              Expanded(
-                  child: TextFormField(
-                controller: _lastCtrl,
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                decoration: _getFormDecoration('Last Name'),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
-              )),
-            ]),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _emailCtrl,
-              enabled: false,
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade600),
-              decoration: _getFormDecoration('Email (cannot change)',
-                  prefixIcon: Icons.email_outlined),
-            ),
-            const SizedBox(height: 16),
-            Row(children: [
-              Expanded(
-                child: _dropdownField(
-                  label: 'Department',
-                  value: _selectedDept,
-                  hint: _departments.isEmpty ? 'N/A' : 'Select Department',
-                  items: _departments,
-                  onChanged: (v) {
-                    setState(() {
-                      _selectedDept = v;
-                      _positions = _deptRoles[v] ?? ['Intern', 'Others'];
-                      if (_selectedPos != null &&
-                          !_positions.contains(_selectedPos)) {
-                        _selectedPos = null;
-                      }
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _dropdownField(
-                  label: 'Position',
-                  value: _selectedPos,
-                  hint: _positions.isEmpty
-                      ? 'Select Dept First'
-                      : 'Select Position',
-                  items: _positions,
-                  onChanged: _positions.isEmpty
-                      ? null
-                      : (v) => setState(() => _selectedPos = v),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 32),
-            SizedBox(
-              height: 48,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _savingProfile ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: _savingProfile
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : const Text('Save Changes',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            letterSpacing: 0.5)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Scrollable fields ────────────────────────────────────
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+            child: Form(
+              key: _profileKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_profileMsg != null) ...[
+                    _msgBanner(_profileMsg!, _profileSuccess),
+                    const SizedBox(height: 16),
+                  ],
+                  // First Name / Last Name row
+                  Row(children: [
+                    Expanded(
+                        child: TextFormField(
+                      controller: _firstCtrl,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w500),
+                      decoration: _getFormDecoration('First Name'),
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    )),
+                    const SizedBox(width: 16),
+                    Expanded(
+                        child: TextFormField(
+                      controller: _lastCtrl,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w500),
+                      decoration: _getFormDecoration('Last Name'),
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    )),
+                  ]),
+                  const SizedBox(height: 16),
+                  // Email – full width
+                  TextFormField(
+                    controller: _emailCtrl,
+                    enabled: false,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade600),
+                    decoration: _getFormDecoration('Email (cannot change)',
+                        prefixIcon: Icons.email_outlined),
+                  ),
+                  const SizedBox(height: 16),
+                  // Department – full width (same as email)
+                  _dropdownField(
+                    label: 'Department',
+                    value: _selectedDept,
+                    hint: _departments.isEmpty ? 'N/A' : 'Select Department',
+                    items: _departments,
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedDept = v;
+                        /*_positions = _deptRoles[v] ?? ['Intern', 'Others'];
+                        if (_selectedPos != null &&
+                            !_positions.contains(_selectedPos)) {
+                          _selectedPos = null;
+                        }*/
+                      });
+                    },
+                  ),
+                  /*const SizedBox(width: 16),
+                  Expanded(
+                    child: _dropdownField(
+                      label: 'Position',
+                      value: _selectedPos,
+                      hint: _positions.isEmpty
+                          ? 'Select Dept First'
+                          : 'Select Position',
+                      items: _positions,
+                      onChanged: _positions.isEmpty
+                          ? null
+                          : (v) => setState(() => _selectedPos = v),
+                    ),
+                  ),*/
+                ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
+
+        // ── Save Changes button pinned to the bottom ──────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _savingProfile ? null : _saveProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: _savingProfile
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text('Save Changes',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildPasswordForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-      child: Form(
-        key: _passKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_passMsg != null) ...[
-              _msgBanner(_passMsg!, _passSuccess),
-              const SizedBox(height: 16),
-            ],
-            _passField(
-              controller: _curPassCtrl,
-              label: 'Current Password',
-              obscure: _obscureCur,
-              onToggle: () => setState(() => _obscureCur = !_obscureCur),
-              validator: (v) => v!.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 20),
-            _passField(
-              controller: _newPassCtrl,
-              label: 'New Password',
-              obscure: _obscureNew,
-              onToggle: () => setState(() => _obscureNew = !_obscureNew),
-              validator: (v) {
-                if (v == null || v.length < 8) {
-                  return 'Min 8 characters';
-                }
-                if (!v.contains(RegExp(r'[A-Z]'))) {
-                  return 'Need one uppercase letter';
-                }
-                if (!v.contains(RegExp(r'[0-9]'))) {
-                  return 'Need one number';
-                }
-                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-                  return 'Need one special character';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            _passField(
-              controller: _confirmPassCtrl,
-              label: 'Confirm New Password',
-              obscure: _obscureConf,
-              onToggle: () => setState(() => _obscureConf = !_obscureConf),
-              validator: (v) {
-                if (v!.isEmpty) {
-                  return 'Required';
-                }
-                if (v != _newPassCtrl.text) {
-                  return 'Passwords do not match';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              height: 48,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _savingPass ? null : _changePassword,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: _savingPass
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : const Text('Change Password',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            letterSpacing: 0.5)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Scrollable fields ────────────────────────────────────
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+            child: Form(
+              key: _passKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_passMsg != null) ...[
+                    _msgBanner(_passMsg!, _passSuccess),
+                    const SizedBox(height: 16),
+                  ],
+                  _passField(
+                    controller: _curPassCtrl,
+                    label: 'Current Password',
+                    obscure: _obscureCur,
+                    onToggle: () => setState(() => _obscureCur = !_obscureCur),
+                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  _passField(
+                    controller: _newPassCtrl,
+                    label: 'New Password',
+                    obscure: _obscureNew,
+                    onToggle: () => setState(() => _obscureNew = !_obscureNew),
+                    validator: (v) {
+                      if (v == null || v.length < 8) {
+                        return 'Min 8 characters';
+                      }
+                      if (!v.contains(RegExp(r'[A-Z]'))) {
+                        return 'Need one uppercase letter';
+                      }
+                      if (!v.contains(RegExp(r'[0-9]'))) {
+                        return 'Need one number';
+                      }
+                      if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+                        return 'Need one special character';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  _passField(
+                    controller: _confirmPassCtrl,
+                    label: 'Confirm New Password',
+                    obscure: _obscureConf,
+                    onToggle: () =>
+                        setState(() => _obscureConf = !_obscureConf),
+                    validator: (v) {
+                      if (v!.isEmpty) {
+                        return 'Required';
+                      }
+                      if (v != _newPassCtrl.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
+
+        // ── Change Password button pinned to the bottom ───────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _savingPass ? null : _changePassword,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: _savingPass
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text('Change Password',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
