@@ -61,9 +61,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   final _academicKey = GlobalKey<FormState>();
   List<String> _departments = [];
   List<String> _positions = [];
-  bool _configLoading = true;
+
+  // FIX: Single loading flag for the entire init sequence
+  bool _initialLoading = true;
+
   String? _selectedDept;
   String? _selectedPos;
+
   late TextEditingController _schoolCtrl;
   late TextEditingController _programCtrl;
   late TextEditingController _specCtrl;
@@ -88,29 +92,23 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
 
-    final user = context.read<AuthProvider>().user;
+    // FIX: Initialize controllers with empty strings first.
+    // They will be populated after we fetch fresh data from the server.
+    _schoolCtrl = TextEditingController();
+    _programCtrl = TextEditingController();
+    _specCtrl = TextEditingController();
+    _yearCtrl = TextEditingController();
+    _internNumCtrl = TextEditingController();
+    _startCtrl = TextEditingController();
+    _endCtrl = TextEditingController();
+    _bioCtrl = TextEditingController();
+    _techSkillsCtrl = TextEditingController();
+    _softSkillsCtrl = TextEditingController();
+    _linkedinCtrl = TextEditingController();
+    _githubCtrl = TextEditingController();
 
-    _schoolCtrl = TextEditingController(text: user?['school'] ?? '');
-    _programCtrl = TextEditingController(text: user?['program'] ?? '');
-    _specCtrl = TextEditingController(text: user?['specialization'] ?? '');
-    _yearCtrl = TextEditingController(text: user?['year_level'] ?? '');
-    _internNumCtrl = TextEditingController(text: user?['intern_number'] ?? '');
-    _startCtrl = TextEditingController(text: user?['start_date'] ?? '');
-    _endCtrl = TextEditingController(text: user?['end_date'] ?? '');
-
-    _bioCtrl = TextEditingController(text: user?['bio'] ?? '');
-    _techSkillsCtrl =
-        TextEditingController(text: user?['technical_skills'] ?? '');
-    _softSkillsCtrl = TextEditingController(text: user?['soft_skills'] ?? '');
-    _linkedinCtrl = TextEditingController(text: user?['linked_in'] ?? '');
-    _githubCtrl = TextEditingController(text: user?['git_hub'] ?? '');
-
-    final dept = user?['department'] as String? ?? '';
-    final pos = user?['position'] as String? ?? '';
-    _selectedDept = dept.isNotEmpty ? dept : null;
-    _selectedPos = pos.isNotEmpty ? pos : null;
-
-    _loadConfig();
+    // FIX: Always fetch fresh data from the server on screen load
+    _initScreenData();
   }
 
   @override
@@ -135,23 +133,104 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     super.dispose();
   }
 
-  Future<void> _loadConfig() async {
-    final d = await ApiService.getConfig(type: 'department');
-    final p = await ApiService.getConfig(type: 'position');
-    if (!mounted) return;
-    setState(() {
-      _departments =
-          (d['items'] as List? ?? []).map((e) => e['name'] as String).toList();
-      _positions =
-          (p['items'] as List? ?? []).map((e) => e['name'] as String).toList();
-      if (_selectedDept != null && !_departments.contains(_selectedDept)) {
-        _departments.add(_selectedDept!);
+  // FIX: Fetch fresh profile from server FIRST, then load dropdown configs,
+  // then populate all controllers from the fresh data.
+  Future<void> _initScreenData() async {
+    try {
+      // Step 1: Pull fresh profile from the server and update AuthProvider
+      final profileRes = await ApiService.getProfile();
+      if (!mounted) return;
+
+      Map<String, dynamic> freshUser = {};
+      if (profileRes['ok'] == true || profileRes['id'] != null) {
+        freshUser = Map<String, dynamic>.from(profileRes);
+        // Update the provider so the rest of the app also stays in sync
+        await context.read<AuthProvider>().updateUserData(freshUser);
+      } else {
+        // Fall back to whatever is cached in the provider
+        freshUser =
+            Map<String, dynamic>.from(context.read<AuthProvider>().user ?? {});
       }
-      if (_selectedPos != null && !_positions.contains(_selectedPos)) {
-        _positions.add(_selectedPos!);
+
+      // Step 2: Fetch dropdown options in parallel
+      final results = await Future.wait([
+        ApiService.getConfig(type: 'department'),
+        ApiService.getConfig(type: 'position'),
+      ]);
+      if (!mounted) return;
+
+      final deptRes = results[0];
+      final posRes = results[1];
+
+      final depts = (deptRes['items'] as List? ?? [])
+          .map((e) => e['name'] as String)
+          .toList();
+      final positions = (posRes['items'] as List? ?? [])
+          .map((e) => e['name'] as String)
+          .toList();
+
+      final dept = freshUser['department'] as String? ?? '';
+      final pos = freshUser['position'] as String? ?? '';
+      final savedDept = dept.isNotEmpty ? dept : null;
+      final savedPos = pos.isNotEmpty ? pos : null;
+
+      // Preserve saved values even if they aren't in the dropdown list yet
+      if (savedDept != null && !depts.contains(savedDept)) {
+        depts.add(savedDept);
       }
-      _configLoading = false;
-    });
+      if (savedPos != null && !positions.contains(savedPos)) {
+        positions.add(savedPos);
+      }
+
+      // Step 3: Populate all controllers with the fresh server data
+      setState(() {
+        _departments = depts;
+        _positions = positions;
+        _selectedDept = savedDept;
+        _selectedPos = savedPos;
+
+        _schoolCtrl.text = freshUser['school'] as String? ?? '';
+        _programCtrl.text = freshUser['program'] as String? ?? '';
+        _specCtrl.text = freshUser['specialization'] as String? ?? '';
+        _yearCtrl.text = freshUser['year_level'] as String? ?? '';
+        _internNumCtrl.text = freshUser['intern_number'] as String? ?? '';
+        _startCtrl.text = freshUser['start_date'] as String? ?? '';
+        _endCtrl.text = freshUser['end_date'] as String? ?? '';
+        _bioCtrl.text = freshUser['bio'] as String? ?? '';
+        _techSkillsCtrl.text = freshUser['technical_skills'] as String? ?? '';
+        _softSkillsCtrl.text = freshUser['soft_skills'] as String? ?? '';
+        _linkedinCtrl.text = freshUser['linked_in'] as String? ?? '';
+        _githubCtrl.text = freshUser['git_hub'] as String? ?? '';
+
+        _initialLoading = false;
+      });
+    } catch (e) {
+      debugPrint('EditProfile init error: $e');
+      if (mounted) {
+        // Fall back to cached provider data so the screen still renders
+        final user = context.read<AuthProvider>().user ?? {};
+        final dept = user['department'] as String? ?? '';
+        final pos = user['position'] as String? ?? '';
+
+        setState(() {
+          _selectedDept = dept.isNotEmpty ? dept : null;
+          _selectedPos = pos.isNotEmpty ? pos : null;
+          _schoolCtrl.text = user['school'] as String? ?? '';
+          _programCtrl.text = user['program'] as String? ?? '';
+          _specCtrl.text = user['specialization'] as String? ?? '';
+          _yearCtrl.text = user['year_level'] as String? ?? '';
+          _internNumCtrl.text = user['intern_number'] as String? ?? '';
+          _startCtrl.text = user['start_date'] as String? ?? '';
+          _endCtrl.text = user['end_date'] as String? ?? '';
+          _bioCtrl.text = user['bio'] as String? ?? '';
+          _techSkillsCtrl.text = user['technical_skills'] as String? ?? '';
+          _softSkillsCtrl.text = user['soft_skills'] as String? ?? '';
+          _linkedinCtrl.text = user['linked_in'] as String? ?? '';
+          _githubCtrl.text = user['git_hub'] as String? ?? '';
+          _initialLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -185,17 +264,17 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     if (res['ok'] == true) {
       final auth = context.read<AuthProvider>();
 
-      // ✅ Step 1: Manually merge what we sent — we KNOW these are now saved
-      // in the DB, so optimistically update local state immediately.
+      // FIX: Merge the payload we just saved optimistically
       await auth.updateUserData(payload);
 
-      // ✅ Step 2: Also pull fresh from server (gets updated_at, avatar, etc.)
+      // FIX: Then pull the canonical server copy so My Profile is fully in sync
       await auth.refreshProfile();
 
       if (mounted) {
         setState(() {
           _saving = false;
           _successMsg = 'Profile updated successfully!';
+          _errorMsg = null;
         });
       }
     } else {
@@ -205,6 +284,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           _errorMsg = res['error'] ??
               res['details'] ??
               'Save failed. Please try again.';
+          _successMsg = null;
         });
       }
     }
@@ -284,7 +364,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     required void Function(String?) onChanged,
   }) =>
       DropdownButtonFormField<String>(
-        initialValue: value,
+        value: value,
         style: const TextStyle(color: Colors.black, fontSize: 14),
         dropdownColor: Colors.white,
         decoration: InputDecoration(
@@ -339,46 +419,41 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             _sectionTitle('Academic Information',
                 'Your school, program, department, and internship details'),
-            if (_configLoading)
-              const Center(
-                  child: CircularProgressIndicator(color: kCrimsonDeep))
-            else ...[
-              Row(children: [
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      _label('Department'),
-                      _dropdown(
-                        value: _selectedDept,
-                        hint: _departments.isEmpty
-                            ? 'No departments yet'
-                            : 'Select Department',
-                        items: _departments,
-                        onChanged: (v) => setState(() {
-                          _selectedDept = v;
-                          _selectedPos = null;
-                        }),
-                      ),
-                    ])),
-                const SizedBox(width: 16),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      _label('Position'),
-                      _dropdown(
-                        value: _selectedPos,
-                        hint: _positions.isEmpty
-                            ? 'Select Dept First'
-                            : 'Select Position',
-                        items: _positions,
-                        onChanged: (v) => setState(() => _selectedPos = v),
-                      ),
-                    ])),
-              ]),
-              const SizedBox(height: 16),
-            ],
+            Row(children: [
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    _label('Department'),
+                    _dropdown(
+                      value: _selectedDept,
+                      hint: _departments.isEmpty
+                          ? 'No departments yet'
+                          : 'Select Department',
+                      items: _departments,
+                      onChanged: (v) => setState(() {
+                        _selectedDept = v;
+                        _selectedPos = null;
+                      }),
+                    ),
+                  ])),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    _label('Position'),
+                    _dropdown(
+                      value: _selectedPos,
+                      hint: _positions.isEmpty
+                          ? 'Select Dept First'
+                          : 'Select Position',
+                      items: _positions,
+                      onChanged: (v) => setState(() => _selectedPos = v),
+                    ),
+                  ])),
+            ]),
+            const SizedBox(height: 16),
             _label('School / University'),
             _field(ctrl: _schoolCtrl, hint: 'e.g. University of Santo Tomas'),
             const SizedBox(height: 16),
@@ -547,71 +622,82 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                             ),
                           ],
                         ),
-                        child: Column(children: [
-                          if (_successMsg != null)
-                            _banner(_successMsg!, success: true),
-                          if (_errorMsg != null)
-                            _banner(_errorMsg!, success: false),
-                          SizedBox(
-                            height: 55,
-                            child: TabBar(
-                              controller: _tabs,
-                              labelColor: Colors.black,
-                              unselectedLabelColor: Colors.grey.shade500,
-                              indicatorColor: kCrimsonDeep,
-                              indicatorWeight: 3,
-                              dividerColor: Colors.grey.shade200,
-                              tabs: const [
-                                Tab(
-                                    iconMargin: EdgeInsets.only(bottom: 4),
-                                    icon: Icon(Icons.school_outlined, size: 18),
-                                    text: 'Academic Info'),
-                                Tab(
-                                    iconMargin: EdgeInsets.only(bottom: 4),
-                                    icon: Icon(Icons.stars_outlined, size: 18),
-                                    text: 'Skills'),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: TabBarView(
-                              controller: _tabs,
-                              children: [
-                                _buildAcademicTab(),
-                                _buildSkillsTab(),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: _saving ? null : _save,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: kCrimsonDeep,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  elevation: 0,
+                        // FIX: Show a loader while fetching fresh data from server
+                        child: _initialLoading
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                    color: kCrimsonDeep))
+                            : Column(children: [
+                                if (_successMsg != null)
+                                  _banner(_successMsg!, success: true),
+                                if (_errorMsg != null)
+                                  _banner(_errorMsg!, success: false),
+                                SizedBox(
+                                  height: 55,
+                                  child: TabBar(
+                                    controller: _tabs,
+                                    labelColor: Colors.black,
+                                    unselectedLabelColor: Colors.grey.shade500,
+                                    indicatorColor: kCrimsonDeep,
+                                    indicatorWeight: 3,
+                                    dividerColor: Colors.grey.shade200,
+                                    tabs: const [
+                                      Tab(
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 4),
+                                          icon: Icon(Icons.school_outlined,
+                                              size: 18),
+                                          text: 'Academic Info'),
+                                      Tab(
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 4),
+                                          icon: Icon(Icons.stars_outlined,
+                                              size: 18),
+                                          text: 'Skills'),
+                                    ],
+                                  ),
                                 ),
-                                child: _saving
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2))
-                                    : const Text('SAVE CHANGES',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 0.8)),
-                              ),
-                            ),
-                          ),
-                        ]),
+                                Expanded(
+                                  child: TabBarView(
+                                    controller: _tabs,
+                                    children: [
+                                      _buildAcademicTab(),
+                                      _buildSkillsTab(),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(28, 0, 28, 24),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: _saving ? null : _save,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: kCrimsonDeep,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12)),
+                                        elevation: 0,
+                                      ),
+                                      child: _saving
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                  color: Colors.white,
+                                                  strokeWidth: 2))
+                                          : const Text('SAVE CHANGES',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.8)),
+                                    ),
+                                  ),
+                                ),
+                              ]),
                       ),
                     ),
                   ),
