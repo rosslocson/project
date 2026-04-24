@@ -152,7 +152,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     _tabs = TabController(length: 2, vsync: this);
     _departments = _deptRoles.keys.toList();
     final user = context.read<AuthProvider>().user;
-    
+
     _firstCtrl = TextEditingController(text: user?['first_name'] ?? '');
     _lastCtrl = TextEditingController(text: user?['last_name'] ?? '');
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
@@ -230,7 +230,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please select a valid image file (JPG, PNG, JPEG)'),
+              content:
+                  Text('Please select a valid image file (JPG, PNG, JPEG)'),
               backgroundColor: Color(0xFF00022E),
             ),
           );
@@ -275,7 +276,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         );
 
         if (!mounted) return;
-        
+
         setState(() {
           _isUploadingAvatar = false;
         });
@@ -331,7 +332,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
       debugPrint("🚀 Navigating to crop screen");
       if (!mounted) return;
-      
+
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
         MaterialPageRoute(
@@ -342,7 +343,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
         ),
       );
 
-      debugPrint("🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
+      debugPrint(
+          "🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
 
       if (croppedBytes == null) {
         debugPrint("❌ Cropping cancelled");
@@ -354,12 +356,12 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       final tempFile =
           File('${(await getTemporaryDirectory()).path}/cropped_avatar.png');
       await tempFile.writeAsBytes(croppedBytes);
-      
+
       setState(() {
         _avatarFile = tempFile;
         _isUploadingAvatar = true;
       });
-      
+
       debugPrint("✅ UI updated with cropped image");
 
       if (!mounted) return;
@@ -369,7 +371,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       debugPrint("🔙 Upload response received");
 
       if (!mounted) return;
-      
+
       setState(() {
         _isUploadingAvatar = false;
       });
@@ -478,20 +480,6 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     setState(() => _savingPass = false);
   }
 
-  // ── Space Background ───────────────────────────────────────────────────────
-  Widget _buildSpaceBackground() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/images/space_background.png'),
-          fit: BoxFit.cover,
-        ),
-      ),
-    );
-  }
-
   InputDecoration _getFormDecoration(String label, {IconData? prefixIcon}) {
     return InputDecoration(
       labelText: label,
@@ -517,7 +505,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: const Color(0xFF00022E).withOpacity(0.6), width: 1),
+        borderSide: BorderSide(
+            color: const Color(0xFF00022E).withOpacity(0.6), width: 1),
       ),
     );
   }
@@ -541,6 +530,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       resizeToAvoidBottomInset: false,
       body: Row(
         children: [
+          // ── Sidebar ──────────────────────────────────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -552,252 +542,292 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                   )
                 : null,
           ),
+
+          // ── Main content ────────────────────────────────────────
           Expanded(
             child: Stack(
               children: [
-                Positioned.fill(child: _buildSpaceBackground()),
+                // Background
                 Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 24, horizontal: 48),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1000),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/space_background.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+
+                Positioned.fill(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Top bar ──────────────────────────────────
+                      SizedBox(
+                        height: 72,
+                        child: Stack(
+                          alignment: Alignment.centerLeft,
                           children: [
-                            Row(
-                              children: [
-                                if (!_isSidebarOpen) ...[
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.15),
-                                        width: 1,
-                                      ),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 100, right: 100, top: 28),
+                              child: Text(
+                                'Account Settings',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displaySmall
+                                    ?.copyWith(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
                                     ),
-                                    child: IconButton(
-                                      padding: const EdgeInsets.all(12),
-                                      onPressed: () =>
-                                          setState(() => _isSidebarOpen = true),
-                                      icon: const HamburgerIcon(),
-                                      tooltip: 'Open Sidebar',
-                                      splashColor:
-                                          Colors.white.withOpacity(0.1),
-                                      highlightColor: Colors.transparent,
-                                    ),
-                                  ),
-                                ],
-                                Text(
-                                  'Account Settings',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color.fromARGB(255, 255, 255, 255),
-                                        letterSpacing: 0.5,
-                                      ),
-                                ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 20),
-                            Card(
-                              elevation: 0,
+                            if (!_isSidebarOpen)
+                              Positioned(
+                                left: 20,
+                                top: 28,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: Colors.white.withOpacity(0.15)),
+                                  ),
+                                  child: IconButton(
+                                    padding: const EdgeInsets.all(12),
+                                    onPressed: () =>
+                                        setState(() => _isSidebarOpen = true),
+                                    icon: const HamburgerIcon(),
+                                    tooltip: 'Open Sidebar',
+                                    splashColor: Colors.white.withOpacity(0.1),
+                                    highlightColor: Colors.transparent,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+
+                      // ── Main container ────────────────────────────
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                              left: 100, right: 100, bottom: 28),
+                          child: Container(
+                            decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.95),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24)),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 32, vertical: 20),
-                                child: Row(
-                                  children: [
-                                    Stack(
-                                      alignment: Alignment.bottomRight,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // ── Profile card ──────────────────
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 32, vertical: 20),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                            color: Colors.grey.shade200),
+                                      ),
+                                    ),
+                                    child: Row(
                                       children: [
-                                        CircleAvatar(
-                                          radius: 40,
-                                          backgroundColor:
-                                              _kBlue.withOpacity(0.1),
-                                          backgroundImage: _avatarFile != null
-                                              ? FileImage(_avatarFile!)
-                                              : (_localAvatarBytes != null
-                                                  ? MemoryImage(
-                                                      _localAvatarBytes!)
-                                                  : (finalAvatarUrl.isNotEmpty
-                                                      ? NetworkImage(
-                                                          finalAvatarUrl)
-                                                      : null)) as ImageProvider?,
-                                          child: _isUploadingAvatar
-                                              ? const CircularProgressIndicator(
-                                                  color: _kBlue,
-                                                  strokeWidth: 3)
-                                              : (_avatarFile == null &&
-                                                      _localAvatarBytes ==
-                                                          null &&
-                                                      finalAvatarUrl.isEmpty)
-                                                  ? Text(
-                                                      '${(user?['first_name'] as String? ?? ' ')[0]}'
-                                                      '${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                      style: const TextStyle(
-                                                        fontSize: 28,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: _kBlue,
-                                                      ),
-                                                    )
-                                                  : null,
-                                        ),
-                                        Positioned(
-                                          bottom: 0,
-                                          right: 0,
-                                          child: Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              onTap: _isUploadingAvatar
-                                                  ? null
-                                                  : pickAndCropAvatar,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.all(6),
-                                                decoration: BoxDecoration(
-                                                  color: _kBlue,
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
+                                        Stack(
+                                          alignment: Alignment.bottomRight,
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 40,
+                                              backgroundColor:
+                                                  _kBlue.withOpacity(0.1),
+                                              backgroundImage: _avatarFile !=
+                                                      null
+                                                  ? FileImage(_avatarFile!)
+                                                  : (_localAvatarBytes != null
+                                                          ? MemoryImage(
+                                                              _localAvatarBytes!)
+                                                          : (finalAvatarUrl
+                                                                  .isNotEmpty
+                                                              ? NetworkImage(
+                                                                  finalAvatarUrl)
+                                                              : null))
+                                                      as ImageProvider?,
+                                              child: _isUploadingAvatar
+                                                  ? const CircularProgressIndicator(
+                                                      color: _kBlue,
+                                                      strokeWidth: 3)
+                                                  : (_avatarFile == null &&
+                                                          _localAvatarBytes ==
+                                                              null &&
+                                                          finalAvatarUrl
+                                                              .isEmpty)
+                                                      ? Text(
+                                                          '${(user?['first_name'] as String? ?? ' ')[0]}'
+                                                          '${(user?['last_name'] as String? ?? ' ')[0]}',
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 28,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: _kBlue,
+                                                          ),
+                                                        )
+                                                      : null,
+                                            ),
+                                            Positioned(
+                                              bottom: 0,
+                                              right: 0,
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  onTap: _isUploadingAvatar
+                                                      ? null
+                                                      : pickAndCropAvatar,
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: _kBlue,
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                          color: Colors.white,
+                                                          width: 2),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.camera_alt,
                                                       color: Colors.white,
-                                                      width: 2),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.camera_alt,
-                                                  color: Colors.white,
-                                                  size: 14,
+                                                      size: 14,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 20),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                                                style: const TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.black87,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                user?['email'] ?? '',
+                                                style: TextStyle(
+                                                    color: Colors.grey.shade600,
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.w500),
+                                              ),
+                                              if ((user?['department']
+                                                          as String? ??
+                                                      '')
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '${user?['department']} · ${user?['position'] ?? ''}',
+                                                  style: TextStyle(
+                                                      color:
+                                                          Colors.grey.shade500,
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w500),
+                                                ),
+                                              ],
+                                              const SizedBox(height: 10),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      _kBlue.withOpacity(0.08),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                ),
+                                                child: Text(
+                                                  (user?['role'] ?? 'user')
+                                                      .toUpperCase(),
+                                                  style: TextStyle(
+                                                    color:
+                                                        _kBlue.withOpacity(0.9),
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 1.0,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(width: 20),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                            style: const TextStyle(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.w800,
-                                              color: Colors.black87,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            user?['email'] ?? '',
-                                            style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500),
-                                          ),
-                                          if ((user?['department'] as String? ??
-                                                  '')
-                                              .isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '${user?['department']} · ${user?['position'] ?? ''}',
-                                              style: TextStyle(
-                                                  color: Colors.grey.shade500,
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w500),
-                                            ),
-                                          ],
-                                          const SizedBox(height: 10),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: _kBlue.withOpacity(0.08),
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            child: Text(
-                                              (user?['role'] ?? 'user')
-                                                  .toUpperCase(),
-                                              style: TextStyle(
-                                                color: _kBlue.withOpacity(0.9),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w800,
-                                                letterSpacing: 1.0,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                                  ),
+
+                                  // ── Tabs ──────────────────────────
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                            color: Colors.grey.shade200),
                                       ),
                                     ),
-                                  ],
-                                ),
+                                    child: TabBar(
+                                      controller: _tabs,
+                                      labelColor: _kBlue,
+                                      indicatorColor: _kBlue,
+                                      indicatorWeight: 3,
+                                      unselectedLabelColor:
+                                          Colors.grey.shade500,
+                                      labelStyle: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700),
+                                      unselectedLabelStyle: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
+                                      dividerColor: Colors.transparent,
+                                      tabs: const [
+                                        Tab(text: 'Account Settings'),
+                                        Tab(text: 'Change Password'),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // ── Tab content ───────────────────
+                                  Expanded(
+                                    child: TabBarView(
+                                      controller: _tabs,
+                                      children: [
+                                        _buildProfileForm(),
+                                        _buildPasswordForm(),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            Expanded(
-                              child: Card(
-                                elevation: 0,
-                                color: Colors.white.withOpacity(0.95),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24)),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(
-                                              color: Colors.grey.shade200),
-                                        ),
-                                      ),
-                                      child: TabBar(
-                                        controller: _tabs,
-                                        labelColor: _kBlue,
-                                        indicatorColor: _kBlue,
-                                        indicatorWeight: 3,
-                                        unselectedLabelColor:
-                                            Colors.grey.shade500,
-                                        labelStyle: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700),
-                                        unselectedLabelStyle: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500),
-                                        dividerColor: Colors.transparent,
-                                        tabs: const [
-                                          Tab(text: 'Account Settings'),
-                                          Tab(text: 'Change Password'),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: TabBarView(
-                                        controller: _tabs,
-                                        children: [
-                                          _buildProfileForm(),
-                                          _buildPasswordForm(),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],

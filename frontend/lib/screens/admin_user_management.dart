@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/sidebar_provider.dart';
 import '../services/api_service.dart';
-import '../widgets/admin_layout.dart';
+import '../widgets/admin_sidebar.dart';
 
 // ── Custom Hamburger Icon ────────────────────────────────────────────────────
 class HamburgerIcon extends StatelessWidget {
@@ -52,7 +52,6 @@ int _toInt(dynamic v) {
   return (v as num).toInt();
 }
 
-// Robust parsing for booleans coming from SQL/Go APIs
 bool _isArchived(dynamic user) {
   final val = user['is_archived'];
   return val == true || val == 1 || val == 'true';
@@ -74,6 +73,7 @@ class _UsersScreenState extends State<UsersScreen> {
   bool _loading = true;
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
+  bool _isSidebarOpen = true; // ← mirrors ConfigScreen
 
   String _filterStatus = 'All';
 
@@ -232,7 +232,6 @@ class _UsersScreenState extends State<UsersScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    // Optimistic UI Update: Move to archive visually right away
     setState(() {
       user['is_archived'] = true;
       user['is_active'] = false;
@@ -244,10 +243,8 @@ class _UsersScreenState extends State<UsersScreen> {
 
     if (res['ok'] == true) {
       _showSuccess('$name has been archived.');
-      // Background reload to sync with server
       _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
     } else {
-      // Revert optimistic update on error
       setState(() {
         user['is_archived'] = false;
         user['is_active'] = isActive;
@@ -260,7 +257,6 @@ class _UsersScreenState extends State<UsersScreen> {
     final id = _toInt(user['id']);
     final name = '${user['first_name']} ${user['last_name']}';
 
-    // Optimistic UI Update
     setState(() {
       user['is_archived'] = false;
     });
@@ -299,10 +295,10 @@ class _UsersScreenState extends State<UsersScreen> {
         Container(
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(24),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(24),
             child: ListView.separated(
               padding: EdgeInsets.zero,
               shrinkWrap: true,
@@ -333,7 +329,6 @@ class _UsersScreenState extends State<UsersScreen> {
   Widget build(BuildContext context) {
     final currentUserId = _getCurrentUserId();
 
-    // Calculate dynamic counts
     final int allCount = _users.length;
     final int activeCount =
         _users.where((u) => _isActive(u) && !_isArchived(u)).length;
@@ -371,171 +366,270 @@ class _UsersScreenState extends State<UsersScreen> {
     admins.sort(sortSelfToTop);
     internUsers.sort(sortSelfToTop);
 
-    return Theme(
-      data: Theme.of(context).copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A0A14),
-      ),
-      child: AdminLayout(
-        title: 'User Management',
-        currentRoute: GoRouterState.of(context).matchedLocation ?? '/users',
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(
-            color: Color(
-                0xFF0A0A14), // Solid dark background, removing starfield imagery
+    // ── Mirrors ConfigScreen's Scaffold + Row(sidebar, Expanded) structure ──
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: Row(
+        children: [
+          // ── Sidebar ────────────────────────────────────────────
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: _isSidebarOpen ? 250 : 0,
+            child: _isSidebarOpen
+                ? AdminSidebar(
+                    currentRoute:
+                        GoRouterState.of(context).matchedLocation ?? '/users',
+                    onClose: () => setState(() => _isSidebarOpen = false),
+                  )
+                : null,
           ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+
+          // ── Main content ───────────────────────────────────────
+          Expanded(
+            child: Stack(
               children: [
-                Text(
-                  'User Management',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                // Background
+                Positioned.fill(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0A0A14),
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/space_background.png'),
+                        fit: BoxFit.cover,
                       ),
-                ),
-                const SizedBox(height: 24),
-
-                // ── Search ───────────────────────────
-                TextField(
-                  controller: _searchCtrl,
-                  style: const TextStyle(color: Colors.black87, fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Search by name or email...',
-                    hintStyle:
-                        TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                    prefixIcon: IconButton(
-                      icon: const Icon(Icons.search, color: Colors.grey),
-                      onPressed: () {
-                        if (_debounce?.isActive ?? false) _debounce!.cancel();
-                        _loadUsers(search: _searchCtrl.text);
-                      },
                     ),
-                    suffixIcon: _searchCtrl.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.grey),
-                            onPressed: () {
-                              _searchCtrl.clear();
-                              _loadUsers();
-                              setState(() {});
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
-                  onChanged: (v) {
-                    setState(() {});
-                    if (_debounce?.isActive ?? false) _debounce!.cancel();
-                    _debounce = Timer(const Duration(milliseconds: 300), () {
-                      _loadUsers(search: v);
-                    });
-                  },
-                  onSubmitted: (v) => _loadUsers(search: v),
                 ),
-                const SizedBox(height: 24),
 
-                // ── Filter Pill Group (All / Active / Inactive / Archived) ──────────
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  padding: const EdgeInsets.all(6),
-                  child: Row(
-                    children: tabs.map((tab) {
-                      final id = tab['id'] as String;
-                      final label = tab['label'] as String;
-                      final count = tab['count'] as int;
-                      final isSelected = _filterStatus == id;
-
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _filterStatus = id),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            curve: Curves.easeOut,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFF4A5E9A)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xFF4A5E9A)
-                                            .withOpacity(0.4),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      )
-                                    ]
-                                  : [],
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '$label ($count)',
-                              style: TextStyle(
-                                color:
-                                    isSelected ? Colors.white : Colors.white70,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                fontSize: 13,
+                Positioned.fill(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Top bar — same dimensions as ConfigScreen ──
+                      SizedBox(
+                        height: 72,
+                        child: Stack(
+                          alignment: Alignment.centerLeft,
+                          children: [
+                            // Title at left-100 offset, top-28 — matches Config
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 100, right: 100, top: 28),
+                              child: Text(
+                                'User Management',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displaySmall
+                                    ?.copyWith(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
                               ),
+                            ),
+                            // Hamburger — only visible when sidebar is closed
+                            if (!_isSidebarOpen)
+                              Positioned(
+                                left: 20,
+                                top: 28,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: Colors.white.withOpacity(0.15)),
+                                  ),
+                                  child: IconButton(
+                                    padding: const EdgeInsets.all(12),
+                                    onPressed: () =>
+                                        setState(() => _isSidebarOpen = true),
+                                    icon: const HamburgerIcon(),
+                                    tooltip: 'Open Sidebar',
+                                    splashColor: Colors.white.withOpacity(0.1),
+                                    highlightColor: Colors.transparent,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // ── Scrollable content — fills remaining height ─
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                              left: 100, right: 100, bottom: 28),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // ── Search ──────────────────────────
+                                TextField(
+                                  controller: _searchCtrl,
+                                  style: const TextStyle(
+                                      color: Colors.black87, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    hintText: 'Search by name or email...',
+                                    hintStyle: TextStyle(
+                                        color: Colors.grey.shade500,
+                                        fontSize: 13),
+                                    prefixIcon: IconButton(
+                                      icon: const Icon(Icons.search,
+                                          color: Colors.grey),
+                                      onPressed: () {
+                                        if (_debounce?.isActive ?? false)
+                                          _debounce!.cancel();
+                                        _loadUsers(search: _searchCtrl.text);
+                                      },
+                                    ),
+                                    suffixIcon: _searchCtrl.text.isNotEmpty
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear,
+                                                color: Colors.grey),
+                                            onPressed: () {
+                                              _searchCtrl.clear();
+                                              _loadUsers();
+                                              setState(() {});
+                                            },
+                                          )
+                                        : null,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  onChanged: (v) {
+                                    setState(() {});
+                                    if (_debounce?.isActive ?? false)
+                                      _debounce!.cancel();
+                                    _debounce = Timer(
+                                        const Duration(milliseconds: 300), () {
+                                      _loadUsers(search: v);
+                                    });
+                                  },
+                                  onSubmitted: (v) => _loadUsers(search: v),
+                                ),
+                                const SizedBox(height: 24),
+
+                                // ── Filter Pill Group ────────────────
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  padding: const EdgeInsets.all(6),
+                                  child: Row(
+                                    children: tabs.map((tab) {
+                                      final id = tab['id'] as String;
+                                      final label = tab['label'] as String;
+                                      final count = tab['count'] as int;
+                                      final isSelected = _filterStatus == id;
+
+                                      return Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => setState(
+                                              () => _filterStatus = id),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 250),
+                                            curve: Curves.easeOut,
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 10),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? const Color(0xFF4A5E9A)
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(24),
+                                              boxShadow: isSelected
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: const Color(
+                                                                0xFF4A5E9A)
+                                                            .withOpacity(0.4),
+                                                        blurRadius: 8,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      )
+                                                    ]
+                                                  : [],
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              '$label ($count)',
+                                              style: TextStyle(
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : Colors.white70,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w500,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+
+                                // ── Tables ───────────────────────────
+                                if (_loading)
+                                  const Padding(
+                                    padding: EdgeInsets.all(48),
+                                    child: Center(
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white)),
+                                  )
+                                else if (admins.isEmpty && internUsers.isEmpty)
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.95),
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                    padding: const EdgeInsets.all(48),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.people_outline,
+                                              size: 56,
+                                              color: Colors.grey.shade300),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                              'No users found in this category.',
+                                              style: TextStyle(
+                                                  color: Colors.grey.shade500)),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                else ...[
+                                  if (admins.isNotEmpty)
+                                    _buildUserSection('Administrators', admins),
+                                  if (internUsers.isNotEmpty)
+                                    _buildUserSection('Interns', internUsers),
+                                ],
+                              ],
                             ),
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                // ── Tables ───────────────────────────
-                if (_loading)
-                  const Padding(
-                    padding: EdgeInsets.all(48),
-                    child: Center(
-                        child: CircularProgressIndicator(color: Colors.white)),
-                  )
-                else if (admins.isEmpty && internUsers.isEmpty)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    padding: const EdgeInsets.all(48),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.people_outline,
-                              size: 56, color: Colors.grey.shade300),
-                          const SizedBox(height: 12),
-                          Text('No users found in this category.',
-                              style: TextStyle(color: Colors.grey.shade500)),
-                        ],
-                      ),
-                    ),
-                  )
-                else ...[
-                  if (admins.isNotEmpty)
-                    _buildUserSection('Administrators', admins),
-                  if (internUsers.isNotEmpty)
-                    _buildUserSection('Interns', internUsers),
-                ],
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -692,7 +786,6 @@ class _UserTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-
             if (isArchivedView)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -725,10 +818,7 @@ class _UserTile extends StatelessWidget {
                   ),
                 ),
               ),
-
             const SizedBox(width: 12),
-
-            // Sleek Cupertino Toggle switch
             if (!isArchivedView)
               Tooltip(
                 message: isActive ? 'Deactivate user' : 'Activate user',
@@ -742,10 +832,7 @@ class _UserTile extends StatelessWidget {
                   ),
                 ),
               ),
-
             const SizedBox(width: 8),
-
-            // Styled Action Buttons
             if (isArchivedView)
               Tooltip(
                 message: 'Restore user',

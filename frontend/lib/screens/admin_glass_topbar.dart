@@ -100,14 +100,14 @@ class GlassTopBar extends StatelessWidget {
               Text(
                 isAdmin ? 'Admin Dashboard' : 'Home',
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 0.5,
                 ),
               ),
               Text(
-                'Welcome, $firstName',
+                'Welcome, $firstName'!,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white.withOpacity(0.8),
@@ -167,7 +167,8 @@ class GlassTopBar extends StatelessWidget {
                   const SizedBox(width: 16),
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: const Color.fromARGB(255, 205, 210, 251).withOpacity(0.1),
+                    backgroundColor: const Color.fromARGB(255, 205, 210, 251)
+                        .withOpacity(0.1),
                     backgroundImage: finalAvatarUrl.isNotEmpty
                         ? NetworkImage(finalAvatarUrl)
                         : null,
@@ -191,8 +192,9 @@ class GlassTopBar extends StatelessWidget {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color.fromARGB(255, 122, 116, 212)
-                                        .withOpacity(0.4),
+                                    color:
+                                        const Color.fromARGB(255, 122, 116, 212)
+                                            .withOpacity(0.4),
                                     blurRadius: 12,
                                     spreadRadius: 2,
                                   )
