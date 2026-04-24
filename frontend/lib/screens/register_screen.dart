@@ -268,7 +268,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       _loadingDepts
                           ? _shimmerDropdown(dec)
                           : DropdownButtonFormField<String>(
-                              value: _selectedDept,
+                              initialValue: _selectedDept,
                               decoration: dec,
                               hint: Text(
                                 _departments.isEmpty
@@ -304,7 +304,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       const SizedBox(height: 4),
                       IgnorePointer(
                         child: DropdownButtonFormField<String>(
-                          value: _defaultPosition,
+                          initialValue: _defaultPosition,
                           decoration: dec.copyWith(
                             filled: true,
                             fillColor: Colors.grey.shade100,
@@ -355,11 +355,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                 ),
                 validator: (v) {
                   if (v == null || v.length < 8) return 'Min 8 characters';
-                  if (!v.contains(RegExp(r'[A-Z]')))
+                  if (!v.contains(RegExp(r'[A-Z]'))) {
                     return 'Need one uppercase letter';
+                  }
                   if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
-                  if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
+                  if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
                     return 'Need one special character';
+                  }
                   return null;
                 },
               ),
@@ -415,8 +417,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty)
+                  if (v == null || v.isEmpty) {
                     return 'Please confirm your password';
+                  }
                   if (v != _passCtrl.text) return 'Passwords do not match';
                   return null;
                 },
@@ -503,7 +506,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Image.asset(
-                                'assets/images/logo_file.png',
+                                'assets/images/logo_login.png',
                                 height: 280,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) =>

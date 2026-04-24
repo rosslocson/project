@@ -457,7 +457,7 @@ class _LoginScreenState extends State<LoginScreen>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Image.asset(
-                                'assets/images/logo_file.png',
+                                'assets/images/logo_login.png',
                                 height: 280,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {

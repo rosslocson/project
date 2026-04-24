@@ -764,11 +764,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               onToggle: () => setState(() => _obscureNew = !_obscureNew),
               validator: (v) {
                 if (v == null || v.length < 8) return 'Min 8 characters';
-                if (!v.contains(RegExp(r'[A-Z]')))
+                if (!v.contains(RegExp(r'[A-Z]'))) {
                   return 'Need one uppercase letter';
+                }
                 if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
-                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
+                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
                   return 'Need one special character';
+                }
                 return null;
               },
             ),

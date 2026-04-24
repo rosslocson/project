@@ -118,7 +118,7 @@ class _UsersScreenState extends State<UsersScreen> {
   int _getCurrentUserId() {
     final authUser = context.read<AuthProvider>().user;
     if (authUser == null) return 0;
-    return _toInt(authUser is Map ? authUser['id'] : (authUser as dynamic).id);
+    return _toInt(authUser['id']);
   }
 
   int get _activeAdminCount {
@@ -658,8 +658,8 @@ class _UserTile extends StatelessWidget {
                   scale: 0.8,
                   child: CupertinoSwitch(
                     value: isActive,
-                    activeColor: const Color(0xFF4A5E9A),
-                    trackColor: Colors.grey.shade300,
+                    activeTrackColor: const Color(0xFF4A5E9A),
+                    inactiveTrackColor: Colors.grey.shade300,
                     onChanged: (_) => onToggle(),
                   ),
                 ),
