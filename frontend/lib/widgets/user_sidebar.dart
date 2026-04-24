@@ -14,12 +14,11 @@ class UserSidebar extends StatelessWidget {
 
 
    // Blue theme colors
- static const Color _bgColor = Color(0xFF00022E);
- static const Color _activeItemBg = Color(0xFF4C6FFF);
- static const Color _sectionLabelColor = Color(0xFF8A9DBF);
- static const Color _textLight = Colors.white;
- static const Color _textDark = Color(0xFF00022E);
-
+  static const Color _bgColor = Color(0xFF0B0F2F);
+  static const Color _activeItemBg = Color(0xFF6366F1);
+  static const Color _sectionLabelColor = Color(0xFFA78BFA);
+  static const Color _textLight = Colors.white;
+  static const Color _textDark = Color(0xFF050816);
 
  @override
  Widget build(BuildContext context) {

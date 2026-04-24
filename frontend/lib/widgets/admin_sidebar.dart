@@ -10,11 +10,11 @@ class AdminSidebar extends StatelessWidget {
 
 
 
-  static const Color _bgColor = Color(0xFF0A1425); // Dark blue bg
-  static const Color _activeItemBg = Color(0xFF4A5E9A); // Blue active
-  static const Color _sectionLabelColor = Color(0xFF8A9ABF); // Light blue label
+  static const Color _bgColor = Color(0xFF0B0F2F); // Dark blue bg
+  static const Color _activeItemBg = Color(0xFF6366F1); // Blue active
+  static const Color _sectionLabelColor = Color(0xFFA78BFA); // Light blue label
   static const Color _textLight = Colors.white;
-  static const Color _textDark = Color(0xFF0A1425); // Dark blue text
+  static const Color _textDark = Color(0xFF050816);// Dark blue text
 
   @override
   Widget build(BuildContext context) {
