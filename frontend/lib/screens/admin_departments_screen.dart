@@ -1,4 +1,4 @@
-import 'dart:async'; // Added for the debounce timer
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
@@ -58,7 +58,6 @@ class ConfigScreen extends StatefulWidget {
 
 class _ConfigScreenState extends State<ConfigScreen>
     with TickerProviderStateMixin {
-  late TabController _tabs;
   bool _isSidebarOpen = true;
   List<dynamic> _departments = [];
   bool _loadingDept = true;
@@ -66,14 +65,7 @@ class _ConfigScreenState extends State<ConfigScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 1, vsync: this);
     _loadDepartments();
-  }
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
   }
 
   Future<void> _loadDepartments() async {
@@ -260,6 +252,7 @@ class _ConfigScreenState extends State<ConfigScreen>
           Expanded(
             child: Stack(
               children: [
+                // Background
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -270,55 +263,62 @@ class _ConfigScreenState extends State<ConfigScreen>
                     ),
                   ),
                 ),
+
                 Positioned.fill(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // ── Top bar ──────────────────────────────────
-                      Padding(
-                        padding:
-                            const EdgeInsets.only(left: 40, right: 40, top: 28),
-                        child: Row(
+                      // ── Top bar ──────────────────────────────────
+                      SizedBox(
+                        height: 72,
+                        child: Stack(
+                          alignment: Alignment.centerLeft,
                           children: [
-                            if (!_isSidebarOpen) ...[
-                              Container(
-                                margin: const EdgeInsets.only(right: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: Colors.white.withOpacity(0.15)),
-                                ),
-                                child: IconButton(
-                                  padding: const EdgeInsets.all(12),
-                                  onPressed: () =>
-                                      setState(() => _isSidebarOpen = true),
-                                  icon: const _HamburgerIcon(),
-                                  tooltip: 'Open Sidebar',
-                                  splashColor: Colors.white.withOpacity(0.1),
-                                  highlightColor: Colors.transparent,
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 100, right: 100, top: 28),
+                              child: Text(
+                                'Departments',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displaySmall
+                                    ?.copyWith(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                              ),
+                            ),
+                            if (!_isSidebarOpen)
+                              Positioned(
+                                left: 20,
+                                top: 28,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: Colors.white.withOpacity(0.15)),
+                                  ),
+                                  child: IconButton(
+                                    padding: const EdgeInsets.all(12),
+                                    onPressed: () =>
+                                        setState(() => _isSidebarOpen = true),
+                                    icon: const _HamburgerIcon(),
+                                    tooltip: 'Open Sidebar',
+                                    splashColor: Colors.white.withOpacity(0.1),
+                                    highlightColor: Colors.transparent,
+                                  ),
                                 ),
                               ),
-                            ],
-                            Text(
-                              'Departments',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displaySmall
-                                  ?.copyWith(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                            ),
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 15),
 
-                      // ── Content ───────────────────────────────────
+                      // ── Container ─────────────────────────────────
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.only(
@@ -330,69 +330,16 @@ class _ConfigScreenState extends State<ConfigScreen>
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(24),
-                              child: Column(
-                                children: [
-                                  // ── Tab bar ───────────────────────
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(
-                                            color: Colors.grey.shade200),
-                                      ),
-                                    ),
-                                    child: TabBar(
-                                      controller: _tabs,
-                                      labelColor: _kBlue,
-                                      indicatorColor: _kBlue,
-                                      indicatorWeight: 3.5,
-                                      unselectedLabelColor:
-                                          Colors.grey.shade500,
-                                      labelStyle: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                      unselectedLabelStyle: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      dividerColor: Colors.transparent,
-                                      tabs: const [
-                                        Tab(
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                  Icons.business_outlined,
-                                                  size: 16),
-                                              SizedBox(width: 6),
-                                              Text('Departments'),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // ── Tab content ───────────────────
-                                  Expanded(
-                                    child: TabBarView(
-                                      controller: _tabs,
-                                      children: [
-                                        _ItemTab(
-                                          loading: _loadingDept,
-                                          items: _departments,
-                                          searchHint: 'Search departments...',
-                                          onAdd: _addDepartment,
-                                          onEdit: (id, name) => _editItem(
-                                              id: id, currentName: name),
-                                          onDelete: (id, name) =>
-                                              _deleteItem(id: id, name: name),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                              // Directly show the list — no tab bar, no header
+                              child: _ItemTab(
+                                loading: _loadingDept,
+                                items: _departments,
+                                searchHint: 'Search departments...',
+                                onAdd: _addDepartment,
+                                onEdit: (id, name) =>
+                                    _editItem(id: id, currentName: name),
+                                onDelete: (id, name) =>
+                                    _deleteItem(id: id, name: name),
                               ),
                             ),
                           ),
@@ -410,7 +357,7 @@ class _ConfigScreenState extends State<ConfigScreen>
   }
 }
 
-// ── Reusable tab content ──────────────────────────────────────────────────────
+// ── List tab content ──────────────────────────────────────────────────────────
 class _ItemTab extends StatefulWidget {
   final bool loading;
   final List<dynamic> items;
@@ -435,7 +382,7 @@ class _ItemTab extends StatefulWidget {
 class _ItemTabState extends State<_ItemTab> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
-  Timer? _debounce; // Added Timer for real-time typing search
+  Timer? _debounce;
 
   static const _kBarColor = Color(0xFFEEF2F5);
 
@@ -453,7 +400,7 @@ class _ItemTabState extends State<_ItemTab> {
   @override
   void dispose() {
     _searchCtrl.dispose();
-    _debounce?.cancel(); // Cancel timer when widget is disposed
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -643,6 +590,7 @@ class _ItemTabState extends State<_ItemTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // ── Search bar + Add button ───────────────────────────────
         Container(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           decoration: BoxDecoration(
@@ -659,17 +607,14 @@ class _ItemTabState extends State<_ItemTab> {
                 decoration: InputDecoration(
                   hintText: widget.searchHint,
                   hintStyle: _hintStyle,
-                  
-                  // Updated to make the magnifying glass clickable
                   prefixIcon: IconButton(
-                    icon: Icon(Icons.search, color: Colors.grey.shade400, size: 18),
+                    icon: Icon(Icons.search,
+                        color: Colors.grey.shade400, size: 18),
                     onPressed: () {
                       if (_debounce?.isActive ?? false) _debounce!.cancel();
                       setState(() => _searchQuery = _searchCtrl.text.trim());
                     },
                   ),
-                  
-                  // Changed to look directly at _searchCtrl.text so the UI feels more responsive
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
                           icon: Icon(Icons.clear,
@@ -690,12 +635,8 @@ class _ItemTabState extends State<_ItemTab> {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
                 onChanged: (v) {
-                  setState(() {}); // Updates the clear button visibility immediately
-                  
-                  // Cancel the previous timer if user is still typing
+                  setState(() {});
                   if (_debounce?.isActive ?? false) _debounce!.cancel();
-                  
-                  // Start a new timer. It will only search 300ms AFTER they stop typing.
                   _debounce = Timer(const Duration(milliseconds: 300), () {
                     setState(() => _searchQuery = v.trim());
                   });
@@ -722,7 +663,8 @@ class _ItemTabState extends State<_ItemTab> {
             ),
           ]),
         ),
-        Container(height: 0.5, color: _kBlue.withOpacity(0.15)),
+
+        // ── List ─────────────────────────────────────────────────
         if (widget.loading)
           const Padding(
             padding: EdgeInsets.all(40),
