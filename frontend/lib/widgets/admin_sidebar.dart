@@ -8,13 +8,11 @@ class AdminSidebar extends StatelessWidget {
   final VoidCallback? onClose;
   const AdminSidebar({super.key, required this.currentRoute, this.onClose});
 
-
-
   static const Color _bgColor = Color(0xFF0B0F2F); // Dark blue bg
   static const Color _activeItemBg = Color(0xFF6366F1); // Blue active
   static const Color _sectionLabelColor = Color(0xFFA78BFA); // Light blue label
   static const Color _textLight = Colors.white;
-  static const Color _textDark = Color(0xFF050816);// Dark blue text
+  static const Color _textDark = Color(0xFF050816); // Dark blue text
 
   @override
   Widget build(BuildContext context) {
@@ -86,15 +84,13 @@ class AdminSidebar extends StatelessWidget {
             ),
           ),
 
-
-
           // Nav items
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
                 const _SectionLabel('MENU'),
-_NavItem(
+                _NavItem(
                   icon: Icons.grid_view_rounded,
                   label: 'Dashboard',
                   route: '/dashboard',
@@ -132,32 +128,7 @@ _NavItem(
             mainAxisSize: MainAxisSize.min,
             children: [
               Divider(color: Colors.white.withOpacity(0.15), height: 1),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    context.read<AuthProvider>().logout();
-                    context.go('/login');
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout_rounded, color: _textLight, size: 22),
-                        SizedBox(width: 16),
-                        Text(
-                          'Sign Out',
-                          style: TextStyle(
-                            color: _textLight,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              const _SignOutButton(),
             ],
           ),
         ],
@@ -166,7 +137,7 @@ _NavItem(
   }
 }
 
-class _NavItem extends StatelessWidget {
+class _NavItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final String route;
@@ -180,34 +151,51 @@ class _NavItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final active = current == route;
+  State<_NavItem> createState() => _NavItemState();
+}
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: active ? AdminSidebar._activeItemBg : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-        leading: Icon(
-          icon,
-          size: 20,
-          color: active ? AdminSidebar._textDark : AdminSidebar._textLight,
+class _NavItemState extends State<_NavItem> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.current == widget.route;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: active ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: active
+              ? AdminSidebar._activeItemBg
+              : _isHovering
+                  ? Colors.white.withOpacity(0.08) // Hover color
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+        child: ListTile(
+          dense: true,
+          hoverColor: Colors.transparent, // Disable default material hover
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          leading: Icon(
+            widget.icon,
+            size: 20,
             color: active ? AdminSidebar._textDark : AdminSidebar._textLight,
           ),
+          title: Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+              color: active ? AdminSidebar._textDark : AdminSidebar._textLight,
+            ),
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          onTap: active ? null : () => context.go(widget.route),
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        onTap: active ? null : () => context.go(route),
       ),
     );
   }
@@ -232,3 +220,55 @@ class _SectionLabel extends StatelessWidget {
       );
 }
 
+class _SignOutButton extends StatefulWidget {
+  const _SignOutButton();
+
+  @override
+  State<_SignOutButton> createState() => _SignOutButtonState();
+}
+
+class _SignOutButtonState extends State<_SignOutButton> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        color: _isHovering
+            ? Colors.white.withOpacity(0.08) // Hover color
+            : Colors.transparent,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            hoverColor: Colors.transparent, // Prevent duplicate hover effects
+            onTap: () {
+              context.read<AuthProvider>().logout();
+              context.go('/login');
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Row(
+                children: [
+                  Icon(Icons.logout_rounded, color: AdminSidebar._textLight, size: 22),
+                  SizedBox(width: 16),
+                  Text(
+                    'Sign Out',
+                    style: TextStyle(
+                      color: AdminSidebar._textLight,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
