@@ -25,7 +25,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
 
   // ── Dynamic dept/position lists ──────────────────────────────────────────
   List<String> _departments = [];
-  List<String> _positions = [];
+  //List<String> _positions = [];
   bool _loadingDepts = true;
   bool _loadingPositions = false;
   String? _selectedDept;
@@ -77,10 +77,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     _selectedDept = (user?['department'] as String? ?? '').isEmpty
         ? null
         : user?['department'] as String?;
+    /*
     _selectedPos = (user?['position'] as String? ?? '').isEmpty
         ? null
         : user?['position'] as String?;
-
+    */
     _fetchDepartments();
   }
 
@@ -117,10 +118,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
             _departments.add(_selectedDept!);
           }
         });
-        // Load positions for the already-selected department
-        if (_selectedDept != null) {
-          await _fetchPositions(_selectedDept!);
-        }
       } else {
         setState(() => _loadingDepts = false);
       }
@@ -130,6 +127,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     }
   }
 
+/*
   // ── Fetch positions (authenticated) ──────────────────────────────────────
   Future<void> _fetchPositions(String department) async {
     setState(() => _loadingPositions = true);
@@ -156,7 +154,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       if (mounted) setState(() => _loadingPositions = false);
     }
   }
-
+*/
   // ── Avatar Pick & Upload ──────────────────────────────────────────────────
   Future<void> pickAndCropAvatar() async {
     try {
@@ -289,7 +287,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       'last_name': _lastCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
       'department': _selectedDept ?? '',
-      'position': _selectedPos ?? '',
+      //'position': _selectedPos ?? '',
     });
 
     if (!mounted) return;
@@ -356,8 +354,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           : null,
       filled: true,
       fillColor: const Color(0xFFF9FAFB),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -416,8 +413,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         ),
         Positioned.fill(
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1000),
@@ -426,14 +422,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                   children: [
                     Text(
                       'Account Settings',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 0.5,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
                     ),
                     const SizedBox(height: 20),
 
@@ -479,8 +473,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                       onTap: _isUploadingAvatar
                                           ? null
                                           : pickAndCropAvatar,
-                                      borderRadius:
-                                          BorderRadius.circular(20),
+                                      borderRadius: BorderRadius.circular(20),
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
@@ -577,11 +570,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                 indicatorWeight: 3,
                                 unselectedLabelColor: Colors.grey.shade500,
                                 labelStyle: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700),
+                                    fontSize: 14, fontWeight: FontWeight.w700),
                                 unselectedLabelStyle: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500),
+                                    fontSize: 14, fontWeight: FontWeight.w500),
                                 dividerColor: Colors.transparent,
                                 tabs: const [
                                   Tab(text: 'Account Settings'),
@@ -675,32 +666,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                             ? 'None available'
                             : 'Select Department',
                         items: _departments,
-                        onChanged: (v) async {
-                          setState(() {
-                            _selectedDept = v;
-                            _selectedPos = null;
-                            _positions = [];
-                          });
-                          if (v != null) await _fetchPositions(v);
-                        },
-                      ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _loadingPositions
-                    ? _loadingDropdown('Position')
-                    : _dropdownField(
-                        label: 'Position',
-                        value: _selectedPos,
-                        hint: _selectedDept == null
-                            ? 'Select Dept First'
-                            : _positions.isEmpty
-                                ? 'None available'
-                                : 'Select Position',
-                        items: _positions,
-                        onChanged: _positions.isEmpty
-                            ? null
-                            : (v) => setState(() => _selectedPos = v),
+                        onChanged: (v) => setState(() => _selectedDept = v),
                       ),
               ),
             ]),
@@ -889,8 +855,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                   items: items
                       .map((s) => DropdownMenuItem(
                           value: s,
-                          child:
-                              Text(s, overflow: TextOverflow.ellipsis)))
+                          child: Text(s, overflow: TextOverflow.ellipsis)))
                       .toList(),
                   onChanged: onChanged,
                 ),
@@ -911,11 +876,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         controller: controller,
         obscureText: obscure,
         validator: validator,
-        style:
-            const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        decoration: _getFormDecoration(label,
-                prefixIcon: Icons.lock_outline)
-            .copyWith(
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        decoration:
+            _getFormDecoration(label, prefixIcon: Icons.lock_outline).copyWith(
           suffixIcon: IconButton(
             icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
                 size: 18, color: Colors.grey.shade500),
@@ -925,32 +888,24 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       );
 
   Widget _msgBanner(String msg, bool success) => Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: success ? Colors.green.shade50 : Colors.red.shade50,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: success
-                  ? Colors.green.shade200
-                  : Colors.red.shade200),
+              color: success ? Colors.green.shade200 : Colors.red.shade200),
         ),
         child: Row(
           children: [
-            Icon(
-                success
-                    ? Icons.check_circle
-                    : Icons.error_outline,
-                color: success ? Colors.green : Colors.red,
-                size: 18),
+            Icon(success ? Icons.check_circle : Icons.error_outline,
+                color: success ? Colors.green : Colors.red, size: 18),
             const SizedBox(width: 10),
             Expanded(
               child: Text(msg,
                   style: TextStyle(
                       fontSize: 13,
-                      color: success
-                          ? Colors.green.shade800
-                          : Colors.red.shade800,
+                      color:
+                          success ? Colors.green.shade800 : Colors.red.shade800,
                       fontWeight: FontWeight.w600)),
             ),
           ],
