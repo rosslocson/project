@@ -129,6 +129,7 @@ _NavItem(
 
           // Sign out
           Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Divider(color: Colors.white.withOpacity(0.15), height: 1),
               Material(
@@ -139,7 +140,7 @@ _NavItem(
                     context.go('/login');
                   },
                   child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                     child: Row(
                       children: [
                         Icon(Icons.logout_rounded, color: _textLight, size: 22),
@@ -218,7 +219,7 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 20, top: 12, bottom: 8),
+        padding: const EdgeInsets.only(left: 20, top: 16, bottom: 12),
         child: Text(
           text.toUpperCase(),
           style: const TextStyle(
