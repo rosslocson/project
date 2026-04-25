@@ -377,7 +377,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       });
 
       if (res['ok'] == true) {
-        print("✅ Upload successful");
+        print("Upload successful");
         await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
 
         setState(() {
@@ -805,8 +805,14 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           fontWeight: FontWeight.w500),
                                       dividerColor: Colors.transparent,
                                       tabs: const [
-                                        Tab(text: 'Account Settings'),
-                                        Tab(text: 'Change Password'),
+                                        Tab(
+                                        icon: Icon(Icons.manage_accounts_outlined, size: 20),
+                                        text: 'Account Settings',
+                                      ), 
+                                        Tab(
+                                        icon: Icon(Icons.lock_outline, size: 20),
+                                        text: 'Change Password',
+                                        ),
                                       ],
                                     ),
                                   ),

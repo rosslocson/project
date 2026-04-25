@@ -4,48 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../providers/sidebar_provider.dart';
 import '../widgets/user_sidebar.dart';
 
-class HamburgerIcon extends StatelessWidget {
-  const HamburgerIcon({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 14,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class UserLayout extends StatelessWidget {
   final Widget child;
   final String? currentRoute;
@@ -64,50 +22,22 @@ class UserLayout extends StatelessWidget {
     final route = currentRoute ?? GoRouterState.of(context).matchedLocation;
 
     return Scaffold(
-      body: Stack(
+      body: Row(
         children: [
-          Row(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                width: sidebar.isUserSidebarOpen ? 250 : 0,
-                child: sidebar.isUserSidebarOpen
-                    ? UserSidebar(
-                        currentRoute: route,
-                        onClose: () => sidebar.setUserSidebarOpen(false),
-                      )
-                    : const SizedBox(),
-              ),
-              Expanded(
-                child: child,
-              ),
-            ],
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: sidebar.isUserSidebarOpen ? 250 : 0,
+            child: sidebar.isUserSidebarOpen
+                ? UserSidebar(
+                    currentRoute: route,
+                    onClose: () => sidebar.setUserSidebarOpen(false),
+                  )
+                : const SizedBox(),
           ),
-          // Hamburger menu button when sidebar is closed
-          if (!sidebar.isUserSidebarOpen)
-            Positioned(
-              top: 24,
-              left: 24,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    width: 1,
-                  ),
-                ),
-                child: IconButton(
-                  padding: const EdgeInsets.all(12),
-                  onPressed: () => sidebar.setUserSidebarOpen(true),
-                  icon: const HamburgerIcon(),
-                  tooltip: 'Open Sidebar',
-                  splashColor: Colors.white.withValues(alpha: 0.1),
-                  highlightColor: Colors.transparent,
-                ),
-              ),
-            ),
+          Expanded(
+            child: child,
+          ),
         ],
       ),
     );

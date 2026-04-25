@@ -62,8 +62,7 @@ class GlassTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sidebar = context.watch<SidebarProvider>();
-    final sidebarOpen = isSidebarOpen ?? sidebar.isUserSidebarOpen;
-    final toggleSidebar = onToggleSidebar ?? () => sidebar.toggleUserSidebar();
+    final bool sidebarClosed = !sidebar.isUserSidebarOpen;
 
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
@@ -94,20 +93,21 @@ class GlassTopBar extends StatelessWidget {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (!sidebarOpen) ...[
+          // ── Hamburger — only when sidebar is closed ───────────────────
+          if (sidebarClosed) ...[
             Container(
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.15),
-                  width: 1,
                 ),
               ),
               child: IconButton(
                 padding: const EdgeInsets.all(12),
-                onPressed: toggleSidebar,
+                onPressed: () => sidebar.setUserSidebarOpen(true),
                 icon: const HamburgerIcon(),
                 tooltip: 'Open Sidebar',
                 splashColor: Colors.white.withValues(alpha: 0.1),
@@ -116,13 +116,16 @@ class GlassTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 24),
           ],
+          // ── Title ─────────────────────────────────────────────────────
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
                 'Home',
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 0.5,
@@ -138,6 +141,7 @@ class GlassTopBar extends StatelessWidget {
             ],
           ),
           const Spacer(),
+          // ── User menu ─────────────────────────────────────────────────
           PopupMenuButton<String>(
             onSelected: (String choice) {
               if (choice == 'profile') {
@@ -185,7 +189,8 @@ class GlassTopBar extends StatelessWidget {
                   const SizedBox(width: 16),
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: const Color(0xFFD4748A).withValues(alpha: 0.1),
+                    backgroundColor:
+                        const Color(0xFFD4748A).withValues(alpha: 0.1),
                     backgroundImage: finalAvatarUrl.isNotEmpty
                         ? NetworkImage(finalAvatarUrl)
                         : null,
@@ -194,27 +199,28 @@ class GlassTopBar extends StatelessWidget {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFFD4748A),
-                                    Color(0xFF4A1040)
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFD4748A),
+                                  Color(0xFF4A1040),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFD4748A)
+                                      .withValues(alpha: 0.4),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
                                 ),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.6),
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFD4748A)
-                                        .withValues(alpha: 0.4),
-                                    blurRadius: 12,
-                                    spreadRadius: 2,
-                                  )
-                                ]),
+                              ],
+                            ),
                             child: Center(
                               child: Text(
                                 initials,

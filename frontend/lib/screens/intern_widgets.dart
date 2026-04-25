@@ -340,16 +340,16 @@ class _InternDetailPageState extends State<InternDetailPage>
                                       : 'N/A',
                                 ),
                                 _InfoRow(
+                                  icon: Icons.work,
+                                  label: 'Specialization',
+                                  value: intern.specialization,
+                                ),
+                                _InfoRow(
                                   icon: Icons.location_city,
                                   label: 'School',
                                   value: intern.school.isNotEmpty
                                       ? intern.school
                                       : 'N/A',
-                                ),
-                                _InfoRow(
-                                  icon: Icons.work,
-                                  label: 'Specialization',
-                                  value: intern.specialization,
                                 ),
                                 _InfoRow(
                                   icon: Icons.email,
@@ -359,44 +359,56 @@ class _InternDetailPageState extends State<InternDetailPage>
                                       : 'N/A',
                                 ),
                                 if (intern.technicalSkills.isNotEmpty) ...[
-                                  const SizedBox(height: 24),
-                                  const Text(
-                                    'Technical Skills',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: intern.technicalSkills
-                                        .map((s) => _SkillChip(s))
-                                        .toList(),
-                                  ),
+  const SizedBox(height: 24),
+  const Align(
+    alignment: Alignment.centerLeft,
+    child: Text(
+      'Technical Skills',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    ),
+  ),
+  const SizedBox(height: 12),
+  Align(
+    alignment: Alignment.centerLeft,
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: intern.technicalSkills
+          .map((s) => _SkillChip(s))
+          .toList(),
+    ),
+  ),
+],
+if (intern.softSkills.isNotEmpty) ...[
+  const SizedBox(height: 24),
+  const Align(
+    alignment: Alignment.centerLeft,
+    child: Text(
+      'Soft Skills',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    ),
+  ),
+  const SizedBox(height: 12),
+  Align(
+    alignment: Alignment.centerLeft,
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: intern.softSkills
+          .map((s) => _SkillChip(s))
+          .toList(),
+    ),
+  ),
+],
                                 ],
-                                if (intern.softSkills.isNotEmpty) ...[
-                                  const SizedBox(height: 24),
-                                  const Text(
-                                    'Soft Skills',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: intern.softSkills
-                                        .map((s) => _SkillChip(s))
-                                        .toList(),
-                                  ),
-                                ],
-                              ],
                             ),
                           ),
                         ],

@@ -7,11 +7,54 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/sidebar_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/user_layout.dart';
 import 'avatar_crop_screen.dart';
 
 const _kBlue = Color(0xFF00022E);
+
+class HamburgerIcon extends StatelessWidget {
+  const HamburgerIcon({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 22,
+      height: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 22,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: 14,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: 22,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -23,30 +66,22 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
 
-  // ── Dynamic dept/position lists ──────────────────────────────────────────
   List<String> _departments = [];
-  //List<String> _positions = [];
   bool _loadingDepts = true;
-  //bool _loadingPositions = false;
   String? _selectedDept;
-  //String? _selectedPos;
 
-  // Form keys
   final _profileKey = GlobalKey<FormState>();
   final _passKey = GlobalKey<FormState>();
 
-  // Profile controllers
   late TextEditingController _firstCtrl;
   late TextEditingController _lastCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
 
-  // Password controllers
   final _curPassCtrl = TextEditingController();
   final _newPassCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
 
-  // UI state
   bool _savingProfile = false;
   bool _savingPass = false;
   String? _profileMsg;
@@ -57,7 +92,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   bool _obscureNew = true;
   bool _obscureConf = true;
 
-  // Avatar state
   bool _isUploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
   Uint8List? _localAvatarBytes;
@@ -77,11 +111,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     _selectedDept = (user?['department'] as String? ?? '').isEmpty
         ? null
         : user?['department'] as String?;
-    /*
-    _selectedPos = (user?['position'] as String? ?? '').isEmpty
-        ? null
-        : user?['position'] as String?;
-    */
+
     _fetchDepartments();
   }
 
@@ -102,7 +132,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     super.dispose();
   }
 
-  // ── Fetch departments (authenticated) ────────────────────────────────────
   Future<void> _fetchDepartments() async {
     try {
       final res = await ApiService.getDepartments();
@@ -113,7 +142,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         setState(() {
           _departments = depts;
           _loadingDepts = false;
-          // Validate saved dept still exists
           if (_selectedDept != null && !_departments.contains(_selectedDept)) {
             _departments.add(_selectedDept!);
           }
@@ -127,35 +155,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     }
   }
 
-/*
-  // ── Fetch positions (authenticated) ──────────────────────────────────────
-  Future<void> _fetchPositions(String department) async {
-    setState(() => _loadingPositions = true);
-    try {
-      final res = await ApiService.getPositions();
-      if (!mounted) return;
-      if (res['ok'] == true) {
-        final List items = res['items'] ?? [];
-        final allPositions =
-            items.map<String>((p) => p['name'] as String).toList();
-        setState(() {
-          _positions = allPositions;
-          _loadingPositions = false;
-          // Validate saved position still exists
-          if (_selectedPos != null && !_positions.contains(_selectedPos)) {
-            _positions.add(_selectedPos!);
-          }
-        });
-      } else {
-        setState(() => _loadingPositions = false);
-      }
-    } catch (e) {
-      debugPrint('Failed to fetch positions: $e');
-      if (mounted) setState(() => _loadingPositions = false);
-    }
-  }
-*/
-  // ── Avatar Pick & Upload ──────────────────────────────────────────────────
   Future<void> pickAndCropAvatar() async {
     try {
       final pickedFile = await _picker.pickImage(
@@ -218,7 +217,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         return;
       }
 
-      // Native
       final file = File(pickedFile.path);
       if (!await file.exists()) return;
 
@@ -274,7 +272,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     }
   }
 
-  // ── Save Profile ──────────────────────────────────────────────────────────
   Future<void> _saveProfile() async {
     if (!_profileKey.currentState!.validate()) return;
     setState(() {
@@ -287,7 +284,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       'last_name': _lastCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
       'department': _selectedDept ?? '',
-      //'position': _selectedPos ?? '',
     });
 
     if (!mounted) return;
@@ -313,7 +309,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     setState(() => _savingProfile = false);
   }
 
-  // ── Change Password ───────────────────────────────────────────────────────
   Future<void> _changePassword() async {
     if (!_passKey.currentState!.validate()) return;
     setState(() {
@@ -343,7 +338,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     setState(() => _savingPass = false);
   }
 
-  // ── Input Decoration ──────────────────────────────────────────────────────
   InputDecoration _getFormDecoration(String label, {IconData? prefixIcon}) {
     return InputDecoration(
       labelText: label,
@@ -374,7 +368,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return UserLayout(
@@ -385,6 +378,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
 
   Widget _buildSettingsContent(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
+    final sidebar = context.watch<SidebarProvider>();
 
     final rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     final finalAvatarUrl = rawAvatarUrl.isEmpty
@@ -393,7 +387,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
             ? rawAvatarUrl
             : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
 
-    // Null-safe avatar image provider
     ImageProvider? avatarImage;
     if (_avatarFile != null) {
       avatarImage = FileImage(_avatarFile!);
@@ -405,197 +398,353 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
 
     return Stack(
       children: [
+        // ── Background ────────────────────────────────────────────
         Positioned.fill(
-          child: Image.asset(
-            'assets/images/space_background.png',
-            fit: BoxFit.cover,
+          child: Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/space_background.png'),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         ),
-        Positioned.fill(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 48),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1000),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Account Settings',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
-                              ),
-                    ),
-                    const SizedBox(height: 20),
 
-                    // ── Avatar card ────────────────────────────────────
-                    Card(
-                      elevation: 0,
-                      color: Colors.white.withValues(alpha:0.95),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24)),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 20),
-                        child: Row(
-                          children: [
-                            Stack(
-                              alignment: Alignment.bottomRight,
+        Positioned.fill(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Top bar ───────────────────────────────────────────
+              SizedBox(
+                height: 72,
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, top: 28),
+                      child: Text(
+                        'Account Settings',
+                        style: Theme.of(context)
+                            .textTheme
+                            .displaySmall
+                            ?.copyWith(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                      ),
+                    ),
+                    if (!sidebar.isUserSidebarOpen)
+                      Positioned(
+                        left: 20,
+                        top: 28,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: IconButton(
+                            padding: const EdgeInsets.all(12),
+                            onPressed: () => sidebar.setUserSidebarOpen(true),
+                            icon: const HamburgerIcon(),
+                            tooltip: 'Open Sidebar',
+                            splashColor: Colors.white.withValues(alpha: 0.1),
+                            highlightColor: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 15),
+
+              // ── Main container ────────────────────────────────────
+              Expanded(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // ── Profile card ──────────────────────────
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 32, vertical: 20),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom:
+                                    BorderSide(color: Colors.grey.shade200),
+                              ),
+                            ),
+                            child: Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 40,
-                                  backgroundColor: _kBlue.withValues(alpha:0.1),
-                                  backgroundImage: avatarImage,
-                                  child: _isUploadingAvatar
-                                      ? const CircularProgressIndicator(
-                                          color: _kBlue, strokeWidth: 3)
-                                      : avatarImage == null
-                                          ? Text(
-                                              '${(user?['first_name'] as String? ?? ' ')[0]}'
-                                              '${(user?['last_name'] as String? ?? ' ')[0]}',
-                                              style: const TextStyle(
-                                                fontSize: 28,
-                                                fontWeight: FontWeight.bold,
-                                                color: _kBlue,
-                                              ),
-                                            )
-                                          : null,
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: _isUploadingAvatar
-                                          ? null
-                                          : pickAndCropAvatar,
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: _kBlue,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                              color: Colors.white, width: 2),
+                                Stack(
+                                  alignment: Alignment.bottomRight,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 40,
+                                      backgroundColor:
+                                          _kBlue.withValues(alpha: 0.1),
+                                      backgroundImage: avatarImage,
+                                      child: _isUploadingAvatar
+                                          ? const CircularProgressIndicator(
+                                              color: _kBlue, strokeWidth: 3)
+                                          : avatarImage == null
+                                              ? Text(
+                                                  '${(user?['first_name'] as String? ?? ' ')[0]}'
+                                                  '${(user?['last_name'] as String? ?? ' ')[0]}',
+                                                  style: const TextStyle(
+                                                    fontSize: 28,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: _kBlue,
+                                                  ),
+                                                )
+                                              : null,
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: _isUploadingAvatar
+                                              ? null
+                                              : pickAndCropAvatar,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: _kBlue,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2),
+                                            ),
+                                            child: const Icon(Icons.camera_alt,
+                                                color: Colors.white, size: 14),
+                                          ),
                                         ),
-                                        child: const Icon(Icons.camera_alt,
-                                            color: Colors.white, size: 14),
                                       ),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.black87,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        user?['email'] ?? '',
+                                        style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                      if ((user?['department'] as String? ?? '')
+                                          .isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${user?['department']} · ${user?['position'] ?? ''}',
+                                          style: TextStyle(
+                                              color: Colors.grey.shade500,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 10),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: _kBlue.withValues(alpha: 0.08),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                        child: const Text('USER',
+                                            style: TextStyle(
+                                              color: _kBlue,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 1.0,
+                                            )),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.black87,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    user?['email'] ?? '',
-                                    style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500),
-                                  ),
-                                  if ((user?['department'] as String? ?? '')
-                                      .isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${user?['department']} · ${user?['position'] ?? ''}',
-                                      style: TextStyle(
-                                          color: Colors.grey.shade500,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: _kBlue.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: const Text('USER',
-                                        style: TextStyle(
-                                          color: _kBlue,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 1.0,
-                                        )),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                          ),
 
-                    // ── Tabs card ──────────────────────────────────────
-                    Expanded(
-                      child: Card(
-                        elevation: 0,
-                        color: Colors.white.withValues(alpha: 0.95),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                        child: Column(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                    bottom: BorderSide(
-                                        color: Colors.grey.shade200)),
-                              ),
-                              child: TabBar(
-                                controller: _tabs,
-                                labelColor: _kBlue,
-                                indicatorColor: _kBlue,
-                                indicatorWeight: 3,
-                                unselectedLabelColor: Colors.grey.shade500,
-                                labelStyle: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w700),
-                                unselectedLabelStyle: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500),
-                                dividerColor: Colors.transparent,
-                                tabs: const [
-                                  Tab(text: 'Account Settings'),
-                                  Tab(text: 'Change Password'),
-                                ],
+                          // ── Tabs ──────────────────────────────────
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom:
+                                    BorderSide(color: Colors.grey.shade200),
                               ),
                             ),
-                            Expanded(
-                              child: TabBarView(
-                                controller: _tabs,
-                                children: [
-                                  _buildProfileForm(),
-                                  _buildPasswordForm(),
-                                ],
-                              ),
+                            child: TabBar(
+                              controller: _tabs,
+                              labelColor: _kBlue,
+                              indicatorColor: _kBlue,
+                              indicatorWeight: 3,
+                              unselectedLabelColor: Colors.grey.shade500,
+                              labelStyle: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w700),
+                              unselectedLabelStyle: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w500),
+                              dividerColor: Colors.transparent,
+                              tabs: const [
+                                Tab(
+                                  icon: Icon(Icons.manage_accounts_outlined,
+                                      size: 20),
+                                  text: 'Account Settings',
+                                ),
+                                Tab(
+                                  icon: Icon(Icons.lock_outline, size: 20),
+                                  text: 'Change Password',
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+
+                          // ── Tab content ───────────────────────────
+                          Expanded(
+                            child: TabBarView(
+                              controller: _tabs,
+                              children: [
+                                _buildProfileForm(),
+                                _buildPasswordForm(),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+            child: Form(
+              key: _profileKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_profileMsg != null) ...[
+                    _msgBanner(_profileMsg!, _profileSuccess),
+                    const SizedBox(height: 16),
+                  ],
+                  Row(children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _firstCtrl,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
+                        decoration: _getFormDecoration('First Name'),
+                        validator: (v) => v!.isEmpty ? 'Required' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _lastCtrl,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
+                        decoration: _getFormDecoration('Last Name'),
+                        validator: (v) => v!.isEmpty ? 'Required' : null,
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _emailCtrl,
+                    enabled: false,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade600),
+                    decoration: _getFormDecoration('Email (cannot change)',
+                        prefixIcon: Icons.email_outlined),
+                  ),
+                  const SizedBox(height: 16),
+                  _loadingDepts
+                      ? _loadingDropdown('Department')
+                      : _dropdownField(
+                          label: 'Department',
+                          value: _selectedDept,
+                          hint: _departments.isEmpty
+                              ? 'None available'
+                              : 'Select Department',
+                          items: _departments,
+                          onChanged: (v) => setState(() => _selectedDept = v),
+                        ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _savingProfile ? null : _saveProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: _savingProfile
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text('Save Changes',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5)),
             ),
           ),
         ),
@@ -603,189 +752,96 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     );
   }
 
-  // ── Profile form ──────────────────────────────────────────────────────────
-  Widget _buildProfileForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-      child: Form(
-        key: _profileKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_profileMsg != null) ...[
-              _msgBanner(_profileMsg!, _profileSuccess),
-              const SizedBox(height: 16),
-            ],
-
-            // First + Last name
-            Row(children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _firstCtrl,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500),
-                  decoration: _getFormDecoration('First Name'),
-                  validator: (v) => v!.isEmpty ? 'Required' : null,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _lastCtrl,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500),
-                  decoration: _getFormDecoration('Last Name'),
-                  validator: (v) => v!.isEmpty ? 'Required' : null,
-                ),
-              ),
-            ]),
-            const SizedBox(height: 16),
-
-            // Email (read-only)
-            TextFormField(
-              controller: _emailCtrl,
-              enabled: false,
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade600),
-              decoration: _getFormDecoration('Email (cannot change)',
-                  prefixIcon: Icons.email_outlined),
-            ),
-            const SizedBox(height: 16),
-
-            // Department + Position
-            Row(children: [
-              Expanded(
-                child: _loadingDepts
-                    ? _loadingDropdown('Department')
-                    : _dropdownField(
-                        label: 'Department',
-                        value: _selectedDept,
-                        hint: _departments.isEmpty
-                            ? 'None available'
-                            : 'Select Department',
-                        items: _departments,
-                        onChanged: (v) => setState(() => _selectedDept = v),
-                      ),
-              ),
-            ]),
-            const SizedBox(height: 32),
-
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _savingProfile ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: _savingProfile
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : const Text('Save Changes',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            letterSpacing: 0.5)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Password form ─────────────────────────────────────────────────────────
   Widget _buildPasswordForm() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-      child: Form(
-        key: _passKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_passMsg != null) ...[
-              _msgBanner(_passMsg!, _passSuccess),
-              const SizedBox(height: 16),
-            ],
-            _passField(
-              controller: _curPassCtrl,
-              label: 'Current Password',
-              obscure: _obscureCur,
-              onToggle: () => setState(() => _obscureCur = !_obscureCur),
-              validator: (v) => v!.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 20),
-            _passField(
-              controller: _newPassCtrl,
-              label: 'New Password',
-              obscure: _obscureNew,
-              onToggle: () => setState(() => _obscureNew = !_obscureNew),
-              validator: (v) {
-                if (v == null || v.length < 8) return 'Min 8 characters';
-                if (!v.contains(RegExp(r'[A-Z]'))) {
-                  return 'Need one uppercase letter';
-                }
-                if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
-                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-                  return 'Need one special character';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            _passField(
-              controller: _confirmPassCtrl,
-              label: 'Confirm New Password',
-              obscure: _obscureConf,
-              onToggle: () => setState(() => _obscureConf = !_obscureConf),
-              validator: (v) {
-                if (v!.isEmpty) return 'Required';
-                if (v != _newPassCtrl.text) return 'Passwords do not match';
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _savingPass ? null : _changePassword,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: _savingPass
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : const Text('Change Password',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            letterSpacing: 0.5)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+            child: Form(
+              key: _passKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_passMsg != null) ...[
+                    _msgBanner(_passMsg!, _passSuccess),
+                    const SizedBox(height: 16),
+                  ],
+                  _passField(
+                    controller: _curPassCtrl,
+                    label: 'Current Password',
+                    obscure: _obscureCur,
+                    onToggle: () => setState(() => _obscureCur = !_obscureCur),
+                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  _passField(
+                    controller: _newPassCtrl,
+                    label: 'New Password',
+                    obscure: _obscureNew,
+                    onToggle: () => setState(() => _obscureNew = !_obscureNew),
+                    validator: (v) {
+                      if (v == null || v.length < 8) return 'Min 8 characters';
+                      if (!v.contains(RegExp(r'[A-Z]')))
+                        return 'Need one uppercase letter';
+                      if (!v.contains(RegExp(r'[0-9]')))
+                        return 'Need one number';
+                      if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
+                        return 'Need one special character';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  _passField(
+                    controller: _confirmPassCtrl,
+                    label: 'Confirm New Password',
+                    obscure: _obscureConf,
+                    onToggle: () =>
+                        setState(() => _obscureConf = !_obscureConf),
+                    validator: (v) {
+                      if (v!.isEmpty) return 'Required';
+                      if (v != _newPassCtrl.text) return 'Passwords do not match';
+                      return null;
+                    },
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: SizedBox(
+            height: 48,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _savingPass ? null : _changePassword,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: _savingPass
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text('Change Password',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
-  /// Shown while API call is in-flight
   Widget _loadingDropdown(String label) => Container(
         height: 52,
         decoration: BoxDecoration(
@@ -904,8 +960,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               child: Text(msg,
                   style: TextStyle(
                       fontSize: 13,
-                      color:
-                          success ? Colors.green.shade800 : Colors.red.shade800,
+                      color: success
+                          ? Colors.green.shade800
+                          : Colors.red.shade800,
                       fontWeight: FontWeight.w600)),
             ),
           ],

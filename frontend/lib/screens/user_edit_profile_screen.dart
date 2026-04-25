@@ -62,7 +62,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   List<String> _departments = [];
   final String _defaultPosition = 'Intern';
 
-  // FIX: Single loading flag for the entire init sequence
   bool _initialLoading = true;
 
   String? _selectedDept;
@@ -91,9 +90,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
 
-    // ✅ Populate immediately from cached provider (like file 2)
-    // This is why fields were blank on re-login — file 1 waited on a server
-    // fetch before populating, so a slow/failed fetch = empty fields.
     final user = context.read<AuthProvider>().user ?? {};
 
     _schoolCtrl = TextEditingController(text: user['school'] ?? '');
@@ -111,10 +107,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     _githubCtrl = TextEditingController(text: user['git_hub'] ?? '');
 
     final dept = user['department'] as String? ?? '';
-
     _selectedDept = dept.isNotEmpty ? dept : null;
 
-    // ✅ Only fetch dropdown configs in the background — no full profile re-fetch
     _loadConfig();
   }
 
@@ -140,7 +134,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     super.dispose();
   }
 
-  // ✅ Replace _initScreenData with this leaner version
   Future<void> _loadConfig() async {
     final result = await ApiService.getConfig(type: 'department');
     if (!mounted) return;
@@ -189,11 +182,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
     if (res['ok'] == true) {
       final auth = context.read<AuthProvider>();
-
-      // FIX: Merge the payload we just saved optimistically
       await auth.updateUserData(payload);
-
-      // FIX: Then pull the canonical server copy so My Profile is fully in sync
       await auth.refreshProfile();
 
       if (mounted) {
@@ -277,8 +266,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide:
-                BorderSide(color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
+            borderSide: BorderSide(
+                color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
           ),
         ),
       );
@@ -304,8 +293,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide:
-                BorderSide(color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
+            borderSide: BorderSide(
+                color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
           ),
         ),
         hint: Text(hint,
@@ -316,8 +305,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                   value: s,
                   child: Text(s,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(color: Colors.black, fontSize: 13)),
+                      style: const TextStyle(
+                          color: Colors.black, fontSize: 13)),
                 ))
             .toList(),
         onChanged: items.isEmpty ? null : onChanged,
@@ -325,7 +314,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
   Widget _sectionTitle(String title, String sub) => Padding(
         padding: const EdgeInsets.only(bottom: 20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title,
               style: const TextStyle(
                   fontSize: 16,
@@ -341,125 +331,133 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         padding: const EdgeInsets.all(28),
         child: Form(
           key: _academicKey,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _sectionTitle('Academic Information',
-                'Your school, program, department, and internship details'),
-            Row(children: [
-              Expanded(
-                  child: Column(
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionTitle('Academic Information',
+                    'Your school, program, department, and internship details'),
+                Row(children: [
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        _label('Department'),
+                        _dropdown(
+                          value: _selectedDept,
+                          hint: _departments.isEmpty
+                              ? 'No departments yet'
+                              : 'Select Department',
+                          items: _departments,
+                          onChanged: (v) => setState(() {
+                            _selectedDept = v;
+                          }),
+                        ),
+                      ])),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    _label('Department'),
-                    _dropdown(
-                      value: _selectedDept,
-                      hint: _departments.isEmpty
-                          ? 'No departments yet'
-                          : 'Select Department',
-                      items: _departments,
-                      onChanged: (v) => setState(() {
-                        _selectedDept = v;
-                      }),
-                    ),
-                  ])),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _label('Position'),
-                    IgnorePointer(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _defaultPosition,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                        _label('Position'),
+                        IgnorePointer(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _defaultPosition,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.grey.shade100,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                    color: Colors.grey.shade300),
+                              ),
+                            ),
+                            icon: Icon(Icons.keyboard_arrow_down,
+                                color: Colors.grey.shade300),
+                            items: [
+                              DropdownMenuItem(
+                                value: _defaultPosition,
+                                child: Text(_defaultPosition,
+                                    style: const TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 13)),
+                              ),
+                            ],
+                            onChanged: null,
                           ),
                         ),
-                        icon: Icon(Icons.keyboard_arrow_down,
-                            color: Colors.grey.shade300),
-                        items: [
-                          DropdownMenuItem(
-                            value: _defaultPosition,
-                            child: Text(_defaultPosition,
-                                style: const TextStyle(
-                                    color: Colors.black54, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 16),
+                _label('School / University'),
+                _field(
+                    ctrl: _schoolCtrl,
+                    hint: 'e.g. University of Santo Tomas'),
+                const SizedBox(height: 16),
+                _label('Program / Course'),
+                _field(
+                    ctrl: _programCtrl, hint: 'e.g. BS Computer Science'),
+                const SizedBox(height: 16),
+                Row(children: [
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        _label('Specialization'),
+                        _field(
+                            ctrl: _specCtrl,
+                            hint: 'e.g. Web Development'),
+                      ])),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        _label('Year Level'),
+                        _field(ctrl: _yearCtrl, hint: 'e.g. 4th Year'),
+                      ])),
+                ]),
+                const SizedBox(height: 16),
+                _label('Intern Number'),
+                _field(ctrl: _internNumCtrl, hint: 'e.g. 12'),
+                const SizedBox(height: 16),
+                Row(children: [
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        _label('Internship Start'),
+                        _field(
+                          ctrl: _startCtrl,
+                          hint: 'YYYY-MM-DD',
+                          suffix: IconButton(
+                            icon: Icon(Icons.calendar_today,
+                                size: 18, color: Colors.grey.shade600),
+                            onPressed: () => _pickDate(_startCtrl),
                           ),
-                        ],
-                        onChanged: null,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ]),
-            const SizedBox(height: 16),
-            _label('School / University'),
-            _field(ctrl: _schoolCtrl, hint: 'e.g. University of Santo Tomas'),
-            const SizedBox(height: 16),
-            _label('Program / Course'),
-            _field(ctrl: _programCtrl, hint: 'e.g. BS Computer Science'),
-            const SizedBox(height: 16),
-            Row(children: [
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    _label('Specialization'),
-                    _field(ctrl: _specCtrl, hint: 'e.g. Web Development'),
-                  ])),
-              const SizedBox(width: 16),
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    _label('Year Level'),
-                    _field(ctrl: _yearCtrl, hint: 'e.g. 4th Year'),
-                  ])),
-            ]),
-            const SizedBox(height: 16),
-            _label('Intern Number'),
-            _field(ctrl: _internNumCtrl, hint: 'e.g. 12'),
-            const SizedBox(height: 16),
-            Row(children: [
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    _label('Internship Start'),
-                    _field(
-                      ctrl: _startCtrl,
-                      hint: 'YYYY-MM-DD',
-                      suffix: IconButton(
-                        icon: Icon(Icons.calendar_today,
-                            size: 18, color: Colors.grey.shade600),
-                        onPressed: () => _pickDate(_startCtrl),
-                      ),
-                    ),
-                  ])),
-              const SizedBox(width: 16),
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    _label('Internship End'),
-                    _field(
-                      ctrl: _endCtrl,
-                      hint: 'YYYY-MM-DD',
-                      suffix: IconButton(
-                        icon: Icon(Icons.calendar_today,
-                            size: 18, color: Colors.grey.shade600),
-                        onPressed: () => _pickDate(_endCtrl),
-                      ),
-                    ),
-                  ])),
-            ]),
-          ]),
+                        ),
+                      ])),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        _label('Internship End'),
+                        _field(
+                          ctrl: _endCtrl,
+                          hint: 'YYYY-MM-DD',
+                          suffix: IconButton(
+                            icon: Icon(Icons.calendar_today,
+                                size: 18, color: Colors.grey.shade600),
+                            onPressed: () => _pickDate(_endCtrl),
+                          ),
+                        ),
+                      ])),
+                ]),
+              ]),
         ),
       );
 
@@ -467,212 +465,273 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         padding: const EdgeInsets.all(28),
         child: Form(
           key: _skillsKey,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _sectionTitle('Skills & Profile',
-                'Bio, technical and soft skills, and social links'),
-            _label('Bio'),
-            _field(
-                ctrl: _bioCtrl,
-                hint: 'A short description about yourself…',
-                maxLines: 4),
-            const SizedBox(height: 16),
-            _label('Technical Skills'),
-            _field(
-                ctrl: _techSkillsCtrl,
-                hint: 'Flutter, Dart, Python, SQL  (comma-separated)',
-                maxLines: 2),
-            Padding(
-              padding: const EdgeInsets.only(top: 4, left: 2),
-              child: Text('Separate each skill with a comma',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-            ),
-            const SizedBox(height: 16),
-            _label('Soft Skills'),
-            _field(
-                ctrl: _softSkillsCtrl,
-                hint: 'Teamwork, Leadership, Communication  (comma-separated)',
-                maxLines: 2),
-            const SizedBox(height: 16),
-            _label('LinkedIn URL'),
-            _field(
-                ctrl: _linkedinCtrl,
-                hint: 'https://linkedin.com/in/yourname',
-                keyboardType: TextInputType.url),
-            const SizedBox(height: 16),
-            _label('GitHub URL'),
-            _field(
-                ctrl: _githubCtrl,
-                hint: 'https://github.com/yourname',
-                keyboardType: TextInputType.url),
-          ]),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionTitle('Skills & Profile',
+                    'Bio, technical and soft skills, and social links'),
+                _label('Bio'),
+                _field(
+                    ctrl: _bioCtrl,
+                    hint: 'A short description about yourself…',
+                    maxLines: 4),
+                const SizedBox(height: 16),
+                _label('Technical Skills'),
+                _field(
+                    ctrl: _techSkillsCtrl,
+                    hint: 'Flutter, Dart, Python, SQL  (comma-separated)',
+                    maxLines: 2),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 2),
+                  child: Text('Separate each skill with a comma',
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey.shade600)),
+                ),
+                const SizedBox(height: 16),
+                _label('Soft Skills'),
+                _field(
+                    ctrl: _softSkillsCtrl,
+                    hint:
+                        'Teamwork, Leadership, Communication  (comma-separated)',
+                    maxLines: 2),
+                const SizedBox(height: 16),
+                _label('LinkedIn URL'),
+                _field(
+                    ctrl: _linkedinCtrl,
+                    hint: 'https://linkedin.com/in/yourname',
+                    keyboardType: TextInputType.url),
+                const SizedBox(height: 16),
+                _label('GitHub URL'),
+                _field(
+                    ctrl: _githubCtrl,
+                    hint: 'https://github.com/yourname',
+                    keyboardType: TextInputType.url),
+              ]),
         ),
       );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
+      resizeToAvoidBottomInset: false,
+      body: Row(
         children: [
-          Row(children: [
-            if (_sidebarVisible)
-              UserSidebar(
-                currentRoute: '/edit-profile',
-                onClose: () => setState(() => _sidebarVisible = false),
-              ),
-            Expanded(
-                child: Stack(children: [
-              Positioned.fill(
-                  child: Image.asset(
-                'assets/images/space_background.png',
-                fit: BoxFit.cover,
-              )),
-              Positioned.fill(
-                child: Column(children: [
-                  // Top bar
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          const Color(0xFF050505).withValues(alpha: 0.95),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                    child: const Row(children: [
-                      Text('Edit Profile',
-                          style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white)),
-                    ]),
-                  ),
+          // ── Sidebar ──────────────────────────────────────────────
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: _sidebarVisible ? 250 : 0,
+            child: _sidebarVisible
+                ? UserSidebar(
+                    currentRoute: '/edit-profile',
+                    onClose: () =>
+                        setState(() => _sidebarVisible = false),
+                  )
+                : null,
+          ),
 
-                  // Card
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+          // ── Main content ─────────────────────────────────────────
+          Expanded(
+            child: Stack(
+              children: [
+                // Background
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/space_background.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+
+                Positioned.fill(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Top bar ───────────────────────────────────
+                      SizedBox(
+                        height: 72,
+                        child: Stack(
+                          alignment: Alignment.centerLeft,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 100, right: 100, top: 28),
+                              child: Text(
+                                'Edit Profile',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displaySmall
+                                    ?.copyWith(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                              ),
                             ),
+                            if (!_sidebarVisible)
+                              Positioned(
+                                left: 20,
+                                top: 28,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color:
+                                        Colors.white.withOpacity(0.05),
+                                    borderRadius:
+                                        BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: Colors.white
+                                            .withOpacity(0.15)),
+                                  ),
+                                  child: IconButton(
+                                    padding: const EdgeInsets.all(12),
+                                    onPressed: () => setState(
+                                        () => _sidebarVisible = true),
+                                    icon: const HamburgerIcon(),
+                                    tooltip: 'Open Sidebar',
+                                    splashColor:
+                                        Colors.white.withOpacity(0.1),
+                                    highlightColor: Colors.transparent,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
-                        // FIX: Show a loader while fetching fresh data from server
-                        child: _initialLoading
-                            ? const Center(
-                                child: CircularProgressIndicator(
-                                    color: kCrimsonDeep))
-                            : Column(children: [
-                                if (_successMsg != null)
-                                  _banner(_successMsg!, success: true),
-                                if (_errorMsg != null)
-                                  _banner(_errorMsg!, success: false),
-                                SizedBox(
-                                  height: 55,
-                                  child: TabBar(
-                                    controller: _tabs,
-                                    labelColor: Colors.black,
-                                    unselectedLabelColor: Colors.grey.shade500,
-                                    indicatorColor: kCrimsonDeep,
-                                    indicatorWeight: 3,
-                                    dividerColor: Colors.grey.shade200,
-                                    tabs: const [
-                                      Tab(
-                                          iconMargin:
-                                              EdgeInsets.only(bottom: 4),
-                                          icon: Icon(Icons.school_outlined,
-                                              size: 18),
-                                          text: 'Academic Info'),
-                                      Tab(
-                                          iconMargin:
-                                              EdgeInsets.only(bottom: 4),
-                                          icon: Icon(Icons.stars_outlined,
-                                              size: 18),
-                                          text: 'Skills'),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: TabBarView(
-                                    controller: _tabs,
-                                    children: [
-                                      _buildAcademicTab(),
-                                      _buildSkillsTab(),
-                                    ],
-                                  ),
-                                ),
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(28, 0, 28, 24),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      onPressed: _saving ? null : _save,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: kCrimsonDeep,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12)),
-                                        elevation: 0,
-                                      ),
-                                      child: _saving
-                                          ? const SizedBox(
-                                              height: 20,
-                                              width: 20,
-                                              child: CircularProgressIndicator(
-                                                  color: Colors.white,
-                                                  strokeWidth: 2))
-                                          : const Text('SAVE CHANGES',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.w800,
-                                                  letterSpacing: 0.8)),
-                                    ),
-                                  ),
-                                ),
-                              ]),
                       ),
-                    ),
-                  ),
-                ]),
-              ),
-            ])),
-          ]),
-          if (!_sidebarVisible)
-            Positioned(
-              top: 24,
-              left: 24,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    width: 1,
+                      const SizedBox(height: 15),
+
+                      // ── Main container ────────────────────────────
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                              left: 100, right: 100, bottom: 28),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.95),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: _initialLoading
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                          color: kCrimsonDeep))
+                                  : Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        if (_successMsg != null)
+                                          _banner(_successMsg!,
+                                              success: true),
+                                        if (_errorMsg != null)
+                                          _banner(_errorMsg!,
+                                              success: false),
+                                        // ── Tabs ──────────────────
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            border: Border(
+                                              bottom: BorderSide(
+                                                  color: Colors
+                                                      .grey.shade200),
+                                            ),
+                                          ),
+                                          child: TabBar(
+                                            controller: _tabs,
+                                            labelColor: Colors.black,
+                                            unselectedLabelColor:
+                                                Colors.grey.shade500,
+                                            indicatorColor: kCrimsonDeep,
+                                            indicatorWeight: 3,
+                                            dividerColor:
+                                                Colors.transparent,
+                                            tabs: const [
+                                              Tab(
+                                                  iconMargin:
+                                                      EdgeInsets.only(
+                                                          bottom: 4),
+                                                  icon: Icon(
+                                                      Icons.school_outlined,
+                                                      size: 18),
+                                                  text: 'Academic Info'),
+                                              Tab(
+                                                  iconMargin:
+                                                      EdgeInsets.only(
+                                                          bottom: 4),
+                                                  icon: Icon(
+                                                      Icons.stars_outlined,
+                                                      size: 18),
+                                                  text: 'Skills'),
+                                            ],
+                                          ),
+                                        ),
+                                        // ── Tab content ───────────
+                                        Expanded(
+                                          child: TabBarView(
+                                            controller: _tabs,
+                                            children: [
+                                              _buildAcademicTab(),
+                                              _buildSkillsTab(),
+                                            ],
+                                          ),
+                                        ),
+                                        // ── Save button ───────────
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.fromLTRB(
+                                                  40, 0, 40, 28),
+                                          child: SizedBox(
+                                            height: 48,
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed:
+                                                  _saving ? null : _save,
+                                              style:
+                                                  ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    kCrimsonDeep,
+                                                foregroundColor:
+                                                    Colors.white,
+                                                shape:
+                                                    RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
+                                                                    12)),
+                                                elevation: 0,
+                                              ),
+                                              child: _saving
+                                                  ? const SizedBox(
+                                                      height: 20,
+                                                      width: 20,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                              color: Colors
+                                                                  .white,
+                                                              strokeWidth:
+                                                                  2))
+                                                  : const Text(
+                                                      'SAVE CHANGES',
+                                                      style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight
+                                                                  .w800,
+                                                          fontSize: 15,
+                                                          letterSpacing:
+                                                              0.8)),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: IconButton(
-                  padding: const EdgeInsets.all(12),
-                  onPressed: () => setState(() => _sidebarVisible = true),
-                  icon: const HamburgerIcon(),
-                  tooltip: 'Open Sidebar',
-                  splashColor: Colors.white.withValues(alpha: 0.1),
-                  highlightColor: Colors.transparent,
-                ),
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -692,20 +751,27 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                   : Colors.red.withValues(alpha: 0.4)),
         ),
         child: Row(children: [
-          Icon(success ? Icons.check_circle_outline : Icons.error_outline,
-              color: success ? Colors.green.shade600 : Colors.red.shade600,
+          Icon(
+              success
+                  ? Icons.check_circle_outline
+                  : Icons.error_outline,
+              color: success
+                  ? Colors.green.shade600
+                  : Colors.red.shade600,
               size: 18),
           const SizedBox(width: 10),
           Expanded(
               child: Text(msg,
                   style: TextStyle(
-                      color:
-                          success ? Colors.green.shade800 : Colors.red.shade800,
+                      color: success
+                          ? Colors.green.shade800
+                          : Colors.red.shade800,
                       fontSize: 13))),
           GestureDetector(
-            onTap: () =>
-                setState(() => success ? _successMsg = null : _errorMsg = null),
-            child: const Icon(Icons.close, size: 16, color: Colors.black54),
+            onTap: () => setState(
+                () => success ? _successMsg = null : _errorMsg = null),
+            child:
+                const Icon(Icons.close, size: 16, color: Colors.black54),
           ),
         ]),
       );

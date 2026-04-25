@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/attendance_model.dart';
+import '../providers/sidebar_provider.dart';
 import '../services/attendance_service.dart';
 import '../widgets/attendance_clock_card.dart';
 import '../widgets/attendance_history_list.dart';
 import '../widgets/ojt_progress_card.dart';
-import '../widgets/user_sidebar.dart';        // your existing sidebar
+import '../widgets/user_layout.dart';
 
-// ── Hamburger icon  ─────────────────────
-class _HamburgerIcon extends StatelessWidget {
-  const _HamburgerIcon();
+class HamburgerIcon extends StatelessWidget {
+  const HamburgerIcon({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,25 +20,35 @@ class _HamburgerIcon extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _bar(22),
-          _bar(14, opacity: 0.8),
-          _bar(22),
+          Container(
+            width: 22,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: 14,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: 22,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
         ],
       ),
     );
   }
-
-  Widget _bar(double w, {double opacity = 1.0}) => Container(
-        width: w,
-        height: 2.5,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: opacity),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -55,18 +66,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _historyLoading = true;
   bool _actionLoading = false;
 
-  bool _isSidebarOpen = true;
-
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     _loadAll();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   // ── Data loading ───────────────────────────────────────────────────────────
@@ -128,121 +132,147 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF050505), // Fallback dark color
-      body: Row(
-        children: [
-          // ── Sidebar ────────────────────────────────────────────────────
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            width: _isSidebarOpen ? 250 : 0,
-            child: _isSidebarOpen
-                ? UserSidebar(
-                    currentRoute: '/attendance',
-                    onClose: () => setState(() => _isSidebarOpen = false),
-                  )
-                : null,
-          ),
+    return UserLayout(
+      currentRoute: '/attendance',
+      child: _buildAttendanceContent(context),
+    );
+  }
 
-          // ── Main content ───────────────────────────────────────────────
-          Expanded(
-            child: Stack(
-              children: [
-                // Background Image Layer
-                Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/space_background.png',
-                    fit: BoxFit.cover,
-                  ),
+  Widget _buildAttendanceContent(BuildContext context) {
+    final sidebar = context.watch<SidebarProvider>();
+
+    return Stack(
+      children: [
+        // ── Background ────────────────────────────────────────────
+        Positioned.fill(
+          child: Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/space_background.png'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+
+        Positioned.fill(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Top bar ───────────────────────────────────────────
+              SizedBox(
+                height: 72,
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, top: 28),
+                      child: Text(
+                        'My Attendance',
+                        style: Theme.of(context)
+                            .textTheme
+                            .displaySmall
+                            ?.copyWith(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                      ),
+                    ),
+                    if (!sidebar.isUserSidebarOpen)
+                      Positioned(
+                        left: 20,
+                        top: 28,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: IconButton(
+                            padding: const EdgeInsets.all(12),
+                            onPressed: () => sidebar.setUserSidebarOpen(true),
+                            icon: const HamburgerIcon(),
+                            tooltip: 'Open Sidebar',
+                            splashColor: Colors.white.withValues(alpha: 0.1),
+                            highlightColor: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                
-                // Foreground Content Layer
-                Positioned.fill(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Page header ──────────────────────────────────
-                        Row(
+              ),
+              const SizedBox(height: 15),
+
+              // ── Main content container ────────────────────────────
+              Expanded(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (!_isSidebarOpen) ...[
-                              Container(
-                                margin: const EdgeInsets.only(right: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.15),
-                                  ),
-                                ),
-                                child: IconButton(
-                                  padding: const EdgeInsets.all(12),
-                                  onPressed: () =>
-                                      setState(() => _isSidebarOpen = true),
-                                  icon: const _HamburgerIcon(),
-                                  tooltip: 'Open Sidebar',
-                                ),
+                            // ── Refresh button ────────────────────────
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: IconButton(
+                                onPressed: _loadAll,
+                                icon: const Icon(Icons.refresh_rounded,
+                                    color: Colors.black54),
+                                tooltip: 'Refresh',
                               ),
-                            ],
-                            Text(
-                              'My Attendance',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
                             ),
-                            const Spacer(),
-                            // Refresh button
-                            IconButton(
-                              onPressed: _loadAll,
-                              icon: const Icon(Icons.refresh_rounded,
-                                  color: Colors.white70),
-                              tooltip: 'Refresh',
+
+                            // ── Clock card ────────────────────────────
+                            AttendanceClockCard(
+                              summary: _summary,
+                              isLoading: _actionLoading || _summaryLoading,
+                              onTimeIn: _handleTimeIn,
+                              onTimeOut: _handleTimeOut,
                             ),
+
+                            const SizedBox(height: 20),
+
+                            // ── OJT progress ──────────────────────────
+                            if (_summaryLoading)
+                              const Center(
+                                  child: CircularProgressIndicator())
+                            else if (_summary != null)
+                              OjtProgressCard(summary: _summary!),
+
+                            const SizedBox(height: 20),
+
+                            // ── History ───────────────────────────────
+                            AttendanceHistoryList(
+                              records: _history,
+                              isLoading: _historyLoading,
+                            ),
+
+                            const SizedBox(height: 32),
                           ],
                         ),
-
-                        const SizedBox(height: 24),
-
-                        // ── Clock card ───────────────────────────────────
-                        AttendanceClockCard(
-                          summary: _summary,
-                          isLoading: _actionLoading || _summaryLoading,
-                          onTimeIn: _handleTimeIn,
-                          onTimeOut: _handleTimeOut,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // ── OJT progress ─────────────────────────────────
-                        if (_summaryLoading)
-                          const Center(child: CircularProgressIndicator(color: Colors.white))
-                        else if (_summary != null)
-                          OjtProgressCard(summary: _summary!),
-
-                        const SizedBox(height: 20),
-
-                        // ── History ───────────────────────────────────────
-                        AttendanceHistoryList(
-                          records: _history,
-                          isLoading: _historyLoading,
-                        ),
-
-                        const SizedBox(height: 32),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
