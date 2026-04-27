@@ -23,21 +23,15 @@ import (
 // ── Response shapes ───────────────────────────────────────────────────────────
 
 type AdminAttendanceRow struct {
-	ID               uint     `json:"id"`
-	UserID           uint     `json:"user_id"`
-	InternName       string   `json:"intern_name"`
-	AvatarURL        string   `json:"avatar_url"`
-	Department       string   `json:"department"`
-	School           string   `json:"school"`
-	Program          string   `json:"program"`
-	StartDate        string   `json:"start_date"`
-	EndDate          string   `json:"end_date"`
-	RequiredOJTHours float64  `json:"required_ojt_hours"`
-	Date             string   `json:"date"`           // "YYYY-MM-DD"
-	TimeIn           *string  `json:"time_in"`        // nullable "HH:MI AM"
-	TimeOut          *string  `json:"time_out"`       // nullable "HH:MI AM"
-	HoursRendered    *float64 `json:"hours_rendered"` // nullable
-	Status           string   `json:"status"`         // Present | Late | Absent | In Progress | Missed Clock Out
+	ID            uint     `json:"id"`
+	UserID        uint     `json:"user_id"`
+	InternName    string   `json:"intern_name"`
+	AvatarURL     string   `json:"avatar_url"`
+	Date          string   `json:"date"`           // "YYYY-MM-DD"
+	TimeIn        *string  `json:"time_in"`        // nullable "HH:MI AM"
+	TimeOut       *string  `json:"time_out"`       // nullable "HH:MI AM"
+	HoursRendered *float64 `json:"hours_rendered"` // nullable
+	Status        string   `json:"status"`         // Present | Late | Absent | In Progress | Missed Clock Out
 }
 
 // ── Timezone helper ───────────────────────────────────────────────────────────
@@ -52,18 +46,9 @@ func manilaLoc() *time.Location {
 
 // ── Status logic ──────────────────────────────────────────────────────────────
 
-// Late = time-in strictly after 08:15 Manila time.
 const lateThresholdHour = 8
 const lateThresholdMin = 15
 
-// deriveStatus computes status from SQL-formatted time strings ("HH12:MI AM")
-// and the record date ("YYYY-MM-DD").
-//
-//	timeIn == nil                              → Absent
-//	timeIn != nil, timeOut == nil, today       → In Progress
-//	timeIn != nil, timeOut == nil, past date   → Missed Clock Out
-//	timeIn after 08:15                         → Late
-//	otherwise                                  → Present
 func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
 	if timeIn == nil {
 		return "Absent"
@@ -75,7 +60,6 @@ func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
 		}
 		return "Missed Clock Out"
 	}
-	// Parse "09:02 AM" / "02:15 PM" to check lateness.
 	t, err := time.Parse("03:04 PM", *timeIn)
 	if err != nil {
 		return "Present"
@@ -90,41 +74,29 @@ func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
 // ── Shared raw scan type ──────────────────────────────────────────────────────
 
 type attendanceRaw struct {
-	ID               uint     `gorm:"column:id"`
-	UserID           uint     `gorm:"column:user_id"`
-	InternName       string   `gorm:"column:intern_name"`
-	AvatarURL        string   `gorm:"column:avatar_url"`
-	Department       string   `gorm:"column:department"`
-	School           string   `gorm:"column:school"`
-	Program          string   `gorm:"column:program"`
-	StartDate        string   `gorm:"column:start_date"`
-	EndDate          string   `gorm:"column:end_date"`
-	RequiredOJTHours float64  `gorm:"column:required_ojt_hours"`
-	Date             string   `gorm:"column:date"`
-	TimeIn           *string  `gorm:"column:time_in"`
-	TimeOut          *string  `gorm:"column:time_out"`
-	HoursRendered    *float64 `gorm:"column:hours_rendered"`
+	ID            uint     `gorm:"column:id"`
+	UserID        uint     `gorm:"column:user_id"`
+	InternName    string   `gorm:"column:intern_name"`
+	AvatarURL     string   `gorm:"column:avatar_url"`
+	Date          string   `gorm:"column:date"`
+	TimeIn        *string  `gorm:"column:time_in"`
+	TimeOut       *string  `gorm:"column:time_out"`
+	HoursRendered *float64 `gorm:"column:hours_rendered"`
 }
 
 func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
 	out := make([]AdminAttendanceRow, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, AdminAttendanceRow{
-			ID:               r.ID,
-			UserID:           r.UserID,
-			InternName:       r.InternName,
-			AvatarURL:        r.AvatarURL,
-			Department:       r.Department,
-			School:           r.School,
-			Program:          r.Program,
-			StartDate:        r.StartDate,
-			EndDate:          r.EndDate,
-			RequiredOJTHours: r.RequiredOJTHours,
-			Date:             r.Date,
-			TimeIn:           r.TimeIn,
-			TimeOut:          r.TimeOut,
-			HoursRendered:    r.HoursRendered,
-			Status:           deriveStatus(r.TimeIn, r.TimeOut, r.Date),
+			ID:            r.ID,
+			UserID:        r.UserID,
+			InternName:    r.InternName,
+			AvatarURL:     r.AvatarURL,
+			Date:          r.Date,
+			TimeIn:        r.TimeIn,
+			TimeOut:       r.TimeOut,
+			HoursRendered: r.HoursRendered,
+			Status:        deriveStatus(r.TimeIn, r.TimeOut, r.Date),
 		})
 	}
 	return out
@@ -132,40 +104,25 @@ func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
 
 // ── intern base query helpers ─────────────────────────────────────────────────
 
-// internSelect is the SELECT list for single-date mode (drives from users).
-// The date placeholder must be passed as a GORM arg.
 const internSelectSingleDate = `
-	COALESCE(a.id, 0)                                                              AS id,
-	u.id                                                                           AS user_id,
-	COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown') AS intern_name,
-	COALESCE(u.avatar_url, '')                                                     AS avatar_url,
-	COALESCE(u.department, '')                                                     AS department,
-	COALESCE(u.school, '')                                                         AS school,
-	COALESCE(u.program, '')                                                        AS program,
-	COALESCE(TO_CHAR(u.start_date, 'YYYY-MM-DD'), '')                             AS start_date,
-	COALESCE(TO_CHAR(u.end_date,   'YYYY-MM-DD'), '')                             AS end_date,
-	COALESCE(u.required_ojt_hours, 0)                                             AS required_ojt_hours,
-	CAST(? AS TEXT)                                                                AS date,
-	TO_CHAR(a.time_in  AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
-	TO_CHAR(a.time_out AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out,
+	COALESCE(a.id, 0)                                                                            AS id,
+	u.id                                                                                         AS user_id,
+	COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
+	COALESCE(u.avatar_url, '')                                                                   AS avatar_url,
+	CAST(? AS TEXT)                                                                              AS date,
+	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
+	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
 	a.hours_rendered
 `
 
-// internSelectAllDates is the SELECT list for all-dates mode (drives from attendance).
 const internSelectAllDates = `
-	a.id                                                                           AS id,
-	a.user_id                                                                      AS user_id,
-	COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown') AS intern_name,
-	COALESCE(u.avatar_url, '')                                                     AS avatar_url,
-	COALESCE(u.department, '')                                                     AS department,
-	COALESCE(u.school, '')                                                         AS school,
-	COALESCE(u.program, '')                                                        AS program,
-	COALESCE(TO_CHAR(u.start_date, 'YYYY-MM-DD'), '')                             AS start_date,
-	COALESCE(TO_CHAR(u.end_date,   'YYYY-MM-DD'), '')                             AS end_date,
-	COALESCE(u.required_ojt_hours, 0)                                             AS required_ojt_hours,
-	TO_CHAR(a.date, 'YYYY-MM-DD')                                                 AS date,
-	TO_CHAR(a.time_in  AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
-	TO_CHAR(a.time_out AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out,
+	a.id                                                                                         AS id,
+	a.user_id                                                                                    AS user_id,
+	COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
+	COALESCE(u.avatar_url, '')                                                                   AS avatar_url,
+	TO_CHAR(a.date::date, 'YYYY-MM-DD')                                                         AS date,
+	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
+	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
 	a.hours_rendered
 `
 
@@ -177,9 +134,6 @@ const internSelectAllDates = `
 //   page        – 1-based; default = 1
 //   limit       – rows per page 1-100; default = 20
 //   user_id     – (optional) filter to one intern
-//
-// Single-date mode drives from `users` (role='user', position='Intern',
-// not deleted, not archived) so every intern appears even if absent.
 
 func (h *Handler) AdminGetAttendance(c *gin.Context) {
 	dateStr := c.DefaultQuery("date", time.Now().In(manilaLoc()).Format("2006-01-02"))
@@ -213,10 +167,7 @@ func (h *Handler) AdminGetAttendance(c *gin.Context) {
 		}
 
 		q.Count(&total)
-		q.Order("intern_name ASC").
-			Limit(limit).
-			Offset(offset).
-			Scan(&rows)
+		q.Order("intern_name ASC").Limit(limit).Offset(offset).Scan(&rows)
 
 	} else {
 		q := h.DB.Table("attendance a").
@@ -228,10 +179,7 @@ func (h *Handler) AdminGetAttendance(c *gin.Context) {
 		}
 
 		q.Count(&total)
-		q.Order("a.date DESC, intern_name ASC").
-			Limit(limit).
-			Offset(offset).
-			Scan(&rows)
+		q.Order("a.date DESC, intern_name ASC").Limit(limit).Offset(offset).Scan(&rows)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -249,25 +197,18 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 	dateStr := c.DefaultQuery("date", time.Now().In(manilaLoc()).Format("2006-01-02"))
 	allDates := c.DefaultQuery("all_dates", "false") == "true"
 
-	// Export uses a lighter SELECT — no need for id / user_id.
 	const exportSelectSingleDate = `
-		COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown') AS intern_name,
-		COALESCE(u.department, '')                                                     AS department,
-		COALESCE(u.school, '')                                                         AS school,
-		COALESCE(u.program, '')                                                        AS program,
-		CAST(? AS TEXT)                                                                AS date,
-		TO_CHAR(a.time_in  AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
-		TO_CHAR(a.time_out AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out,
+		COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
+		CAST(? AS TEXT)                                                                              AS date,
+		TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
+		TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
 		a.hours_rendered
 	`
 	const exportSelectAllDates = `
-		COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown') AS intern_name,
-		COALESCE(u.department, '')                                                     AS department,
-		COALESCE(u.school, '')                                                         AS school,
-		COALESCE(u.program, '')                                                        AS program,
-		TO_CHAR(a.date, 'YYYY-MM-DD')                                                 AS date,
-		TO_CHAR(a.time_in  AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
-		TO_CHAR(a.time_out AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out,
+		COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
+		TO_CHAR(a.date::date, 'YYYY-MM-DD')                                                         AS date,
+		TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
+		TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
 		a.hours_rendered
 	`
 
@@ -296,10 +237,7 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 	c.Header("Content-Type", "text/csv")
 
 	w := csv.NewWriter(c.Writer)
-	_ = w.Write([]string{
-		"Intern", "Department", "School", "Program",
-		"Date", "Time In", "Time Out", "Hours Rendered", "Status",
-	})
+	_ = w.Write([]string{"Intern", "Date", "Time In", "Time Out", "Hours Rendered", "Status"})
 
 	for _, r := range rows {
 		timeIn := "--:--"
@@ -318,9 +256,6 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 		}
 		_ = w.Write([]string{
 			r.InternName,
-			r.Department,
-			r.School,
-			r.Program,
 			r.Date,
 			timeIn,
 			timeOut,
