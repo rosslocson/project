@@ -378,7 +378,7 @@ class _UsersScreenState extends State<UsersScreen> {
             child: _isSidebarOpen
                 ? AdminSidebar(
                     currentRoute:
-                        GoRouterState.of(context).matchedLocation ?? '/users',
+                        GoRouterState.of(context).matchedLocation,
                     onClose: () => setState(() => _isSidebarOpen = false),
                   )
                 : null,

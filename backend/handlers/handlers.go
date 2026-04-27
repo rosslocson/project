@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -479,9 +480,37 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 	h.DB.Model(&models.User{}).Where("is_active = true").Count(&activeUsers)
 	h.DB.Model(&models.User{}).Where("role = ?", models.RoleAdmin).Count(&adminUsers)
 
-	var recentUsers []models.User
-	h.DB.Order("created_at desc").Limit(5).Find(&recentUsers)
+	// Parse pagination parameters for recent users
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "5")
 
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 100 {
+		limit = 5
+	}
+
+	offset := (page - 1) * limit
+
+	// Get total count of users for pagination
+	var totalUserCount int64
+	h.DB.Model(&models.User{}).Count(&totalUserCount)
+
+	// Calculate total pages for users
+	totalPages := int((totalUserCount + int64(limit) - 1) / int64(limit))
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	// Get paginated recent users
+	var recentUsers []models.User
+	h.DB.Order("created_at desc").Limit(limit).Offset(offset).Find(&recentUsers)
+
+	// Get recent logs (not paginated for dashboard, just recent 10)
 	var recentLogs []models.ActivityLog
 	h.DB.Preload("User").Order("created_at desc").Limit(10).Find(&recentLogs)
 
@@ -492,6 +521,8 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 		"new_users":    totalUsers - activeUsers,
 		"recent_users": recentUsers,
 		"recent_logs":  recentLogs,
+		"total_pages":  totalPages,
+		"current_page": page,
 	})
 }
 
@@ -633,13 +664,48 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 func (h *Handler) GetActivityLogs(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	role := c.GetString("role")
-	var logs []models.ActivityLog
-	query := h.DB.Preload("User").Order("created_at desc").Limit(50)
+
+	// Parse pagination parameters
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "5")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 100 {
+		limit = 5
+	}
+
+	offset := (page - 1) * limit
+
+	// Build base query
+	query := h.DB.Model(&models.ActivityLog{}).Preload("User")
 	if role != string(models.RoleAdmin) {
 		query = query.Where("user_id = ?", userID)
 	}
-	query.Find(&logs)
-	c.JSON(http.StatusOK, gin.H{"logs": logs})
+
+	// Get total count for pagination
+	var totalCount int64
+	query.Count(&totalCount)
+
+	// Calculate total pages
+	totalPages := int((totalCount + int64(limit) - 1) / int64(limit))
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	// Get paginated logs
+	var logs []models.ActivityLog
+	query.Order("created_at desc").Limit(limit).Offset(offset).Find(&logs)
+
+	c.JSON(http.StatusOK, gin.H{
+		"logs":         logs,
+		"total_pages":  totalPages,
+		"current_page": page,
+	})
 }
 
 // ── List Interns ─────────────────────────────────────────────────────────────

@@ -240,10 +240,10 @@ class ApiService {
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> getDashboardStats() async {
+  static Future<Map<String, dynamic>> getDashboardStats({int page = 1, int limit = 5}) async {
     try {
       final res = await http.get(
-        Uri.parse('$baseUrl/dashboard/stats'),
+        Uri.parse('$baseUrl/dashboard/stats?page=$page&limit=$limit'),
         headers: await _authHeaders(),
       );
       return _parse(res);
@@ -461,10 +461,22 @@ class ApiService {
 
   // ── Activity Logs ─────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> getActivityLogs() async {
+  static Future<Map<String, dynamic>> getActivityLogs({int page = 1, int limit = 5}) async {
     try {
       final res = await http.get(
-        Uri.parse('$baseUrl/activity'),
+        Uri.parse('$baseUrl/activity?page=$page&limit=$limit'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAllActivityLogs() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/activity?page=1&limit=1000'), // Large limit to get all
         headers: await _authHeaders(),
       );
       return _parse(res);
