@@ -514,6 +514,23 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 	var recentLogs []models.ActivityLog
 	h.DB.Preload("User").Order("created_at desc").Limit(10).Find(&recentLogs)
 
+	// Get all activity logs - SIMPLIFIED: Get last 7 days (past week)
+	var allWeeklyLogs []models.ActivityLog
+	now := time.Now().Local() // Use local time, not UTC
+
+	// Get activities from the last 7 days to ensure we capture everything from the past week
+	sevenDaysAgo := now.AddDate(0, 0, -7)
+	tomorrow := now.AddDate(0, 0, 1).Add(time.Hour) // Include remainder of today
+
+	fmt.Printf("DEBUG: Dashboard Stats - Querying logs from %v to %v (past 7 days)\n", sevenDaysAgo, tomorrow)
+
+	h.DB.Preload("User").
+		Where("created_at >= ? AND created_at < ?", sevenDaysAgo, tomorrow).
+		Order("created_at desc").
+		Find(&allWeeklyLogs)
+
+	fmt.Printf("DEBUG: Dashboard Stats - Found %d activity logs in the past 7 days\n", len(allWeeklyLogs))
+
 	c.JSON(http.StatusOK, gin.H{
 		"total_users":  totalUsers,
 		"active_users": activeUsers,
@@ -521,6 +538,7 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 		"new_users":    totalUsers - activeUsers,
 		"recent_users": recentUsers,
 		"recent_logs":  recentLogs,
+		"weekly_logs":  allWeeklyLogs,
 		"total_pages":  totalPages,
 		"current_page": page,
 	})
@@ -740,6 +758,8 @@ func (h *Handler) ListDepartments(c *gin.Context) {
 }
 
 func (h *Handler) CreateDepartment(c *gin.Context) {
+	adminID := c.GetUint("user_id")
+
 	var body struct {
 		Name string `json:"name" binding:"required"`
 	}
@@ -752,10 +772,15 @@ func (h *Handler) CreateDepartment(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Department name already exists"})
 		return
 	}
+
+	h.logActivity(adminID, "CREATE_DEPARTMENT", "Admin created department: "+item.Name, c.ClientIP())
+
 	c.JSON(http.StatusCreated, gin.H{"message": "Department created", "item": item})
 }
 
 func (h *Handler) UpdateDepartment(c *gin.Context) {
+	adminID := c.GetUint("user_id")
+
 	var item models.Department
 	if h.DB.First(&item, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
@@ -768,20 +793,29 @@ func (h *Handler) UpdateDepartment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	oldName := item.Name
 	item.Name = strings.TrimSpace(body.Name)
 	if err := h.DB.Save(&item).Error; err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Department name already exists"})
 		return
 	}
+
+	h.logActivity(adminID, "UPDATE_DEPARTMENT", fmt.Sprintf("Admin updated department: %s -> %s", oldName, item.Name), c.ClientIP())
+
 	c.JSON(http.StatusOK, gin.H{"message": "Department updated", "item": item})
 }
 
 func (h *Handler) DeleteDepartment(c *gin.Context) {
+	adminID := c.GetUint("user_id")
+
 	var item models.Department
 	if h.DB.First(&item, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
 		return
 	}
+
+	h.logActivity(adminID, "DELETE_DEPARTMENT", fmt.Sprintf("Admin deleted department: %s (id=%d)", item.Name, item.ID), c.ClientIP())
+
 	h.DB.Unscoped().Delete(&item)
 	c.JSON(http.StatusOK, gin.H{"message": "Department deleted"})
 }
@@ -795,6 +829,8 @@ func (h *Handler) ListPositions(c *gin.Context) {
 }
 
 func (h *Handler) CreatePosition(c *gin.Context) {
+	adminID := c.GetUint("user_id")
+
 	var body struct {
 		Name string `json:"name" binding:"required"`
 	}
@@ -807,10 +843,15 @@ func (h *Handler) CreatePosition(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists"})
 		return
 	}
+
+	h.logActivity(adminID, "CREATE_POSITION", "Admin created position: "+item.Name, c.ClientIP())
+
 	c.JSON(http.StatusCreated, gin.H{"message": "Position created", "item": item})
 }
 
 func (h *Handler) UpdatePosition(c *gin.Context) {
+	adminID := c.GetUint("user_id")
+
 	var item models.Position
 	if h.DB.First(&item, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Position not found"})
@@ -823,20 +864,29 @@ func (h *Handler) UpdatePosition(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	oldName := item.Name
 	item.Name = strings.TrimSpace(body.Name)
 	if err := h.DB.Save(&item).Error; err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists"})
 		return
 	}
+
+	h.logActivity(adminID, "UPDATE_POSITION", fmt.Sprintf("Admin updated position: %s -> %s", oldName, item.Name), c.ClientIP())
+
 	c.JSON(http.StatusOK, gin.H{"message": "Position updated", "item": item})
 }
 
 func (h *Handler) DeletePosition(c *gin.Context) {
+	adminID := c.GetUint("user_id")
+
 	var item models.Position
 	if h.DB.First(&item, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Position not found"})
 		return
 	}
+
+	h.logActivity(adminID, "DELETE_POSITION", fmt.Sprintf("Admin deleted position: %s (id=%d)", item.Name, item.ID), c.ClientIP())
+
 	h.DB.Unscoped().Delete(&item)
 	c.JSON(http.StatusOK, gin.H{"message": "Position deleted"})
 }

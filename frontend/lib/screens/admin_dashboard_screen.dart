@@ -46,29 +46,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _showScrollIndicator = false;
 
   List<dynamic> _allFilteredActivities = [];
+  List<dynamic> _allRecentUsers = [];
 
   // Filter activity logs to current week (Monday to Sunday)
-  List<dynamic> _filterActivitiesToCurrentWeek(List<dynamic> activities) {
-    final now = DateTime.now();
-    // Find the most recent Monday
-    final monday = now.subtract(Duration(days: now.weekday - 1));
-    // Set to start of Monday
-    final weekStart = DateTime(monday.year, monday.month, monday.day);
-    // Set to end of Sunday
-    final weekEnd = weekStart.add(const Duration(days: 7, hours: 23, minutes: 59, seconds: 59));
 
-    return activities.where((activity) {
-      final createdAt = activity['created_at'];
-      if (createdAt == null) return false;
-      
-      try {
-        final activityDate = DateTime.parse(createdAt as String).toLocal();
-        return activityDate.isAfter(weekStart) && activityDate.isBefore(weekEnd);
-      } catch (e) {
-        return false;
-      }
-    }).toList();
-  }
 
   void _updateActivityPage(int newPage) {
     setState(() {
@@ -79,8 +60,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final endIndex = startIndex + activitiesPerPage;
       _activityLogs = _allFilteredActivities.sublist(
         startIndex,
-        endIndex > _allFilteredActivities.length ? _allFilteredActivities.length : endIndex,
+        endIndex > _allFilteredActivities.length
+            ? _allFilteredActivities.length
+            : endIndex,
       );
+    });
+  }
+
+  void _updateUsersPage(int newPage) {
+    setState(() {
+      _usersPage = newPage;
+      // Recalculate users for the new page
+      const int usersPerPage = 5;
+      final startIndex = (_usersPage - 1) * usersPerPage;
+      final endIndex = startIndex + usersPerPage;
+
+      // Update stats with the paginated users
+      if (_stats != null) {
+        _stats!['recent_users'] = _allRecentUsers.sublist(
+          startIndex,
+          endIndex > _allRecentUsers.length ? _allRecentUsers.length : endIndex,
+        );
+      }
     });
   }
 
@@ -159,12 +160,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Future<void> _loadAll({int page = 1}) async {
+  Future<void> _loadAll({int page = 1, bool isPagination = false}) async {
     setState(() => _loading = true);
     try {
       final results = await Future.wait([
-        ApiService.getDashboardStats(page: page, limit: 5),
-        ApiService.getAllActivityLogs(),
+        ApiService.getDashboardStats(page: page, limit: 100),
+        // Remove the separate activity logs call since we now get weekly_logs from dashboard stats
       ]);
 
       if (!mounted) return;
@@ -172,35 +173,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       setState(() {
         if (results[0]['ok'] == true) {
           _stats = results[0];
-          _usersPage = (results[0]['current_page'] ?? 0) + 1;
-          _totalUsersPages = results[0]['total_pages'] ?? 1;
-        }
-        if (results[1]['ok'] == true) {
-          final allActivities = (results[1]['logs'] as List?) ?? [];
-          _allFilteredActivities = _filterActivitiesToCurrentWeek(allActivities);
-          
+          _allRecentUsers = (results[0]['recent_users'] as List?) ?? [];
+
+          // Frontend pagination for users
+          const int usersPerPage = 5;
+          _totalUsersPages = (_allRecentUsers.length / usersPerPage).ceil();
+          if (_totalUsersPages == 0) _totalUsersPages = 1;
+
+          // Ensure usersPage is within bounds
+          if (_usersPage > _totalUsersPages) _usersPage = _totalUsersPages;
+          if (_usersPage < 1) _usersPage = 1;
+
+          // Get current page users
+          final startIndex = (_usersPage - 1) * usersPerPage;
+          final endIndex = startIndex + usersPerPage;
+          _stats!['recent_users'] = _allRecentUsers.sublist(
+            startIndex,
+            endIndex > _allRecentUsers.length
+                ? _allRecentUsers.length
+                : endIndex,
+          );
+
+          // Process weekly activity logs from dashboard stats
+          final allActivities = (results[0]['weekly_logs'] as List?) ?? [];
+          debugPrint('✅ DASHBOARD: Received ${allActivities.length} activity logs');
+          if (allActivities.isNotEmpty) {
+            debugPrint('✅ DASHBOARD: First log action: ${allActivities[0]['action']}');
+            debugPrint('✅ DASHBOARD: First log created_at: ${allActivities[0]['created_at']}');
+          }
+          _allFilteredActivities = allActivities; // No need to filter since backend already filtered for current week
+
           // Frontend pagination for activities
           const int activitiesPerPage = 5;
-          _totalActivityPages = (_allFilteredActivities.length / activitiesPerPage).ceil();
+          _totalActivityPages =
+              (_allFilteredActivities.length / activitiesPerPage).ceil();
           if (_totalActivityPages == 0) _totalActivityPages = 1;
-          
+
           // Ensure activityPage is within bounds
-          if (_activityPage > _totalActivityPages) _activityPage = _totalActivityPages;
+          if (_activityPage > _totalActivityPages) {
+            _activityPage = _totalActivityPages;
+          }
           if (_activityPage < 1) _activityPage = 1;
-          
+
           // Get current page activities
-          final startIndex = (_activityPage - 1) * activitiesPerPage;
-          final endIndex = startIndex + activitiesPerPage;
+          final activityStartIndex = (_activityPage - 1) * activitiesPerPage;
+          final activityEndIndex = activityStartIndex + activitiesPerPage;
           _activityLogs = _allFilteredActivities.sublist(
-            startIndex,
-            endIndex > _allFilteredActivities.length ? _allFilteredActivities.length : endIndex,
+            activityStartIndex,
+            activityEndIndex > _allFilteredActivities.length
+                ? _allFilteredActivities.length
+                : activityEndIndex,
           );
+          debugPrint('✅ DASHBOARD: Activity pagination - Page $_activityPage of $_totalActivityPages, showing ${_activityLogs.length} logs on this page');
+        } else {
+          debugPrint('❌ DASHBOARD: API returned ok=false: ${results[0]}');
         }
         _loading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkScrollable());
+      if (!isPagination) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _checkScrollable());
+      }
     } catch (e) {
-      debugPrint('_loadAll error: $e');
+      debugPrint('❌ _loadAll error: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -252,13 +286,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           const SizedBox(height: 32),
                           if (_loading)
                             const Center(
-                              child: CircularProgressIndicator(color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  color: Colors.white),
                             )
                           else ...[
                             // 2. Extracted Stats Grid
                             DashboardStatsGrid(stats: _stats),
-                            const SizedBox(height: 100), 
-                            
+                            const SizedBox(height: 100),
+
                             Container(
                               key: _cardsKey,
                               child: Row(
@@ -270,7 +305,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       stats: _stats,
                                       usersPage: _usersPage,
                                       totalPages: _totalUsersPages,
-                                      onPageChanged: (newPage) => _loadAll(page: newPage),
+                                      onPageChanged: _updateUsersPage,
                                     ),
                                   ),
                                   const SizedBox(width: 32),
