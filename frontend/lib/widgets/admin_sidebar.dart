@@ -101,6 +101,12 @@ class AdminSidebar extends StatelessWidget {
                     route: '/config',
                     current: currentRoute,
                   ),
+                  _NavItem(
+                    icon: Icons.punch_clock_outlined,
+                    label: 'Attendance',
+                    route: '/admin/attendance',
+                    current: currentRoute,
+                  ),
                 ],
               ],
             ),

@@ -144,7 +144,7 @@ func main() {
 	// Seed database with admin account
 	seedAdminAccount(DB)
 
-	//  Fix any users with plaintext passwords
+	// Fix any users with plaintext passwords
 	fixPlaintextPasswords(DB)
 
 	// Init handlers with DB
@@ -186,21 +186,27 @@ func main() {
 		auth.POST("/register", h.Register)
 		auth.POST("/login", h.Login)
 
-		// Admin dashboard example (RBAC demo)
-		admin := r.Group("/api/admin")
-		admin.Use(middleware.JWTAuth(), middleware.AdminOnly())
-		{
-			admin.GET("/dashboard", h.AdminDashboard)
-		}
 		auth.POST("/forgot-password", h.ForgotPassword)
 		auth.POST("/reset-password", h.ResetPassword)
 
 		r.GET("/api/departments", h.ListDepartments)
 		r.GET("/api/positions", h.ListPositions)
-
 	}
 
-	// Protected routes
+	// Admin-only routes (JWT + AdminOnly middleware)
+	admin := r.Group("/api/admin")
+	admin.Use(middleware.JWTAuth(), middleware.AdminOnly())
+	{
+		admin.GET("/dashboard", h.AdminDashboard)
+
+		// ── Attendance Monitoring ──────────────────────────────────────────
+		// GET  /api/admin/attendance         → paginated list of all interns' records
+		// GET  /api/admin/attendance/export  → CSV download
+		admin.GET("/attendance", h.AdminGetAttendance)
+		admin.GET("/attendance/export", h.AdminExportAttendance)
+	}
+
+	// Protected routes (JWT only)
 	api := r.Group("/api")
 	api.Use(middleware.JWTAuth())
 	{
@@ -214,7 +220,6 @@ func main() {
 		api.GET("/dashboard/stats", h.GetDashboardStats)
 
 		// Departments — public read, admin write/edit/delete
-		//api.GET("/departments", h.ListDepartments)
 		depts := api.Group("/departments")
 		depts.Use(middleware.AdminOnly())
 		{
@@ -224,7 +229,6 @@ func main() {
 		}
 
 		// Positions — public read, admin write/edit/delete
-		//api.GET("/positions", h.ListPositions)
 		positions := api.Group("/positions")
 		positions.Use(middleware.AdminOnly())
 		{
@@ -248,7 +252,7 @@ func main() {
 		api.GET("/activity", h.GetActivityLogs)
 		api.GET("/interns", h.ListInterns)
 
-		// Attendance (intern time in/out + OJT hours tracking)
+		// Attendance (intern time-in/out + OJT hours tracking)
 		attendance := api.Group("/attendance")
 		{
 			attendance.POST("/time-in", h.TimeIn)

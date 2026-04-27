@@ -18,6 +18,7 @@ import 'screens/admin_add_user.dart';
 import 'screens/admin_departments_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'screens/user_attendance_screen.dart';
+import 'screens/admin_attendance_screen.dart'; 
 
 void main() {
   runApp(
@@ -147,7 +148,7 @@ class _MyAppState extends State<MyApp> {
               child: const AdminDashboardScreen(),
             ),
           ),
-          // Attendance page
+          // Intern attendance page
           GoRoute(
             path: '/attendance',
             pageBuilder: (context, state) => MaterialPage<void>(
@@ -155,9 +156,16 @@ class _MyAppState extends State<MyApp> {
               child: const AttendanceScreen(),
             ),
           ),
+          // Admin attendance monitoring  ← added
+          GoRoute(
+            path: '/admin/attendance',
+            pageBuilder: (context, state) => MaterialPage<void>(
+              key: state.pageKey,
+              child: const AdminAttendanceScreen(),
+            ),
+          ),
         ],
       ),
     );
   }
 }
-
