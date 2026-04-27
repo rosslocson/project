@@ -103,6 +103,8 @@ class _LoginScreenState extends State<LoginScreen>
     String? stepMsg;
     bool stepLoading = false;
     int step = 1;
+    bool _obscureNewPass = true; // Added state for new password visibility
+    bool _obscureConfPass = true; // Added state for confirm password visibility
     _resetEmailCtrl.text = _emailCtrl.text.trim();
 
     showModalBottomSheet(
@@ -274,18 +276,46 @@ class _LoginScreenState extends State<LoginScreen>
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _newPassCtrl,
-                    obscureText: true,
-                    decoration:
-                        dec.copyWith(hintText: 'Enter new password'),
+                    obscureText: _obscureNewPass, // Updated to use state
+                    decoration: dec.copyWith(
+                      hintText: 'Enter new password',
+                      suffixIcon: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: IconButton(
+                          icon: Icon(
+                            _obscureNewPass
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: const Color(0xFF9CA3AF),
+                            size: 22,
+                          ),
+                          onPressed: () => setSheet(() => _obscureNewPass = !_obscureNewPass),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   fieldLabel('Confirm New Password'),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _confPassCtrl,
-                    obscureText: true,
-                    decoration:
-                        dec.copyWith(hintText: 'Confirm new password'),
+                    obscureText: _obscureConfPass, // Updated to use state
+                    decoration: dec.copyWith(
+                      hintText: 'Confirm new password',
+                      suffixIcon: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: IconButton(
+                          icon: Icon(
+                            _obscureConfPass
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: const Color(0xFF9CA3AF),
+                            size: 22,
+                          ),
+                          onPressed: () => setSheet(() => _obscureConfPass = !_obscureConfPass),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   BlueButton(

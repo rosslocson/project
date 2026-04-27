@@ -115,9 +115,120 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   }
 
   Future<void> pickAndCropAvatar() async {
-    // ... (Keep ALL your existing avatar picking/cropping logic exactly as is)
-    // I am omitting the 100+ lines of pickAndCropAvatar to save space, but DO NOT delete it from your actual file.
-    // Keep the entire try/catch block exactly as it was.
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 100,
+      );
+      if (pickedFile == null) return;
+
+      final pickedFileBytes = await pickedFile.readAsBytes();
+      final mimeType =
+          lookupMimeType(pickedFile.name, headerBytes: pickedFileBytes);
+
+      if (mimeType == null || !mimeType.startsWith('image/')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Please select a valid image file (JPG, PNG, JPEG)'),
+            backgroundColor: Colors.red,
+          ));
+        }
+        return;
+      }
+
+      if (kIsWeb) {
+        if (!mounted) return;
+        final croppedBytes = await Navigator.push<Uint8List>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AvatarCropScreen(
+              imageBytes: pickedFileBytes,
+              fileName: pickedFile.name,
+            ),
+          ),
+        );
+        if (croppedBytes == null || !mounted) return;
+
+        setState(() {
+          _localAvatarBytes = croppedBytes;
+          _avatarFile = null;
+          _isUploadingAvatar = true;
+        });
+
+        final res = await ApiService.uploadAvatar(
+            XFile.fromData(croppedBytes, name: pickedFile.name));
+        if (!mounted) return;
+        setState(() => _isUploadingAvatar = false);
+
+        if (res['ok'] == true) {
+          await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Avatar updated successfully!'),
+            backgroundColor: Colors.green,
+          ));
+        } else {
+          setState(() => _localAvatarBytes = null);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(res['error'] ?? 'Failed to upload avatar'),
+            backgroundColor: Colors.red,
+          ));
+        }
+        return;
+      }
+
+      final file = File(pickedFile.path);
+      if (!await file.exists()) return;
+
+      final croppedBytes = await Navigator.push<Uint8List>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AvatarCropScreen(
+            imageBytes: pickedFileBytes,
+            fileName: pickedFile.name,
+          ),
+        ),
+      );
+      if (croppedBytes == null || !mounted) return;
+
+      final tempFile =
+          File('${(await getTemporaryDirectory()).path}/cropped_avatar.png');
+      await tempFile.writeAsBytes(croppedBytes);
+
+      setState(() {
+        _avatarFile = tempFile;
+        _isUploadingAvatar = true;
+      });
+
+      final res = await ApiService.uploadAvatar(XFile(_avatarFile!.path));
+      if (!mounted) return;
+      setState(() => _isUploadingAvatar = false);
+
+      if (res['ok'] == true) {
+        await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+        setState(() => _avatarFile = null);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Avatar updated successfully!'),
+          backgroundColor: Colors.green,
+        ));
+      } else {
+        setState(() => _avatarFile = null);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(res['error'] ?? 'Upload failed'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _avatarFile = null;
+          _isUploadingAvatar = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
   }
 
   Future<void> _saveProfile() async {
