@@ -45,12 +45,6 @@ class AdminAttendanceRecord {
   final int     userId;
   final String  internName;
   final String  avatarUrl;
-  final String  department;
-  final String  school;
-  final String  program;
-  final String  startDate;
-  final String  endDate;
-  final double  requiredOjtHours;
   final String  date;
   final String? timeIn;
   final String? timeOut;
@@ -62,12 +56,6 @@ class AdminAttendanceRecord {
     required this.userId,
     required this.internName,
     required this.avatarUrl,
-    required this.department,
-    required this.school,
-    required this.program,
-    required this.startDate,
-    required this.endDate,
-    required this.requiredOjtHours,
     required this.date,
     this.timeIn,
     this.timeOut,
@@ -77,21 +65,15 @@ class AdminAttendanceRecord {
 
   factory AdminAttendanceRecord.fromJson(Map<String, dynamic> j) {
     return AdminAttendanceRecord(
-      id:               j['id']                 as int?    ?? 0,
-      userId:           j['user_id']            as int?    ?? 0,
-      internName:       j['intern_name']        as String? ?? 'Unknown',
-      avatarUrl:        j['avatar_url']         as String? ?? '',
-      department:       j['department']         as String? ?? '',
-      school:           j['school']             as String? ?? '',
-      program:          j['program']            as String? ?? '',
-      startDate:        j['start_date']         as String? ?? '',
-      endDate:          j['end_date']           as String? ?? '',
-      requiredOjtHours: (j['required_ojt_hours'] as num?)?.toDouble() ?? 0,
-      date:             j['date']               as String? ?? '',
-      timeIn:           j['time_in']            as String?,
-      timeOut:          j['time_out']           as String?,
-      hoursRendered:    (j['hours_rendered']    as num?)?.toDouble(),
-      status:           j['status']             as String? ?? 'Absent',
+      id:           j['id']          as int?    ?? 0,
+      userId:       j['user_id']     as int?    ?? 0,
+      internName:   j['intern_name'] as String? ?? 'Unknown',
+      avatarUrl:    j['avatar_url']  as String? ?? '',
+      date:         j['date']        as String? ?? '',
+      timeIn:       j['time_in']     as String?,
+      timeOut:      j['time_out']    as String?,
+      hoursRendered:(j['hours_rendered'] as num?)?.toDouble(),
+      status:       j['status']      as String? ?? 'Absent',
     );
   }
 
@@ -102,12 +84,7 @@ class AdminAttendanceRecord {
     return '${h}h ${m}m';
   }
 
-  String get formattedDate    => _formatDate(date);
-  String get formattedStart   => startDate.isEmpty ? '--' : _formatDate(startDate);
-  String get formattedEnd     => endDate.isEmpty   ? '--' : _formatDate(endDate);
-  String get requiredHoursStr => requiredOjtHours == 0
-      ? '--'
-      : '${requiredOjtHours.toStringAsFixed(0)}h';
+  String get formattedDate => _formatDate(date);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -496,24 +473,14 @@ class _AttendanceTable extends StatelessWidget {
 
   // Column indices
   // 0  Intern name + avatar
-  // 1  Department
-  // 2  School
-  // 3  Program
-  // 4  OJT Period (start → end)
-  // 5  Required Hours
-  // 6  Date
-  // 7  Time In
-  // 8  Time Out
-  // 9  Hours Worked
-  // 10 Status
+  // 1  Date
+  // 2  Time In
+  // 3  Time Out
+  // 4  Hours Worked
+  // 5  Status
 
   static const _headers = [
     'Intern',
-    'Department',
-    'School',
-    'Program',
-    'OJT Period',
-    'Required Hrs',
     'Date',
     'Time In',
     'Time Out',
@@ -522,17 +489,12 @@ class _AttendanceTable extends StatelessWidget {
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0:  FixedColumnWidth(180), // Intern
-    1:  FixedColumnWidth(160), // Department
-    2:  FixedColumnWidth(200), // School
-    3:  FixedColumnWidth(180), // Program
-    4:  FixedColumnWidth(180), // OJT Period
-    5:  FixedColumnWidth(110), // Required Hrs
-    6:  FixedColumnWidth(120), // Date
-    7:  FixedColumnWidth(100), // Time In
-    8:  FixedColumnWidth(100), // Time Out
-    9:  FixedColumnWidth(110), // Hours Worked
-    10: FixedColumnWidth(150), // Status
+    0: FixedColumnWidth(200), // Intern
+    1: FixedColumnWidth(130), // Date
+    2: FixedColumnWidth(110), // Time In
+    3: FixedColumnWidth(110), // Time Out
+    4: FixedColumnWidth(120), // Hours Worked
+    5: FixedColumnWidth(160), // Status
   };
 
   @override
@@ -572,10 +534,6 @@ class _AttendanceTable extends StatelessWidget {
   }
 
   TableRow _buildRow(AdminAttendanceRecord r) {
-    final ojtPeriod = (r.startDate.isEmpty && r.endDate.isEmpty)
-        ? '--'
-        : '${r.formattedStart} → ${r.formattedEnd}';
-
     return TableRow(
       children: [
         // 0 — Intern
@@ -599,25 +557,15 @@ class _AttendanceTable extends StatelessWidget {
             ],
           ),
         ),
-        // 1 — Department
-        _cell(r.department.isEmpty ? '--' : r.department),
-        // 2 — School
-        _cell(r.school.isEmpty ? '--' : r.school),
-        // 3 — Program
-        _cell(r.program.isEmpty ? '--' : r.program),
-        // 4 — OJT Period
-        _cell(ojtPeriod),
-        // 5 — Required Hours
-        _cell(r.requiredHoursStr),
-        // 6 — Date
+        // 1 — Date
         _cell(r.formattedDate),
-        // 7 — Time In
+        // 2 — Time In
         _cell(r.timeIn  ?? '--'),
-        // 8 — Time Out
+        // 3 — Time Out
         _cell(r.timeOut ?? '--'),
-        // 9 — Hours Worked
+        // 4 — Hours Worked
         _cell(r.formattedHours),
-        // 10 — Status
+        // 5 — Status
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           child: _StatusBadge(status: r.status),
@@ -652,11 +600,27 @@ class _InternAvatar extends StatelessWidget {
 
     if (url.isNotEmpty) {
       return CircleAvatar(
-        radius:                 18,
-        backgroundImage:        NetworkImage(url),
-        backgroundColor:        const Color(0xFF6C63FF),
-        onBackgroundImageError: (_, __) {},
-        child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 12)),
+        radius:          18,
+        backgroundColor: const Color(0xFF6C63FF),
+        child: ClipOval(
+          child: Image.network(
+            url,
+            width:  36,
+            height: 36,
+            fit:    BoxFit.cover,
+            errorBuilder: (_, __, ___) => Text(
+              initials,
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return Text(
+                initials,
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              );
+            },
+          ),
+        ),
       );
     }
     return CircleAvatar(
