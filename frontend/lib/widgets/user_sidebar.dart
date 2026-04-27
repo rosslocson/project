@@ -7,7 +7,7 @@ class UserSidebar extends StatelessWidget {
   final String currentRoute;
   final VoidCallback? onClose;
 
-  const UserSidebar({super.key, required this.currentRoute, this.onClose}); // ✅ UPDATE
+  const UserSidebar({super.key, required this.currentRoute, this.onClose});
 
   // Blue theme colors
   static const Color _bgColor = Color(0xFF0B0F2F);
@@ -64,27 +64,7 @@ class UserSidebar extends StatelessWidget {
                   ),
                 ),
 
-                Material(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  shape: const CircleBorder(),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: onClose,
-                    child: Material(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      shape: const CircleBorder(),
-                      clipBehavior: Clip.antiAlias,
-                      child: const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Icon(
-                          Icons.close_rounded,
-                          color: _textLight,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _CloseButton(onClose: onClose),
               ],
             ),
           ),
@@ -114,7 +94,7 @@ class UserSidebar extends StatelessWidget {
                   current: currentRoute,
                 ),
                 _NavItem(
-                  icon: Icons.lock_outline,
+                  icon: Icons.settings_outlined, // Changed to gear icon here
                   label: 'Account Settings',
                   route: '/account-settings',
                   current: currentRoute,
@@ -272,6 +252,53 @@ class _SignOutButtonState extends State<_SignOutButton> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CloseButton extends StatefulWidget {
+  final VoidCallback? onClose;
+  const _CloseButton({this.onClose});
+
+  @override
+  State<_CloseButton> createState() => _CloseButtonState();
+}
+
+class _CloseButtonState extends State<_CloseButton> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          color: _isHovering
+              ? Colors.white.withValues(alpha: 0.2) // Lighter on hover
+              : Colors.white.withValues(alpha: 0.1), // Default color
+          shape: BoxShape.circle,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            hoverColor: Colors.transparent,
+            onTap: widget.onClose,
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(
+                Icons.close_rounded,
+                color: UserSidebar._textLight,
+                size: 20,
+              ),
             ),
           ),
         ),

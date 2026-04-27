@@ -536,10 +536,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                         child: GestureDetector(
                                           onTap: () => setState(
                                               () => _filterStatus = id),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                                milliseconds: 250),
-                                            curve: Curves.easeOut,
+                                          child: Container( // <-- Changed to regular Container
                                             padding: const EdgeInsets.symmetric(
                                                 vertical: 10),
                                             decoration: BoxDecoration(

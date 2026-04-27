@@ -61,25 +61,8 @@ class AdminSidebar extends StatelessWidget {
                     ),
                   ),
                 ),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onClose,
-                    child: Material(
-                      color: Colors.white.withOpacity(0.1),
-                      shape: const CircleBorder(),
-                      clipBehavior: Clip.antiAlias,
-                      child: const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Icon(
-                          Icons.close_rounded,
-                          color: _textLight,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                
+                _CloseButton(onClose: onClose),
               ],
             ),
           ),
@@ -264,6 +247,53 @@ class _SignOutButtonState extends State<_SignOutButton> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CloseButton extends StatefulWidget {
+  final VoidCallback? onClose;
+  const _CloseButton({this.onClose});
+
+  @override
+  State<_CloseButton> createState() => _CloseButtonState();
+}
+
+class _CloseButtonState extends State<_CloseButton> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          color: _isHovering
+              ? Colors.white.withOpacity(0.2) // Lighter on hover
+              : Colors.white.withOpacity(0.1), // Default color
+          shape: BoxShape.circle,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            hoverColor: Colors.transparent,
+            onTap: widget.onClose,
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(
+                Icons.close_rounded,
+                color: AdminSidebar._textLight,
+                size: 20,
               ),
             ),
           ),
