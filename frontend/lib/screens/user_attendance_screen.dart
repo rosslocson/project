@@ -98,7 +98,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     setState(() => _actionLoading = false);
 
     if (res['ok'] == true) {
-      _showSnack('Time In recorded! 🕐', isSuccess: true);
+      _showSnack('Time In recorded!', isSuccess: true);
       await _loadAll();
     } else {
       _showSnack(res['error'] ?? 'Failed to record Time In');
@@ -112,7 +112,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     setState(() => _actionLoading = false);
 
     if (res['ok'] == true) {
-      _showSnack('Time Out recorded! Good work today 🎉', isSuccess: true);
+      _showSnack('Time Out recorded! Good work today', isSuccess: true);
       await _loadAll();
     } else {
       _showSnack(res['error'] ?? 'Failed to record Time Out');
