@@ -3,14 +3,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 
-import '../providers/sidebar_provider.dart';
 import '../services/api_service.dart';
-import '../widgets/admin_layout.dart';
+import '../widgets/admin_sidebar.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Date helpers — no intl package needed
+// Date helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
 String _pad(int n) => n.toString().padLeft(2, '0');
@@ -25,11 +23,11 @@ String _formatDate(String iso) {
   }
 }
 
-/// DateTime → "YYYY-MM-DD"  (for API calls)
+/// DateTime → "YYYY-MM-DD"
 String _toApiDate(DateTime dt) =>
     '${dt.year}-${_pad(dt.month)}-${_pad(dt.day)}';
 
-/// DateTime → "Apr 27, 2026"  (for toolbar label)
+/// DateTime → "Apr 27, 2026"
 String _toDisplayDate(DateTime dt) {
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -47,6 +45,12 @@ class AdminAttendanceRecord {
   final int     userId;
   final String  internName;
   final String  avatarUrl;
+  final String  department;
+  final String  school;
+  final String  program;
+  final String  startDate;
+  final String  endDate;
+  final double  requiredOjtHours;
   final String  date;
   final String? timeIn;
   final String? timeOut;
@@ -58,6 +62,12 @@ class AdminAttendanceRecord {
     required this.userId,
     required this.internName,
     required this.avatarUrl,
+    required this.department,
+    required this.school,
+    required this.program,
+    required this.startDate,
+    required this.endDate,
+    required this.requiredOjtHours,
     required this.date,
     this.timeIn,
     this.timeOut,
@@ -67,26 +77,37 @@ class AdminAttendanceRecord {
 
   factory AdminAttendanceRecord.fromJson(Map<String, dynamic> j) {
     return AdminAttendanceRecord(
-      id:            j['id']            as int?    ?? 0,
-      userId:        j['user_id']       as int?    ?? 0,
-      internName:    j['intern_name']   as String? ?? 'Unknown',
-      avatarUrl:     j['avatar_url']    as String? ?? '',
-      date:          j['date']          as String? ?? '',
-      timeIn:        j['time_in']       as String?,
-      timeOut:       j['time_out']      as String?,
-      hoursRendered: (j['hours_rendered'] as num?)?.toDouble(),
-      status:        j['status']        as String? ?? 'Absent',
+      id:               j['id']                 as int?    ?? 0,
+      userId:           j['user_id']            as int?    ?? 0,
+      internName:       j['intern_name']        as String? ?? 'Unknown',
+      avatarUrl:        j['avatar_url']         as String? ?? '',
+      department:       j['department']         as String? ?? '',
+      school:           j['school']             as String? ?? '',
+      program:          j['program']            as String? ?? '',
+      startDate:        j['start_date']         as String? ?? '',
+      endDate:          j['end_date']           as String? ?? '',
+      requiredOjtHours: (j['required_ojt_hours'] as num?)?.toDouble() ?? 0,
+      date:             j['date']               as String? ?? '',
+      timeIn:           j['time_in']            as String?,
+      timeOut:          j['time_out']           as String?,
+      hoursRendered:    (j['hours_rendered']    as num?)?.toDouble(),
+      status:           j['status']             as String? ?? 'Absent',
     );
   }
 
   String get formattedHours {
-    if (hoursRendered == null) return '0h 0m';
+    if (hoursRendered == null) return '--';
     final h = hoursRendered!.floor();
     final m = ((hoursRendered! - h) * 60).round();
     return '${h}h ${m}m';
   }
 
-  String get formattedDate => _formatDate(date);
+  String get formattedDate    => _formatDate(date);
+  String get formattedStart   => startDate.isEmpty ? '--' : _formatDate(startDate);
+  String get formattedEnd     => endDate.isEmpty   ? '--' : _formatDate(endDate);
+  String get requiredHoursStr => requiredOjtHours == 0
+      ? '--'
+      : '${requiredOjtHours.toStringAsFixed(0)}h';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,7 +115,6 @@ class AdminAttendanceRecord {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class AdminAttendanceService {
-  /// GET /api/admin/attendance
   static Future<Map<String, dynamic>> fetchAttendance({
     String? date,
     bool    allDates = false,
@@ -126,7 +146,6 @@ class AdminAttendanceService {
     }
   }
 
-  /// Builds the CSV export URL — open with url_launcher in your app.
   static String exportUrl({String? date, bool allDates = false}) {
     final params = <String, String>{
       if (allDates) 'all_dates': 'true'
@@ -150,38 +169,33 @@ class AdminAttendanceScreen extends StatefulWidget {
 }
 
 class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
-  // ── Filter ─────────────────────────────────────────────────────────────────
+  bool _isSidebarOpen = true;
+
   DateTime _selectedDate = DateTime.now();
   bool     _allDates     = false;
 
-  // ── Pagination ─────────────────────────────────────────────────────────────
   int       _page  = 1;
-  final int _limit = 20;   // final → fixes prefer_final_fields lint
+  final int _limit = 20;
   int       _total = 0;
 
-  // ── Data ───────────────────────────────────────────────────────────────────
   List<AdminAttendanceRecord> _records = [];
   bool    _loading = true;
   String? _error;
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     _load();
   }
 
-  // ── Load ───────────────────────────────────────────────────────────────────
   Future<void> _load({int page = 1}) async {
     setState(() { _loading = true; _error = null; _page = page; });
-
     final result = await AdminAttendanceService.fetchAttendance(
       date:     _allDates ? null : _toApiDate(_selectedDate),
       allDates: _allDates,
       page:     page,
       limit:    _limit,
     );
-
     if (!mounted) return;
     if (result['ok'] == true) {
       setState(() {
@@ -194,7 +208,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     }
   }
 
-  // ── Date picker ────────────────────────────────────────────────────────────
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context:     context,
@@ -228,66 +241,76 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     ));
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return AdminLayout(
-      currentRoute: '/admin/attendance',
-      child:        _buildContent(context),
-    );
-  }
-
-  Widget _buildContent(BuildContext context) {
-    final sidebar = context.watch<SidebarProvider>();
-    return Stack(
-      children: [
-        // Space background
-        Positioned.fill(
-          child: Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/space_background.png'),
-                fit:   BoxFit.cover,
-              ),
-            ),
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve:    Curves.easeInOut,
+            width:    _isSidebarOpen ? 250 : 0,
+            child: _isSidebarOpen
+                ? AdminSidebar(
+                    currentRoute: '/admin/attendance',
+                    onClose: () => setState(() => _isSidebarOpen = false),
+                  )
+                : null,
           ),
-        ),
-        Positioned.fill(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildTopBar(context, sidebar),
-              const SizedBox(height: 15),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(
                   child: Container(
-                    decoration: BoxDecoration(
-                      color:        Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Column(
-                        children: [
-                          _buildToolbar(),
-                          const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
-                          Expanded(child: _buildBody()),
-                          if (_total > _limit) _buildPagination(),
-                        ],
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/space_background.png'),
+                        fit:   BoxFit.cover,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                Positioned.fill(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildTopBar(context),
+                      const SizedBox(height: 15),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color:        Colors.white.withValues(alpha: 0.95),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: Column(
+                                children: [
+                                  _buildToolbar(),
+                                  const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                                  Expanded(child: _buildBody()),
+                                  if (_total > _limit) _buildPagination(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildTopBar(BuildContext context, SidebarProvider sidebar) {
+  Widget _buildTopBar(BuildContext context) {
     return SizedBox(
       height: 72,
       child: Stack(
@@ -305,7 +328,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               ),
             ),
           ),
-          if (!sidebar.isUserSidebarOpen)
+          if (!_isSidebarOpen)
             Positioned(
               left: 20,
               top:  28,
@@ -317,7 +340,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 ),
                 child: IconButton(
                   padding:        const EdgeInsets.all(12),
-                  onPressed:      () => sidebar.setUserSidebarOpen(true),
+                  onPressed:      () => setState(() => _isSidebarOpen = true),
                   icon:           const _HamburgerIcon(),
                   tooltip:        'Open Sidebar',
                   splashColor:    Colors.white.withValues(alpha: 0.1),
@@ -376,8 +399,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 date:     _allDates ? null : _toApiDate(_selectedDate),
                 allDates: _allDates,
               );
-              // Swap the snack for: launchUrl(Uri.parse(url))
-              // once url_launcher is added to pubspec.yaml
+              // Replace _snack with launchUrl(Uri.parse(url)) once
+              // url_launcher is added to pubspec.yaml
               _snack(url);
             },
           ),
@@ -427,7 +450,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     }
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      child: _AttendanceTable(records: _records),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: _AttendanceTable(records: _records),
+      ),
     );
   }
 
@@ -468,20 +494,55 @@ class _AttendanceTable extends StatelessWidget {
   final List<AdminAttendanceRecord> records;
   const _AttendanceTable({required this.records});
 
+  // Column indices
+  // 0  Intern name + avatar
+  // 1  Department
+  // 2  School
+  // 3  Program
+  // 4  OJT Period (start → end)
+  // 5  Required Hours
+  // 6  Date
+  // 7  Time In
+  // 8  Time Out
+  // 9  Hours Worked
+  // 10 Status
+
+  static const _headers = [
+    'Intern',
+    'Department',
+    'School',
+    'Program',
+    'OJT Period',
+    'Required Hrs',
+    'Date',
+    'Time In',
+    'Time Out',
+    'Hours Worked',
+    'Status',
+  ];
+
+  static const _colWidths = <int, TableColumnWidth>{
+    0:  FixedColumnWidth(180), // Intern
+    1:  FixedColumnWidth(160), // Department
+    2:  FixedColumnWidth(200), // School
+    3:  FixedColumnWidth(180), // Program
+    4:  FixedColumnWidth(180), // OJT Period
+    5:  FixedColumnWidth(110), // Required Hrs
+    6:  FixedColumnWidth(120), // Date
+    7:  FixedColumnWidth(100), // Time In
+    8:  FixedColumnWidth(100), // Time Out
+    9:  FixedColumnWidth(110), // Hours Worked
+    10: FixedColumnWidth(150), // Status
+  };
+
   @override
   Widget build(BuildContext context) {
     return Table(
-      columnWidths: const {
-        0: FlexColumnWidth(2.2),
-        1: FlexColumnWidth(1.5),
-        2: FlexColumnWidth(1.2),
-        3: FlexColumnWidth(1.2),
-        4: FlexColumnWidth(1.8),
-        5: FlexColumnWidth(1.2),
-      },
+      columnWidths: _colWidths,
       border: TableBorder(
         horizontalInside: BorderSide(color: Colors.grey.shade100),
       ),
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
         _buildHeader(),
         ...records.map(_buildRow),
@@ -490,20 +551,18 @@ class _AttendanceTable extends StatelessWidget {
   }
 
   TableRow _buildHeader() {
-    const headers = [
-      'Intern', 'Date', 'Time In', 'Time Out', 'Total Worked Hours', 'Status',
-    ];
     return TableRow(
       decoration: const BoxDecoration(
+        color:  Color(0xFFF8F9FB),
         border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 2)),
       ),
-      children: headers.map((h) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      children: _headers.map((h) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
         child: Text(
           h,
           style: const TextStyle(
             fontWeight:    FontWeight.w700,
-            fontSize:      14,
+            fontSize:      13,
             color:         Color(0xFF1A1F3A),
             letterSpacing: 0.2,
           ),
@@ -513,10 +572,15 @@ class _AttendanceTable extends StatelessWidget {
   }
 
   TableRow _buildRow(AdminAttendanceRecord r) {
+    final ojtPeriod = (r.startDate.isEmpty && r.endDate.isEmpty)
+        ? '--'
+        : '${r.formattedStart} → ${r.formattedEnd}';
+
     return TableRow(
       children: [
+        // 0 — Intern
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           child: Row(
             children: [
               _InternAvatar(url: r.avatarUrl, name: r.internName),
@@ -526,7 +590,7 @@ class _AttendanceTable extends StatelessWidget {
                   r.internName,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize:   14,
+                    fontSize:   13,
                     color:      Color(0xFF1A1F3A),
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -535,12 +599,27 @@ class _AttendanceTable extends StatelessWidget {
             ],
           ),
         ),
+        // 1 — Department
+        _cell(r.department.isEmpty ? '--' : r.department),
+        // 2 — School
+        _cell(r.school.isEmpty ? '--' : r.school),
+        // 3 — Program
+        _cell(r.program.isEmpty ? '--' : r.program),
+        // 4 — OJT Period
+        _cell(ojtPeriod),
+        // 5 — Required Hours
+        _cell(r.requiredHoursStr),
+        // 6 — Date
         _cell(r.formattedDate),
-        _cell(r.timeIn  ?? '--:--'),
-        _cell(r.timeOut ?? '--:--'),
+        // 7 — Time In
+        _cell(r.timeIn  ?? '--'),
+        // 8 — Time Out
+        _cell(r.timeOut ?? '--'),
+        // 9 — Hours Worked
         _cell(r.formattedHours),
+        // 10 — Status
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           child: _StatusBadge(status: r.status),
         ),
       ],
@@ -548,8 +627,11 @@ class _AttendanceTable extends StatelessWidget {
   }
 
   Widget _cell(String text) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-    child: Text(text, style: const TextStyle(fontSize: 14, color: Color(0xFF444444))),
+    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 13, color: Color(0xFF444444)),
+    ),
   );
 }
 
@@ -570,10 +652,10 @@ class _InternAvatar extends StatelessWidget {
 
     if (url.isNotEmpty) {
       return CircleAvatar(
-        radius:                  18,
-        backgroundImage:         NetworkImage(url),
-        backgroundColor:         const Color(0xFF6C63FF),
-        onBackgroundImageError:  (_, __) {},
+        radius:                 18,
+        backgroundImage:        NetworkImage(url),
+        backgroundColor:        const Color(0xFF6C63FF),
+        onBackgroundImageError: (_, __) {},
         child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 12)),
       );
     }
@@ -598,7 +680,6 @@ class _StatusBadge extends StatelessWidget {
     final Color text;
     final Color bg;
 
-    // Switch with Dart 3 exhaustive style — no break needed
     switch (status) {
       case 'Present':
         border = const Color(0xFF22C55E);
@@ -612,6 +693,14 @@ class _StatusBadge extends StatelessWidget {
         border = const Color(0xFF6C63FF);
         text   = const Color(0xFF4F46E5);
         bg     = const Color(0xFFEEF2FF);
+      case 'Missed Clock Out':
+        border = const Color(0xFFEA580C);
+        text   = const Color(0xFFC2410C);
+        bg     = const Color(0xFFFFF7ED);
+      case 'Absent':
+        border = const Color(0xFFEF4444);
+        text   = const Color(0xFFDC2626);
+        bg     = const Color(0xFFFEF2F2);
       default:
         border = const Color(0xFFEF4444);
         text   = const Color(0xFFDC2626);
@@ -619,7 +708,7 @@ class _StatusBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color:        bg,
         borderRadius: BorderRadius.circular(20),
@@ -627,7 +716,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 12),
+        style: TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 11),
       ),
     );
   }

@@ -118,7 +118,7 @@ class InternAvatar extends StatelessWidget {
     final cleanRaw = raw.startsWith('/') ? raw.substring(1) : raw;
     final resolved = '$serverRoot/$cleanRaw';
 
-    debugPrint('🖼️ InternAvatar resolved: $resolved');
+    
     return resolved;
   }
 
