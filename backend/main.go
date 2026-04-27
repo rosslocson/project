@@ -190,6 +190,7 @@ func main() {
 		auth.POST("/reset-password", h.ResetPassword)
 
 		r.GET("/api/departments", h.ListDepartments)
+		r.GET("/api/departments-with-positions", h.GetDepartmentsWithPositions)
 		r.GET("/api/positions", h.ListPositions)
 	}
 

@@ -753,8 +753,25 @@ func (h *Handler) logActivity(userID uint, action, details, ip string) {
 
 func (h *Handler) ListDepartments(c *gin.Context) {
 	var items []models.Department
-	h.DB.Order("name asc").Find(&items)
+	h.DB.Preload("Positions").Order("name asc").Find(&items)
 	c.JSON(http.StatusOK, gin.H{"items": items})
+}
+
+func (h *Handler) GetDepartmentsWithPositions(c *gin.Context) {
+	var departments []models.Department
+	h.DB.Preload("Positions").Order("name asc").Find(&departments)
+
+	// Transform to the format expected by frontend
+	result := make(map[string][]string)
+	for _, dept := range departments {
+		var positions []string
+		for _, pos := range dept.Positions {
+			positions = append(positions, pos.Name)
+		}
+		result[dept.Name] = positions
+	}
+
+	c.JSON(http.StatusOK, gin.H{"departments": result})
 }
 
 func (h *Handler) CreateDepartment(c *gin.Context) {
@@ -767,7 +784,7 @@ func (h *Handler) CreateDepartment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	item := models.Department{Name: strings.TrimSpace(body.Name), IsActive: true}
+	item := models.Department{Name: strings.TrimSpace(body.Name)}
 	if err := h.DB.Create(&item).Error; err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Department name already exists"})
 		return
@@ -832,19 +849,31 @@ func (h *Handler) CreatePosition(c *gin.Context) {
 	adminID := c.GetUint("user_id")
 
 	var body struct {
-		Name string `json:"name" binding:"required"`
+		DepartmentID uint   `json:"department_id" binding:"required"`
+		Name         string `json:"name" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	item := models.Position{Name: strings.TrimSpace(body.Name), IsActive: true}
-	if err := h.DB.Create(&item).Error; err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists"})
+
+	// Verify department exists
+	var dept models.Department
+	if err := h.DB.First(&dept, body.DepartmentID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department ID"})
 		return
 	}
 
-	h.logActivity(adminID, "CREATE_POSITION", "Admin created position: "+item.Name, c.ClientIP())
+	item := models.Position{
+		DepartmentID: body.DepartmentID,
+		Name:         strings.TrimSpace(body.Name),
+	}
+	if err := h.DB.Create(&item).Error; err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists in this department"})
+		return
+	}
+
+	h.logActivity(adminID, "CREATE_POSITION", fmt.Sprintf("Admin created position: %s in %s", item.Name, dept.Name), c.ClientIP())
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Position created", "item": item})
 }
@@ -858,16 +887,28 @@ func (h *Handler) UpdatePosition(c *gin.Context) {
 		return
 	}
 	var body struct {
-		Name string `json:"name" binding:"required"`
+		DepartmentID *uint  `json:"department_id"`
+		Name         string `json:"name" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	if body.DepartmentID != nil {
+		// Verify department exists
+		var dept models.Department
+		if err := h.DB.First(&dept, *body.DepartmentID).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department ID"})
+			return
+		}
+		item.DepartmentID = *body.DepartmentID
+	}
+
 	oldName := item.Name
 	item.Name = strings.TrimSpace(body.Name)
 	if err := h.DB.Save(&item).Error; err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists"})
+		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists in this department"})
 		return
 	}
 

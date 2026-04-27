@@ -309,6 +309,18 @@ class ApiService {
 
   // ── Departments ───────────────────────────────────────────────────────────
 
+  static Future<Map<String, dynamic>> getDepartmentsWithPositions() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/departments-with-positions'),
+        headers: {'Content-Type': 'application/json'}, // Public endpoint, no auth needed
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
   static Future<Map<String, dynamic>> getDepartments() async {
     try {
       final res = await http.get(

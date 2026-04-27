@@ -6,55 +6,18 @@ import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
 import 'avatar_crop_screen.dart';
 
+// ── Imported Extracted Widgets ──
+import '../../widgets/admin_account_settings_widgets/hamburger_icon.dart';
+import '../../widgets/admin_account_settings_widgets/profile_form_tab.dart';
+import '../../widgets/admin_account_settings_widgets/password_form_tab.dart';
+
 const _kBlue = Color(0xFF00022E);
-
-// ── Custom Hamburger Icon ────────────────────────────────────────────────────
-class HamburgerIcon extends StatelessWidget {
-  const HamburgerIcon({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 14,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class AdminAccountSettingsScreen extends StatefulWidget {
   const AdminAccountSettingsScreen({super.key});
@@ -69,50 +32,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   late TabController _tabs;
   bool _isSidebarOpen = true;
 
-  // Department → Position mapping
-  static const Map<String, List<String>> _deptRoles = {
-    'Business Relationship Management': [
-      'Account Manager',
-      'Business Analyst',
-      'Client Relations',
-      'Intern',
-      'Others',
-    ],
-    'Project Management Office': [
-      'Project Manager',
-      'Project Coordinator',
-      'Scrum Master',
-      'Intern',
-      'Others',
-    ],
-    'Quality Assurance': [
-      'QA Engineer',
-      'QA Automation Tester',
-      'Manual Tester',
-      'Intern',
-      'Others',
-    ],
-    'Technical Support Department': [
-      'IT Support Specialist',
-      'System Administrator',
-      'Helpdesk Technician',
-      'Intern',
-      'Others',
-    ],
-    'Development Department': [
-      'Software Engineer',
-      'Frontend Developer',
-      'Backend Developer',
-      'UI/UX Designer',
-      'Intern',
-      'Others',
-    ],
-  };
-
+  // Department state
+  Map<String, List<String>> _deptRoles = {};
+  bool _isLoadingDepartments = true;
   List<String> _departments = [];
-  /*List<String> _positions = [];*/
   String? _selectedDept;
-  /*String? _selectedPos;*/
 
   // Form keys
   final _profileKey = GlobalKey<FormState>();
@@ -150,7 +74,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
-    _departments = _deptRoles.keys.toList();
+    _loadDepartments();
     final user = context.read<AuthProvider>().user;
 
     _firstCtrl = TextEditingController(text: user?['first_name'] ?? '');
@@ -158,369 +82,96 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
     _phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
 
-    // Initialize Department and Position state
     final dept = user?['department'] as String? ?? '';
-    /*final pos = user?['position'] as String? ?? '';*/
-
-    if (dept.isNotEmpty && _departments.contains(dept)) {
+    if (dept.isNotEmpty) {
       _selectedDept = dept;
-      /*_positions = _deptRoles[dept] ?? ['Intern', 'Others'];*/
-    } else if (dept.isNotEmpty) {
-      _selectedDept = dept;
-      if (!_departments.contains(dept)) _departments.add(dept);
-      /*_positions = [pos];*/
     }
-
-    /*if (pos.isNotEmpty && _positions.contains(pos)) {
-      _selectedPos = pos;
-    } else if (pos.isNotEmpty) {
-      _selectedPos = pos;
-      if (!_positions.contains(pos)) _positions.add(pos);
-    }*/
   }
 
   @override
   void dispose() {
     _tabs.dispose();
-    for (final c in [
-      _firstCtrl,
-      _lastCtrl,
-      _emailCtrl,
-      _phoneCtrl,
-      _curPassCtrl,
-      _newPassCtrl,
-      _confirmPassCtrl,
-    ]) {
+    for (final c in [_firstCtrl, _lastCtrl, _emailCtrl, _phoneCtrl, _curPassCtrl, _newPassCtrl, _confirmPassCtrl]) {
       c.dispose();
     }
     super.dispose();
   }
 
-  // ── Avatar Pick & Upload ───────────────────────────────────────────────────
-  Future<void> pickAndCropAvatar() async {
+  Future<void> _loadDepartments() async {
     try {
-      debugPrint("🔥 Edit Avatar clicked");
-      debugPrint("📸 Function started");
-
-      final pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 100, // prevent corrupted compression
-      );
-
-      debugPrint("📂 Picker opened");
-
-      if (pickedFile == null) {
-        debugPrint("❌ User cancelled image selection");
-        return;
-      }
-
-      debugPrint("✅ Image selected: ${pickedFile.path}");
-
-      // Validate using MIME type on actual file bytes
-      debugPrint("📂 Full path: ${pickedFile.path}");
-      debugPrint("📂 Lowercase path: ${pickedFile.path.toLowerCase()}");
-
-      final pickedFileBytes = await pickedFile.readAsBytes();
-      final mimeType =
-          lookupMimeType(pickedFile.name, headerBytes: pickedFileBytes);
-      debugPrint("📄 MIME TYPE: $mimeType");
-
-      if (mimeType == null || !mimeType.startsWith('image/')) {
-        debugPrint("❌ Invalid file type detected (MIME: $mimeType)");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content:
-                  Text('Please select a valid image file (JPG, PNG, JPEG)'),
-              backgroundColor: Color(0xFF00022E),
-            ),
-          );
-        }
-        return;
-      }
-
-      debugPrint("✅ Valid image file detected");
-
-      if (kIsWeb) {
-        debugPrint("🌐 Web detected - opening crop screen");
-        if (!mounted) return;
-
-        final croppedBytes = await Navigator.push<Uint8List>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AvatarCropScreen(
-              imageBytes: pickedFileBytes,
-              fileName: pickedFile.name,
-            ),
-          ),
-        );
-
-        debugPrint(
-            "🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
-
-        if (croppedBytes == null) {
-          debugPrint("❌ Cropping cancelled");
-          return;
-        }
-
-        if (!mounted) return;
-
+      final response = await ApiService.getDepartmentsWithPositions();
+      if (response['ok'] == true && response['departments'] != null) {
         setState(() {
-          _localAvatarBytes = croppedBytes;
-          _avatarFile = null;
-          _isUploadingAvatar = true;
+          _deptRoles = Map<String, List<String>>.from(response['departments']);
+          _departments = _deptRoles.keys.toList();
+          _isLoadingDepartments = false;
         });
-
-        final res = await ApiService.uploadAvatar(
-          XFile.fromData(croppedBytes, name: pickedFile.name),
-        );
-
-        if (!mounted) return;
-
-        setState(() {
-          _isUploadingAvatar = false;
-        });
-
-        if (res['ok'] == true) {
-          debugPrint("✅ Web upload successful");
-          final messenger = ScaffoldMessenger.of(context);
-          await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-          setState(() {
-            _avatarFile = null;
-          });
-
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Avatar updated successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          debugPrint("❌ Web upload failed: ${res['error'] ?? 'Unknown error'}");
-          setState(() {
-            _avatarFile = null;
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(res['error'] ?? 'Failed to upload avatar'),
-                backgroundColor: const Color(0xFF00022E),
-              ),
-            );
-          }
-        }
-        return;
-      }
-
-      final file = File(pickedFile.path);
-
-      if (!await file.exists()) {
-        debugPrint("❌ File does not exist: ${pickedFile.path}");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('File does not exist'),
-              backgroundColor: Color(0xFF00022E),
-            ),
-          );
-        }
-        return;
-      }
-
-      final fileSize = await file.length();
-      debugPrint("✅ File verified: size=${fileSize}bytes");
-
-      debugPrint("🚀 Navigating to crop screen");
-      if (!mounted) return;
-
-      final croppedBytes = await Navigator.push<Uint8List>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AvatarCropScreen(
-            imageBytes: pickedFileBytes,
-            fileName: pickedFile.name,
-          ),
-        ),
-      );
-
-      debugPrint(
-          "🔙 Returned from crop screen: ${croppedBytes?.length ?? 0} bytes");
-
-      if (croppedBytes == null) {
-        debugPrint("❌ Cropping cancelled");
-        return;
-      }
-
-      if (!mounted) return;
-
-      final tempFile =
-          File('${(await getTemporaryDirectory()).path}/cropped_avatar.png');
-      await tempFile.writeAsBytes(croppedBytes);
-
-      setState(() {
-        _avatarFile = tempFile;
-        _isUploadingAvatar = true;
-      });
-
-      debugPrint("✅ UI updated with cropped image");
-
-      if (!mounted) return;
-      debugPrint("📤 Uploading avatar...");
-
-      final res = await ApiService.uploadAvatar(XFile(_avatarFile!.path));
-      debugPrint("🔙 Upload response received");
-
-      if (!mounted) return;
-
-      setState(() {
-        _isUploadingAvatar = false;
-      });
-
-      if (res['ok'] == true) {
-        print("Upload successful");
-        await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-
-        setState(() {
-          _avatarFile = null;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Avatar updated successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
       } else {
-        print("❌ Upload failed: ${res['error'] ?? 'Unknown error'}");
-        setState(() {
-          _avatarFile = null;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['error'] ?? 'Upload failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() { _deptRoles = {}; _departments = []; _isLoadingDepartments = false; });
       }
-    } catch (e, stackTrace) {
-      print("❌ ERROR: $e");
-      print("📋 Stack trace: $stackTrace");
-
-      if (mounted) {
-        setState(() {
-          _avatarFile = null;
-          _isUploadingAvatar = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: const Color(0xFF00022E),
-          ),
-        );
-      }
+    } catch (e) {
+      setState(() { _deptRoles = {}; _departments = []; _isLoadingDepartments = false; });
     }
+  }
+
+  Future<void> pickAndCropAvatar() async {
+    // ... (Keep ALL your existing avatar picking/cropping logic exactly as is)
+    // I am omitting the 100+ lines of pickAndCropAvatar to save space, but DO NOT delete it from your actual file.
+    // Keep the entire try/catch block exactly as it was.
   }
 
   Future<void> _saveProfile() async {
     if (!_profileKey.currentState!.validate()) return;
-    setState(() {
-      _savingProfile = true;
-      _profileMsg = null;
-    });
+    setState(() { _savingProfile = true; _profileMsg = null; });
+    
     final res = await ApiService.updateProfile({
       'first_name': _firstCtrl.text.trim(),
       'last_name': _lastCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
       'department': _selectedDept ?? '',
-      /*'position': _selectedPos ?? '',*/
     });
+    
     if (!mounted) return;
+    
     if (res['ok'] == true) {
       context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-      setState(() {
-        _profileMsg = 'Profile updated successfully!';
-        _profileSuccess = true;
-      });
+      setState(() { _profileMsg = 'Profile updated successfully!'; _profileSuccess = true; });
     } else {
-      setState(() {
-        _profileMsg = res['error'] ?? 'Update failed';
-        _profileSuccess = false;
-      });
+      setState(() { _profileMsg = res['error'] ?? 'Update failed'; _profileSuccess = false; });
     }
     setState(() => _savingProfile = false);
   }
 
   Future<void> _changePassword() async {
     if (!_passKey.currentState!.validate()) return;
-    setState(() {
-      _savingPass = true;
-      _passMsg = null;
-    });
+    setState(() { _savingPass = true; _passMsg = null; });
+    
     final res = await ApiService.changePassword({
       'current_password': _curPassCtrl.text,
       'new_password': _newPassCtrl.text,
       'confirm_password': _confirmPassCtrl.text,
     });
+    
     if (!mounted) return;
+    
     if (res['ok'] == true) {
-      _curPassCtrl.clear();
-      _newPassCtrl.clear();
-      _confirmPassCtrl.clear();
-      setState(() {
-        _passMsg = 'Password changed successfully!';
-        _passSuccess = true;
-      });
+      _curPassCtrl.clear(); _newPassCtrl.clear(); _confirmPassCtrl.clear();
+      setState(() { _passMsg = 'Password changed successfully!'; _passSuccess = true; });
     } else {
-      setState(() {
-        _passMsg = res['error'] ?? res['details'] ?? 'Change failed';
-        _passSuccess = false;
-      });
+      setState(() { _passMsg = res['error'] ?? res['details'] ?? 'Change failed'; _passSuccess = false; });
     }
     setState(() => _savingPass = false);
-  }
-
-  InputDecoration _getFormDecoration(String label, {IconData? prefixIcon}) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(
-          fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
-      prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, color: Colors.grey.shade500, size: 18)
-          : null,
-      filled: true,
-      fillColor: const Color(0xFFF9FAFB),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _kBlue, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-            color: const Color(0xFF00022E).withOpacity(0.6), width: 1),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
+    
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl =
-            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
+        finalAvatarUrl = '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -530,7 +181,6 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       resizeToAvoidBottomInset: false,
       body: Row(
         children: [
-          // ── Sidebar ──────────────────────────────────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -542,12 +192,9 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                   )
                 : null,
           ),
-
-          // ── Main content ────────────────────────────────────────
           Expanded(
             child: Stack(
               children: [
-                // Background
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -558,26 +205,20 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                     ),
                   ),
                 ),
-
                 Positioned.fill(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── Top bar ──────────────────────────────────
                       SizedBox(
                         height: 72,
                         child: Stack(
                           alignment: Alignment.centerLeft,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 100, right: 100, top: 28),
+                              padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
                               child: Text(
                                 'Account Settings',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displaySmall
-                                    ?.copyWith(
+                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
                                       fontSize: 28,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -587,23 +228,18 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                             ),
                             if (!_isSidebarOpen)
                               Positioned(
-                                left: 20,
-                                top: 28,
+                                left: 20, top: 28,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: Colors.white.withOpacity(0.15)),
+                                    border: Border.all(color: Colors.white.withOpacity(0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
-                                    onPressed: () =>
-                                        setState(() => _isSidebarOpen = true),
+                                    onPressed: () => setState(() => _isSidebarOpen = true),
                                     icon: const HamburgerIcon(),
                                     tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withOpacity(0.1),
-                                    highlightColor: Colors.transparent,
                                   ),
                                 ),
                               ),
@@ -611,12 +247,9 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                         ),
                       ),
                       const SizedBox(height: 15),
-
-                      // ── Main container ────────────────────────────
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(
-                              left: 100, right: 100, bottom: 28),
+                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.95),
@@ -627,15 +260,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // ── Profile card ──────────────────
+                                  // Profile Header (Avatar and Name) handled directly here since it applies globally to the card
                                   Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 32, vertical: 20),
+                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                                     decoration: BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(
-                                            color: Colors.grey.shade200),
-                                      ),
+                                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
                                     ),
                                     child: Row(
                                       children: [
@@ -644,68 +273,36 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           children: [
                                             CircleAvatar(
                                               radius: 40,
-                                              backgroundColor:
-                                                  _kBlue.withOpacity(0.1),
-                                              backgroundImage: _avatarFile !=
-                                                      null
+                                              backgroundColor: _kBlue.withOpacity(0.1),
+                                              backgroundImage: _avatarFile != null
                                                   ? FileImage(_avatarFile!)
                                                   : (_localAvatarBytes != null
-                                                          ? MemoryImage(
-                                                              _localAvatarBytes!)
-                                                          : (finalAvatarUrl
-                                                                  .isNotEmpty
-                                                              ? NetworkImage(
-                                                                  finalAvatarUrl)
-                                                              : null))
-                                                      as ImageProvider?,
+                                                      ? MemoryImage(_localAvatarBytes!)
+                                                      : (finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null)) as ImageProvider?,
                                               child: _isUploadingAvatar
-                                                  ? const CircularProgressIndicator(
-                                                      color: _kBlue,
-                                                      strokeWidth: 3)
-                                                  : (_avatarFile == null &&
-                                                          _localAvatarBytes ==
-                                                              null &&
-                                                          finalAvatarUrl
-                                                              .isEmpty)
+                                                  ? const CircularProgressIndicator(color: _kBlue, strokeWidth: 3)
+                                                  : (_avatarFile == null && _localAvatarBytes == null && finalAvatarUrl.isEmpty)
                                                       ? Text(
-                                                          '${(user?['first_name'] as String? ?? ' ')[0]}'
-                                                          '${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize: 28,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: _kBlue,
-                                                          ),
+                                                          '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
+                                                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kBlue),
                                                         )
                                                       : null,
                                             ),
                                             Positioned(
-                                              bottom: 0,
-                                              right: 0,
+                                              bottom: 0, right: 0,
                                               child: Material(
                                                 color: Colors.transparent,
                                                 child: InkWell(
-                                                  onTap: _isUploadingAvatar
-                                                      ? null
-                                                      : pickAndCropAvatar,
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
+                                                  onTap: _isUploadingAvatar ? null : pickAndCropAvatar,
+                                                  borderRadius: BorderRadius.circular(20),
                                                   child: Container(
-                                                    padding:
-                                                        const EdgeInsets.all(6),
+                                                    padding: const EdgeInsets.all(6),
                                                     decoration: BoxDecoration(
                                                       color: _kBlue,
                                                       shape: BoxShape.circle,
-                                                      border: Border.all(
-                                                          color: Colors.white,
-                                                          width: 2),
+                                                      border: Border.all(color: Colors.white, width: 2),
                                                     ),
-                                                    child: const Icon(
-                                                      Icons.camera_alt,
-                                                      color: Colors.white,
-                                                      size: 14,
-                                                    ),
+                                                    child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
                                                   ),
                                                 ),
                                               ),
@@ -715,65 +312,25 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                         const SizedBox(width: 20),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                                style: const TextStyle(
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: Colors.black87,
-                                                  letterSpacing: 0.5,
-                                                ),
-                                              ),
+                                              Text('${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black87)),
                                               const SizedBox(height: 2),
-                                              Text(
-                                                user?['email'] ?? '',
-                                                style: TextStyle(
-                                                    color: Colors.grey.shade600,
-                                                    fontSize: 14,
-                                                    fontWeight:
-                                                        FontWeight.w500),
-                                              ),
-                                              if ((user?['department']
-                                                          as String? ??
-                                                      '')
-                                                  .isNotEmpty) ...[
+                                              Text(user?['email'] ?? '', style: TextStyle(color: Colors.grey.shade600, fontSize: 14, fontWeight: FontWeight.w500)),
+                                              if ((user?['department'] as String? ?? '').isNotEmpty) ...[
                                                 const SizedBox(height: 4),
-                                                Text(
-                                                  '${user?['department']}',
-                                                  style: TextStyle(
-                                                      color:
-                                                          Colors.grey.shade500,
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w500),
-                                                ),
+                                                Text('${user?['department']}', style: TextStyle(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w500)),
                                               ],
                                               const SizedBox(height: 10),
                                               Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 4),
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      _kBlue.withOpacity(0.08),
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
+                                                  color: _kBlue.withOpacity(0.08),
+                                                  borderRadius: BorderRadius.circular(16),
                                                 ),
-                                                child: Text(
-                                                  (user?['role'] ?? 'user')
-                                                      .toUpperCase(),
-                                                  style: TextStyle(
-                                                    color:
-                                                        _kBlue.withOpacity(0.9),
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w800,
-                                                    letterSpacing: 1.0,
-                                                  ),
-                                                ),
+                                                child: Text((user?['role'] ?? 'user').toUpperCase(),
+                                                  style: TextStyle(color: _kBlue.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.0)),
                                               ),
                                             ],
                                           ),
@@ -781,49 +338,61 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                       ],
                                     ),
                                   ),
-
-                                  // ── Tabs ──────────────────────────
+                                  
+                                  // Tabs
                                   Container(
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(
-                                            color: Colors.grey.shade200),
-                                      ),
-                                    ),
+                                    decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
                                     child: TabBar(
                                       controller: _tabs,
                                       labelColor: _kBlue,
                                       indicatorColor: _kBlue,
                                       indicatorWeight: 3,
-                                      unselectedLabelColor:
-                                          Colors.grey.shade500,
-                                      labelStyle: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700),
-                                      unselectedLabelStyle: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500),
+                                      unselectedLabelColor: Colors.grey.shade500,
+                                      labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                                      unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                                       dividerColor: Colors.transparent,
                                       tabs: const [
-                                        Tab(
-                                        icon: Icon(Icons.manage_accounts_outlined, size: 20),
-                                        text: 'Account Settings',
-                                      ), 
-                                        Tab(
-                                        icon: Icon(Icons.lock_outline, size: 20),
-                                        text: 'Change Password',
-                                        ),
+                                        Tab(icon: Icon(Icons.manage_accounts_outlined, size: 20), text: 'Account Settings'),
+                                        Tab(icon: Icon(Icons.lock_outline, size: 20), text: 'Change Password'),
                                       ],
                                     ),
                                   ),
 
-                                  // ── Tab content ───────────────────
+                                  // Tab Content Modules
                                   Expanded(
                                     child: TabBarView(
                                       controller: _tabs,
                                       children: [
-                                        _buildProfileForm(),
-                                        _buildPasswordForm(),
+                                        ProfileFormTab(
+                                          formKey: _profileKey,
+                                          firstCtrl: _firstCtrl,
+                                          lastCtrl: _lastCtrl,
+                                          emailCtrl: _emailCtrl,
+                                          selectedDept: _selectedDept,
+                                          departments: _departments,
+                                          isLoadingDepartments: _isLoadingDepartments,
+                                          profileMsg: _profileMsg,
+                                          profileSuccess: _profileSuccess,
+                                          savingProfile: _savingProfile,
+                                          onDeptChanged: (v) => setState(() => _selectedDept = v),
+                                          onSave: _saveProfile,
+                                        ),
+                                        PasswordFormTab(
+                                          formKey: _passKey,
+                                          curPassCtrl: _curPassCtrl,
+                                          newPassCtrl: _newPassCtrl,
+                                          confirmPassCtrl: _confirmPassCtrl,
+                                          obscureCur: _obscureCur,
+                                          obscureNew: _obscureNew,
+                                          obscureConf: _obscureConf,
+                                          passMsg: _passMsg,
+                                          passSuccess: _passSuccess,
+                                          savingPass: _savingPass,
+                                          onToggleCur: () => setState(() => _obscureCur = !_obscureCur),
+                                          onToggleNew: () => setState(() => _obscureNew = !_obscureNew),
+                                          onToggleConf: () => setState(() => _obscureConf = !_obscureConf),
+                                          onSave: _changePassword,
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -843,330 +412,4 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       ),
     );
   }
-
-  Widget _buildProfileForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // ── Scrollable fields ────────────────────────────────────
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-            child: Form(
-              key: _profileKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_profileMsg != null) ...[
-                    _msgBanner(_profileMsg!, _profileSuccess),
-                    const SizedBox(height: 16),
-                  ],
-                  // First Name / Last Name row
-                  Row(children: [
-                    Expanded(
-                        child: TextFormField(
-                      controller: _firstCtrl,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500),
-                      decoration: _getFormDecoration('First Name'),
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
-                    )),
-                    const SizedBox(width: 16),
-                    Expanded(
-                        child: TextFormField(
-                      controller: _lastCtrl,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500),
-                      decoration: _getFormDecoration('Last Name'),
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
-                    )),
-                  ]),
-                  const SizedBox(height: 16),
-                  // Email – full width
-                  TextFormField(
-                    controller: _emailCtrl,
-                    enabled: false,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600),
-                    decoration: _getFormDecoration('Email (cannot change)',
-                        prefixIcon: Icons.email_outlined),
-                  ),
-                  const SizedBox(height: 16),
-                  // Department – full width (same as email)
-                  _dropdownField(
-                    label: 'Department',
-                    value: _selectedDept,
-                    hint: _departments.isEmpty ? 'N/A' : 'Select Department',
-                    items: _departments,
-                    onChanged: (v) {
-                      setState(() {
-                        _selectedDept = v;
-                        /*_positions = _deptRoles[v] ?? ['Intern', 'Others'];
-                        if (_selectedPos != null &&
-                            !_positions.contains(_selectedPos)) {
-                          _selectedPos = null;
-                        }*/
-                      });
-                    },
-                  ),
-                  /*const SizedBox(width: 16),
-                  Expanded(
-                    child: _dropdownField(
-                      label: 'Position',
-                      value: _selectedPos,
-                      hint: _positions.isEmpty
-                          ? 'Select Dept First'
-                          : 'Select Position',
-                      items: _positions,
-                      onChanged: _positions.isEmpty
-                          ? null
-                          : (v) => setState(() => _selectedPos = v),
-                    ),
-                  ),*/
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // ── Save Changes button pinned to the bottom ──────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _savingProfile ? null : _saveProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: _savingProfile
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('Save Changes',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          letterSpacing: 0.5)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // ── Scrollable fields ────────────────────────────────────
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-            child: Form(
-              key: _passKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_passMsg != null) ...[
-                    _msgBanner(_passMsg!, _passSuccess),
-                    const SizedBox(height: 16),
-                  ],
-                  _passField(
-                    controller: _curPassCtrl,
-                    label: 'Current Password',
-                    obscure: _obscureCur,
-                    onToggle: () => setState(() => _obscureCur = !_obscureCur),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  _passField(
-                    controller: _newPassCtrl,
-                    label: 'New Password',
-                    obscure: _obscureNew,
-                    onToggle: () => setState(() => _obscureNew = !_obscureNew),
-                    validator: (v) {
-                      if (v == null || v.length < 8) {
-                        return 'Min 8 characters';
-                      }
-                      if (!v.contains(RegExp(r'[A-Z]'))) {
-                        return 'Need one uppercase letter';
-                      }
-                      if (!v.contains(RegExp(r'[0-9]'))) {
-                        return 'Need one number';
-                      }
-                      if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-                        return 'Need one special character';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  _passField(
-                    controller: _confirmPassCtrl,
-                    label: 'Confirm New Password',
-                    obscure: _obscureConf,
-                    onToggle: () =>
-                        setState(() => _obscureConf = !_obscureConf),
-                    validator: (v) {
-                      if (v!.isEmpty) {
-                        return 'Required';
-                      }
-                      if (v != _newPassCtrl.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // ── Change Password button pinned to the bottom ───────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _savingPass ? null : _changePassword,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: _savingPass
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('Change Password',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          letterSpacing: 0.5)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _dropdownField({
-    required String label,
-    required String? value,
-    required String hint,
-    required List<String> items,
-    required void Function(String?)? onChanged,
-  }) =>
-      Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w600)),
-            Expanded(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: value,
-                  isDense: true,
-                  hint: Text(hint,
-                      style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500)),
-                  isExpanded: true,
-                  icon: Icon(Icons.keyboard_arrow_down,
-                      color: Colors.grey[500], size: 18),
-                  style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500),
-                  items: items
-                      .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(
-                            s,
-                            overflow: TextOverflow.ellipsis,
-                          )))
-                      .toList(),
-                  onChanged: onChanged,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _passField({
-    required TextEditingController controller,
-    required String label,
-    required bool obscure,
-    required VoidCallback onToggle,
-    required String? Function(String?) validator,
-  }) =>
-      TextFormField(
-        controller: controller,
-        obscureText: obscure,
-        validator: validator,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        decoration:
-            _getFormDecoration(label, prefixIcon: Icons.lock_outline).copyWith(
-          suffixIcon: IconButton(
-            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
-                size: 18, color: Colors.grey.shade500),
-            onPressed: onToggle,
-          ),
-        ),
-      );
-
-  Widget _msgBanner(String msg, bool success) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: success ? Colors.green.shade50 : Colors.red.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: success ? Colors.green.shade200 : Colors.red.shade200),
-        ),
-        child: Row(
-          children: [
-            Icon(success ? Icons.check_circle : Icons.error_outline,
-                color: success ? Colors.green : Colors.red, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(msg,
-                  style: TextStyle(
-                      fontSize: 13,
-                      color:
-                          success ? Colors.green.shade800 : Colors.red.shade800,
-                      fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ),
-      );
 }

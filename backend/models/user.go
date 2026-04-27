@@ -71,17 +71,18 @@ type Department struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
 
-	Name     string `json:"name"     gorm:"uniqueIndex;not null"`
-	IsActive bool   `json:"is_active" gorm:"default:true"`
+	Name      string     `json:"name"      gorm:"unique;not null"`
+	Positions []Position `json:"positions" gorm:"foreignKey:DepartmentID"`
 }
 
 // Position — stored in its own table
 type Position struct {
-	ID        uint           `json:"id"         gorm:"primarykey;autoIncrement"`
+	ID        uint           `json:"id"           gorm:"primarykey;autoIncrement"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
 
-	Name     string `json:"name"     gorm:"uniqueIndex;not null"`
-	IsActive bool   `json:"is_active" gorm:"default:true"`
+	DepartmentID uint        `json:"department_id" gorm:"not null"`
+	Name         string      `json:"name"          gorm:"not null"`
+	Department   *Department `json:"department,omitempty" gorm:"foreignKey:DepartmentID"`
 }
