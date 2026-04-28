@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import '../services/api_service.dart';
 
-
 // ── Brand colors ──────────────────────────────────────────────────────────────
 const kBlue = Color(0xFF1E40AF);
 const kBlueDark = Color(0xFF1E2A44);
@@ -12,7 +11,7 @@ const kBlueLight = Color(0xFF3B82F6);
 class InternProfile {
   final int id;
   final String name;
-  final int internNumber;
+  final String internNumber;
   final String program;
   final String school;
   final String specialization;
@@ -57,32 +56,41 @@ class InternProfile {
   }
 
   factory InternProfile.fromJson(Map<String, dynamic> json) {
-  final firstName = (json['first_name'] ?? '').toString().trim();
-  final lastName  = (json['last_name']  ?? '').toString().trim();
-  final fullName  = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
+    final firstName = (json['first_name'] ?? '').toString().trim();
+    final lastName = (json['last_name'] ?? '').toString().trim();
+    final fullName = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
 
-  // Helper to safely parse a JSON array of strings
-  List<String> parseStringList(dynamic value) {
-    if (value == null) return [];
-    if (value is List) return value.map((e) => e.toString()).toList();
-    // Some APIs return a comma-separated string instead of an array
-    if (value is String && value.isNotEmpty) return value.split(',').map((s) => s.trim()).toList();
-    return [];
+    // Helper to safely parse a JSON array of strings
+    List<String> parseStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) return value.map((e) => e.toString()).toList();
+      // Some APIs return a comma-separated string instead of an array
+      if (value is String && value.isNotEmpty)
+        return value.split(',').map((s) => s.trim()).toList();
+      return [];
+    }
+
+    return InternProfile(
+      id: json['id'] as int,
+      name: fullName.isNotEmpty ? fullName : 'Unnamed Intern',
+      internNumber: json['intern_number'] as String? ?? 'N/A',
+      program: (json['program'] ?? '').toString().trim().isNotEmpty
+          ? json['program']
+          : 'N/A',
+      school: (json['school'] ?? '').toString().trim().isNotEmpty
+          ? json['school']
+          : 'N/A', // ← was hardcoded ''
+      specialization:
+          (json['specialization'] ?? '').toString().trim().isNotEmpty
+              ? json['specialization']
+              : 'N/A',
+      email: json['email'] ?? '',
+      technicalSkills:
+          parseStringList(json['technical_skills']), // ← was hardcoded []
+      softSkills: parseStringList(json['soft_skills']), // ← was hardcoded []
+      avatarUrl: json['avatar_url'],
+    );
   }
-
-  return InternProfile(
-    id:             json['id'] as int,
-    name:           fullName.isNotEmpty ? fullName : 'Unnamed Intern',
-    internNumber:   json['id'] as int,
-    program:        (json['program']        ?? '').toString().trim().isNotEmpty ? json['program']        : 'N/A',
-    school:         (json['school']         ?? '').toString().trim().isNotEmpty ? json['school']         : 'N/A',  // ← was hardcoded ''
-    specialization: (json['specialization'] ?? '').toString().trim().isNotEmpty ? json['specialization'] : 'N/A',
-    email:          json['email'] ?? '',
-    technicalSkills: parseStringList(json['technical_skills']),  // ← was hardcoded []
-    softSkills:      parseStringList(json['soft_skills']),       // ← was hardcoded []
-    avatarUrl:      json['avatar_url'],
-  );
-}
 }
 
 // ── Avatar widget: real photo or initials fallback ────────────────────────────
@@ -118,7 +126,6 @@ class InternAvatar extends StatelessWidget {
     final cleanRaw = raw.startsWith('/') ? raw.substring(1) : raw;
     final resolved = '$serverRoot/$cleanRaw';
 
-    
     return resolved;
   }
 
@@ -325,7 +332,9 @@ class _InternDetailPageState extends State<InternDetailPage>
                                   textAlign: TextAlign.center,
                                 ),
                                 Text(
-                                  'Intern #${intern.internNumber}',
+                                  intern.internNumber != 'N/A'
+                                      ? 'Intern #${intern.internNumber}'
+                                      : '',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.white.withValues(alpha: 0.7),
@@ -359,56 +368,56 @@ class _InternDetailPageState extends State<InternDetailPage>
                                       : 'N/A',
                                 ),
                                 if (intern.technicalSkills.isNotEmpty) ...[
-  const SizedBox(height: 24),
-  const Align(
-    alignment: Alignment.centerLeft,
-    child: Text(
-      'Technical Skills',
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    ),
-  ),
-  const SizedBox(height: 12),
-  Align(
-    alignment: Alignment.centerLeft,
-    child: Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: intern.technicalSkills
-          .map((s) => _SkillChip(s))
-          .toList(),
-    ),
-  ),
-],
-if (intern.softSkills.isNotEmpty) ...[
-  const SizedBox(height: 24),
-  const Align(
-    alignment: Alignment.centerLeft,
-    child: Text(
-      'Soft Skills',
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    ),
-  ),
-  const SizedBox(height: 12),
-  Align(
-    alignment: Alignment.centerLeft,
-    child: Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: intern.softSkills
-          .map((s) => _SkillChip(s))
-          .toList(),
-    ),
-  ),
-],
+                                  const SizedBox(height: 24),
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Technical Skills',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: intern.technicalSkills
+                                          .map((s) => _SkillChip(s))
+                                          .toList(),
+                                    ),
+                                  ),
                                 ],
+                                if (intern.softSkills.isNotEmpty) ...[
+                                  const SizedBox(height: 24),
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Soft Skills',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: intern.softSkills
+                                          .map((s) => _SkillChip(s))
+                                          .toList(),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
@@ -447,7 +456,8 @@ class _InfoRow extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 20),
+            child: Icon(icon,
+                color: Colors.white.withValues(alpha: 0.8), size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(

@@ -624,7 +624,7 @@ func (h *Handler) ListInterns(c *gin.Context) {
 	h.DB.Where("role = ? AND is_active = ?", models.RoleUser, true).
 		Select(`id, first_name, last_name, email, department, position, 
                 avatar_url, school, program, specialization, 
-                technical_skills, soft_skills, created_at`).
+                technical_skills, soft_skills, intern_number, created_at`).
 		Order("first_name asc, last_name asc").
 		Find(&interns)
 	c.JSON(http.StatusOK, gin.H{"interns": interns})

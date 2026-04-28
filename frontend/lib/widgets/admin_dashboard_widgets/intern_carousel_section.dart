@@ -31,7 +31,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
   void initState() {
     super.initState();
     _currentPage = widget.interns.isNotEmpty ? widget.interns.length * 1000 : 0;
-    _pageController = PageController(viewportFraction: 0.35, initialPage: _currentPage);
+    _pageController =
+        PageController(viewportFraction: 0.35, initialPage: _currentPage);
     if (!widget.loading && widget.interns.isNotEmpty) {
       _startAutoScroll();
     }
@@ -43,7 +44,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
     if (widget.interns != oldWidget.interns && widget.interns.isNotEmpty) {
       _currentPage = widget.interns.length * 1000;
       _pageController.dispose();
-      _pageController = PageController(viewportFraction: 0.35, initialPage: _currentPage);
+      _pageController =
+          PageController(viewportFraction: 0.35, initialPage: _currentPage);
       _startAutoScroll();
     }
   }
@@ -126,7 +128,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
         child: Center(child: CircularProgressIndicator(color: Colors.white54)),
       );
     }
-    
+
     if (widget.error != null) {
       return SizedBox(
         height: 180,
@@ -136,22 +138,27 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
             children: [
               const Icon(Icons.error_outline, color: Colors.white54, size: 40),
               const SizedBox(height: 8),
-              Text(widget.error!, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+              Text(widget.error!,
+                  style: const TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center),
               TextButton.icon(
                 onPressed: widget.onRetry,
                 icon: const Icon(Icons.refresh, color: Colors.white70),
-                label: const Text('Retry', style: TextStyle(color: Colors.white70)),
+                label: const Text('Retry',
+                    style: TextStyle(color: Colors.white70)),
               ),
             ],
           ),
         ),
       );
     }
-    
+
     if (widget.interns.isEmpty) {
       return const SizedBox(
-        height: 180, 
-        child: Center(child: Text('No interns found.', style: TextStyle(color: Colors.white54, fontSize: 15))),
+        height: 180,
+        child: Center(
+            child: Text('No interns found.',
+                style: TextStyle(color: Colors.white54, fontSize: 15))),
       );
     }
 
@@ -196,7 +203,9 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
               width: active ? 16 : 6,
               height: 6,
               decoration: BoxDecoration(
-                color: active ? const Color.fromARGB(255, 118, 115, 200) : Colors.white.withValues(alpha: 0.25),
+                color: active
+                    ? const Color.fromARGB(255, 118, 115, 200)
+                    : Colors.white.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.circular(3),
               ),
             );
@@ -211,9 +220,9 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
 
 class _InternCardFront extends StatelessWidget {
   final InternProfile intern;
-  
+
   const _InternCardFront({required this.intern});
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -221,15 +230,15 @@ class _InternCardFront extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          begin: Alignment.topLeft, 
-          end: Alignment.bottomRight, 
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [Color(0xFF1E1B4B), Color(0xFF4C1D95)],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.4), 
-            blurRadius: 32, 
+            color: const Color(0xFF0F172A).withValues(alpha: 0.4),
+            blurRadius: 32,
             offset: const Offset(0, 16),
           ),
         ],
@@ -237,19 +246,24 @@ class _InternCardFront extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          InternAvatar(intern: intern, size: 70, borderRadius: 18, fontSize: 28),
+          InternAvatar(
+              intern: intern, size: 70, borderRadius: 18, fontSize: 28),
           const SizedBox(height: 12),
           Text(
-            intern.name, 
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white), 
-            textAlign: TextAlign.center, 
-            maxLines: 2, 
+            intern.name,
+            style: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+            textAlign: TextAlign.center,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
-            'Intern #${intern.internNumber}', 
-            style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+            intern.internNumber != 'N/A'
+                ? 'Intern #${intern.internNumber}'
+                : '',
+            style: TextStyle(
+                fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
           ),
         ],
       ),
@@ -260,7 +274,7 @@ class _InternCardFront extends StatelessWidget {
 class _ArrowButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
-  
+
   const _ArrowButton({required this.icon, required this.onTap});
 
   @override
@@ -280,19 +294,19 @@ class _ArrowButtonState extends State<_ArrowButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: 40, 
+          width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: _isHovered ? 0.25 : 0.10), 
-            shape: BoxShape.circle, 
+            color: Colors.white.withValues(alpha: _isHovered ? 0.25 : 0.10),
+            shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.white.withValues(alpha: _isHovered ? 0.4 : 0.2), 
+              color: Colors.white.withValues(alpha: _isHovered ? 0.4 : 0.2),
               width: 0.8,
             ),
           ),
           child: Icon(
-            widget.icon, 
-            color: Colors.white.withValues(alpha: _isHovered ? 1.0 : 0.8), 
+            widget.icon,
+            color: Colors.white.withValues(alpha: _isHovered ? 1.0 : 0.8),
             size: 22,
           ),
         ),
