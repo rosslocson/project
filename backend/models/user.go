@@ -19,38 +19,38 @@ type User struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
 
-	FirstName        string     `json:"first_name"         gorm:"not null"`
-	LastName         string     `json:"last_name"          gorm:"not null"`
-	Email            string     `json:"email"              gorm:"uniqueIndex;not null"`
-	Password         string     `json:"-"                  gorm:"not null"`
-	Phone            string     `json:"phone"`
-	Department       string     `json:"department"`
-	Position         string     `json:"position"`
-	AvatarURL        string     `json:"avatar_url"`
-	Role             Role       `json:"role"               gorm:"default:'user'"`
-	IsActive         bool       `json:"is_active"          gorm:"default:true"`
-	IsArchived       bool       `json:"is_archived"        gorm:"default:false"`
-	LastLoginAt      *time.Time `json:"last_login_at"`
-	Bio              string     `json:"bio"`
+	FirstName   string     `json:"first_name"         gorm:"not null"`
+	LastName    string     `json:"last_name"          gorm:"not null"`
+	Email       string     `json:"email"              gorm:"uniqueIndex;not null"`
+	Password    string     `json:"-"                  gorm:"not null"`
+	Phone       string     `json:"phone"`
+	Department  string     `json:"department"`
+	Position    string     `json:"position"`
+	AvatarURL   string     `json:"avatar_url"`
+	Role        Role       `json:"role"               gorm:"default:'user'"`
+	IsActive    bool       `json:"is_active"          gorm:"default:true"`
+	IsArchived  bool       `json:"is_archived"        gorm:"default:false"`
+	LastLoginAt *time.Time `json:"last_login_at"`
+	Bio         string     `json:"bio"`
 
 	// --- NEW SECURITY FIELDS ---
-	FailedAttempts   int        `json:"failed_attempts"    gorm:"default:0"`
-	LockedUntil      *time.Time `json:"locked_until"`
-	ResetOTP         string     `json:"-"`
-	ResetOTPExpiry   *time.Time `json:"-"`
+	FailedAttempts int        `json:"failed_attempts"    gorm:"default:0"`
+	LockedUntil    *time.Time `json:"locked_until"`
+	ResetOTP       string     `json:"-"`
+	ResetOTPExpiry *time.Time `json:"-"`
 
-	RequiredOjtHours int        `gorm:"default:486"        json:"required_ojt_hours"`
-	School           string     `json:"school"`
-	Program          string     `json:"program"`
-	Specialization   string     `json:"specialization"`
-	YearLevel        string     `json:"year_level"`
-	InternNumber     string     `json:"intern_number"`
-	StartDate        string     `json:"start_date"`
-	EndDate          string     `json:"end_date"`
-	TechnicalSkills  string     `json:"technical_skills"`
-	SoftSkills       string     `json:"soft_skills"`
-	LinkedIn         string     `json:"linked_in"`
-	GitHub           string     `json:"git_hub"`
+	RequiredOjtHours int    `gorm:"default:486"        json:"required_ojt_hours"`
+	School           string `json:"school"`
+	Program          string `json:"program"`
+	Specialization   string `json:"specialization"`
+	YearLevel        string `json:"year_level"`
+	InternNumber     string `json:"intern_number"`
+	StartDate        string `json:"start_date"`
+	EndDate          string `json:"end_date"`
+	TechnicalSkills  string `json:"technical_skills"`
+	SoftSkills       string `json:"soft_skills"`
+	LinkedIn         string `json:"linked_in"`
+	GitHub           string `json:"git_hub"`
 }
 
 type ActivityLog struct {
