@@ -7,6 +7,7 @@ import (
 	"image/jpeg"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -119,6 +120,35 @@ func validatePassword(password string) []string {
 	}
 	return errs
 }
+func validateProfileURL(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", nil
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid URL")
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return "", fmt.Errorf("invalid URL")
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", fmt.Errorf("URL must start with http:// or https://")
+	}
+	return u.String(), nil
+}
+
+func parseProfileDate(dateStr, fieldName string) (time.Time, error) {
+	if strings.TrimSpace(dateStr) == "" {
+		return time.Time{}, nil
+	}
+	parsed, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid %s format", fieldName)
+	}
+	return parsed, nil
+}
 
 // ── JWT helpers ──────────────────────────────────────────────────────────────
 
@@ -159,6 +189,7 @@ func (h *Handler) GetProfile(c *gin.Context) {
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
+	role := c.GetString("role")
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -172,15 +203,59 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	// Only overwrite a field if the request actually sent a non-empty value.
-	// This prevents AccountSettings from blanking out Edit Profile fields
-	// and vice versa.
-	// Replace the updates map section in UpdateProfile
-	updates := map[string]interface{}{}
+	// Validate URLs before applying them
+	if req.LinkedIn != "" {
+		cleaned, err := validateProfileURL(req.LinkedIn)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid LinkedIn URL: " + err.Error()})
+			return
+		}
+		req.LinkedIn = cleaned
+	}
+	if req.GitHub != "" {
+		cleaned, err := validateProfileURL(req.GitHub)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid GitHub URL: " + err.Error()})
+			return
+		}
+		req.GitHub = cleaned
+	}
 
-	// Only write fields that were explicitly sent (non-empty)
-	// If you need to allow clearing a field, the Flutter side must send a
-	// sentinel like " " or handle it separately
+	// Validate chronological dates. Use existing values when only one side is updated.
+	startDateValue := user.StartDate
+	endDateValue := user.EndDate
+	if req.StartDate != "" {
+		if _, err := parseProfileDate(req.StartDate, "start_date"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		startDateValue = req.StartDate
+	}
+	if req.EndDate != "" {
+		if _, err := parseProfileDate(req.EndDate, "end_date"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		endDateValue = req.EndDate
+	}
+	if startDateValue != "" && endDateValue != "" {
+		parsedStart, err := parseProfileDate(startDateValue, "start_date")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		parsedEnd, err := parseProfileDate(endDateValue, "end_date")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if parsedEnd.Before(parsedStart) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "End date cannot be before start date"})
+			return
+		}
+	}
+
+	updates := map[string]interface{}{}
 	if req.FirstName != "" {
 		updates["first_name"] = req.FirstName
 	}
@@ -191,14 +266,13 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		updates["phone"] = req.Phone
 	}
 
-	// ✅ Department/Position: only write if the key was actually in the JSON.
-	// Use pointers in the request struct instead so you can distinguish
-	// "not sent" from "intentionally empty":
-	if req.Department != "" {
-		updates["department"] = req.Department
-	}
-	if req.Position != "" {
-		updates["position"] = req.Position
+	if role == string(models.RoleAdmin) {
+		if req.Department != "" {
+			updates["department"] = req.Department
+		}
+		if req.Position != "" {
+			updates["position"] = req.Position
+		}
 	}
 
 	if req.School != "" {
@@ -245,7 +319,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 	h.logActivity(userID, "UPDATE_PROFILE", "Profile updated", c.ClientIP())
 
-	// Return the full fresh user so Flutter always has the complete picture
 	var updated models.User
 	h.DB.First(&updated, userID)
 	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "Profile updated", "user": updated})

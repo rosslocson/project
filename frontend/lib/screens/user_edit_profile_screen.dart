@@ -1,51 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/app_theme.dart';
 import '../../widgets/user_sidebar.dart';
 
-class HamburgerIcon extends StatelessWidget {
-  const HamburgerIcon({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 14,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ── Imported Extracted Widgets ──
+import '../../widgets/user_edit_profile_widgets/edit_profile_hamburger_icon.dart';
+import '../../widgets/user_edit_profile_widgets/edit_profile_status_banner.dart';
+import '../../widgets/user_edit_profile_widgets/academic_info_tab.dart';
+import '../../widgets/user_edit_profile_widgets/skills_profile_tab.dart';
 
 class UserEditProfileScreen extends StatefulWidget {
   const UserEditProfileScreen({super.key});
@@ -53,8 +18,7 @@ class UserEditProfileScreen extends StatefulWidget {
   State<UserEditProfileScreen> createState() => _UserEditProfileScreenState();
 }
 
-class _UserEditProfileScreenState extends State<UserEditProfileScreen>
-    with TickerProviderStateMixin {
+class _UserEditProfileScreenState extends State<UserEditProfileScreen> with TickerProviderStateMixin {
   late TabController _tabs;
   bool _sidebarVisible = true;
 
@@ -63,7 +27,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   final String _defaultPosition = 'Intern';
 
   bool _initialLoading = true;
-
   String? _selectedDept;
 
   late TextEditingController _schoolCtrl;
@@ -100,8 +63,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     _startCtrl = TextEditingController(text: user['start_date'] ?? '');
     _endCtrl = TextEditingController(text: user['end_date'] ?? '');
     _bioCtrl = TextEditingController(text: user['bio'] ?? '');
-    _techSkillsCtrl =
-        TextEditingController(text: user['technical_skills'] ?? '');
+    _techSkillsCtrl = TextEditingController(text: user['technical_skills'] ?? '');
     _softSkillsCtrl = TextEditingController(text: user['soft_skills'] ?? '');
     _linkedinCtrl = TextEditingController(text: user['linked_in'] ?? '');
     _githubCtrl = TextEditingController(text: user['git_hub'] ?? '');
@@ -115,20 +77,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   @override
   void dispose() {
     _tabs.dispose();
-    for (final c in [
-      _schoolCtrl,
-      _programCtrl,
-      _specCtrl,
-      _yearCtrl,
-      _internNumCtrl,
-      _startCtrl,
-      _endCtrl,
-      _bioCtrl,
-      _techSkillsCtrl,
-      _softSkillsCtrl,
-      _linkedinCtrl,
-      _githubCtrl,
-    ]) {
+    for (final c in [_schoolCtrl, _programCtrl, _specCtrl, _yearCtrl, _internNumCtrl, _startCtrl, _endCtrl, _bioCtrl, _techSkillsCtrl, _softSkillsCtrl, _linkedinCtrl, _githubCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -138,9 +87,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     final result = await ApiService.getConfig(type: 'department');
     if (!mounted) return;
 
-    final depts = (result['items'] as List? ?? [])
-        .map((e) => e['name'] as String)
-        .toList();
+    final depts = (result['items'] as List? ?? []).map((e) => e['name'] as String).toList();
 
     if (_selectedDept != null && !depts.contains(_selectedDept!)) {
       depts.add(_selectedDept!);
@@ -196,9 +143,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       if (mounted) {
         setState(() {
           _saving = false;
-          _errorMsg = res['error'] ??
-              res['details'] ??
-              'Save failed. Please try again.';
+          _errorMsg = res['error'] ?? res['details'] ?? 'Save failed. Please try again.';
           _successMsg = null;
         });
       }
@@ -225,290 +170,10 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       ),
     );
     if (picked != null) {
-      ctrl.text =
-          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      ctrl.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
       setState(() {});
     }
   }
-
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87)),
-      );
-
-  Widget _field({
-    required TextEditingController ctrl,
-    required String hint,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-    Widget? suffix,
-  }) =>
-      TextFormField(
-        controller: ctrl,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        style: const TextStyle(color: Colors.black, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-          suffixIcon: suffix,
-          filled: true,
-          fillColor: const Color(0xFFF3F4F6),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-                color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
-          ),
-        ),
-      );
-
-  Widget _dropdown({
-    required String? value,
-    required String hint,
-    required List<String> items,
-    required void Function(String?) onChanged,
-  }) =>
-      DropdownButtonFormField<String>(
-        initialValue: value,
-        style: const TextStyle(color: Colors.black, fontSize: 14),
-        dropdownColor: Colors.white,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: const Color(0xFFF3F4F6),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-                color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
-          ),
-        ),
-        hint: Text(hint,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-        icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
-        items: items
-            .map((s) => DropdownMenuItem(
-                  value: s,
-                  child: Text(s,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.black, fontSize: 13)),
-                ))
-            .toList(),
-        onChanged: items.isEmpty ? null : onChanged,
-      );
-
-  Widget _sectionTitle(String title, String sub) => Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black)),
-          const SizedBox(height: 4),
-          Text(sub,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-        ]),
-      );
-
-  Widget _buildAcademicTab() => SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Form(
-          key: _academicKey,
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle('Academic Information',
-                    'Your school, program, department, and internship details'),
-                Row(children: [
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        _label('Department'),
-                        _dropdown(
-                          value: _selectedDept,
-                          hint: _departments.isEmpty
-                              ? 'No departments yet'
-                              : 'Select Department',
-                          items: _departments,
-                          onChanged: (v) => setState(() {
-                            _selectedDept = v;
-                          }),
-                        ),
-                      ])),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _label('Position'),
-                        IgnorePointer(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _defaultPosition,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.grey.shade100,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                    color: Colors.grey.shade300),
-                              ),
-                            ),
-                            icon: Icon(Icons.keyboard_arrow_down,
-                                color: Colors.grey.shade300),
-                            items: [
-                              DropdownMenuItem(
-                                value: _defaultPosition,
-                                child: Text(_defaultPosition,
-                                    style: const TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 13)),
-                              ),
-                            ],
-                            onChanged: null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 16),
-                _label('School / University'),
-                _field(
-                    ctrl: _schoolCtrl,
-                    hint: 'e.g. University of Santo Tomas'),
-                const SizedBox(height: 16),
-                _label('Program / Course'),
-                _field(
-                    ctrl: _programCtrl, hint: 'e.g. BS Computer Science'),
-                const SizedBox(height: 16),
-                Row(children: [
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        _label('Specialization'),
-                        _field(
-                            ctrl: _specCtrl,
-                            hint: 'e.g. Web Development'),
-                      ])),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        _label('Year Level'),
-                        _field(ctrl: _yearCtrl, hint: 'e.g. 4th Year'),
-                      ])),
-                ]),
-                const SizedBox(height: 16),
-                _label('Intern Number'),
-                _field(ctrl: _internNumCtrl, hint: 'e.g. 12'),
-                const SizedBox(height: 16),
-                Row(children: [
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        _label('Internship Start'),
-                        _field(
-                          ctrl: _startCtrl,
-                          hint: 'YYYY-MM-DD',
-                          suffix: IconButton(
-                            icon: Icon(Icons.calendar_today,
-                                size: 18, color: Colors.grey.shade600),
-                            onPressed: () => _pickDate(_startCtrl),
-                          ),
-                        ),
-                      ])),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        _label('Internship End'),
-                        _field(
-                          ctrl: _endCtrl,
-                          hint: 'YYYY-MM-DD',
-                          suffix: IconButton(
-                            icon: Icon(Icons.calendar_today,
-                                size: 18, color: Colors.grey.shade600),
-                            onPressed: () => _pickDate(_endCtrl),
-                          ),
-                        ),
-                      ])),
-                ]),
-              ]),
-        ),
-      );
-
-  Widget _buildSkillsTab() => SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Form(
-          key: _skillsKey,
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle('Skills & Profile',
-                    'Bio, technical and soft skills, and social links'),
-                _label('Bio'),
-                _field(
-                    ctrl: _bioCtrl,
-                    hint: 'A short description about yourself…',
-                    maxLines: 4),
-                const SizedBox(height: 16),
-                _label('Technical Skills'),
-                _field(
-                    ctrl: _techSkillsCtrl,
-                    hint: 'Flutter, Dart, Python, SQL  (comma-separated)',
-                    maxLines: 2),
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, left: 2),
-                  child: Text('Separate each skill with a comma',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade600)),
-                ),
-                const SizedBox(height: 16),
-                _label('Soft Skills'),
-                _field(
-                    ctrl: _softSkillsCtrl,
-                    hint:
-                        'Teamwork, Leadership, Communication  (comma-separated)',
-                    maxLines: 2),
-                const SizedBox(height: 16),
-                _label('LinkedIn URL'),
-                _field(
-                    ctrl: _linkedinCtrl,
-                    hint: 'https://linkedin.com/in/yourname',
-                    keyboardType: TextInputType.url),
-                const SizedBox(height: 16),
-                _label('GitHub URL'),
-                _field(
-                    ctrl: _githubCtrl,
-                    hint: 'https://github.com/yourname',
-                    keyboardType: TextInputType.url),
-              ]),
-        ),
-      );
 
   @override
   Widget build(BuildContext context) {
@@ -516,7 +181,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       resizeToAvoidBottomInset: false,
       body: Row(
         children: [
-          // ── Sidebar ──────────────────────────────────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -524,43 +188,33 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
             child: _sidebarVisible
                 ? UserSidebar(
                     currentRoute: '/edit-profile',
-                    onClose: () =>
-                        setState(() => _sidebarVisible = false),
+                    onClose: () => setState(() => _sidebarVisible = false),
                   )
                 : null,
           ),
-
-          // ── Main content ─────────────────────────────────────────
           Expanded(
             child: Stack(
               children: [
-                // Background
                 Positioned.fill(
                   child: Image.asset(
                     'assets/images/space_background.png',
                     fit: BoxFit.cover,
                   ),
                 ),
-
                 Positioned.fill(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── Top bar ───────────────────────────────────
                       SizedBox(
                         height: 72,
                         child: Stack(
                           alignment: Alignment.centerLeft,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 100, right: 100, top: 28),
+                              padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
                               child: Text(
                                 'Edit Profile',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displaySmall
-                                    ?.copyWith(
+                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
                                       fontSize: 28,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -574,22 +228,16 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                 top: 28,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color:
-                                        Colors.white.withOpacity(0.05),
-                                    borderRadius:
-                                        BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: Colors.white
-                                            .withOpacity(0.15)),
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
-                                    onPressed: () => setState(
-                                        () => _sidebarVisible = true),
-                                    icon: const HamburgerIcon(),
+                                    onPressed: () => setState(() => _sidebarVisible = true),
+                                    icon: const EditProfileHamburgerIcon(),
                                     tooltip: 'Open Sidebar',
-                                    splashColor:
-                                        Colors.white.withOpacity(0.1),
+                                    splashColor: Colors.white.withOpacity(0.1),
                                     highlightColor: Colors.transparent,
                                   ),
                                 ),
@@ -598,12 +246,9 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                         ),
                       ),
                       const SizedBox(height: 15),
-
-                      // ── Main container ────────────────────────────
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(
-                              left: 100, right: 100, bottom: 28),
+                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.95),
@@ -612,111 +257,101 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(24),
                               child: _initialLoading
-                                  ? const Center(
-                                      child: CircularProgressIndicator(
-                                          color: kCrimsonDeep))
+                                  ? const Center(child: CircularProgressIndicator(color: kCrimsonDeep))
                                   : Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
                                       children: [
                                         if (_successMsg != null)
-                                          _banner(_successMsg!,
-                                              success: true),
+                                          EditProfileStatusBanner(
+                                            msg: _successMsg!,
+                                            success: true,
+                                            onClose: () => setState(() => _successMsg = null),
+                                          ),
                                         if (_errorMsg != null)
-                                          _banner(_errorMsg!,
-                                              success: false),
-                                        // ── Tabs ──────────────────
+                                          EditProfileStatusBanner(
+                                            msg: _errorMsg!,
+                                            success: false,
+                                            onClose: () => setState(() => _errorMsg = null),
+                                          ),
                                         Container(
                                           decoration: BoxDecoration(
-                                            border: Border(
-                                              bottom: BorderSide(
-                                                  color: Colors
-                                                      .grey.shade200),
-                                            ),
+                                            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
                                           ),
                                           child: TabBar(
                                             controller: _tabs,
                                             labelColor: Colors.black,
-                                            unselectedLabelColor:
-                                                Colors.grey.shade500,
+                                            unselectedLabelColor: Colors.grey.shade500,
                                             indicatorColor: kCrimsonDeep,
                                             indicatorWeight: 3,
-                                            dividerColor:
-                                                Colors.transparent,
+                                            dividerColor: Colors.transparent,
                                             tabs: const [
                                               Tab(
-                                                  iconMargin:
-                                                      EdgeInsets.only(
-                                                          bottom: 4),
-                                                  icon: Icon(
-                                                      Icons.school_outlined,
-                                                      size: 18),
-                                                  text: 'Academic Info'),
+                                                iconMargin: EdgeInsets.only(bottom: 4),
+                                                icon: Icon(Icons.school_outlined, size: 18),
+                                                text: 'Academic Info',
+                                              ),
                                               Tab(
-                                                  iconMargin:
-                                                      EdgeInsets.only(
-                                                          bottom: 4),
-                                                  icon: Icon(
-                                                      Icons.stars_outlined,
-                                                      size: 18),
-                                                  text: 'Skills'),
+                                                iconMargin: EdgeInsets.only(bottom: 4),
+                                                icon: Icon(Icons.stars_outlined, size: 18),
+                                                text: 'Skills',
+                                              ),
                                             ],
                                           ),
                                         ),
-                                        // ── Tab content ───────────
                                         Expanded(
                                           child: TabBarView(
                                             controller: _tabs,
                                             children: [
-                                              _buildAcademicTab(),
-                                              _buildSkillsTab(),
+                                              AcademicInfoTab(
+                                                formKey: _academicKey,
+                                                departments: _departments,
+                                                selectedDept: _selectedDept,
+                                                defaultPosition: _defaultPosition,
+                                                schoolCtrl: _schoolCtrl,
+                                                programCtrl: _programCtrl,
+                                                specCtrl: _specCtrl,
+                                                yearCtrl: _yearCtrl,
+                                                internNumCtrl: _internNumCtrl,
+                                                startCtrl: _startCtrl,
+                                                endCtrl: _endCtrl,
+                                                onDeptChanged: (v) => setState(() => _selectedDept = v),
+                                                onPickStart: () => _pickDate(_startCtrl),
+                                                onPickEnd: () => _pickDate(_endCtrl),
+                                              ),
+                                              SkillsProfileTab(
+                                                formKey: _skillsKey,
+                                                bioCtrl: _bioCtrl,
+                                                techSkillsCtrl: _techSkillsCtrl,
+                                                softSkillsCtrl: _softSkillsCtrl,
+                                                linkedinCtrl: _linkedinCtrl,
+                                                githubCtrl: _githubCtrl,
+                                              ),
                                             ],
                                           ),
                                         ),
-                                        // ── Save button ───────────
                                         Padding(
-                                          padding:
-                                              const EdgeInsets.fromLTRB(
-                                                  40, 0, 40, 28),
+                                          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
                                           child: SizedBox(
                                             height: 48,
                                             width: double.infinity,
                                             child: ElevatedButton(
-                                              onPressed:
-                                                  _saving ? null : _save,
-                                              style:
-                                                  ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    kCrimsonDeep,
-                                                foregroundColor:
-                                                    Colors.white,
-                                                shape:
-                                                    RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(
-                                                                    12)),
+                                              onPressed: _saving ? null : _save,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: kCrimsonDeep,
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                                 elevation: 0,
                                               ),
                                               child: _saving
                                                   ? const SizedBox(
                                                       height: 20,
                                                       width: 20,
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                              color: Colors
-                                                                  .white,
-                                                              strokeWidth:
-                                                                  2))
+                                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                                    )
                                                   : const Text(
                                                       'SAVE CHANGES',
-                                                      style: TextStyle(
-                                                          fontWeight:
-                                                              FontWeight
-                                                                  .w800,
-                                                          fontSize: 15,
-                                                          letterSpacing:
-                                                              0.8)),
+                                                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.8),
+                                                    ),
                                             ),
                                           ),
                                         ),
@@ -736,43 +371,4 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       ),
     );
   }
-
-  Widget _banner(String msg, {required bool success}) => Container(
-        margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: success
-              ? Colors.green.withValues(alpha: 0.15)
-              : Colors.red.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: success
-                  ? Colors.green.withValues(alpha: 0.4)
-                  : Colors.red.withValues(alpha: 0.4)),
-        ),
-        child: Row(children: [
-          Icon(
-              success
-                  ? Icons.check_circle_outline
-                  : Icons.error_outline,
-              color: success
-                  ? Colors.green.shade600
-                  : Colors.red.shade600,
-              size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-              child: Text(msg,
-                  style: TextStyle(
-                      color: success
-                          ? Colors.green.shade800
-                          : Colors.red.shade800,
-                      fontSize: 13))),
-          GestureDetector(
-            onTap: () => setState(
-                () => success ? _successMsg = null : _errorMsg = null),
-            child:
-                const Icon(Icons.close, size: 16, color: Colors.black54),
-          ),
-        ]),
-      );
 }
