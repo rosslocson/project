@@ -216,8 +216,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                     color: Colors.white.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                        color:
-                                            Colors.white.withOpacity(0.15)),
+                                        color: Colors.white.withOpacity(0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
@@ -225,8 +224,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                         setState(() => _isSidebarOpen = true),
                                     icon: const HamburgerIcon(),
                                     tooltip: 'Open Sidebar',
-                                    splashColor:
-                                        Colors.white.withOpacity(0.1),
+                                    splashColor: Colors.white.withOpacity(0.1),
                                     highlightColor: Colors.transparent,
                                   ),
                                 ),
@@ -234,6 +232,8 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                           ],
                         ),
                       ),
+
+                      const SizedBox(height: 15),
 
                       // ── Main container ────────────────────────────
                       Expanded(
@@ -290,8 +290,8 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                                             .grey.shade200),
                                                   ),
                                                 ),
-                                                padding: const EdgeInsets
-                                                    .only(top: 8),
+                                                padding: const EdgeInsets.only(
+                                                    top: 8),
                                                 child: TabBar(
                                                   controller: _tabs,
                                                   labelColor: Colors.black,
@@ -303,16 +303,18 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                                       Colors.transparent,
                                                   tabs: const [
                                                     Tab(
-                                                      iconMargin: EdgeInsets
-                                                          .only(bottom: 4),
+                                                      iconMargin:
+                                                          EdgeInsets.only(
+                                                              bottom: 4),
                                                       icon: Icon(
                                                           Icons.school_outlined,
                                                           size: 18),
                                                       text: 'Academic Info',
                                                     ),
                                                     Tab(
-                                                      iconMargin: EdgeInsets
-                                                          .only(bottom: 4),
+                                                      iconMargin:
+                                                          EdgeInsets.only(
+                                                              bottom: 4),
                                                       icon: Icon(
                                                           Icons.stars_outlined,
                                                           size: 18),
@@ -363,13 +365,13 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   ) {
     return Container(
       width: 260,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
             kCrimsonDeep,
-            Color(0xFF00022E),
+            const Color(0xFF00022E),
           ],
         ),
       ),
@@ -433,7 +435,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.edit_rounded,
                     color: kCrimsonDeep,
                     size: 16,
@@ -484,8 +486,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
 
           // ── Badge ─────────────────────────────────────────────────
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
@@ -682,8 +683,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
           _SkillChips(raw: techSkills, color: kCrimsonDeep),
           const SizedBox(height: 16),
           _label('Soft Skills'),
-          _SkillChips(
-              raw: softSkills, color: const Color(0xFF00022E)),
+          _SkillChips(raw: softSkills, color: const Color(0xFF00022E)),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -713,19 +713,16 @@ class _MyProfileScreenState extends State<MyProfileScreen>
 
   Widget _sectionTitle(String title, String sub) => Padding(
         padding: const EdgeInsets.only(bottom: 20),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black)),
-              const SizedBox(height: 4),
-              Text(sub,
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.grey.shade600)),
-            ]),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black)),
+          const SizedBox(height: 4),
+          Text(sub,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        ]),
       );
 
   Widget _label(String text) => Padding(
@@ -746,13 +743,12 @@ class _MyProfileScreenState extends State<MyProfileScreen>
           border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
         ),
         child: Row(children: [
-          Icon(Icons.wifi_off_rounded,
-              color: Colors.orange.shade700, size: 18),
+          Icon(Icons.wifi_off_rounded, color: Colors.orange.shade700, size: 18),
           const SizedBox(width: 10),
           Expanded(
               child: Text(msg,
-                  style: TextStyle(
-                      color: Colors.orange.shade900, fontSize: 12))),
+                  style:
+                      TextStyle(color: Colors.orange.shade900, fontSize: 12))),
           TextButton(
             onPressed: _fetchProfile,
             style: TextButton.styleFrom(
@@ -762,8 +758,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: const Text('Retry',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 12)),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ]),
       );
@@ -884,8 +879,7 @@ class _ReadonlyField extends StatelessWidget {
                   style: TextStyle(
                     color: isEmpty ? Colors.grey.shade400 : Colors.black,
                     fontSize: 14,
-                    fontWeight:
-                        isEmpty ? FontWeight.w400 : FontWeight.w500,
+                    fontWeight: isEmpty ? FontWeight.w400 : FontWeight.w500,
                   ),
                 ),
               ),
@@ -914,8 +908,7 @@ class _SkillChips extends StatelessWidget {
     if (raw == '—' || raw.trim().isEmpty) {
       return Container(
         width: double.infinity,
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(12),
@@ -929,11 +922,8 @@ class _SkillChips extends StatelessWidget {
       );
     }
 
-    final skills = raw
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
+    final skills =
+        raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
     return Container(
       width: double.infinity,
@@ -948,13 +938,12 @@ class _SkillChips extends StatelessWidget {
         runSpacing: 8,
         children: skills
             .map((s) => Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: color.withValues(alpha: 0.25)),
+                    border: Border.all(color: color.withValues(alpha: 0.25)),
                   ),
                   child: Text(
                     s,
