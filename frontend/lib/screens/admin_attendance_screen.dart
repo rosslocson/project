@@ -1,5 +1,6 @@
 // lib/screens/admin_attendance_screen.dart
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -35,6 +36,44 @@ String _toDisplayDate(DateTime dt) {
   ];
   return '${months[dt.month - 1]} ${_pad(dt.day)}, ${dt.year}';
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Period enum
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum AttendancePeriod { custom, today, week, month, year, allDates }
+
+extension AttendancePeriodExt on AttendancePeriod {
+  String get label => switch (this) {
+        AttendancePeriod.custom   => 'Custom',
+        AttendancePeriod.today    => 'Today',
+        AttendancePeriod.week     => 'This Week',
+        AttendancePeriod.month    => 'This Month',
+        AttendancePeriod.year     => 'This Year',
+        AttendancePeriod.allDates => 'All Dates',
+      };
+
+  String? get apiPeriod => switch (this) {
+        AttendancePeriod.today    => 'today',
+        AttendancePeriod.week     => 'week',
+        AttendancePeriod.month    => 'month',
+        AttendancePeriod.year     => 'year',
+        _                         => null,
+      };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status options
+// ─────────────────────────────────────────────────────────────────────────────
+
+const _kStatuses = [
+  'All',
+  'Present',
+  'Late',
+  'In Progress',
+  'Missed Clock Out',
+  'Absent',
+];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Model
@@ -94,7 +133,10 @@ class AdminAttendanceRecord {
 class AdminAttendanceService {
   static Future<Map<String, dynamic>> fetchAttendance({
     String? date,
+    String? period,
     bool    allDates = false,
+    String? search,
+    String? status,
     int     page     = 1,
     int     limit    = 20,
     int?    userId,
@@ -103,9 +145,15 @@ class AdminAttendanceService {
       final params = <String, String>{
         'page':  '$page',
         'limit': '$limit',
-        if (allDates) 'all_dates': 'true'
-        else if (date != null) 'date': date,
-        if (userId != null) 'user_id': '$userId',
+        if (allDates)
+          'all_dates': 'true'
+        else if (period != null)
+          'period': period
+        else if (date != null)
+          'date': date,
+        if (search != null && search.isNotEmpty) 'search': search,
+        if (status != null && status != 'All')   'status': status,
+        if (userId != null)                       'user_id': '$userId',
       };
       final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance')
           .replace(queryParameters: params);
@@ -123,10 +171,22 @@ class AdminAttendanceService {
     }
   }
 
-  static String exportUrl({String? date, bool allDates = false}) {
+  static String exportUrl({
+    String? date,
+    String? period,
+    bool    allDates = false,
+    String? search,
+    String? status,
+  }) {
     final params = <String, String>{
-      if (allDates) 'all_dates': 'true'
-      else if (date != null) 'date': date,
+      if (allDates)
+        'all_dates': 'true'
+      else if (period != null)
+        'period': period
+      else if (date != null)
+        'date': date,
+      if (search != null && search.isNotEmpty) 'search': search,
+      if (status != null && status != 'All')   'status': status,
     };
     return Uri.parse('${ApiService.baseUrl}/admin/attendance/export')
         .replace(queryParameters: params)
@@ -148,9 +208,16 @@ class AdminAttendanceScreen extends StatefulWidget {
 class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   bool _isSidebarOpen = true;
 
-  DateTime _selectedDate = DateTime.now();
-  bool     _allDates     = false;
+  // ── filter state ────────────────────────────────────────────────────────────
+  AttendancePeriod _period       = AttendancePeriod.today;
+  DateTime         _customDate   = DateTime.now();
+  String           _selectedStatus = 'All';
 
+  // Search
+  final TextEditingController _searchCtrl = TextEditingController();
+  Timer? _debounce;
+
+  // ── pagination ───────────────────────────────────────────────────────────────
   int       _page  = 1;
   final int _limit = 20;
   int       _total = 0;
@@ -163,13 +230,34 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   void initState() {
     super.initState();
     _load();
+    _searchCtrl.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.removeListener(_onSearchChanged);
+    _searchCtrl.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () => _load());
   }
 
   Future<void> _load({int page = 1}) async {
     setState(() { _loading = true; _error = null; _page = page; });
+
+    final isAllDates = _period == AttendancePeriod.allDates;
+    final isCustom   = _period == AttendancePeriod.custom;
+
     final result = await AdminAttendanceService.fetchAttendance(
-      date:     _allDates ? null : _toApiDate(_selectedDate),
-      allDates: _allDates,
+      allDates: isAllDates,
+      period:   (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+      date:     isCustom ? _toApiDate(_customDate) : null,
+      search:   _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+      status:   _selectedStatus == 'All' ? null : _selectedStatus,
       page:     page,
       limit:    _limit,
     );
@@ -185,10 +273,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     }
   }
 
-  Future<void> _pickDate() async {
+  Future<void> _pickCustomDate() async {
     final picked = await showDatePicker(
       context:     context,
-      initialDate: _selectedDate,
+      initialDate: _customDate,
       firstDate:   DateTime(2024),
       lastDate:    DateTime.now(),
       builder: (ctx, child) => Theme(
@@ -203,7 +291,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       ),
     );
     if (picked != null) {
-      setState(() { _selectedDate = picked; _allDates = false; });
+      setState(() { _customDate = picked; _period = AttendancePeriod.custom; });
       _load();
     }
   }
@@ -217,6 +305,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
   }
+
+  // ── build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -267,6 +357,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                               child: Column(
                                 children: [
                                   _buildToolbar(),
+                                  _buildFilterRow(),
                                   const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
                                   Expanded(child: _buildBody()),
                                   if (_total > _limit) _buildPagination(),
@@ -330,57 +421,144 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
+  // ── toolbar: search + export + refresh ────────────────────────────────────
+
   Widget _buildToolbar() {
-    final dateLabel = _allDates ? 'All Dates' : _toDisplayDate(_selectedDate);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
       child: Row(
         children: [
-          _ToolbarButton(
-            icon:   Icons.calendar_today_rounded,
-            label:  dateLabel,
-            accent: const Color(0xFF6C63FF),
-            onTap:  _pickDate,
-          ),
-          const SizedBox(width: 10),
-          FilterChip(
-            label:          const Text('All Dates'),
-            selected:       _allDates,
-            onSelected:     (v) { setState(() => _allDates = v); _load(); },
-            selectedColor:  const Color(0xFF6C63FF).withValues(alpha: 0.15),
-            checkmarkColor: const Color(0xFF6C63FF),
-            labelStyle: TextStyle(
-              color:      _allDates ? const Color(0xFF6C63FF) : Colors.black54,
-              fontWeight: FontWeight.w600,
-              fontSize:   13,
+          // ── Search field ──────────────────────────────────────────────────
+          Expanded(
+            child: SizedBox(
+              height: 40,
+              child: TextField(
+                controller:  _searchCtrl,
+                decoration: InputDecoration(
+                  hintText:    'Search intern by name…',
+                  hintStyle:   const TextStyle(fontSize: 13, color: Colors.black38),
+                  prefixIcon:  const Icon(Icons.search_rounded, size: 18, color: Colors.black38),
+                  suffixIcon: _searchCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon:    const Icon(Icons.close_rounded, size: 16, color: Colors.black38),
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            _load();
+                          },
+                        )
+                      : null,
+                  filled:      true,
+                  fillColor:   const Color(0xFFF4F4F8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide:   BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
             ),
-            side: BorderSide(
-              color: _allDates ? const Color(0xFF6C63FF) : Colors.grey.shade300,
-            ),
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           ),
-          const Spacer(),
+          const SizedBox(width: 12),
+
+          // ── Status filter dropdown ────────────────────────────────────────
+          _StatusDropdown(
+            value:    _selectedStatus,
+            onChanged: (v) {
+              setState(() => _selectedStatus = v ?? 'All');
+              _load();
+            },
+          ),
+          const SizedBox(width: 12),
+
+          // ── Refresh ───────────────────────────────────────────────────────
           IconButton(
             onPressed: () => _load(page: _page),
             icon:      const Icon(Icons.refresh_rounded, color: Colors.black54),
             tooltip:   'Refresh',
           ),
           const SizedBox(width: 8),
+
+          // ── Export CSV ────────────────────────────────────────────────────
           _ToolbarButton(
             icon:   Icons.download_rounded,
             label:  'Export CSV',
             accent: const Color(0xFF22C55E),
             onTap: () {
+              final isAllDates = _period == AttendancePeriod.allDates;
+              final isCustom   = _period == AttendancePeriod.custom;
               final url = AdminAttendanceService.exportUrl(
-                date:     _allDates ? null : _toApiDate(_selectedDate),
-                allDates: _allDates,
+                allDates: isAllDates,
+                period:   (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+                date:     isCustom ? _toApiDate(_customDate) : null,
+                search:   _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+                status:   _selectedStatus == 'All' ? null : _selectedStatus,
               );
-              // Replace _snack with launchUrl(Uri.parse(url)) once
+              // TODO: Replace _snack with launchUrl(Uri.parse(url)) once
               // url_launcher is added to pubspec.yaml
               _snack(url);
             },
           ),
+        ],
+      ),
+    );
+  }
+
+  // ── period filter chips row ───────────────────────────────────────────────
+
+  Widget _buildFilterRow() {
+    const periods = [
+      AttendancePeriod.today,
+      AttendancePeriod.week,
+      AttendancePeriod.month,
+      AttendancePeriod.year,
+      AttendancePeriod.allDates,
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+      child: Row(
+        children: [
+          // Period chips
+          ...periods.map((p) {
+            final selected = _period == p;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _PeriodChip(
+                label:    p.label,
+                selected: selected,
+                onTap: () {
+                  setState(() => _period = p);
+                  _load();
+                },
+              ),
+            );
+          }),
+
+          // Custom date picker chip
+          _PeriodChip(
+            label: _period == AttendancePeriod.custom
+                ? _toDisplayDate(_customDate)
+                : 'Custom Date',
+            selected: _period == AttendancePeriod.custom,
+            icon: Icons.calendar_today_rounded,
+            onTap: _pickCustomDate,
+          ),
+
+          const Spacer(),
+
+          // Active-filter summary badge
+          if (_searchCtrl.text.isNotEmpty || _selectedStatus != 'All')
+            _ActiveFiltersBadge(
+              count: (_searchCtrl.text.isNotEmpty ? 1 : 0) +
+                     (_selectedStatus != 'All'    ? 1 : 0),
+              onClear: () {
+                _searchCtrl.clear();
+                setState(() => _selectedStatus = 'All');
+                _load();
+              },
+            ),
         ],
       ),
     );
@@ -471,14 +649,6 @@ class _AttendanceTable extends StatelessWidget {
   final List<AdminAttendanceRecord> records;
   const _AttendanceTable({required this.records});
 
-  // Column indices
-  // 0  Intern name + avatar
-  // 1  Date
-  // 2  Time In
-  // 3  Time Out
-  // 4  Hours Worked
-  // 5  Status
-
   static const _headers = [
     'Intern',
     'Date',
@@ -489,12 +659,12 @@ class _AttendanceTable extends StatelessWidget {
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(200), // Intern
-    1: FixedColumnWidth(130), // Date
-    2: FixedColumnWidth(110), // Time In
-    3: FixedColumnWidth(110), // Time Out
-    4: FixedColumnWidth(120), // Hours Worked
-    5: FixedColumnWidth(160), // Status
+    0: FixedColumnWidth(200),
+    1: FixedColumnWidth(130),
+    2: FixedColumnWidth(110),
+    3: FixedColumnWidth(110),
+    4: FixedColumnWidth(120),
+    5: FixedColumnWidth(160),
   };
 
   @override
@@ -536,7 +706,6 @@ class _AttendanceTable extends StatelessWidget {
   TableRow _buildRow(AdminAttendanceRecord r) {
     return TableRow(
       children: [
-        // 0 — Intern
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           child: Row(
@@ -557,15 +726,10 @@ class _AttendanceTable extends StatelessWidget {
             ],
           ),
         ),
-        // 1 — Date
         _cell(r.formattedDate),
-        // 2 — Time In
         _cell(r.timeIn  ?? '--'),
-        // 3 — Time Out
         _cell(r.timeOut ?? '--'),
-        // 4 — Hours Worked
         _cell(r.formattedHours),
-        // 5 — Status
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           child: _StatusBadge(status: r.status),
@@ -584,7 +748,136 @@ class _AttendanceTable extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Sub-widgets
+// New sub-widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Segmented period chip (Today / This Week / etc.)
+class _PeriodChip extends StatelessWidget {
+  final String     label;
+  final bool       selected;
+  final IconData?  icon;
+  final VoidCallback onTap;
+
+  const _PeriodChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF6C63FF);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color:        selected ? accent : const Color(0xFFF4F4F8),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? accent : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 13, color: selected ? Colors.white : Colors.black54),
+              const SizedBox(width: 5),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize:   12,
+                fontWeight: FontWeight.w600,
+                color:      selected ? Colors.white : Colors.black54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Status filter dropdown
+class _StatusDropdown extends StatelessWidget {
+  final String  value;
+  final ValueChanged<String?> onChanged;
+
+  const _StatusDropdown({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color:        const Color(0xFFF4F4F8),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value:        value,
+          onChanged:    onChanged,
+          isDense:      true,
+          style: const TextStyle(fontSize: 13, color: Color(0xFF1A1F3A)),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Colors.black45),
+          items: _kStatuses.map((s) {
+            return DropdownMenuItem<String>(
+              value: s,
+              child: Text(s, style: const TextStyle(fontSize: 13)),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Small badge showing how many extra filters are active, with a clear button
+class _ActiveFiltersBadge extends StatelessWidget {
+  final int          count;
+  final VoidCallback onClear;
+
+  const _ActiveFiltersBadge({required this.count, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color:        const Color(0xFFEEF2FF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF6C63FF), width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$count filter${count > 1 ? 's' : ''} active',
+            style: const TextStyle(
+              fontSize:   11,
+              fontWeight: FontWeight.w600,
+              color:      Color(0xFF4F46E5),
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onClear,
+            child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF4F46E5)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Existing sub-widgets (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _InternAvatar extends StatelessWidget {
