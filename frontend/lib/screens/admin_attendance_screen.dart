@@ -767,7 +767,7 @@ class _PeriodChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF6C63FF);
+    const accent = Color(0xFF0A0A14);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
