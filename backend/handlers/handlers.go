@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"project/backend/email"
 	"project/backend/models"
 )
 
@@ -39,22 +37,6 @@ func NewHandler(db *gorm.DB) *Handler {
 }
 
 // ── Request/Response types ───────────────────────────────────────────────────
-
-type RegisterRequest struct {
-	FirstName       string `json:"first_name" binding:"required,min=2"`
-	LastName        string `json:"last_name" binding:"required,min=2"`
-	Email           string `json:"email" binding:"required,email"`
-	Password        string `json:"password" binding:"required,min=8"`
-	ConfirmPassword string `json:"confirm_password" binding:"required"`
-	Phone           string `json:"phone"`
-	Department      string `json:"department"`
-	Position        string `json:"position"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
 
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password" binding:"required"`
@@ -159,98 +141,7 @@ func generateToken(userID uint, role models.Role) (string, error) {
 
 // Login moved to auth_handlers.go with service layer (simplified lockout)
 
-// ── Password Reset ───────────────────────────────────────────────────────────
-
-func (h *Handler) ForgotPassword(c *gin.Context) {
-	var body struct {
-		Email string `json:"email" binding:"required,email"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Valid email required"})
-		return
-	}
-
-	cleanEmail := strings.ToLower(strings.TrimSpace(body.Email))
-	var user models.User
-	if h.DB.Where("email = ?", cleanEmail).First(&user).Error != nil {
-		log.Printf("Debug: Email not found in DB: '%s'", cleanEmail)
-		// Always return success to avoid email enumeration
-		c.JSON(http.StatusOK, gin.H{"message": "If that email exists, a reset token has been sent."})
-		return
-	}
-
-	otp, err := email.GenerateSecureOTP()
-	if err != nil {
-		log.Printf("OTP generation failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate OTP"})
-		return
-	}
-
-	expiry := time.Now().Add(otpExpiry)
-	if err := h.DB.Model(&user).Updates(map[string]interface{}{
-		"reset_token":        otp,
-		"reset_token_expiry": expiry,
-	}).Error; err != nil {
-		log.Printf("DB update failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store OTP"})
-		return
-	}
-
-	if err := email.SendPasswordResetEmail(cleanEmail, otp); err != nil {
-		log.Printf("Email send failed for %s: %v", cleanEmail, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to send OTP email right now. Please try again later."})
-		return
-	}
-
-	h.logActivity(user.ID, "PASSWORD_RESET_OTP_SENT", "OTP sent to "+cleanEmail, c.ClientIP())
-
-	c.JSON(http.StatusOK, gin.H{"message": "If that email is registered, check your inbox for the 6-digit OTP (expires in 5 minutes)."})
-}
-
-func (h *Handler) ResetPassword(c *gin.Context) {
-	var body struct {
-		Token           string `json:"token" binding:"required"`
-		NewPassword     string `json:"new_password" binding:"required,min=8"`
-		ConfirmPassword string `json:"confirm_password" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if body.NewPassword != body.ConfirmPassword {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
-		return
-	}
-	if errs := validatePassword(body.NewPassword); len(errs) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Password too weak",
-			"details": strings.Join(errs, ", "),
-		})
-		return
-	}
-
-	var user models.User
-	if h.DB.Where("reset_token = ?", body.Token).First(&user).Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
-		return
-	}
-	if user.ResetTokenExpiry == nil || time.Now().After(*user.ResetTokenExpiry) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Reset token has expired. Please request a new one."})
-		return
-	}
-
-	hashed, _ := bcrypt.GenerateFromPassword([]byte(body.NewPassword), bcrypt.DefaultCost)
-	h.DB.Model(&user).Updates(map[string]interface{}{
-		"password":           string(hashed),
-		"reset_token":        "",
-		"reset_token_expiry": nil,
-		"failed_login_count": 0,
-		"locked_until":       nil,
-	})
-	h.logActivity(user.ID, "PASSWORD_RESET", "Password reset successfully", c.ClientIP())
-	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully. You can now log in."})
-}
+// Password reset moved to auth_handlers.go
 
 // ── Profile Handlers ─────────────────────────────────────────────────────────
 

@@ -1,9 +1,13 @@
 package services
 
 import (
+	"crypto/rand"
 	"errors"
+	"fmt"
 	"log"
+	"math/big"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -88,7 +92,7 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 	}
 
 	log.Printf("🔍 Login: User found - Email: %s, Role: %s, Active: %v", user.Email, user.Role, user.IsActive)
-	log.Printf("🔍 Failed login count: %d", user.FailedLoginCount)
+	log.Printf("🔍 Failed login count: %d", user.FailedAttempts)
 
 	if !user.IsActive {
 		log.Printf("⚠️ Login failed: Account is deactivated for %s", email)
@@ -115,7 +119,7 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 	// Clear lock if expired
 	if user.LockedUntil != nil && time.Now().After(*user.LockedUntil) {
 		log.Printf("🔓 Lock expired for %s, resetting counters", email)
-		user.FailedLoginCount = 0
+		user.FailedAttempts = 0
 		user.LockedUntil = nil
 		s.userRepo.Update(user)
 	}
@@ -138,12 +142,12 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 		log.Printf("❌ Password mismatch for %s", user.Email)
 
 		// Increment failed login count
-		user.FailedLoginCount++
-		result.AttemptsLeft = maxLoginAttempts - user.FailedLoginCount
-		log.Printf("⚠️ Failed login attempt %d/%d for %s", user.FailedLoginCount, maxLoginAttempts, user.Email)
+		user.FailedAttempts++
+		result.AttemptsLeft = maxLoginAttempts - user.FailedAttempts
+		log.Printf("⚠️ Failed login attempt %d/%d for %s", user.FailedAttempts, maxLoginAttempts, user.Email)
 
 		// Lock account if max attempts reached
-		if user.FailedLoginCount >= maxLoginAttempts {
+		if user.FailedAttempts >= maxLoginAttempts {
 			lockUntil := time.Now().Add(lockDuration)
 			user.LockedUntil = &lockUntil
 			log.Printf("🔒 Account locked for %s until %v (max attempts reached)", email, lockUntil)
@@ -161,7 +165,7 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 	log.Printf("✅ Password verified successfully for %s", user.Email)
 
 	// Reset counters on successful login
-	user.FailedLoginCount = 0
+	user.FailedAttempts = 0
 	user.LockedUntil = nil
 	now := time.Now()
 	user.LastLoginAt = &now
@@ -191,4 +195,44 @@ func (s *AuthService) generateToken(userID uint, role models.Role) (string, erro
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
+}
+
+// ------------------------------------------------------------------
+// 1. Generate a secure 6-digit OTP
+// ------------------------------------------------------------------
+func GenerateOTP() (string, error) {
+	// Generate a random number between 0 and 999999
+	max := big.NewInt(1000000)
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return "", err
+	}
+	// Format as a 6-digit string with leading zeros (e.g., "004512")
+	return fmt.Sprintf("%06d", n.Int64()), nil
+}
+
+// ------------------------------------------------------------------
+// 2. Validate Password Strength (Matches your Flutter Regex)
+// ------------------------------------------------------------------
+func ValidatePasswordStrength(password string) error {
+	if len(password) < 8 {
+		return errors.New("password must be at least 8 characters long")
+	}
+
+	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	if !hasUpper {
+		return errors.New("password must contain at least one uppercase letter")
+	}
+
+	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
+	if !hasNumber {
+		return errors.New("password must contain at least one number")
+	}
+
+	hasSpecial := regexp.MustCompile(`[!@#$%^&*(),.?":{}|<>]`).MatchString(password)
+	if !hasSpecial {
+		return errors.New("password must contain at least one special character")
+	}
+
+	return nil
 }

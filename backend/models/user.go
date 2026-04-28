@@ -32,23 +32,25 @@ type User struct {
 	IsArchived       bool       `json:"is_archived"        gorm:"default:false"`
 	LastLoginAt      *time.Time `json:"last_login_at"`
 	Bio              string     `json:"bio"`
-	FailedLoginCount int        `json:"failed_login_count" gorm:"default:0"`
-	LockedUntil      *time.Time `json:"locked_until"`
-	ResetToken       string     `json:"-"`
-	ResetTokenExpiry *time.Time `json:"-"`
-	RequiredOjtHours int        `gorm:"default:486" json:"required_ojt_hours"`
 
-	School          string `json:"school"`
-	Program         string `json:"program"`
-	Specialization  string `json:"specialization"`
-	YearLevel       string `json:"year_level"`
-	InternNumber    string `json:"intern_number"`
-	StartDate       string `json:"start_date"`
-	EndDate         string `json:"end_date"`
-	TechnicalSkills string `json:"technical_skills"`
-	SoftSkills      string `json:"soft_skills"`
-	LinkedIn        string `json:"linked_in"`
-	GitHub          string `json:"git_hub"`
+	// --- NEW SECURITY FIELDS ---
+	FailedAttempts   int        `json:"failed_attempts"    gorm:"default:0"`
+	LockedUntil      *time.Time `json:"locked_until"`
+	ResetOTP         string     `json:"-"`
+	ResetOTPExpiry   *time.Time `json:"-"`
+
+	RequiredOjtHours int        `gorm:"default:486"        json:"required_ojt_hours"`
+	School           string     `json:"school"`
+	Program          string     `json:"program"`
+	Specialization   string     `json:"specialization"`
+	YearLevel        string     `json:"year_level"`
+	InternNumber     string     `json:"intern_number"`
+	StartDate        string     `json:"start_date"`
+	EndDate          string     `json:"end_date"`
+	TechnicalSkills  string     `json:"technical_skills"`
+	SoftSkills       string     `json:"soft_skills"`
+	LinkedIn         string     `json:"linked_in"`
+	GitHub           string     `json:"git_hub"`
 }
 
 type ActivityLog struct {
@@ -71,8 +73,8 @@ type Department struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
 
-	Name      string     `json:"name"      gorm:"unique;not null"`
-	Positions []Position `json:"positions" gorm:"foreignKey:DepartmentID"`
+	Name      string     `json:"name"       gorm:"unique;not null"`
+	Positions []Position `json:"positions"  gorm:"foreignKey:DepartmentID"`
 }
 
 // Position — stored in its own table
@@ -80,7 +82,7 @@ type Position struct {
 	ID        uint           `json:"id"           gorm:"primarykey;autoIncrement"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
+	DeletedAt gorm.DeletedAt `json:"-"            gorm:"index"`
 
 	DepartmentID uint        `json:"department_id" gorm:"not null"`
 	Name         string      `json:"name"          gorm:"not null"`
