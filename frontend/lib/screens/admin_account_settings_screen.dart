@@ -13,9 +13,9 @@ import '../../widgets/admin_sidebar.dart';
 import 'avatar_crop_screen.dart';
 
 // ── Imported Extracted Widgets ──
-import '../../widgets/admin_account_settings_widgets/hamburger_icon.dart';
-import '../../widgets/admin_account_settings_widgets/profile_form_tab.dart';
-import '../../widgets/admin_account_settings_widgets/password_form_tab.dart';
+import '../widgets/admin_account_settings_widgets/hamburger_icon.dart';
+import '../widgets/admin_account_settings_widgets/profile_form_tab.dart';
+import '../widgets/admin_account_settings_widgets/password_form_tab.dart';
 
 const _kBlue = Color(0xFF00022E);
 

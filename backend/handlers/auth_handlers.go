@@ -55,12 +55,23 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
+	// 1. BACKEND ENFORCEMENT: Check Password Strength
+	if err := services.ValidatePasswordStrength(req.Password); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	// 2. BACKEND ENFORCEMENT: Force the position to "Intern"
+	// We ignore req.Position to prevent tampering.
+	enforcedPosition := "Intern"
+
 	userRepo := repositories.NewUserRepository(h.DB)
 	authService := services.NewAuthService(userRepo)
 
+	// Pass the enforcedPosition instead of req.Position
 	user, token, err := authService.Register(
 		req.FirstName, req.LastName, strings.TrimSpace(req.Email), req.Password,
-		req.Phone, req.Department, req.Position, models.RoleUser,
+		req.Phone, req.Department, enforcedPosition, models.RoleUser,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "admin role") {
