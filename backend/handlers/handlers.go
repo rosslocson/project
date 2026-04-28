@@ -440,48 +440,49 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 func (h *Handler) ListUsers(c *gin.Context) {
 	var users []models.User
 	query := h.DB.Model(&models.User{})
+
+	// Search filter
 	if search := c.Query("search"); search != "" {
 		query = query.Where("first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ?",
 			"%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
+
+	// Status filter for tabs: 'all', 'active', 'archived', 'inactive'
+	statusFilter := c.Query("status")
+	if statusFilter != "" {
+		switch statusFilter {
+		case "active":
+			query = query.Where("is_active = ? AND is_archived = ?", true, false)
+		case "archived":
+			query = query.Where("is_archived = ?", true)
+		case "inactive":
+			query = query.Where("is_active = ?", false)
+			// 'all' or empty returns all users
+		}
+	}
+
 	query.Order("created_at desc").Find(&users)
-	c.JSON(http.StatusOK, gin.H{"users": users, "total": len(users)})
+
+	// Calculate counts for all statuses
+	var allCount, activeCount, inactiveCount, archivedCount int64
+	h.DB.Model(&models.User{}).Count(&allCount)
+	h.DB.Model(&models.User{}).Where("is_active = ? AND is_archived = ?", true, false).Count(&activeCount)
+	h.DB.Model(&models.User{}).Where("is_active = ?", false).Count(&inactiveCount)
+	h.DB.Model(&models.User{}).Where("is_archived = ?", true).Count(&archivedCount)
+
+	c.JSON(http.StatusOK, gin.H{
+		"users": users,
+		"total": len(users),
+		"counts": gin.H{
+			"all":      allCount,
+			"active":   activeCount,
+			"inactive": inactiveCount,
+			"archived": archivedCount,
+		},
+	})
 }
 
 func (h *Handler) CreateUser(c *gin.Context) {
-	var req CreateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	var existing models.User
-	if h.DB.Where("email = ?", req.Email).First(&existing).Error == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
-		return
-	}
-	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	role := req.Role
-	if role == "" {
-		role = models.RoleUser
-	}
-	user := models.User{
-		FirstName:  req.FirstName,
-		LastName:   req.LastName,
-		Email:      strings.ToLower(req.Email),
-		Password:   string(hashed),
-		Phone:      req.Phone,
-		Department: req.Department,
-		Position:   req.Position,
-		Role:       role,
-		IsActive:   true,
-	}
-	h.DB.Create(&user)
-	adminID := c.GetUint("user_id")
-	h.logActivity(adminID, "CREATE_USER", "Admin created user: "+user.Email, c.ClientIP())
-	c.JSON(http.StatusCreated, gin.H{"message": "User created", "user": user})
-}
-
-func (h *Handler) GetUser(c *gin.Context) {
 	var user models.User
 	if h.DB.First(&user, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -510,6 +511,41 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Get current user ID from JWT
+	currentUserID := c.GetUint("user_id")
+
+	// Parse target user ID
+	targetUserIDStr := c.Param("id")
+	targetUserID, err := strconv.ParseUint(targetUserIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Security Check 1: Cannot archive yourself
+	if body.IsArchived != nil && *body.IsArchived && uint(targetUserID) == currentUserID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "You cannot archive your own account"})
+		return
+	}
+
+	// Security Check 2: Last Admin Protection
+	if user.Role == models.RoleAdmin {
+		// Check if trying to deactivate or archive an admin
+		isTryingToDeactivate := (body.IsActive != nil && !*body.IsActive) || (body.IsArchived != nil && *body.IsArchived)
+
+		if isTryingToDeactivate {
+			// Count active admins (excluding archived and inactive)
+			var activeAdminCount int64
+			h.DB.Model(&models.User{}).Where("role = ? AND is_active = ? AND is_archived = ?", models.RoleAdmin, true, false).Count(&activeAdminCount)
+
+			if activeAdminCount <= 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Action denied: At least one active admin must remain"})
+				return
+			}
+		}
+	}
+
 	// Use Omit to allow false boolean updates (GORM skips zero values with Updates)
 	if body.FirstName != nil {
 		user.FirstName = *body.FirstName
@@ -540,6 +576,15 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	adminID := c.GetUint("user_id")
 	h.logActivity(adminID, "UPDATE_USER", fmt.Sprintf("Admin updated user %s (active=%v, archived=%v)", user.Email, user.IsActive, user.IsArchived), c.ClientIP())
 	c.JSON(http.StatusOK, gin.H{"message": "User updated", "user": user})
+}
+
+func (h *Handler) GetUser(c *gin.Context) {
+	var user models.User
+	if h.DB.First(&user, c.Param("id")).Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	c.JSON(http.StatusOK, user)
 }
 
 func (h *Handler) DeleteUser(c *gin.Context) {

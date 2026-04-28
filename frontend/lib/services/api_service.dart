@@ -268,10 +268,15 @@ class ApiService {
 
   // ── Users (Admin) ─────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> getUsers({String? search}) async {
+  static Future<Map<String, dynamic>> getUsers({String? search, String? status}) async {
     try {
       var url = '$baseUrl/users';
-      if (search != null && search.isNotEmpty) url += '?search=$search';
+      final params = <String, String>{};
+      if (search != null && search.isNotEmpty) params['search'] = search;
+      if (status != null && status.isNotEmpty) params['status'] = status;
+      if (params.isNotEmpty) {
+        url += '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
+      }
       final res = await http.get(Uri.parse(url), headers: await _authHeaders());
       return _parse(res);
     } catch (e) {

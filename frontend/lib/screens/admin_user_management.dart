@@ -1,6 +1,7 @@
+// lib/screens/users_screen.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -8,58 +9,11 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
 
-// ── Custom Hamburger Icon ────────────────────────────────────────────────────
-class HamburgerIcon extends StatelessWidget {
-  const HamburgerIcon({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(2)),
-          ),
-          Container(
-            width: 14,
-            height: 2.5,
-            decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(2)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-int _toInt(dynamic v) {
-  if (v == null) return 0;
-  return (v as num).toInt();
-}
-
-bool _isArchived(dynamic user) {
-  final val = user['is_archived'];
-  return val == true || val == 1 || val == 'true';
-}
-
-bool _isActive(dynamic user) {
-  final val = user['is_active'];
-  return val == true || val == 1 || val == 'true';
-}
+// ── Imported Extracted Widgets ──
+import '../widgets/admin_user_management_widgets/user_utils.dart';
+import '../widgets/admin_user_management_widgets/users_hamburger_icon.dart';
+import '../widgets/admin_user_management_widgets/filter_pill_group.dart';
+import '../widgets/admin_user_management_widgets/user_list_section.dart';
 
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
@@ -72,9 +26,10 @@ class _UsersScreenState extends State<UsersScreen> {
   bool _loading = true;
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
-  bool _isSidebarOpen = true; // ← mirrors ConfigScreen
+  bool _isSidebarOpen = true;
 
   String _filterStatus = 'All';
+  Map<String, int> _counts = {'all': 0, 'active': 0, 'inactive': 0, 'archived': 0};
 
   @override
   void initState() {
@@ -89,13 +44,21 @@ class _UsersScreenState extends State<UsersScreen> {
     super.dispose();
   }
 
-  Future<void> _loadUsers({String? search}) async {
+  Future<void> _loadUsers({String? search, String? status}) async {
     setState(() => _loading = true);
     try {
-      final res = await ApiService.getUsers(search: search);
+      final res = await ApiService.getUsers(search: search, status: status);
       if (mounted) {
         setState(() {
           _users = res['ok'] == true ? (res['users'] ?? []) : [];
+          if (res['counts'] != null) {
+            _counts = {
+              'all': res['counts']['all'] ?? 0,
+              'active': res['counts']['active'] ?? 0,
+              'inactive': res['counts']['inactive'] ?? 0,
+              'archived': res['counts']['archived'] ?? 0,
+            };
+          }
           _loading = false;
         });
       }
@@ -124,50 +87,27 @@ class _UsersScreenState extends State<UsersScreen> {
   int _getCurrentUserId() {
     final authUser = context.read<AuthProvider>().user;
     if (authUser == null) return 0;
-    return _toInt(authUser['id']);
-  }
-
-  int get _activeAdminCount {
-    return _users
-        .where((u) => u['role'] == 'admin' && _isActive(u) && !_isArchived(u))
-        .length;
+    return toInt(authUser['id']);
   }
 
   Future<void> _toggleActive(Map<String, dynamic> user) async {
-    final id = _toInt(user['id']);
-    final isAdmin = user['role'] == 'admin';
-    final current = _isActive(user);
+    final id = toInt(user['id']);
+    final current = isActive(user);
     final next = !current;
-
-    if (isAdmin && current == true && _activeAdminCount <= 1) {
-      _showError('Action denied: At least one active admin must remain.');
-      return;
-    }
 
     setState(() => user['is_active'] = next);
     final res = await ApiService.updateUser(id, {'is_active': next});
     if (res['ok'] != true && mounted) {
       setState(() => user['is_active'] = current);
       _showError('Failed: ${res['error'] ?? 'Unknown error'}');
+    } else if (res['ok'] == true && mounted) {
+      _loadUsers(status: _filterStatus == 'All' ? null : _filterStatus.toLowerCase());
     }
   }
 
   Future<void> _archiveUser(Map<String, dynamic> user) async {
-    final id = _toInt(user['id']);
-    final currentUserId = _getCurrentUserId();
-    final isAdmin = user['role'] == 'admin';
-    final isActive = _isActive(user);
+    final id = toInt(user['id']);
     final name = '${user['first_name']} ${user['last_name']}';
-
-    if (id == currentUserId) {
-      _showError('You cannot archive your own account.');
-      return;
-    }
-
-    if (isAdmin && isActive && _activeAdminCount <= 1) {
-      _showError('Action denied: At least one active admin must remain.');
-      return;
-    }
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -177,15 +117,11 @@ class _UsersScreenState extends State<UsersScreen> {
         title: Row(children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-                color: const Color(0xFF4A5E9A).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.archive_outlined,
-                color: Color(0xFF4A5E9A), size: 22),
+            decoration: BoxDecoration(color: const Color(0xFF4A5E9A).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.archive_outlined, color: Color(0xFF4A5E9A), size: 22),
           ),
           const SizedBox(width: 12),
-          const Text('Archive User',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Archive User', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -196,24 +132,17 @@ class _UsersScreenState extends State<UsersScreen> {
                 style: const TextStyle(color: Colors.black87, fontSize: 14),
                 children: [
                   const TextSpan(text: 'Are you sure you want to archive '),
-                  TextSpan(
-                      text: name,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  TextSpan(text: name, style: const TextStyle(fontWeight: FontWeight.bold)),
                   const TextSpan(text: '?'),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-                'This user will be hidden from active lists and unable to log in, but their data will be preserved.',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+            Text('This user will be hidden from active lists and unable to log in, but their data will be preserved.', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
           ],
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: Colors.black87))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: Colors.black87))),
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(ctx, true),
             icon: const Icon(Icons.archive_outlined, size: 16),
@@ -221,8 +150,7 @@ class _UsersScreenState extends State<UsersScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4A5E9A),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
         ],
@@ -236,29 +164,30 @@ class _UsersScreenState extends State<UsersScreen> {
       user['is_active'] = false;
     });
 
-    final res = await ApiService.updateUser(
-        id, {'is_archived': true, 'is_active': false});
+    final res = await ApiService.updateUser(id, {'is_archived': true, 'is_active': false});
     if (!mounted) return;
 
     if (res['ok'] == true) {
       _showSuccess('$name has been archived.');
-      _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
+      String? apiStatus;
+      if (_filterStatus == 'Active') apiStatus = 'active';
+      else if (_filterStatus == 'Inactive') apiStatus = 'inactive';
+      else if (_filterStatus == 'Archived') apiStatus = 'archived';
+      _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text, status: apiStatus);
     } else {
       setState(() {
         user['is_archived'] = false;
-        user['is_active'] = isActive;
+        user['is_active'] = isActive(user);
       });
       _showError('Archive failed: ${res['error'] ?? 'Unknown error'}');
     }
   }
 
   Future<void> _restoreUser(Map<String, dynamic> user) async {
-    final id = _toInt(user['id']);
+    final id = toInt(user['id']);
     final name = '${user['first_name']} ${user['last_name']}';
 
-    setState(() {
-      user['is_archived'] = false;
-    });
+    setState(() => user['is_archived'] = false);
 
     final res = await ApiService.updateUser(id, {'is_archived': false});
     if (!mounted) return;
@@ -267,128 +196,62 @@ class _UsersScreenState extends State<UsersScreen> {
       _showSuccess('$name has been restored.');
       _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
     } else {
-      setState(() {
-        user['is_archived'] = true;
-      });
+      setState(() => user['is_archived'] = true);
       _showError('Restore failed: ${res['error'] ?? 'Unknown error'}');
     }
   }
 
-  Widget _buildUserSection(String title, List<dynamic> sectionUsers) {
-    if (sectionUsers.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white70,
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: sectionUsers.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 20),
-              itemBuilder: (context, i) {
-                final u = sectionUsers[i];
-                return _UserTile(
-                  key: ValueKey(_toInt(u['id'])),
-                  user: u,
-                  isArchivedView: _isArchived(u),
-                  isCurrentUser: _toInt(u['id']) == _getCurrentUserId(),
-                  onToggle: () => _toggleActive(u),
-                  onArchive: () => _archiveUser(u),
-                  onRestore: () => _restoreUser(u),
-                );
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
+  void _onTabChanged(String status) {
+    setState(() => _filterStatus = status);
+    String? apiStatus;
+    if (status == 'Active') apiStatus = 'active';
+    else if (status == 'Inactive') apiStatus = 'inactive';
+    else if (status == 'Archived') apiStatus = 'archived';
+    _loadUsers(status: apiStatus);
   }
 
   @override
   Widget build(BuildContext context) {
     final currentUserId = _getCurrentUserId();
 
-    final int allCount = _users.length;
-    final int activeCount =
-        _users.where((u) => _isActive(u) && !_isArchived(u)).length;
-    final int inactiveCount =
-        _users.where((u) => !_isActive(u) && !_isArchived(u)).length;
-    final int archivedCount = _users.where((u) => _isArchived(u)).length;
-
     final tabs = [
-      {'id': 'All', 'label': 'All', 'count': allCount},
-      {'id': 'Active', 'label': 'Active', 'count': activeCount},
-      {'id': 'Inactive', 'label': 'Inactive', 'count': inactiveCount},
-      {'id': 'Archived', 'label': 'Archived', 'count': archivedCount},
+      {'id': 'All', 'label': 'All', 'count': _counts['all'] ?? 0},
+      {'id': 'Active', 'label': 'Active', 'count': _counts['active'] ?? 0},
+      {'id': 'Inactive', 'label': 'Inactive', 'count': _counts['inactive'] ?? 0},
+      {'id': 'Archived', 'label': 'Archived', 'count': _counts['archived'] ?? 0},
     ];
 
-    final filteredUsers = _users.where((u) {
-      final isArchived = _isArchived(u);
-      final isActive = _isActive(u);
-
-      if (_filterStatus == 'Archived') return isArchived;
-      if (_filterStatus == 'Active') return !isArchived && isActive;
-      if (_filterStatus == 'Inactive') return !isArchived && !isActive;
-      return true;
-    }).toList();
-
+    final filteredUsers = _users;
     final admins = filteredUsers.where((u) => u['role'] == 'admin').toList();
-    final internUsers =
-        filteredUsers.where((u) => u['role'] != 'admin').toList();
+    final internUsers = filteredUsers.where((u) => u['role'] != 'admin').toList();
 
     int sortSelfToTop(dynamic a, dynamic b) {
-      if (_toInt(a['id']) == currentUserId) return -1;
-      if (_toInt(b['id']) == currentUserId) return 1;
+      if (toInt(a['id']) == currentUserId) return -1;
+      if (toInt(b['id']) == currentUserId) return 1;
       return 0;
     }
 
     admins.sort(sortSelfToTop);
     internUsers.sort(sortSelfToTop);
 
-    // ── Mirrors ConfigScreen's Scaffold + Row(sidebar, Expanded) structure ──
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Row(
         children: [
-          // ── Sidebar ────────────────────────────────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             width: _isSidebarOpen ? 250 : 0,
             child: _isSidebarOpen
                 ? AdminSidebar(
-                    currentRoute:
-                        GoRouterState.of(context).matchedLocation,
+                    currentRoute: GoRouterState.of(context).matchedLocation,
                     onClose: () => setState(() => _isSidebarOpen = false),
                   )
                 : null,
           ),
-
-          // ── Main content ───────────────────────────────────────
           Expanded(
             child: Stack(
               children: [
-                // Background
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -400,27 +263,20 @@ class _UsersScreenState extends State<UsersScreen> {
                     ),
                   ),
                 ),
-
                 Positioned.fill(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── Top bar — same dimensions as ConfigScreen ──
                       SizedBox(
                         height: 72,
                         child: Stack(
                           alignment: Alignment.centerLeft,
                           children: [
-                            // Title at left-100 offset, top-28 — matches Config
                             Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 100, right: 100, top: 28),
+                              padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
                               child: Text(
                                 'User Management',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displaySmall
-                                    ?.copyWith(
+                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
                                       fontSize: 28,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -428,7 +284,6 @@ class _UsersScreenState extends State<UsersScreen> {
                                     ),
                               ),
                             ),
-                            // Hamburger — only visible when sidebar is closed
                             if (!_isSidebarOpen)
                               Positioned(
                                 left: 20,
@@ -437,14 +292,12 @@ class _UsersScreenState extends State<UsersScreen> {
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.15)),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
-                                    onPressed: () =>
-                                        setState(() => _isSidebarOpen = true),
-                                    icon: const HamburgerIcon(),
+                                    onPressed: () => setState(() => _isSidebarOpen = true),
+                                    icon: const UsersHamburgerIcon(),
                                     tooltip: 'Open Sidebar',
                                     splashColor: Colors.white.withValues(alpha: 0.1),
                                     highlightColor: Colors.transparent,
@@ -454,42 +307,31 @@ class _UsersScreenState extends State<UsersScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 15),
-
-                      // ── Scrollable content — fills remaining height ─
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(
-                              left: 100, right: 100, bottom: 28),
+                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
                           child: SingleChildScrollView(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // ── Search ──────────────────────────
+                                // Extracted Search & Filter Row
                                 TextField(
                                   controller: _searchCtrl,
-                                  style: const TextStyle(
-                                      color: Colors.black87, fontSize: 13),
+                                  style: const TextStyle(color: Colors.black87, fontSize: 13),
                                   decoration: InputDecoration(
                                     hintText: 'Search by name or email...',
-                                    hintStyle: TextStyle(
-                                        color: Colors.grey.shade500,
-                                        fontSize: 13),
+                                    hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
                                     prefixIcon: IconButton(
-                                      icon: const Icon(Icons.search,
-                                          color: Colors.grey),
+                                      icon: const Icon(Icons.search, color: Colors.grey),
                                       onPressed: () {
-                                        if (_debounce?.isActive ?? false) {
-                                          _debounce!.cancel();
-                                        }
+                                        if (_debounce?.isActive ?? false) _debounce!.cancel();
                                         _loadUsers(search: _searchCtrl.text);
                                       },
                                     ),
                                     suffixIcon: _searchCtrl.text.isNotEmpty
                                         ? IconButton(
-                                            icon: const Icon(Icons.clear,
-                                                color: Colors.grey),
+                                            icon: const Icon(Icons.clear, color: Colors.grey),
                                             onPressed: () {
                                               _searchCtrl.clear();
                                               _loadUsers();
@@ -497,95 +339,32 @@ class _UsersScreenState extends State<UsersScreen> {
                                             },
                                           )
                                         : null,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide.none,
-                                    ),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                                     filled: true,
                                     fillColor: Colors.white,
                                   ),
                                   onChanged: (v) {
                                     setState(() {});
-                                    if (_debounce?.isActive ?? false) {
-                                      _debounce!.cancel();
-                                    }
-                                    _debounce = Timer(
-                                        const Duration(milliseconds: 300), () {
-                                      _loadUsers(search: v);
-                                    });
+                                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                                    _debounce = Timer(const Duration(milliseconds: 300), () => _loadUsers(search: v));
                                   },
                                   onSubmitted: (v) => _loadUsers(search: v),
                                 ),
                                 const SizedBox(height: 24),
-
-                                // ── Filter Pill Group ────────────────
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  padding: const EdgeInsets.all(6),
-                                  child: Row(
-                                    children: tabs.map((tab) {
-                                      final id = tab['id'] as String;
-                                      final label = tab['label'] as String;
-                                      final count = tab['count'] as int;
-                                      final isSelected = _filterStatus == id;
-
-                                      return Expanded(
-                                        child: GestureDetector(
-                                          onTap: () => setState(
-                                              () => _filterStatus = id),
-                                          child: Container( // <-- Changed to regular Container
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 10),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? const Color(0xFF00022E)
-                                                  : Colors.transparent,
-                                              borderRadius:
-                                                  BorderRadius.circular(24),
-                                              boxShadow: isSelected
-                                                  ? [
-                                                      BoxShadow(
-                                                        color: const Color(
-                                                                0xFF4A5E9A)
-                                                            .withValues(alpha: 0.4),
-                                                        blurRadius: 8,
-                                                        offset:
-                                                            const Offset(0, 2),
-                                                      )
-                                                    ]
-                                                  : [],
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: Text(
-                                              '$label ($count)',
-                                              style: TextStyle(
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : Colors.white70,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w500,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
+                                
+                                // Extracted Filter Pills
+                                FilterPillGroup(
+                                  tabs: tabs,
+                                  filterStatus: _filterStatus,
+                                  onTabChanged: _onTabChanged,
                                 ),
                                 const SizedBox(height: 24),
 
-                                // ── Tables ───────────────────────────
+                                // Tables
                                 if (_loading)
                                   const Padding(
                                     padding: EdgeInsets.all(48),
-                                    child: Center(
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white)),
+                                    child: Center(child: CircularProgressIndicator(color: Colors.white)),
                                   )
                                 else if (admins.isEmpty && internUsers.isEmpty)
                                   Container(
@@ -598,23 +377,32 @@ class _UsersScreenState extends State<UsersScreen> {
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.people_outline,
-                                              size: 56,
-                                              color: Colors.grey.shade300),
+                                          Icon(Icons.people_outline, size: 56, color: Colors.grey.shade300),
                                           const SizedBox(height: 12),
-                                          Text(
-                                              'No users found in this category.',
-                                              style: TextStyle(
-                                                  color: Colors.grey.shade500)),
+                                          Text('No users found in this category.', style: TextStyle(color: Colors.grey.shade500)),
                                         ],
                                       ),
                                     ),
                                   )
                                 else ...[
                                   if (admins.isNotEmpty)
-                                    _buildUserSection('Administrators', admins),
+                                    UserListSection(
+                                      title: 'Administrators',
+                                      users: admins,
+                                      currentUserId: currentUserId,
+                                      onToggleActive: _toggleActive,
+                                      onArchive: _archiveUser,
+                                      onRestore: _restoreUser,
+                                    ),
                                   if (internUsers.isNotEmpty)
-                                    _buildUserSection('Interns', internUsers),
+                                    UserListSection(
+                                      title: 'Interns',
+                                      users: internUsers,
+                                      currentUserId: currentUserId,
+                                      onToggleActive: _toggleActive,
+                                      onArchive: _archiveUser,
+                                      onRestore: _restoreUser,
+                                    ),
                                 ],
                               ],
                             ),
@@ -628,259 +416,6 @@ class _UsersScreenState extends State<UsersScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── User Tile ─────────────────────────────────────────────────────────────────
-class _UserTile extends StatelessWidget {
-  final Map<String, dynamic> user;
-  final bool isArchivedView;
-  final bool isCurrentUser;
-  final VoidCallback onToggle;
-  final VoidCallback onArchive;
-  final VoidCallback onRestore;
-
-  const _UserTile({
-    super.key,
-    required this.user,
-    required this.isArchivedView,
-    required this.isCurrentUser,
-    required this.onToggle,
-    required this.onArchive,
-    required this.onRestore,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = _isActive(user);
-    final isAdmin = user['role'] == 'admin';
-
-    final rawAvatarUrl = user['avatar_url'] as String? ?? '';
-    final finalAvatarUrl = rawAvatarUrl.isNotEmpty
-        ? (rawAvatarUrl.startsWith('http')
-            ? rawAvatarUrl
-            : 'http://127.0.0.1:8080$rawAvatarUrl')
-        : '';
-
-    final String fName = user['first_name'] ?? '';
-    final String lName = user['last_name'] ?? '';
-    final initials =
-        '${fName.isNotEmpty ? fName[0] : ''}${lName.isNotEmpty ? lName[0] : ''}'
-            .toUpperCase();
-
-    final opacity = isArchivedView ? 0.5 : 1.0;
-
-    return Opacity(
-      opacity: opacity,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: Stack(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor:
-                  isAdmin ? Colors.indigo.shade50 : Colors.blue.shade50,
-              backgroundImage: finalAvatarUrl.isNotEmpty
-                  ? NetworkImage(finalAvatarUrl)
-                  : null,
-              child: finalAvatarUrl.isEmpty
-                  ? Text(
-                      initials.isEmpty ? 'U' : initials,
-                      style: TextStyle(
-                        color: isAdmin
-                            ? Colors.indigo.shade700
-                            : Colors.blue.shade700,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-            if (isCurrentUser)
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                ),
-              )
-          ],
-        ),
-        title: Row(
-          children: [
-            Text(
-              '${user['first_name']} ${user['last_name']}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isArchivedView
-                    ? Colors.grey.shade700
-                    : (isActive ? Colors.black87 : Colors.grey),
-                decoration: (!isActive && !isArchivedView)
-                    ? TextDecoration.lineThrough
-                    : null,
-              ),
-            ),
-            if (isCurrentUser) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(4)),
-                child: Text('You',
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey.shade700,
-                        fontWeight: FontWeight.bold)),
-              )
-            ]
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(user['email'] ?? '',
-                style: TextStyle(
-                    fontSize: 11,
-                    color: isArchivedView
-                        ? Colors.grey.shade500
-                        : (isActive ? Colors.black54 : Colors.grey.shade400))),
-            if ((user['department'] as String? ?? '').isNotEmpty)
-              Text(
-                '${user['department']} · ${user['position'] ?? ''}',
-                style: TextStyle(
-                    fontSize: 10,
-                    color: isArchivedView
-                        ? Colors.grey.shade400
-                        : (isActive ? Colors.black38 : Colors.grey.shade400)),
-              ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: isAdmin ? Colors.indigo.shade50 : Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                isAdmin ? 'Admin' : 'Intern',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color:
-                      isAdmin ? Colors.indigo.shade700 : Colors.blue.shade700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            if (isArchivedView)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                    color: Colors.orange.shade50, // UPDATED: Orange Background
-                    borderRadius: BorderRadius.circular(20)),
-                child: Text('Archived',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.orange.shade800, // UPDATED: Orange Text
-                        fontWeight: FontWeight.bold)),
-              )
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? Colors.green.shade50 // UPDATED: Green Background
-                      : Colors.yellow.shade100, // UPDATED: Yellow Background
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  isActive ? 'Active' : 'Inactive',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isActive
-                        ? Colors.green.shade800 // UPDATED: Green Text
-                        : Colors.yellow.shade900, // UPDATED: Yellow Text
-                  ),
-                ),
-              ),
-            const SizedBox(width: 12),
-            if (!isArchivedView)
-              Tooltip(
-                message: isActive ? 'Deactivate user' : 'Activate user',
-                child: Transform.scale(
-                  scale: 0.8,
-                  child: CupertinoSwitch(
-                    value: isActive,
-                    activeTrackColor: const Color(0xFF00022E),
-                    inactiveTrackColor: Colors.grey.shade300,
-                    onChanged: (_) => onToggle(),
-                  ),
-                ),
-              ),
-            const SizedBox(width: 8),
-            if (isArchivedView)
-              Tooltip(
-                message: 'Restore user',
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4A5E9A).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: IconButton(
-                    iconSize: 18,
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.unarchive_rounded,
-                        color: Color(0xFF4A5E9A)),
-                    onPressed: onRestore,
-                  ),
-                ),
-              )
-            else
-              Tooltip(
-                message:
-                    isCurrentUser ? 'Cannot archive yourself' : 'Archive user',
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                      color: isCurrentUser
-                          ? Colors.transparent
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isCurrentUser
-                            ? Colors.transparent
-                            : Colors.grey.shade200,
-                        width: 1,
-                      )),
-                  child: IconButton(
-                    iconSize: 18,
-                    padding: EdgeInsets.zero,
-                    icon: Icon(Icons.archive_outlined,
-                        color: isCurrentUser
-                            ? Colors.grey.shade300
-                            : Colors.blueGrey.shade400),
-                    onPressed: isCurrentUser ? null : onArchive,
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
