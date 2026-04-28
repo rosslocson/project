@@ -46,6 +46,7 @@ class CustomTextField extends StatelessWidget {
   final int maxLines;
   final TextInputType keyboardType;
   final Widget? suffix;
+  final String? Function(String?)? validator;
 
   const CustomTextField({
     super.key,
@@ -54,6 +55,7 @@ class CustomTextField extends StatelessWidget {
     this.maxLines = 1,
     this.keyboardType = TextInputType.text,
     this.suffix,
+    this.validator,
   });
 
   @override
@@ -62,6 +64,7 @@ class CustomTextField extends StatelessWidget {
       controller: ctrl,
       maxLines: maxLines,
       keyboardType: keyboardType,
+      validator: validator,
       style: const TextStyle(color: Colors.black, fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
@@ -88,6 +91,7 @@ class CustomDropdown extends StatelessWidget {
   final String hint;
   final List<String> items;
   final void Function(String?) onChanged;
+  final String? Function(String?)? validator;
 
   const CustomDropdown({
     super.key,
@@ -95,12 +99,14 @@ class CustomDropdown extends StatelessWidget {
     required this.hint,
     required this.items,
     required this.onChanged,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
       initialValue: value,
+      validator: validator,
       style: const TextStyle(color: Colors.black, fontSize: 14),
       dropdownColor: Colors.white,
       decoration: InputDecoration(

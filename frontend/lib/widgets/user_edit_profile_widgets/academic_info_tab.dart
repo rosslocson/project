@@ -35,6 +35,14 @@ class AcademicInfoTab extends StatelessWidget {
     required this.onPickEnd,
   });
 
+  // Reusable validation logic for required fields
+  String? _requiredValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'This field is required';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -44,7 +52,10 @@ class AcademicInfoTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const FormSectionTitle(title: 'Academic Information', sub: 'Your school, program, department, and internship details'),
+            const FormSectionTitle(
+              title: 'Academic Information',
+              sub: 'Your school, program, department, and internship details',
+            ),
             Row(children: [
               Expanded(
                 child: Column(
@@ -56,6 +67,7 @@ class AcademicInfoTab extends StatelessWidget {
                       hint: departments.isEmpty ? 'No departments yet' : 'Select Department',
                       items: departments,
                       onChanged: onDeptChanged,
+                      validator: _requiredValidator, // Added validation
                     ),
                   ],
                 ),
@@ -86,6 +98,7 @@ class AcademicInfoTab extends StatelessWidget {
                           ),
                         ],
                         onChanged: null,
+                        // No validator needed for disabled field
                       ),
                     ),
                   ],
@@ -94,10 +107,18 @@ class AcademicInfoTab extends StatelessWidget {
             ]),
             const SizedBox(height: 16),
             const FormLabel(text: 'School / University'),
-            CustomTextField(ctrl: schoolCtrl, hint: 'e.g. University of Santo Tomas'),
+            CustomTextField(
+              ctrl: schoolCtrl, 
+              hint: 'e.g. University of Santo Tomas',
+              validator: _requiredValidator, // Added validation
+            ),
             const SizedBox(height: 16),
             const FormLabel(text: 'Program / Course'),
-            CustomTextField(ctrl: programCtrl, hint: 'e.g. BS Computer Science'),
+            CustomTextField(
+              ctrl: programCtrl, 
+              hint: 'e.g. BS Computer Science',
+              validator: _requiredValidator, // Added validation
+            ),
             const SizedBox(height: 16),
             Row(children: [
               Expanded(
@@ -105,7 +126,11 @@ class AcademicInfoTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const FormLabel(text: 'Specialization'),
-                    CustomTextField(ctrl: specCtrl, hint: 'e.g. Web Development'),
+                    CustomTextField(
+                      ctrl: specCtrl, 
+                      hint: 'e.g. Web Development',
+                      validator: _requiredValidator, // Added validation
+                    ),
                   ],
                 ),
               ),
@@ -115,14 +140,22 @@ class AcademicInfoTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const FormLabel(text: 'Year Level'),
-                    CustomTextField(ctrl: yearCtrl, hint: 'e.g. 4th Year'),
+                    CustomTextField(
+                      ctrl: yearCtrl, 
+                      hint: 'e.g. 4th Year',
+                      validator: _requiredValidator, // Added validation
+                    ),
                   ],
                 ),
               ),
             ]),
             const SizedBox(height: 16),
             const FormLabel(text: 'Intern Number'),
-            CustomTextField(ctrl: internNumCtrl, hint: 'e.g. 12'),
+            CustomTextField(
+              ctrl: internNumCtrl, 
+              hint: 'e.g. 12',
+              validator: _requiredValidator, // Added validation
+            ),
             const SizedBox(height: 16),
             Row(children: [
               Expanded(
@@ -133,6 +166,7 @@ class AcademicInfoTab extends StatelessWidget {
                     CustomTextField(
                       ctrl: startCtrl,
                       hint: 'YYYY-MM-DD',
+                      validator: _requiredValidator, // Added validation
                       suffix: IconButton(
                         icon: Icon(Icons.calendar_today, size: 18, color: Colors.grey.shade600),
                         onPressed: onPickStart,
@@ -150,6 +184,7 @@ class AcademicInfoTab extends StatelessWidget {
                     CustomTextField(
                       ctrl: endCtrl,
                       hint: 'YYYY-MM-DD',
+                      validator: _requiredValidator, // Added validation
                       suffix: IconButton(
                         icon: Icon(Icons.calendar_today, size: 18, color: Colors.grey.shade600),
                         onPressed: onPickEnd,
