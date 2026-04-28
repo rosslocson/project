@@ -170,8 +170,9 @@ class _UsersScreenState extends State<UsersScreen> {
     if (res['ok'] == true) {
       _showSuccess('$name has been archived.');
       String? apiStatus;
-      if (_filterStatus == 'Active') apiStatus = 'active';
-      else if (_filterStatus == 'Inactive') apiStatus = 'inactive';
+      if (_filterStatus == 'Active') {
+        apiStatus = 'active';
+      } else if (_filterStatus == 'Inactive') apiStatus = 'inactive';
       else if (_filterStatus == 'Archived') apiStatus = 'archived';
       _loadUsers(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text, status: apiStatus);
     } else {
@@ -204,8 +205,9 @@ class _UsersScreenState extends State<UsersScreen> {
   void _onTabChanged(String status) {
     setState(() => _filterStatus = status);
     String? apiStatus;
-    if (status == 'Active') apiStatus = 'active';
-    else if (status == 'Inactive') apiStatus = 'inactive';
+    if (status == 'Active') {
+      apiStatus = 'active';
+    } else if (status == 'Inactive') apiStatus = 'inactive';
     else if (status == 'Archived') apiStatus = 'archived';
     _loadUsers(status: apiStatus);
   }

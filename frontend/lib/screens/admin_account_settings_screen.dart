@@ -136,7 +136,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     try {
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 100,
+        imageQuality: 80,
       );
       if (pickedFile == null) return;
 

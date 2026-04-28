@@ -363,13 +363,13 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   ) {
     return Container(
       width: 260,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
             kCrimsonDeep,
-            const Color(0xFF00022E),
+            Color(0xFF00022E),
           ],
         ),
       ),
@@ -433,7 +433,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                       ),
                     ],
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.edit_rounded,
                     color: kCrimsonDeep,
                     size: 16,

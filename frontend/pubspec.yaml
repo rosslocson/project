@@ -29,6 +29,7 @@ dependencies:
   crop_your_image: ^1.0.0
   path_provider: ^2.1.3
   mime: ^1.0.4
+  image: ^4.0.0
   
   # Navigation
   go_router: ^13.0.0
