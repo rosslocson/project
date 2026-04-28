@@ -48,7 +48,8 @@ class UserSidebar extends StatelessWidget {
                   ),
                 ),
                 // ──────────────────────────────────────────────────────────────
-                const SizedBox(width: 12), // Increased gap between logo and text
+                const SizedBox(
+                    width: 12), // Increased gap between logo and text
 
                 const Expanded(
                   child: Text(
@@ -94,7 +95,7 @@ class UserSidebar extends StatelessWidget {
                   current: currentRoute,
                 ),
                 _NavItem(
-                  icon: Icons.settings_outlined, // Changed to gear icon here
+                  icon: Icons.settings_outlined,
                   label: 'Account Settings',
                   route: '/account-settings',
                   current: currentRoute,
@@ -105,6 +106,14 @@ class UserSidebar extends StatelessWidget {
                   icon: Icons.access_time_rounded,
                   label: 'Attendance',
                   route: '/attendance',
+                  current: currentRoute,
+                ),
+                // ── Info section ──────────────────────────────────────────
+                const _SectionLabel('INFO'),
+                _NavItem(
+                  icon: Icons.info_outline_rounded,
+                  label: 'About & Contact',
+                  route: '/about',
                   current: currentRoute,
                 ),
               ],
@@ -160,13 +169,13 @@ class _NavItemState extends State<_NavItem> {
           color: active
               ? UserSidebar._activeItemBg
               : _isHovering
-                  ? Colors.white.withValues(alpha: 0.08) // Hover color
+                  ? Colors.white.withValues(alpha: 0.08)
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: ListTile(
           dense: true,
-          hoverColor: Colors.transparent, // Disable default material hover to use custom AnimatedContainer hover
+          hoverColor: Colors.transparent,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           leading: Icon(
@@ -182,7 +191,8 @@ class _NavItemState extends State<_NavItem> {
               color: active ? UserSidebar._textDark : UserSidebar._textLight,
             ),
           ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           onTap: active ? null : () => context.go(widget.route),
         ),
       ),
@@ -227,11 +237,11 @@ class _SignOutButtonState extends State<_SignOutButton> {
       cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        color: _isHovering 
-            ? Colors.white.withValues(alpha: 0.08) 
+        color: _isHovering
+            ? Colors.white.withValues(alpha: 0.08)
             : Colors.transparent,
         child: InkWell(
-          hoverColor: Colors.transparent, // Prevent duplicate hover effects
+          hoverColor: Colors.transparent,
           onTap: () {
             context.read<AuthProvider>().logout();
             context.go('/login');
@@ -281,8 +291,8 @@ class _CloseButtonState extends State<_CloseButton> {
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
           color: _isHovering
-              ? Colors.white.withValues(alpha: 0.2) // Lighter on hover
-              : Colors.white.withValues(alpha: 0.1), // Default color
+              ? Colors.white.withValues(alpha: 0.2)
+              : Colors.white.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Material(
