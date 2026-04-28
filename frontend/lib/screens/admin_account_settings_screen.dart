@@ -74,24 +74,32 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
-    _loadDepartments();
-    final user = context.read<AuthProvider>().user;
 
+    final user = context.read<AuthProvider>().user;
     _firstCtrl = TextEditingController(text: user?['first_name'] ?? '');
     _lastCtrl = TextEditingController(text: user?['last_name'] ?? '');
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
     _phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
 
-    final dept = user?['department'] as String? ?? '';
-    if (dept.isNotEmpty) {
-      _selectedDept = dept;
-    }
+    // ❌ Remove this block — _loadDepartments() will set _selectedDept correctly
+    // final dept = user?['department'] as String? ?? '';
+    // if (dept.isNotEmpty) _selectedDept = dept;
+
+    _loadDepartments(); // This now sets _selectedDept after validating against the list
   }
 
   @override
   void dispose() {
     _tabs.dispose();
-    for (final c in [_firstCtrl, _lastCtrl, _emailCtrl, _phoneCtrl, _curPassCtrl, _newPassCtrl, _confirmPassCtrl]) {
+    for (final c in [
+      _firstCtrl,
+      _lastCtrl,
+      _emailCtrl,
+      _phoneCtrl,
+      _curPassCtrl,
+      _newPassCtrl,
+      _confirmPassCtrl
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -99,18 +107,28 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
   Future<void> _loadDepartments() async {
     try {
-      final response = await ApiService.getDepartmentsWithPositions();
-      if (response['ok'] == true && response['departments'] != null) {
+      final res = await ApiService.getDepartments(); // ← swap this
+      if (!mounted) return;
+      if (res['ok'] == true) {
+        final List items = res['items'] ?? [];
+        final depts = items.map<String>((d) => d['name'] as String).toList();
+        final userDept =
+            context.read<AuthProvider>().user?['department'] as String? ?? '';
         setState(() {
-          _deptRoles = Map<String, List<String>>.from(response['departments']);
-          _departments = _deptRoles.keys.toList();
+          _deptRoles = {};
+          _departments = depts;
           _isLoadingDepartments = false;
+          if (userDept.isNotEmpty && !_departments.contains(userDept)) {
+            _departments.add(userDept);
+          }
+          if (userDept.isNotEmpty) _selectedDept = userDept;
         });
       } else {
-        setState(() { _deptRoles = {}; _departments = []; _isLoadingDepartments = false; });
+        setState(() => _isLoadingDepartments = false);
       }
     } catch (e) {
-      setState(() { _deptRoles = {}; _departments = []; _isLoadingDepartments = false; });
+      debugPrint('Failed to fetch departments: $e');
+      if (mounted) setState(() => _isLoadingDepartments = false);
     }
   }
 
@@ -233,43 +251,63 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
   Future<void> _saveProfile() async {
     if (!_profileKey.currentState!.validate()) return;
-    setState(() { _savingProfile = true; _profileMsg = null; });
-    
+    setState(() {
+      _savingProfile = true;
+      _profileMsg = null;
+    });
+
     final res = await ApiService.updateProfile({
       'first_name': _firstCtrl.text.trim(),
       'last_name': _lastCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
       'department': _selectedDept ?? '',
     });
-    
+
     if (!mounted) return;
-    
+
     if (res['ok'] == true) {
       context.read<AuthProvider>().updateUserData(res['user'] ?? {});
-      setState(() { _profileMsg = 'Profile updated successfully!'; _profileSuccess = true; });
+      setState(() {
+        _profileMsg = 'Profile updated successfully!';
+        _profileSuccess = true;
+      });
     } else {
-      setState(() { _profileMsg = res['error'] ?? 'Update failed'; _profileSuccess = false; });
+      setState(() {
+        _profileMsg = res['error'] ?? 'Update failed';
+        _profileSuccess = false;
+      });
     }
     setState(() => _savingProfile = false);
   }
 
   Future<void> _changePassword() async {
     if (!_passKey.currentState!.validate()) return;
-    setState(() { _savingPass = true; _passMsg = null; });
-    
+    setState(() {
+      _savingPass = true;
+      _passMsg = null;
+    });
+
     final res = await ApiService.changePassword({
       'current_password': _curPassCtrl.text,
       'new_password': _newPassCtrl.text,
       'confirm_password': _confirmPassCtrl.text,
     });
-    
+
     if (!mounted) return;
-    
+
     if (res['ok'] == true) {
-      _curPassCtrl.clear(); _newPassCtrl.clear(); _confirmPassCtrl.clear();
-      setState(() { _passMsg = 'Password changed successfully!'; _passSuccess = true; });
+      _curPassCtrl.clear();
+      _newPassCtrl.clear();
+      _confirmPassCtrl.clear();
+      setState(() {
+        _passMsg = 'Password changed successfully!';
+        _passSuccess = true;
+      });
     } else {
-      setState(() { _passMsg = res['error'] ?? res['details'] ?? 'Change failed'; _passSuccess = false; });
+      setState(() {
+        _passMsg = res['error'] ?? res['details'] ?? 'Change failed';
+        _passSuccess = false;
+      });
     }
     setState(() => _savingPass = false);
   }
@@ -279,10 +317,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     final user = context.watch<AuthProvider>().user;
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
-    
+
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
+        finalAvatarUrl =
+            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -326,10 +365,14 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                           alignment: Alignment.centerLeft,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
+                              padding: const EdgeInsets.only(
+                                  left: 100, right: 100, top: 28),
                               child: Text(
                                 'Account Settings',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displaySmall
+                                    ?.copyWith(
                                       fontSize: 28,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -339,16 +382,19 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                             ),
                             if (!_isSidebarOpen)
                               Positioned(
-                                left: 20, top: 28,
+                                left: 20,
+                                top: 28,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                                    border: Border.all(
+                                        color: Colors.white.withOpacity(0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
-                                    onPressed: () => setState(() => _isSidebarOpen = true),
+                                    onPressed: () =>
+                                        setState(() => _isSidebarOpen = true),
                                     icon: const HamburgerIcon(),
                                     tooltip: 'Open Sidebar',
                                   ),
@@ -360,7 +406,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                       const SizedBox(height: 15),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                          padding: const EdgeInsets.only(
+                              left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.95),
@@ -373,9 +420,12 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                 children: [
                                   // Profile Header (Avatar and Name) handled directly here since it applies globally to the card
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 32, vertical: 20),
                                     decoration: BoxDecoration(
-                                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                                      border: Border(
+                                          bottom: BorderSide(
+                                              color: Colors.grey.shade200)),
                                     ),
                                     child: Row(
                                       children: [
@@ -384,36 +434,67 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           children: [
                                             CircleAvatar(
                                               radius: 40,
-                                              backgroundColor: _kBlue.withOpacity(0.1),
-                                              backgroundImage: _avatarFile != null
+                                              backgroundColor:
+                                                  _kBlue.withOpacity(0.1),
+                                              backgroundImage: _avatarFile !=
+                                                      null
                                                   ? FileImage(_avatarFile!)
                                                   : (_localAvatarBytes != null
-                                                      ? MemoryImage(_localAvatarBytes!)
-                                                      : (finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null)) as ImageProvider?,
+                                                          ? MemoryImage(
+                                                              _localAvatarBytes!)
+                                                          : (finalAvatarUrl
+                                                                  .isNotEmpty
+                                                              ? NetworkImage(
+                                                                  finalAvatarUrl)
+                                                              : null))
+                                                      as ImageProvider?,
                                               child: _isUploadingAvatar
-                                                  ? const CircularProgressIndicator(color: _kBlue, strokeWidth: 3)
-                                                  : (_avatarFile == null && _localAvatarBytes == null && finalAvatarUrl.isEmpty)
+                                                  ? const CircularProgressIndicator(
+                                                      color: _kBlue,
+                                                      strokeWidth: 3)
+                                                  : (_avatarFile == null &&
+                                                          _localAvatarBytes ==
+                                                              null &&
+                                                          finalAvatarUrl
+                                                              .isEmpty)
                                                       ? Text(
                                                           '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kBlue),
+                                                          style:
+                                                              const TextStyle(
+                                                                  fontSize: 28,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  color:
+                                                                      _kBlue),
                                                         )
                                                       : null,
                                             ),
                                             Positioned(
-                                              bottom: 0, right: 0,
+                                              bottom: 0,
+                                              right: 0,
                                               child: Material(
                                                 color: Colors.transparent,
                                                 child: InkWell(
-                                                  onTap: _isUploadingAvatar ? null : pickAndCropAvatar,
-                                                  borderRadius: BorderRadius.circular(20),
+                                                  onTap: _isUploadingAvatar
+                                                      ? null
+                                                      : pickAndCropAvatar,
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
                                                   child: Container(
-                                                    padding: const EdgeInsets.all(6),
+                                                    padding:
+                                                        const EdgeInsets.all(6),
                                                     decoration: BoxDecoration(
                                                       color: _kBlue,
                                                       shape: BoxShape.circle,
-                                                      border: Border.all(color: Colors.white, width: 2),
+                                                      border: Border.all(
+                                                          color: Colors.white,
+                                                          width: 2),
                                                     ),
-                                                    child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                                                    child: const Icon(
+                                                        Icons.camera_alt,
+                                                        color: Colors.white,
+                                                        size: 14),
                                                   ),
                                                 ),
                                               ),
@@ -423,25 +504,59 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                         const SizedBox(width: 20),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Text('${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black87)),
+                                              Text(
+                                                  '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                                                  style: const TextStyle(
+                                                      fontSize: 22,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: Colors.black87)),
                                               const SizedBox(height: 2),
-                                              Text(user?['email'] ?? '', style: TextStyle(color: Colors.grey.shade600, fontSize: 14, fontWeight: FontWeight.w500)),
-                                              if ((user?['department'] as String? ?? '').isNotEmpty) ...[
+                                              Text(user?['email'] ?? '',
+                                                  style: TextStyle(
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w500)),
+                                              if ((user?['department']
+                                                          as String? ??
+                                                      '')
+                                                  .isNotEmpty) ...[
                                                 const SizedBox(height: 4),
-                                                Text('${user?['department']}', style: TextStyle(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w500)),
+                                                Text('${user?['department']}',
+                                                    style: TextStyle(
+                                                        color: Colors
+                                                            .grey.shade500,
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w500)),
                                               ],
                                               const SizedBox(height: 10),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color: _kBlue.withOpacity(0.08),
-                                                  borderRadius: BorderRadius.circular(16),
+                                                  color:
+                                                      _kBlue.withOpacity(0.08),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
                                                 ),
-                                                child: Text((user?['role'] ?? 'user').toUpperCase(),
-                                                  style: TextStyle(color: _kBlue.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.0)),
+                                                child: Text(
+                                                    (user?['role'] ?? 'user')
+                                                        .toUpperCase(),
+                                                    style: TextStyle(
+                                                        color: _kBlue
+                                                            .withOpacity(0.9),
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        letterSpacing: 1.0)),
                                               ),
                                             ],
                                           ),
@@ -449,22 +564,37 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                       ],
                                     ),
                                   ),
-                                  
+
                                   // Tabs
                                   Container(
-                                    decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+                                    decoration: BoxDecoration(
+                                        border: Border(
+                                            bottom: BorderSide(
+                                                color: Colors.grey.shade200))),
                                     child: TabBar(
                                       controller: _tabs,
                                       labelColor: _kBlue,
                                       indicatorColor: _kBlue,
                                       indicatorWeight: 3,
-                                      unselectedLabelColor: Colors.grey.shade500,
-                                      labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                                      unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                      unselectedLabelColor:
+                                          Colors.grey.shade500,
+                                      labelStyle: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700),
+                                      unselectedLabelStyle: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500),
                                       dividerColor: Colors.transparent,
                                       tabs: const [
-                                        Tab(icon: Icon(Icons.manage_accounts_outlined, size: 20), text: 'Account Settings'),
-                                        Tab(icon: Icon(Icons.lock_outline, size: 20), text: 'Change Password'),
+                                        Tab(
+                                            icon: Icon(
+                                                Icons.manage_accounts_outlined,
+                                                size: 20),
+                                            text: 'Account Settings'),
+                                        Tab(
+                                            icon: Icon(Icons.lock_outline,
+                                                size: 20),
+                                            text: 'Change Password'),
                                       ],
                                     ),
                                   ),
@@ -481,11 +611,13 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           emailCtrl: _emailCtrl,
                                           selectedDept: _selectedDept,
                                           departments: _departments,
-                                          isLoadingDepartments: _isLoadingDepartments,
+                                          isLoadingDepartments:
+                                              _isLoadingDepartments,
                                           profileMsg: _profileMsg,
                                           profileSuccess: _profileSuccess,
                                           savingProfile: _savingProfile,
-                                          onDeptChanged: (v) => setState(() => _selectedDept = v),
+                                          onDeptChanged: (v) =>
+                                              setState(() => _selectedDept = v),
                                           onSave: _saveProfile,
                                         ),
                                         PasswordFormTab(
@@ -499,9 +631,12 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           passMsg: _passMsg,
                                           passSuccess: _passSuccess,
                                           savingPass: _savingPass,
-                                          onToggleCur: () => setState(() => _obscureCur = !_obscureCur),
-                                          onToggleNew: () => setState(() => _obscureNew = !_obscureNew),
-                                          onToggleConf: () => setState(() => _obscureConf = !_obscureConf),
+                                          onToggleCur: () => setState(
+                                              () => _obscureCur = !_obscureCur),
+                                          onToggleNew: () => setState(
+                                              () => _obscureNew = !_obscureNew),
+                                          onToggleConf: () => setState(() =>
+                                              _obscureConf = !_obscureConf),
                                           onSave: _changePassword,
                                         ),
                                       ],
