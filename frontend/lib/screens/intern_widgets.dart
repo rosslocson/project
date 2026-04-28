@@ -65,8 +65,9 @@ class InternProfile {
       if (value == null) return [];
       if (value is List) return value.map((e) => e.toString()).toList();
       // Some APIs return a comma-separated string instead of an array
-      if (value is String && value.isNotEmpty)
+      if (value is String && value.isNotEmpty) {
         return value.split(',').map((s) => s.trim()).toList();
+      }
       return [];
     }
 

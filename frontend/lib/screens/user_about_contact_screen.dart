@@ -186,25 +186,25 @@ class UserAboutScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  _FeatureItem(
+                                  const _FeatureItem(
                                     icon: Icons.access_time_rounded,
                                     label: 'Attendance Tracking',
                                     description:
                                         'Clock in/out with real-time OJT hour monitoring.',
                                   ),
-                                  _FeatureItem(
+                                  const _FeatureItem(
                                     icon: Icons.person_outline_rounded,
                                     label: 'Intern Profiles',
                                     description:
                                         'Manage academic info, skills, and department details.',
                                   ),
-                                  _FeatureItem(
+                                  const _FeatureItem(
                                     icon: Icons.bar_chart_rounded,
                                     label: 'OJT Progress Dashboard',
                                     description:
                                         'Visualize completed hours and milestones at a glance.',
                                   ),
-                                  _FeatureItem(
+                                  const _FeatureItem(
                                     icon: Icons.admin_panel_settings_outlined,
                                     label: 'Admin Management',
                                     description:
@@ -217,11 +217,11 @@ class UserAboutScreen extends StatelessWidget {
                             const SizedBox(height: 24),
 
                             // ── Contact Us Card ───────────────────────
-                            _SectionCard(
+                            const _SectionCard(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Get in Touch',
                                     style: TextStyle(
                                       fontSize: 16,
@@ -229,34 +229,34 @@ class UserAboutScreen extends StatelessWidget {
                                       color: Color(0xFF1A1A2E),
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  const Text(
+                                  SizedBox(height: 6),
+                                  Text(
                                     'Have questions, concerns, or feedback? We\'d love to hear from you.',
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Color(0xFF777777),
                                     ),
                                   ),
-                                  const SizedBox(height: 24),
+                                  SizedBox(height: 24),
                                   _ContactItem(
                                     icon: Icons.email_outlined,
                                     label: 'Email',
                                     value: 'internspace123@gmail.com',
                                   ),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   _ContactItem(
                                     icon: Icons.phone_outlined,
                                     label: 'Phone',
                                     value: '0930-123-4567',
                                   ),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   _ContactItem(
                                     icon: Icons.location_on_outlined,
                                     label: 'Address',
                                     value:
                                         'San Pablo City, Laguna, Philippines',
                                   ),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   _ContactItem(
                                     icon: Icons.schedule_outlined,
                                     label: 'Support Hours',
