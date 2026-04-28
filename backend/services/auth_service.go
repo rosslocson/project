@@ -3,7 +3,6 @@ package services
 import (
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"log"
 	"math/big"
 	"os"
@@ -198,20 +197,6 @@ func (s *AuthService) generateToken(userID uint, role models.Role) (string, erro
 }
 
 // ------------------------------------------------------------------
-// 1. Generate a secure 6-digit OTP
-// ------------------------------------------------------------------
-func GenerateOTP() (string, error) {
-	// Generate a random number between 0 and 999999
-	max := big.NewInt(1000000)
-	n, err := rand.Int(rand.Reader, max)
-	if err != nil {
-		return "", err
-	}
-	// Format as a 6-digit string with leading zeros (e.g., "004512")
-	return fmt.Sprintf("%06d", n.Int64()), nil
-}
-
-// ------------------------------------------------------------------
 // 2. Validate Password Strength (Matches your Flutter Regex)
 // ------------------------------------------------------------------
 func ValidatePasswordStrength(password string) error {
@@ -235,4 +220,34 @@ func ValidatePasswordStrength(password string) error {
 	}
 
 	return nil
+}
+
+// ------------------------------------------------------------------
+// 3. Validate Email Format
+// ------------------------------------------------------------------
+func ValidateEmailFormat(email string) error {
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+
+	if !re.MatchString(email) {
+		return errors.New("invalid email format")
+	}
+	return nil
+}
+
+// ------------------------------------------------------------------
+// 4. Generate OTP
+// ------------------------------------------------------------------
+func GenerateOTP() (string, error) {
+	const otpChars = "1234567890"
+	otpLength := 6
+
+	otp := make([]byte, otpLength)
+	for i := range otp {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(otpChars))))
+		if err != nil {
+			return "", err
+		}
+		otp[i] = otpChars[num.Int64()]
+	}
+	return string(otp), nil
 }

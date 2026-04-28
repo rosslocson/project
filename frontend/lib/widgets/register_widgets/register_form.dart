@@ -145,8 +145,14 @@ class RegisterForm {
                 keyboardType: TextInputType.emailAddress,
                 decoration: dec.copyWith(hintText: 'Enter Email Address'),
                 validator: (v) {
-                  if (v!.isEmpty) return 'Email is required';
-                  if (!v.contains('@')) return 'Enter a valid email';
+                  if (v == null || v.isEmpty) return 'Email is required';
+                  
+                  // Strict Email Regex
+                  final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                  
+                  if (!emailRegex.hasMatch(v)) {
+                    return 'Enter a valid email (e.g., name@example.com)';
+                  }
                   return null;
                 },
               ),

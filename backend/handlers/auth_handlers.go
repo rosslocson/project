@@ -55,7 +55,13 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	// 1. BACKEND ENFORCEMENT: Check Password Strength
+	// 1. BACKEND ENFORCEMENT: Check Email Format
+	if err := services.ValidateEmailFormat(strings.TrimSpace(req.Email)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	// 2. BACKEND ENFORCEMENT: Check Password Strength
 	if err := services.ValidatePasswordStrength(req.Password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
 		return
