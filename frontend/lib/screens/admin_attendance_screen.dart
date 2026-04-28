@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -54,11 +55,11 @@ extension AttendancePeriodExt on AttendancePeriod {
       };
 
   String? get apiPeriod => switch (this) {
-        AttendancePeriod.today    => 'today',
-        AttendancePeriod.week     => 'week',
-        AttendancePeriod.month    => 'month',
-        AttendancePeriod.year     => 'year',
-        _                         => null,
+        AttendancePeriod.today => 'today',
+        AttendancePeriod.week  => 'week',
+        AttendancePeriod.month => 'month',
+        AttendancePeriod.year  => 'year',
+        _                      => null,
       };
 }
 
@@ -103,16 +104,39 @@ class AdminAttendanceRecord {
   });
 
   factory AdminAttendanceRecord.fromJson(Map<String, dynamic> j) {
+    final rawAvatar = j['avatar_url'] as String? ?? '';
+    String avatarUrl = rawAvatar;
+
+    if (rawAvatar.isNotEmpty &&
+        !rawAvatar.startsWith('http://') &&
+        !rawAvatar.startsWith('https://')) {
+      // Uploads are served at the SERVER ROOT (e.g. /uploads/foo.jpg),
+      // NOT under /api. Strip the trailing /api segment from baseUrl so we
+      // don't produce a broken path like /api/uploads/foo.jpg (→ 404).
+      //
+      // Example:
+      //   ApiService.baseUrl = "http://localhost:8080/api"
+      //   rawAvatar          = "uploads/3_abc.jpg"
+      //   staticBase         = "http://localhost:8080"
+      //   result             = "http://localhost:8080/uploads/3_abc.jpg"  ✅
+      final staticBase = ApiService.baseUrl
+          .replaceAll(RegExp(r'/api/?$'), '') // remove trailing /api or /api/
+          .replaceAll(RegExp(r'/$'), '');      // remove any remaining trailing /
+
+      final cleanPath = rawAvatar.startsWith('/') ? rawAvatar : '/$rawAvatar';
+      avatarUrl = '$staticBase$cleanPath';
+    }
+
     return AdminAttendanceRecord(
-      id:           j['id']          as int?    ?? 0,
-      userId:       j['user_id']     as int?    ?? 0,
-      internName:   j['intern_name'] as String? ?? 'Unknown',
-      avatarUrl:    j['avatar_url']  as String? ?? '',
-      date:         j['date']        as String? ?? '',
-      timeIn:       j['time_in']     as String?,
-      timeOut:      j['time_out']    as String?,
-      hoursRendered:(j['hours_rendered'] as num?)?.toDouble(),
-      status:       j['status']      as String? ?? 'Absent',
+      id:            j['id']          as int?    ?? 0,
+      userId:        j['user_id']     as int?    ?? 0,
+      internName:    j['intern_name'] as String? ?? 'Unknown',
+      avatarUrl:     avatarUrl,
+      date:          j['date']        as String? ?? '',
+      timeIn:        j['time_in']     as String?,
+      timeOut:       j['time_out']    as String?,
+      hoursRendered: (j['hours_rendered'] as num?)?.toDouble(),
+      status:        j['status']      as String? ?? 'Absent',
     );
   }
 
@@ -161,9 +185,14 @@ class AdminAttendanceService {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       if (body['ok'] == true) {
         final records = (body['records'] as List? ?? [])
-            .map((e) => AdminAttendanceRecord.fromJson(e as Map<String, dynamic>))
+            .map((e) =>
+                AdminAttendanceRecord.fromJson(e as Map<String, dynamic>))
             .toList();
-        return {'ok': true, 'records': records, 'total': body['total'] as int? ?? 0};
+        return {
+          'ok':      true,
+          'records': records,
+          'total':   body['total'] as int? ?? 0,
+        };
       }
       return {'ok': false, 'error': body['error'] ?? 'Unknown error'};
     } catch (e) {
@@ -208,16 +237,16 @@ class AdminAttendanceScreen extends StatefulWidget {
 class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   bool _isSidebarOpen = true;
 
-  // ── filter state ────────────────────────────────────────────────────────────
-  AttendancePeriod _period       = AttendancePeriod.today;
-  DateTime         _customDate   = DateTime.now();
+  // ── filter state ──────────────────────────────────────────────────────────
+  AttendancePeriod _period         = AttendancePeriod.today;
+  DateTime         _customDate     = DateTime.now();
   String           _selectedStatus = 'All';
 
   // Search
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _debounce;
 
-  // ── pagination ───────────────────────────────────────────────────────────────
+  // ── pagination ────────────────────────────────────────────────────────────
   int       _page  = 1;
   final int _limit = 20;
   int       _total = 0;
@@ -306,7 +335,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     ));
   }
 
-  // ── build ──────────────────────────────────────────────────────────────────
+  // ── build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -346,7 +375,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       const SizedBox(height: 15),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                          padding: const EdgeInsets.only(
+                              left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
                               color:        Colors.white.withValues(alpha: 0.95),
@@ -358,7 +388,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                                 children: [
                                   _buildToolbar(),
                                   _buildFilterRow(),
-                                  const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                                  const Divider(
+                                      height:    1,
+                                      thickness: 1,
+                                      color:     Color(0xFFEEEEEE)),
                                   Expanded(child: _buildBody()),
                                   if (_total > _limit) _buildPagination(),
                                 ],
@@ -389,11 +422,11 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             child: Text(
               'Attendance Monitoring',
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontSize:      28,
-                fontWeight:    FontWeight.w800,
-                color:         Colors.white,
-                letterSpacing: 0.5,
-              ),
+                    fontSize:      28,
+                    fontWeight:    FontWeight.w800,
+                    color:         Colors.white,
+                    letterSpacing: 0.5,
+                  ),
             ),
           ),
           if (!_isSidebarOpen)
@@ -404,7 +437,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 decoration: BoxDecoration(
                   color:        Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: IconButton(
                   padding:        const EdgeInsets.all(12),
@@ -421,26 +455,29 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── toolbar: search + export + refresh ────────────────────────────────────
+  // ── toolbar ───────────────────────────────────────────────────────────────
 
   Widget _buildToolbar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
       child: Row(
         children: [
-          // ── Search field ──────────────────────────────────────────────────
+          // Search
           Expanded(
             child: SizedBox(
               height: 40,
               child: TextField(
-                controller:  _searchCtrl,
+                controller: _searchCtrl,
                 decoration: InputDecoration(
-                  hintText:    'Search intern by name…',
-                  hintStyle:   const TextStyle(fontSize: 13, color: Colors.black38),
-                  prefixIcon:  const Icon(Icons.search_rounded, size: 18, color: Colors.black38),
+                  hintText:   'Search intern by name…',
+                  hintStyle:  const TextStyle(
+                      fontSize: 13, color: Colors.black38),
+                  prefixIcon: const Icon(Icons.search_rounded,
+                      size: 18, color: Colors.black38),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
-                          icon:    const Icon(Icons.close_rounded, size: 16, color: Colors.black38),
+                          icon:    const Icon(Icons.close_rounded,
+                              size: 16, color: Colors.black38),
                           padding: EdgeInsets.zero,
                           onPressed: () {
                             _searchCtrl.clear();
@@ -448,13 +485,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                           },
                         )
                       : null,
-                  filled:      true,
-                  fillColor:   const Color(0xFFF4F4F8),
+                  filled:    true,
+                  fillColor: const Color(0xFFF4F4F8),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide:   BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: 0, horizontal: 12),
                 ),
                 style: const TextStyle(fontSize: 13),
               ),
@@ -462,9 +500,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           ),
           const SizedBox(width: 12),
 
-          // ── Status filter dropdown ────────────────────────────────────────
+          // Status dropdown
           _StatusDropdown(
-            value:    _selectedStatus,
+            value: _selectedStatus,
             onChanged: (v) {
               setState(() => _selectedStatus = v ?? 'All');
               _load();
@@ -472,15 +510,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           ),
           const SizedBox(width: 12),
 
-          // ── Refresh ───────────────────────────────────────────────────────
+          // Refresh
           IconButton(
             onPressed: () => _load(page: _page),
-            icon:      const Icon(Icons.refresh_rounded, color: Colors.black54),
-            tooltip:   'Refresh',
+            icon:    const Icon(Icons.refresh_rounded, color: Colors.black54),
+            tooltip: 'Refresh',
           ),
           const SizedBox(width: 8),
 
-          // ── Export CSV ────────────────────────────────────────────────────
+          // Export CSV
           _ToolbarButton(
             icon:   Icons.download_rounded,
             label:  'Export CSV',
@@ -492,10 +530,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 allDates: isAllDates,
                 period:   (!isAllDates && !isCustom) ? _period.apiPeriod : null,
                 date:     isCustom ? _toApiDate(_customDate) : null,
-                search:   _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
-                status:   _selectedStatus == 'All' ? null : _selectedStatus,
+                search:   _searchCtrl.text.trim().isEmpty
+                    ? null
+                    : _searchCtrl.text.trim(),
+                status: _selectedStatus == 'All' ? null : _selectedStatus,
               );
-              // TODO: Replace _snack with launchUrl(Uri.parse(url)) once
+              // TODO: replace with launchUrl(Uri.parse(url)) once
               // url_launcher is added to pubspec.yaml
               _snack(url);
             },
@@ -505,7 +545,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── period filter chips row ───────────────────────────────────────────────
+  // ── filter row ────────────────────────────────────────────────────────────
 
   Widget _buildFilterRow() {
     const periods = [
@@ -520,7 +560,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
       child: Row(
         children: [
-          // Period chips
           ...periods.map((p) {
             final selected = _period == p;
             return Padding(
@@ -542,13 +581,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 ? _toDisplayDate(_customDate)
                 : 'Custom Date',
             selected: _period == AttendancePeriod.custom,
-            icon: Icons.calendar_today_rounded,
-            onTap: _pickCustomDate,
+            icon:     Icons.calendar_today_rounded,
+            onTap:    _pickCustomDate,
           ),
 
           const Spacer(),
 
-          // Active-filter summary badge
           if (_searchCtrl.text.isNotEmpty || _selectedStatus != 'All')
             _ActiveFiltersBadge(
               count: (_searchCtrl.text.isNotEmpty ? 1 : 0) +
@@ -686,20 +724,24 @@ class _AttendanceTable extends StatelessWidget {
     return TableRow(
       decoration: const BoxDecoration(
         color:  Color(0xFFF8F9FB),
-        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 2)),
+        border: Border(
+            bottom: BorderSide(color: Color(0xFFEEEEEE), width: 2)),
       ),
-      children: _headers.map((h) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-        child: Text(
-          h,
-          style: const TextStyle(
-            fontWeight:    FontWeight.w700,
-            fontSize:      13,
-            color:         Color(0xFF1A1F3A),
-            letterSpacing: 0.2,
-          ),
-        ),
-      )).toList(),
+      children: _headers
+          .map((h) => Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 14, horizontal: 10),
+                child: Text(
+                  h,
+                  style: const TextStyle(
+                    fontWeight:    FontWeight.w700,
+                    fontSize:      13,
+                    color:         Color(0xFF1A1F3A),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ))
+          .toList(),
     );
   }
 
@@ -739,23 +781,135 @@ class _AttendanceTable extends StatelessWidget {
   }
 
   Widget _cell(String text) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 13, color: Color(0xFF444444)),
-    ),
-  );
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 13, color: Color(0xFF444444)),
+        ),
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// New sub-widgets
+// _InternAvatar
+//
+// Fetches the avatar image manually with auth headers (so protected upload
+// routes work). The URL is already fully resolved in fromJson, so this widget
+// just fires a GET with the bearer token and renders the bytes.
+// Falls back gracefully to initials on any error or empty URL.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Segmented period chip (Today / This Week / etc.)
+class _InternAvatar extends StatefulWidget {
+  final String url;
+  final String name;
+  const _InternAvatar({required this.url, required this.name});
+
+  @override
+  State<_InternAvatar> createState() => _InternAvatarState();
+}
+
+class _InternAvatarState extends State<_InternAvatar> {
+  Uint8List? _imageBytes;
+  bool _loading = true;
+  bool _failed  = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchImage();
+  }
+
+  @override
+  void didUpdateWidget(_InternAvatar old) {
+    super.didUpdateWidget(old);
+    if (old.url != widget.url) {
+      setState(() {
+        _loading    = true;
+        _failed     = false;
+        _imageBytes = null;
+      });
+      _fetchImage();
+    }
+  }
+
+  Future<void> _fetchImage() async {
+    if (widget.url.isEmpty) {
+      if (mounted) setState(() { _loading = false; _failed = true; });
+      return;
+    }
+    try {
+      final res = await http.get(
+        Uri.parse(widget.url),
+        headers: await ApiService.authHeaders(),
+      );
+      if (!mounted) return;
+      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+        setState(() {
+          _imageBytes = res.bodyBytes;
+          _loading    = false;
+        });
+      } else {
+        setState(() { _loading = false; _failed = true; });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _failed = true; });
+    }
+  }
+
+  String get _initials {
+    final trimmed = widget.name.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0])
+        .take(2)
+        .join()
+        .toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius:          18,
+      backgroundColor: const Color(0xFF6C63FF),
+      child: _loading
+          ? const SizedBox(
+              width:  18,
+              height: 18,
+              child:  CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color:       Colors.white54,
+              ),
+            )
+          : _imageBytes != null
+              ? ClipOval(
+                  child: Image.memory(
+                    _imageBytes!,
+                    width:  36,
+                    height: 36,
+                    fit:    BoxFit.cover,
+                  ),
+                )
+              : Text(
+                  _initials,
+                  style: const TextStyle(
+                    color:      Colors.white,
+                    fontSize:   12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Period chip
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _PeriodChip extends StatelessWidget {
-  final String     label;
-  final bool       selected;
-  final IconData?  icon;
+  final String    label;
+  final bool      selected;
+  final IconData? icon;
   final VoidCallback onTap;
 
   const _PeriodChip({
@@ -785,7 +939,9 @@ class _PeriodChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 13, color: selected ? Colors.white : Colors.black54),
+              Icon(icon,
+                  size:  13,
+                  color: selected ? Colors.white : Colors.black54),
               const SizedBox(width: 5),
             ],
             Text(
@@ -803,9 +959,12 @@ class _PeriodChip extends StatelessWidget {
   }
 }
 
-/// Status filter dropdown
+// ─────────────────────────────────────────────────────────────────────────────
+// Status dropdown
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _StatusDropdown extends StatelessWidget {
-  final String  value;
+  final String value;
   final ValueChanged<String?> onChanged;
 
   const _StatusDropdown({required this.value, required this.onChanged});
@@ -813,7 +972,7 @@ class _StatusDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
+      height:  40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color:        const Color(0xFFF4F4F8),
@@ -821,11 +980,12 @@ class _StatusDropdown extends StatelessWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value:        value,
-          onChanged:    onChanged,
-          isDense:      true,
+          value:     value,
+          onChanged: onChanged,
+          isDense:   true,
           style: const TextStyle(fontSize: 13, color: Color(0xFF1A1F3A)),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Colors.black45),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              size: 18, color: Colors.black45),
           items: _kStatuses.map((s) {
             return DropdownMenuItem<String>(
               value: s,
@@ -838,7 +998,10 @@ class _StatusDropdown extends StatelessWidget {
   }
 }
 
-/// Small badge showing how many extra filters are active, with a clear button
+// ─────────────────────────────────────────────────────────────────────────────
+// Active filters badge
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _ActiveFiltersBadge extends StatelessWidget {
   final int          count;
   final VoidCallback onClear;
@@ -868,7 +1031,8 @@ class _ActiveFiltersBadge extends StatelessWidget {
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onClear,
-            child: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF4F46E5)),
+            child: const Icon(Icons.close_rounded,
+                size: 14, color: Color(0xFF4F46E5)),
           ),
         ],
       ),
@@ -877,55 +1041,8 @@ class _ActiveFiltersBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Existing sub-widgets (unchanged)
+// Status badge
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _InternAvatar extends StatelessWidget {
-  final String url;
-  final String name;
-  const _InternAvatar({required this.url, required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    final initials = name.trim().isEmpty
-        ? '?'
-        : name.trim().split(' ').map((w) => w[0]).take(2).join().toUpperCase();
-
-    if (url.isNotEmpty) {
-      return CircleAvatar(
-        radius:          18,
-        backgroundColor: const Color(0xFF6C63FF),
-        child: ClipOval(
-          child: Image.network(
-            url,
-            width:  36,
-            height: 36,
-            fit:    BoxFit.cover,
-            errorBuilder: (_, __, ___) => Text(
-              initials,
-              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-            loadingBuilder: (_, child, progress) {
-              if (progress == null) return child;
-              return Text(
-                initials,
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-              );
-            },
-          ),
-        ),
-      );
-    }
-    return CircleAvatar(
-      radius:          18,
-      backgroundColor: const Color(0xFF6C63FF),
-      child: Text(
-        initials,
-        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
 
 class _StatusBadge extends StatelessWidget {
   final String status;
@@ -955,9 +1072,6 @@ class _StatusBadge extends StatelessWidget {
         text   = const Color(0xFFC2410C);
         bg     = const Color(0xFFFFF7ED);
       case 'Absent':
-        border = const Color(0xFFEF4444);
-        text   = const Color(0xFFDC2626);
-        bg     = const Color(0xFFFEF2F2);
       default:
         border = const Color(0xFFEF4444);
         text   = const Color(0xFFDC2626);
@@ -973,11 +1087,16 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 11),
+        style: TextStyle(
+            color: text, fontWeight: FontWeight.w600, fontSize: 11),
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Toolbar button
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _ToolbarButton extends StatelessWidget {
   final IconData     icon;
@@ -1008,7 +1127,10 @@ class _ToolbarButton extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: TextStyle(color: accent, fontWeight: FontWeight.w600, fontSize: 13),
+                style: TextStyle(
+                    color:      accent,
+                    fontWeight: FontWeight.w600,
+                    fontSize:   13),
               ),
             ],
           ),
@@ -1017,6 +1139,10 @@ class _ToolbarButton extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Page button
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _PageButton extends StatelessWidget {
   final IconData     icon;
@@ -1050,6 +1176,10 @@ class _PageButton extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Hamburger icon
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _HamburgerIcon extends StatelessWidget {
   const _HamburgerIcon();
 
@@ -1071,11 +1201,11 @@ class _HamburgerIcon extends StatelessWidget {
   }
 
   Widget _bar(double w, {double opacity = 1.0}) => Container(
-    width:  w,
-    height: 2.5,
-    decoration: BoxDecoration(
-      color:        Colors.white.withValues(alpha: opacity),
-      borderRadius: BorderRadius.circular(2),
-    ),
-  );
+        width:  w,
+        height: 2.5,
+        decoration: BoxDecoration(
+          color:        Colors.white.withValues(alpha: opacity),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      );
 }
