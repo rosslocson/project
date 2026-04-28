@@ -362,7 +362,9 @@ class _InternCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Intern #${intern.internNumber}',
+                intern.internNumber != 'N/A'
+                    ? 'Intern #${intern.internNumber}'
+                    : '',
                 style: const TextStyle(
                   fontSize: 14,
                   color: Colors.white70,
