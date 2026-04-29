@@ -15,7 +15,8 @@ class ConfigScreen extends StatefulWidget {
   State<ConfigScreen> createState() => _ConfigScreenState();
 }
 
-class _ConfigScreenState extends State<ConfigScreen> with TickerProviderStateMixin {
+class _ConfigScreenState extends State<ConfigScreen>
+    with TickerProviderStateMixin {
   bool _isSidebarOpen = true;
   List<dynamic> _departments = [];
   bool _loadingDept = true;
@@ -139,10 +140,14 @@ class _ConfigScreenState extends State<ConfigScreen> with TickerProviderStateMix
                           alignment: Alignment.centerLeft,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
+                              padding: const EdgeInsets.only(
+                                  left: 100, right: 100, top: 28),
                               child: Text(
                                 'Departments',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displaySmall
+                                    ?.copyWith(
                                       fontSize: 28,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -158,14 +163,18 @@ class _ConfigScreenState extends State<ConfigScreen> with TickerProviderStateMix
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                                    border: Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.15)),
                                   ),
                                   child: IconButton(
                                     padding: const EdgeInsets.all(12),
-                                    onPressed: () => setState(() => _isSidebarOpen = true),
+                                    onPressed: () =>
+                                        setState(() => _isSidebarOpen = true),
                                     icon: const DepartmentsHamburgerIcon(),
                                     tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withValues(alpha: 0.1),
+                                    splashColor:
+                                        Colors.white.withValues(alpha: 0.1),
                                     highlightColor: Colors.transparent,
                                   ),
                                 ),
@@ -176,7 +185,8 @@ class _ConfigScreenState extends State<ConfigScreen> with TickerProviderStateMix
                       const SizedBox(height: 15),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                          padding: const EdgeInsets.only(
+                              left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.95),
@@ -189,8 +199,10 @@ class _ConfigScreenState extends State<ConfigScreen> with TickerProviderStateMix
                                 items: _departments,
                                 searchHint: 'Search departments...',
                                 onAdd: _addDepartment,
-                                onEdit: (id, name) => _editItem(id: id, currentName: name),
-                                onDelete: (id, name) => _deleteItem(id: id, name: name),
+                                onEdit: (id, name) =>
+                                    _editItem(id: id, currentName: name),
+                                onDelete: (id, name) =>
+                                    _deleteItem(id: id, name: name),
                               ),
                             ),
                           ),

@@ -8,7 +8,7 @@ class UserListSection extends StatelessWidget {
   final String title;
   final List<dynamic> users;
   final int currentUserId;
-  final Function(Map<String, dynamic>) onToggleActive;
+  final Future<bool> Function(Map<String, dynamic>) onToggleActive;
   final Function(Map<String, dynamic>) onArchive;
   final Function(Map<String, dynamic>) onRestore;
 
@@ -33,7 +33,10 @@ class UserListSection extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white70),
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white70),
           ),
         ),
         Container(
@@ -51,6 +54,8 @@ class UserListSection extends StatelessWidget {
               separatorBuilder: (_, __) => const Divider(height: 1, indent: 20),
               itemBuilder: (context, i) {
                 final u = users[i];
+                print(
+                    'Building tile for user: ${u['id']}, is_active: ${u['is_active']}');
                 return UserTile(
                   key: ValueKey(toInt(u['id'])),
                   user: u,
