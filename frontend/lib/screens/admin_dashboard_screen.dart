@@ -12,6 +12,8 @@ import '../services/api_service.dart';
 import '../widgets/admin_layout.dart';
 import 'admin_glass_topbar.dart';
 import 'intern_widgets.dart';
+import 'intern_directory_screen.dart';
+import '../theme.dart';
 
 // Dashboard Widgets (Your new separated files)
 import '../widgets/admin_dashboard_widgets/intern_carousel_section.dart';
@@ -251,12 +253,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           Positioned.fill(
             child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/space_background.png'),
-                  fit: BoxFit.cover,
-                ),
-              ),
+              decoration: AppTheme.spaceBackground,
             ),
           ),
           Column(
@@ -276,6 +273,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Meet Our Interns',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    // Navigate to the new directory page
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: const Color(0xFF8A84FF), // Matches your accent purple/blue
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Text('View All'),
+                                      SizedBox(width: 4),
+                                      Icon(Icons.arrow_forward_ios, size: 12),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           // 1. Extracted Intern Carousel
                           InternCarouselSection(
                             interns: _interns,

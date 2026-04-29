@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../theme.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
 import 'avatar_crop_screen.dart';
@@ -347,12 +348,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
               children: [
                 Positioned.fill(
                   child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                    decoration: AppTheme.spaceBackground,
                   ),
                 ),
                 Positioned.fill(

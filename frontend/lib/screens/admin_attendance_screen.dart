@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
+import '../theme.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Date helpers
@@ -359,12 +360,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               children: [
                 Positioned.fill(
                   child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.png'),
-                        fit:   BoxFit.cover,
-                      ),
-                    ),
+                    decoration: AppTheme.spaceBackground,
                   ),
                 ),
                 Positioned.fill(

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
+import '../theme.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/admin_departments_widgets/departments_hamburger_icon.dart';
@@ -121,12 +122,7 @@ class _ConfigScreenState extends State<ConfigScreen> with TickerProviderStateMix
               children: [
                 Positioned.fill(
                   child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                    decoration: AppTheme.spaceBackground,
                   ),
                 ),
                 Positioned.fill(

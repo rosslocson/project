@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/user_sidebar.dart';
 import '../widgets/app_theme.dart';
 import '../services/api_service.dart';
+import '../theme.dart';
 
 // ── Custom Hamburger Icon ────────────────────────────────────────────────────
 class HamburgerIcon extends StatelessWidget {
@@ -167,12 +168,8 @@ class _MyProfileScreenState extends State<MyProfileScreen>
               children: [
                 // Background
                 Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/space_background.png',
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Container(color: Colors.black),
+                  child: Container(
+                    decoration: AppTheme.spaceBackground,
                   ),
                 ),
 

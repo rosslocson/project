@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/app_theme.dart';
 import '../../widgets/user_sidebar.dart';
+import '../../theme.dart';
 
 // ── Imported Extracted Widgets ──
 import '../../widgets/user_edit_profile_widgets/edit_profile_hamburger_icon.dart';
@@ -196,9 +197,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/space_background.png',
-                    fit: BoxFit.cover,
+                  child: Container(
+                    decoration: AppTheme.spaceBackground,
                   ),
                 ),
                 Positioned.fill(

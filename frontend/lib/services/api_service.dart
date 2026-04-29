@@ -254,10 +254,10 @@ class ApiService {
 
   /// Fetches all users with role = 'user' (intern).
   /// Hits GET /api/interns — must be accessible to authenticated non-admin users.
-  static Future<Map<String, dynamic>> getInterns() async {
+  static Future<Map<String, dynamic>> getInterns({int limit = 1000}) async {
     try {
       final res = await http.get(
-        Uri.parse('$baseUrl/interns'),
+        Uri.parse('$baseUrl/interns?limit=$limit'),
         headers: await _authHeaders(),
       );
       return _parse(res);

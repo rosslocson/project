@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import '../services/api_service.dart';
+import '../theme.dart';
 
 // ── Brand colors ──────────────────────────────────────────────────────────────
 const kBlue = Color(0xFF1E40AF);
@@ -217,10 +218,9 @@ class InternDetailPage extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Sharp Background Image (No blur)
-            Image.asset(
-              'assets/images/space_background.png',
-              fit: BoxFit.cover,
+            // Sharp Background Gradient (No blur)
+            Container(
+              decoration: AppTheme.spaceBackground,
             ),
             
             // Dark Overlay to make the background blacker/darker
@@ -650,3 +650,4 @@ class _SkillChip extends StatelessWidget {
     );
   }
 }
+

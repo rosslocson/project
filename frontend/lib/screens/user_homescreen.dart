@@ -6,6 +6,8 @@ import '../services/api_service.dart';
 import '../widgets/user_layout.dart';
 import 'user_glass_topbar.dart';
 import 'intern_widgets.dart';
+import 'intern_directory_screen.dart';
+import '../theme.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/user_homescreen_widgets/user_intern_carousel.dart';
@@ -71,9 +73,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/images/space_background.png',
-              fit: BoxFit.cover,
+            child: Container(
+              decoration: AppTheme.spaceBackground,
             ),
           ),
           Column(
@@ -93,24 +94,36 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 16),
-                        const Center(
-                          child: Column(
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
+                              const Text(
                                 'Meet Our Interns',
                                 style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
                                   color: Colors.white,
-                                  letterSpacing: 0.5,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              SizedBox(height: 6),
-                              Text(
-                                'Tap a card to view full profile',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white70,
+                              TextButton(
+                                onPressed: () {
+                                  // Navigate to the new directory page
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
+                                  );
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xFF8A84FF), // Matches your accent purple/blue
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Text('View All'),
+                                    SizedBox(width: 4),
+                                    Icon(Icons.arrow_forward_ios, size: 12),
+                                  ],
                                 ),
                               ),
                             ],

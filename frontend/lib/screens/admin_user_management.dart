@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
+import '../theme.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/admin_user_management_widgets/user_utils.dart';
@@ -256,13 +257,7 @@ class _UsersScreenState extends State<UsersScreen> {
               children: [
                 Positioned.fill(
                   child: Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF0A0A14),
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                    decoration: AppTheme.spaceBackground,
                   ),
                 ),
                 Positioned.fill(

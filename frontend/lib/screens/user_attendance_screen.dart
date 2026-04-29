@@ -7,6 +7,7 @@ import '../widgets/attendance_clock_card.dart';
 import '../widgets/attendance_history_list.dart';
 import '../widgets/ojt_progress_card.dart';
 import '../widgets/user_layout.dart';
+import '../theme.dart';
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
@@ -146,12 +147,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         // ── Background ────────────────────────────────────────────
         Positioned.fill(
           child: Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/space_background.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
+            decoration: AppTheme.spaceBackground,
           ),
         ),
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/sidebar_provider.dart';
 import '../widgets/user_layout.dart';
+import '../theme.dart';
 
 class UserAboutScreen extends StatelessWidget {
   const UserAboutScreen({super.key});
@@ -22,12 +23,7 @@ class UserAboutScreen extends StatelessWidget {
         // ── Background ─────────────────────────────────────────────
         Positioned.fill(
           child: Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/space_background.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
+            decoration: AppTheme.spaceBackground,
           ),
         ),
 
