@@ -16,14 +16,15 @@ import (
 // ── Request Structs ────────────────────────────────────────────────────────
 
 type RegisterRequest struct {
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"last_name"`
-	Email           string `json:"email"`
-	Password        string `json:"password"`
-	ConfirmPassword string `json:"confirm_password"`
-	Phone           string `json:"phone"`
-	Department      string `json:"department"`
-	Position        string `json:"position"`
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ConfirmPassword  string `json:"confirm_password"`
+	Phone            string `json:"phone"`
+	Department       string `json:"department"`
+	Position         string `json:"position"`
+	RequiredOjtHours int    `json:"required_ojt_hours"`
 }
 
 type LoginRequest struct {
@@ -74,10 +75,15 @@ func (h *Handler) Register(c *gin.Context) {
 	userRepo := repositories.NewUserRepository(h.DB)
 	authService := services.NewAuthService(userRepo)
 
+	ojtHours := req.RequiredOjtHours
+	if ojtHours <= 0 {
+		ojtHours = 400 // Default OJT hours if not provided or invalid
+	}
+
 	// Pass the enforcedPosition instead of req.Position
 	user, token, err := authService.Register(
 		req.FirstName, req.LastName, strings.TrimSpace(req.Email), req.Password,
-		req.Phone, req.Department, enforcedPosition, models.RoleUser,
+		req.Phone, req.Department, enforcedPosition, models.RoleUser, ojtHours,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "admin role") {

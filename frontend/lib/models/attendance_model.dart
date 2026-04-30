@@ -83,7 +83,7 @@ class AttendanceSummary {
       totalHoursRendered:
           double.tryParse(json['total_hours_rendered'].toString()) ?? 0.0,
       requiredHours:
-          double.tryParse(json['required_hours'].toString()) ?? 486.0,
+          double.tryParse(json['required_hours'].toString()) ?? 400.0,
       totalDays: _toInt(json['total_days']),
       todayRecord: json['today'] != null
           ? AttendanceRecord.fromJson(json['today'] as Map<String, dynamic>)

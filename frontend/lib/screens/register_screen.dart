@@ -17,14 +17,16 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _firstCtrl = TextEditingController();
   final _lastCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  
+  final _ojtHoursCtrl = TextEditingController(text: '400');
+
   bool _obscurePass = true;
   bool _obscureConfirm = true;
 
@@ -50,9 +52,13 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
 
   @override
   void dispose() {
-    for (final c in [_firstCtrl, _lastCtrl, _emailCtrl, _passCtrl, _confirmCtrl]) {
-      c.dispose();
-    }
+    // ✅ All controllers disposed BEFORE super.dispose()
+    _firstCtrl.dispose();
+    _lastCtrl.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmCtrl.dispose();
+    _ojtHoursCtrl.dispose();
     super.dispose();
   }
 
@@ -68,7 +74,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
         final List items = data['items'] ?? [];
         if (mounted) {
           setState(() {
-            _departments = items.map<String>((d) => d['name'] as String).toList();
+            _departments =
+                items.map<String>((d) => d['name'] as String).toList();
             _loadingDepts = false;
           });
         }
@@ -88,11 +95,11 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
     if (pass.contains(RegExp(r'[a-z]'))) score++;
     if (pass.contains(RegExp(r'[0-9]'))) score++;
     if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) score++;
-    
+
     setState(() {
       if (score <= 2) {
         _passStrength = 'Weak';
-        _passColor = const Color(0xFF00022E); // kCosmicBlue
+        _passColor = const Color(0xFF00022E);
         _passValue = 0.25;
       } else if (score == 3) {
         _passStrength = 'Fair';
@@ -108,7 +115,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
         _passValue = 1.0;
       }
       if (_confirmCtrl.text.isNotEmpty) {
-        _confirmError = _confirmCtrl.text != pass ? 'Passwords do not match' : null;
+        _confirmError =
+            _confirmCtrl.text != pass ? 'Passwords do not match' : null;
       }
     });
   }
@@ -125,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       setState(() => _confirmError = 'Passwords do not match');
       return;
     }
-    
+
     final auth = context.read<AuthProvider>();
     final ok = await auth.register({
       'first_name': _firstCtrl.text.trim(),
@@ -135,8 +143,9 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       'confirm_password': _confirmCtrl.text,
       'department': _selectedDept ?? '',
       'position': _defaultPosition,
+      'required_ojt_hours': int.tryParse(_ojtHoursCtrl.text.trim()) ?? 400,
     });
-    
+
     if (mounted && ok) context.go('/home');
   }
 
@@ -152,6 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       emailCtrl: _emailCtrl,
       passCtrl: _passCtrl,
       confirmCtrl: _confirmCtrl,
+      ojtHoursCtrl: _ojtHoursCtrl, // ← NEW
       obscurePass: _obscurePass,
       obscureConfirm: _obscureConfirm,
       departments: _departments,
@@ -164,7 +174,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       confirmError: _confirmError,
       auth: auth,
       onToggleObscurePass: () => setState(() => _obscurePass = !_obscurePass),
-      onToggleObscureConfirm: () => setState(() => _obscureConfirm = !_obscureConfirm),
+      onToggleObscureConfirm: () =>
+          setState(() => _obscureConfirm = !_obscureConfirm),
       onPassChanged: _checkStrength,
       onConfirmChanged: _checkConfirm,
       onDeptChanged: (v) => setState(() => _selectedDept = v),
@@ -181,7 +192,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
             return Row(
               children: [
                 Expanded(
-                  child: AppBackground(backgroundAsset: 'assets/images/star_background.png', 
+                  child: AppBackground(
+                    backgroundAsset: 'assets/images/star_background.png',
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -193,22 +205,31 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                                 height: 280,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.public, size: 120, color: Colors.white),
+                                    const Icon(Icons.public,
+                                        size: 120, color: Colors.white),
                               ),
                               const SizedBox(height: 24),
                               const Text(
                                 'READY FOR LIFTOFF?',
-                                style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.5),
                               ),
                               const SizedBox(height: 16),
-                              Container(width: 40, height: 2, color: Colors.white54),
+                              Container(
+                                  width: 40, height: 2, color: Colors.white54),
                               const SizedBox(height: 16),
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 64.0),
                                 child: Text(
                                   'Launch your intern journey today.\nBuild your profile and explore the stars of our current cohort.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+                                  style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                      height: 1.5),
                                 ),
                               ),
                               const SizedBox(height: 80),
@@ -222,25 +243,32 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                 Expanded(
                   child: Container(
                     color: Colors.white,
-                    child: formWidget.buildForm(isMobile: false, context: context),
+                    child:
+                        formWidget.buildForm(isMobile: false, context: context),
                   ),
                 ),
               ],
             );
           } else {
             // Mobile Layout
-            return AppBackground(backgroundAsset: 'assets/images/star_background.png', 
+            return AppBackground(
+              backgroundAsset: 'assets/images/star_background.png',
               child: Center(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(32),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 30, spreadRadius: 5),
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 30,
+                          spreadRadius: 5),
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: formWidget.buildForm(isMobile: true, context: context),
                 ),
               ),

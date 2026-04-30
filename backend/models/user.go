@@ -39,7 +39,7 @@ type User struct {
 	ResetOTP       string     `json:"-"`
 	ResetOTPExpiry *time.Time `json:"-"`
 
-	RequiredOjtHours int    `gorm:"default:486"        json:"required_ojt_hours"`
+	RequiredOjtHours int    `gorm:"default:400"        json:"required_ojt_hours"`
 	School           string `json:"school"`
 	Program          string `json:"program"`
 	Specialization   string `json:"specialization"`
