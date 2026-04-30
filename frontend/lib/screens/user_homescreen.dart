@@ -12,7 +12,6 @@ import '../widgets/app_background.dart';
 // ── Imported Extracted Widgets ──
 import '../widgets/user_homescreen_widgets/user_intern_carousel.dart';
 
-
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});
   @override
@@ -76,19 +75,20 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             GlassTopBar(
               key: const Key('user_topbar'),
               isSidebarOpen: _isSidebarOpen,
-              onToggleSidebar: () => setState(() => _isSidebarOpen = !_isSidebarOpen),
+              onToggleSidebar: () =>
+                  setState(() => _isSidebarOpen = !_isSidebarOpen),
               user: user,
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(left: 48, right: 48, bottom: 24),
+                padding: const EdgeInsets.only(left: 0, right: 0, bottom: 24),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.only(top: 32, bottom: 32),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-const SizedBox(height: 16),
-                      
+                      const SizedBox(height: 24),
+
                       // Extracted Carousel Component
                       UserInternCarousel(
                         interns: _interns,
@@ -96,7 +96,7 @@ const SizedBox(height: 16),
                         error: _internsError,
                         onRetry: _fetchInterns,
                       ),
-                      
+
                       const SizedBox(height: 36),
                     ],
                   ),

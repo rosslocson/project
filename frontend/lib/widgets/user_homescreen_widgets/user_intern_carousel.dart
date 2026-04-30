@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 // Adjust this import path based on where InternProfile and InternDetailPage are located
-import '../../screens/intern_widgets.dart'; 
+import '../../screens/intern_widgets.dart';
 import '../../screens/intern_directory_screen.dart';
 import 'user_intern_card.dart';
 
@@ -97,11 +97,13 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
 
   void _openDetail(InternProfile intern) {
     _autoScrollTimer?.cancel();
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (context) => InternDetailPage(intern: intern),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       if (mounted) _startAutoScroll(); // Resume scrolling when returning
     });
   }
@@ -137,7 +139,8 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
               TextButton.icon(
                 onPressed: widget.onRetry,
                 icon: const Icon(Icons.refresh, color: Colors.white70),
-                label: const Text('Retry', style: TextStyle(color: Colors.white70)),
+                label: const Text('Retry',
+                    style: TextStyle(color: Colors.white70)),
               ),
             ],
           ),
@@ -165,39 +168,50 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Spacer(),
+              const Expanded(child: SizedBox()),
               Text(
                 'Meet Our Interns',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
+                      fontSize: 24,
                     ),
               ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF8A84FF),
-                ),
-                child: const Row(
-                  children: [
-                    Text('View All'),
-                    SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_ios, size: 12),
-                  ],
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const InternDirectoryScreen()),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF8A84FF),
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('View All'),
+                        SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_ios, size: 12),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 40),
         SizedBox(
           height: 320,
           child: PageView.builder(
@@ -224,13 +238,14 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
           ),
         ),
         const SizedBox(height: 20),
-        
+
         // Dot Navigation and Controls
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
-              icon: const Icon(Icons.chevron_left, color: Colors.white, size: 32),
+              icon:
+                  const Icon(Icons.chevron_left, color: Colors.white, size: 32),
               onPressed: _prev,
             ),
             const SizedBox(width: 20),
@@ -251,7 +266,8 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
             ),
             const SizedBox(width: 20),
             IconButton(
-              icon: const Icon(Icons.chevron_right, color: Colors.white, size: 32),
+              icon: const Icon(Icons.chevron_right,
+                  color: Colors.white, size: 32),
               onPressed: _next,
             ),
           ],
