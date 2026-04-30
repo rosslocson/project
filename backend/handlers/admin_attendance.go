@@ -33,7 +33,7 @@ type AdminAttendanceRow struct {
 	TimeIn        *string  `json:"time_in"`        // nullable "HH:MI AM"
 	TimeOut       *string  `json:"time_out"`       // nullable "HH:MI AM"
 	HoursRendered *float64 `json:"hours_rendered"` // nullable
-	Status        string   `json:"status"`         // Present | Late | Absent | In Progress | Missed Clock Out
+	Status        string   `json:"status"`         // Present | Late | Absent | On Shift | Missed Clock Out
 }
 
 // ── Timezone helper ───────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
 	if timeOut == nil {
 		today := time.Now().In(manilaLoc()).Format("2006-01-02")
 		if recordDate == today {
-			return "In Progress"
+			return "On Shift"
 		}
 		return "Missed Clock Out"
 	}
@@ -161,7 +161,7 @@ func periodDateRange(period string, now time.Time) (start, end string) {
 //   period      – today | week | month | year  (overrides date)
 //   all_dates   – "true" to return every date on record (overrides both)
 //   search      – partial case-insensitive intern name match
-//   status      – Present | Late | In Progress | Missed Clock Out | Absent
+//   status      – Present | Late | On Shift | Missed Clock Out | Absent
 //   page        – 1-based; default = 1
 //   limit       – rows per page 1-100; default = 20
 //   user_id     – (optional) filter to one intern

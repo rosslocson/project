@@ -32,8 +32,18 @@ String _toApiDate(DateTime dt) =>
 /// DateTime → "Apr 27, 2026"
 String _toDisplayDate(DateTime dt) {
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return '${months[dt.month - 1]} ${_pad(dt.day)}, ${dt.year}';
 }
@@ -46,20 +56,20 @@ enum AttendancePeriod { custom, today, week, month, year, allDates }
 
 extension AttendancePeriodExt on AttendancePeriod {
   String get label => switch (this) {
-        AttendancePeriod.custom   => 'Custom',
-        AttendancePeriod.today    => 'Today',
-        AttendancePeriod.week     => 'This Week',
-        AttendancePeriod.month    => 'This Month',
-        AttendancePeriod.year     => 'This Year',
+        AttendancePeriod.custom => 'Custom',
+        AttendancePeriod.today => 'Today',
+        AttendancePeriod.week => 'This Week',
+        AttendancePeriod.month => 'This Month',
+        AttendancePeriod.year => 'This Year',
         AttendancePeriod.allDates => 'All Dates',
       };
 
   String? get apiPeriod => switch (this) {
         AttendancePeriod.today => 'today',
-        AttendancePeriod.week  => 'week',
+        AttendancePeriod.week => 'week',
         AttendancePeriod.month => 'month',
-        AttendancePeriod.year  => 'year',
-        _                      => null,
+        AttendancePeriod.year => 'year',
+        _ => null,
       };
 }
 
@@ -71,7 +81,7 @@ const _kStatuses = [
   'All',
   'Present',
   'Late',
-  'In Progress',
+  'On Shift',
   'Missed Clock Out',
   'Absent',
 ];
@@ -81,15 +91,15 @@ const _kStatuses = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 class AdminAttendanceRecord {
-  final int     id;
-  final int     userId;
-  final String  internName;
-  final String  avatarUrl;
-  final String  date;
+  final int id;
+  final int userId;
+  final String internName;
+  final String avatarUrl;
+  final String date;
   final String? timeIn;
   final String? timeOut;
   final double? hoursRendered;
-  final String  status;
+  final String status;
 
   const AdminAttendanceRecord({
     required this.id,
@@ -121,22 +131,22 @@ class AdminAttendanceRecord {
       //   result             = "http://localhost:8080/uploads/3_abc.jpg"  ✅
       final staticBase = ApiService.baseUrl
           .replaceAll(RegExp(r'/api/?$'), '') // remove trailing /api or /api/
-          .replaceAll(RegExp(r'/$'), '');      // remove any remaining trailing /
+          .replaceAll(RegExp(r'/$'), ''); // remove any remaining trailing /
 
       final cleanPath = rawAvatar.startsWith('/') ? rawAvatar : '/$rawAvatar';
       avatarUrl = '$staticBase$cleanPath';
     }
 
     return AdminAttendanceRecord(
-      id:            j['id']          as int?    ?? 0,
-      userId:        j['user_id']     as int?    ?? 0,
-      internName:    j['intern_name'] as String? ?? 'Unknown',
-      avatarUrl:     avatarUrl,
-      date:          j['date']        as String? ?? '',
-      timeIn:        j['time_in']     as String?,
-      timeOut:       j['time_out']    as String?,
+      id: j['id'] as int? ?? 0,
+      userId: j['user_id'] as int? ?? 0,
+      internName: j['intern_name'] as String? ?? 'Unknown',
+      avatarUrl: avatarUrl,
+      date: j['date'] as String? ?? '',
+      timeIn: j['time_in'] as String?,
+      timeOut: j['time_out'] as String?,
       hoursRendered: (j['hours_rendered'] as num?)?.toDouble(),
-      status:        j['status']      as String? ?? 'Absent',
+      status: j['status'] as String? ?? 'Absent',
     );
   }
 
@@ -158,16 +168,16 @@ class AdminAttendanceService {
   static Future<Map<String, dynamic>> fetchAttendance({
     String? date,
     String? period,
-    bool    allDates = false,
+    bool allDates = false,
     String? search,
     String? status,
-    int     page     = 1,
-    int     limit    = 20,
-    int?    userId,
+    int page = 1,
+    int limit = 20,
+    int? userId,
   }) async {
     try {
       final params = <String, String>{
-        'page':  '$page',
+        'page': '$page',
         'limit': '$limit',
         if (allDates)
           'all_dates': 'true'
@@ -176,12 +186,12 @@ class AdminAttendanceService {
         else if (date != null)
           'date': date,
         if (search != null && search.isNotEmpty) 'search': search,
-        if (status != null && status != 'All')   'status': status,
-        if (userId != null)                       'user_id': '$userId',
+        if (status != null && status != 'All') 'status': status,
+        if (userId != null) 'user_id': '$userId',
       };
       final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance')
           .replace(queryParameters: params);
-      final res  = await http.get(uri, headers: await ApiService.authHeaders());
+      final res = await http.get(uri, headers: await ApiService.authHeaders());
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       if (body['ok'] == true) {
         final records = (body['records'] as List? ?? [])
@@ -189,9 +199,9 @@ class AdminAttendanceService {
                 AdminAttendanceRecord.fromJson(e as Map<String, dynamic>))
             .toList();
         return {
-          'ok':      true,
+          'ok': true,
           'records': records,
-          'total':   body['total'] as int? ?? 0,
+          'total': body['total'] as int? ?? 0,
         };
       }
       return {'ok': false, 'error': body['error'] ?? 'Unknown error'};
@@ -203,7 +213,7 @@ class AdminAttendanceService {
   static String exportUrl({
     String? date,
     String? period,
-    bool    allDates = false,
+    bool allDates = false,
     String? search,
     String? status,
   }) {
@@ -215,7 +225,7 @@ class AdminAttendanceService {
       else if (date != null)
         'date': date,
       if (search != null && search.isNotEmpty) 'search': search,
-      if (status != null && status != 'All')   'status': status,
+      if (status != null && status != 'All') 'status': status,
     };
     return Uri.parse('${ApiService.baseUrl}/admin/attendance/export')
         .replace(queryParameters: params)
@@ -238,21 +248,21 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   bool _isSidebarOpen = true;
 
   // ── filter state ──────────────────────────────────────────────────────────
-  AttendancePeriod _period         = AttendancePeriod.today;
-  DateTime         _customDate     = DateTime.now();
-  String           _selectedStatus = 'All';
+  AttendancePeriod _period = AttendancePeriod.today;
+  DateTime _customDate = DateTime.now();
+  String _selectedStatus = 'All';
 
   // Search
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _debounce;
 
   // ── pagination ────────────────────────────────────────────────────────────
-  int       _page  = 1;
+  int _page = 1;
   final int _limit = 20;
-  int       _total = 0;
+  int _total = 0;
 
   List<AdminAttendanceRecord> _records = [];
-  bool    _loading = true;
+  bool _loading = true;
   String? _error;
 
   @override
@@ -276,51 +286,61 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 
   Future<void> _load({int page = 1}) async {
-    setState(() { _loading = true; _error = null; _page = page; });
+    setState(() {
+      _loading = true;
+      _error = null;
+      _page = page;
+    });
 
     final isAllDates = _period == AttendancePeriod.allDates;
-    final isCustom   = _period == AttendancePeriod.custom;
+    final isCustom = _period == AttendancePeriod.custom;
 
     final result = await AdminAttendanceService.fetchAttendance(
       allDates: isAllDates,
-      period:   (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-      date:     isCustom ? _toApiDate(_customDate) : null,
-      search:   _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
-      status:   _selectedStatus == 'All' ? null : _selectedStatus,
-      page:     page,
-      limit:    _limit,
+      period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+      date: isCustom ? _toApiDate(_customDate) : null,
+      search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+      status: _selectedStatus == 'All' ? null : _selectedStatus,
+      page: page,
+      limit: _limit,
     );
     if (!mounted) return;
     if (result['ok'] == true) {
       setState(() {
         _records = result['records'] as List<AdminAttendanceRecord>;
-        _total   = result['total']   as int;
+        _total = result['total'] as int;
         _loading = false;
       });
     } else {
-      setState(() { _error = result['error'] as String?; _loading = false; });
+      setState(() {
+        _error = result['error'] as String?;
+        _loading = false;
+      });
     }
   }
 
   Future<void> _pickCustomDate() async {
     final picked = await showDatePicker(
-      context:     context,
+      context: context,
       initialDate: _customDate,
-      firstDate:   DateTime(2024),
-      lastDate:    DateTime.now(),
+      firstDate: DateTime(2024),
+      lastDate: DateTime.now(),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: const ColorScheme.dark(
-            primary:   Color(0xFF6C63FF),
+            primary: Color(0xFF6C63FF),
             onPrimary: Colors.white,
-            surface:   Color(0xFF1A1F3A),
+            surface: Color(0xFF1A1F3A),
           ),
         ),
         child: child!,
       ),
     );
     if (picked != null) {
-      setState(() { _customDate = picked; _period = AttendancePeriod.custom; });
+      setState(() {
+        _customDate = picked;
+        _period = AttendancePeriod.custom;
+      });
       _load();
     }
   }
@@ -328,9 +348,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:         Text(msg),
+      content: Text(msg),
       backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
-      behavior:        SnackBarBehavior.floating,
+      behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
   }
@@ -345,8 +365,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            curve:    Curves.easeInOut,
-            width:    _isSidebarOpen ? 250 : 0,
+            curve: Curves.easeInOut,
+            width: _isSidebarOpen ? 250 : 0,
             child: _isSidebarOpen
                 ? AdminSidebar(
                     currentRoute: '/admin/attendance',
@@ -362,7 +382,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                     decoration: const BoxDecoration(
                       image: DecorationImage(
                         image: AssetImage('assets/images/space_background.png'),
-                        fit:   BoxFit.cover,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -379,7 +399,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                               left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
-                              color:        Colors.white.withValues(alpha: 0.95),
+                              color: Colors.white.withValues(alpha: 0.95),
                               borderRadius: BorderRadius.circular(24),
                             ),
                             child: ClipRRect(
@@ -389,9 +409,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                                   _buildToolbar(),
                                   _buildFilterRow(),
                                   const Divider(
-                                      height:    1,
+                                      height: 1,
                                       thickness: 1,
-                                      color:     Color(0xFFEEEEEE)),
+                                      color: Color(0xFFEEEEEE)),
                                   Expanded(child: _buildBody()),
                                   if (_total > _limit) _buildPagination(),
                                 ],
@@ -422,9 +442,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             child: Text(
               'Attendance Monitoring',
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    fontSize:      28,
-                    fontWeight:    FontWeight.w800,
-                    color:         Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
                     letterSpacing: 0.5,
                   ),
             ),
@@ -432,20 +452,20 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           if (!_isSidebarOpen)
             Positioned(
               left: 20,
-              top:  28,
+              top: 28,
               child: Container(
                 decoration: BoxDecoration(
-                  color:        Colors.white.withValues(alpha: 0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: IconButton(
-                  padding:        const EdgeInsets.all(12),
-                  onPressed:      () => setState(() => _isSidebarOpen = true),
-                  icon:           const _HamburgerIcon(),
-                  tooltip:        'Open Sidebar',
-                  splashColor:    Colors.white.withValues(alpha: 0.1),
+                  padding: const EdgeInsets.all(12),
+                  onPressed: () => setState(() => _isSidebarOpen = true),
+                  icon: const _HamburgerIcon(),
+                  tooltip: 'Open Sidebar',
+                  splashColor: Colors.white.withValues(alpha: 0.1),
                   highlightColor: Colors.transparent,
                 ),
               ),
@@ -469,14 +489,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               child: TextField(
                 controller: _searchCtrl,
                 decoration: InputDecoration(
-                  hintText:   'Search intern by name…',
-                  hintStyle:  const TextStyle(
-                      fontSize: 13, color: Colors.black38),
+                  hintText: 'Search intern by name…',
+                  hintStyle:
+                      const TextStyle(fontSize: 13, color: Colors.black38),
                   prefixIcon: const Icon(Icons.search_rounded,
                       size: 18, color: Colors.black38),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
-                          icon:    const Icon(Icons.close_rounded,
+                          icon: const Icon(Icons.close_rounded,
                               size: 16, color: Colors.black38),
                           padding: EdgeInsets.zero,
                           onPressed: () {
@@ -485,14 +505,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                           },
                         )
                       : null,
-                  filled:    true,
+                  filled: true,
                   fillColor: const Color(0xFFF4F4F8),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide:   BorderSide.none,
+                    borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      vertical: 0, horizontal: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                 ),
                 style: const TextStyle(fontSize: 13),
               ),
@@ -513,24 +533,24 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           // Refresh
           IconButton(
             onPressed: () => _load(page: _page),
-            icon:    const Icon(Icons.refresh_rounded, color: Colors.black54),
+            icon: const Icon(Icons.refresh_rounded, color: Colors.black54),
             tooltip: 'Refresh',
           ),
           const SizedBox(width: 8),
 
           // Export CSV
           _ToolbarButton(
-            icon:   Icons.download_rounded,
-            label:  'Export CSV',
+            icon: Icons.download_rounded,
+            label: 'Export CSV',
             accent: const Color(0xFF22C55E),
             onTap: () {
               final isAllDates = _period == AttendancePeriod.allDates;
-              final isCustom   = _period == AttendancePeriod.custom;
+              final isCustom = _period == AttendancePeriod.custom;
               final url = AdminAttendanceService.exportUrl(
                 allDates: isAllDates,
-                period:   (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-                date:     isCustom ? _toApiDate(_customDate) : null,
-                search:   _searchCtrl.text.trim().isEmpty
+                period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+                date: isCustom ? _toApiDate(_customDate) : null,
+                search: _searchCtrl.text.trim().isEmpty
                     ? null
                     : _searchCtrl.text.trim(),
                 status: _selectedStatus == 'All' ? null : _selectedStatus,
@@ -565,7 +585,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: _PeriodChip(
-                label:    p.label,
+                label: p.label,
                 selected: selected,
                 onTap: () {
                   setState(() => _period = p);
@@ -581,8 +601,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 ? _toDisplayDate(_customDate)
                 : 'Custom Date',
             selected: _period == AttendancePeriod.custom,
-            icon:     Icons.calendar_today_rounded,
-            onTap:    _pickCustomDate,
+            icon: Icons.calendar_today_rounded,
+            onTap: _pickCustomDate,
           ),
 
           const Spacer(),
@@ -590,7 +610,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           if (_searchCtrl.text.isNotEmpty || _selectedStatus != 'All')
             _ActiveFiltersBadge(
               count: (_searchCtrl.text.isNotEmpty ? 1 : 0) +
-                     (_selectedStatus != 'All'    ? 1 : 0),
+                  (_selectedStatus != 'All' ? 1 : 0),
               onClear: () {
                 _searchCtrl.clear();
                 setState(() => _selectedStatus = 'All');
@@ -619,8 +639,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () => _load(page: _page),
-              icon:      const Icon(Icons.refresh_rounded),
-              label:     const Text('Retry'),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
             ),
           ],
         ),
@@ -663,15 +683,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           ),
           const SizedBox(width: 16),
           _PageButton(
-            icon:    Icons.chevron_left_rounded,
+            icon: Icons.chevron_left_rounded,
             enabled: _page > 1,
-            onTap:   () => _load(page: _page - 1),
+            onTap: () => _load(page: _page - 1),
           ),
           const SizedBox(width: 8),
           _PageButton(
-            icon:    Icons.chevron_right_rounded,
+            icon: Icons.chevron_right_rounded,
             enabled: _page < totalPages,
-            onTap:   () => _load(page: _page + 1),
+            onTap: () => _load(page: _page + 1),
           ),
         ],
       ),
@@ -723,20 +743,19 @@ class _AttendanceTable extends StatelessWidget {
   TableRow _buildHeader() {
     return TableRow(
       decoration: const BoxDecoration(
-        color:  Color(0xFFF8F9FB),
-        border: Border(
-            bottom: BorderSide(color: Color(0xFFEEEEEE), width: 2)),
+        color: Color(0xFFF8F9FB),
+        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 2)),
       ),
       children: _headers
           .map((h) => Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 14, horizontal: 10),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
                 child: Text(
                   h,
                   style: const TextStyle(
-                    fontWeight:    FontWeight.w700,
-                    fontSize:      13,
-                    color:         Color(0xFF1A1F3A),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF1A1F3A),
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -759,8 +778,8 @@ class _AttendanceTable extends StatelessWidget {
                   r.internName,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize:   13,
-                    color:      Color(0xFF1A1F3A),
+                    fontSize: 13,
+                    color: Color(0xFF1A1F3A),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -769,7 +788,7 @@ class _AttendanceTable extends StatelessWidget {
           ),
         ),
         _cell(r.formattedDate),
-        _cell(r.timeIn  ?? '--'),
+        _cell(r.timeIn ?? '--'),
         _cell(r.timeOut ?? '--'),
         _cell(r.formattedHours),
         Padding(
@@ -810,7 +829,7 @@ class _InternAvatar extends StatefulWidget {
 class _InternAvatarState extends State<_InternAvatar> {
   Uint8List? _imageBytes;
   bool _loading = true;
-  bool _failed  = false;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -823,8 +842,8 @@ class _InternAvatarState extends State<_InternAvatar> {
     super.didUpdateWidget(old);
     if (old.url != widget.url) {
       setState(() {
-        _loading    = true;
-        _failed     = false;
+        _loading = true;
+        _failed = false;
         _imageBytes = null;
       });
       _fetchImage();
@@ -833,7 +852,11 @@ class _InternAvatarState extends State<_InternAvatar> {
 
   Future<void> _fetchImage() async {
     if (widget.url.isEmpty) {
-      if (mounted) setState(() { _loading = false; _failed = true; });
+      if (mounted)
+        setState(() {
+          _loading = false;
+          _failed = true;
+        });
       return;
     }
     try {
@@ -845,13 +868,20 @@ class _InternAvatarState extends State<_InternAvatar> {
       if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
         setState(() {
           _imageBytes = res.bodyBytes;
-          _loading    = false;
+          _loading = false;
         });
       } else {
-        setState(() { _loading = false; _failed = true; });
+        setState(() {
+          _loading = false;
+          _failed = true;
+        });
       }
     } catch (_) {
-      if (mounted) setState(() { _loading = false; _failed = true; });
+      if (mounted)
+        setState(() {
+          _loading = false;
+          _failed = true;
+        });
     }
   }
 
@@ -870,31 +900,31 @@ class _InternAvatarState extends State<_InternAvatar> {
   @override
   Widget build(BuildContext context) {
     return CircleAvatar(
-      radius:          18,
+      radius: 18,
       backgroundColor: const Color(0xFF6C63FF),
       child: _loading
           ? const SizedBox(
-              width:  18,
+              width: 18,
               height: 18,
-              child:  CircularProgressIndicator(
+              child: CircularProgressIndicator(
                 strokeWidth: 1.5,
-                color:       Colors.white54,
+                color: Colors.white54,
               ),
             )
           : _imageBytes != null
               ? ClipOval(
                   child: Image.memory(
                     _imageBytes!,
-                    width:  36,
+                    width: 36,
                     height: 36,
-                    fit:    BoxFit.cover,
+                    fit: BoxFit.cover,
                   ),
                 )
               : Text(
                   _initials,
                   style: const TextStyle(
-                    color:      Colors.white,
-                    fontSize:   12,
+                    color: Colors.white,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -907,8 +937,8 @@ class _InternAvatarState extends State<_InternAvatar> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PeriodChip extends StatelessWidget {
-  final String    label;
-  final bool      selected;
+  final String label;
+  final bool selected;
   final IconData? icon;
   final VoidCallback onTap;
 
@@ -928,7 +958,7 @@ class _PeriodChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color:        selected ? accent : const Color(0xFFF4F4F8),
+          color: selected ? accent : const Color(0xFFF4F4F8),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected ? accent : Colors.transparent,
@@ -940,16 +970,15 @@ class _PeriodChip extends StatelessWidget {
           children: [
             if (icon != null) ...[
               Icon(icon,
-                  size:  13,
-                  color: selected ? Colors.white : Colors.black54),
+                  size: 13, color: selected ? Colors.white : Colors.black54),
               const SizedBox(width: 5),
             ],
             Text(
               label,
               style: TextStyle(
-                fontSize:   12,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color:      selected ? Colors.white : Colors.black54,
+                color: selected ? Colors.white : Colors.black54,
               ),
             ),
           ],
@@ -972,17 +1001,17 @@ class _StatusDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height:  40,
+      height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color:        const Color(0xFFF4F4F8),
+        color: const Color(0xFFF4F4F8),
         borderRadius: BorderRadius.circular(10),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value:     value,
+          value: value,
           onChanged: onChanged,
-          isDense:   true,
+          isDense: true,
           style: const TextStyle(fontSize: 13, color: Color(0xFF1A1F3A)),
           icon: const Icon(Icons.keyboard_arrow_down_rounded,
               size: 18, color: Colors.black45),
@@ -1003,7 +1032,7 @@ class _StatusDropdown extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ActiveFiltersBadge extends StatelessWidget {
-  final int          count;
+  final int count;
   final VoidCallback onClear;
 
   const _ActiveFiltersBadge({required this.count, required this.onClear});
@@ -1013,7 +1042,7 @@ class _ActiveFiltersBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color:        const Color(0xFFEEF2FF),
+        color: const Color(0xFFEEF2FF),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF6C63FF), width: 1.2),
       ),
@@ -1023,9 +1052,9 @@ class _ActiveFiltersBadge extends StatelessWidget {
           Text(
             '$count filter${count > 1 ? 's' : ''} active',
             style: const TextStyle(
-              fontSize:   11,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
-              color:      Color(0xFF4F46E5),
+              color: Color(0xFF4F46E5),
             ),
           ),
           const SizedBox(width: 6),
@@ -1057,38 +1086,41 @@ class _StatusBadge extends StatelessWidget {
     switch (status) {
       case 'Present':
         border = const Color(0xFF22C55E);
-        text   = const Color(0xFF16A34A);
-        bg     = const Color(0xFFF0FDF4);
+        text = const Color(0xFF16A34A);
+        bg = const Color(0xFFF0FDF4);
       case 'Late':
         border = const Color(0xFFF59E0B);
-        text   = const Color(0xFFB45309);
-        bg     = const Color(0xFFFFFBEB);
-      case 'In Progress':
+        text = const Color(0xFFB45309);
+        bg = const Color(0xFFFFFBEB);
+      case 'On Shift':
         border = const Color(0xFF6C63FF);
-        text   = const Color(0xFF4F46E5);
-        bg     = const Color(0xFFEEF2FF);
+        text = const Color(0xFF4F46E5);
+        bg = const Color(0xFFEEF2FF);
       case 'Missed Clock Out':
         border = const Color(0xFFEA580C);
-        text   = const Color(0xFFC2410C);
-        bg     = const Color(0xFFFFF7ED);
+        text = const Color(0xFFC2410C);
+        bg = const Color(0xFFFFF7ED);
       case 'Absent':
       default:
         border = const Color(0xFFEF4444);
-        text   = const Color(0xFFDC2626);
-        bg     = const Color(0xFFFEF2F2);
+        text = const Color(0xFFDC2626);
+        bg = const Color(0xFFFEF2F2);
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color:        bg,
+        color: bg,
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: border, width: 1.5),
+        border: Border.all(color: border, width: 1.5),
       ),
-      child: Text(
-        status,
-        style: TextStyle(
-            color: text, fontWeight: FontWeight.w600, fontSize: 11),
+      child: Center(
+        child: Text(
+          status,
+          textAlign: TextAlign.center,
+          style:
+              TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 11),
+        ),
       ),
     );
   }
@@ -1099,9 +1131,9 @@ class _StatusBadge extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ToolbarButton extends StatelessWidget {
-  final IconData     icon;
-  final String       label;
-  final Color        accent;
+  final IconData icon;
+  final String label;
+  final Color accent;
   final VoidCallback onTap;
 
   const _ToolbarButton({
@@ -1114,10 +1146,10 @@ class _ToolbarButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color:        accent.withValues(alpha: 0.08),
+      color: accent.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        onTap:        onTap,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1128,9 +1160,7 @@ class _ToolbarButton extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                    color:      accent,
-                    fontWeight: FontWeight.w600,
-                    fontSize:   13),
+                    color: accent, fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ],
           ),
@@ -1145,8 +1175,8 @@ class _ToolbarButton extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PageButton extends StatelessWidget {
-  final IconData     icon;
-  final bool         enabled;
+  final IconData icon;
+  final bool enabled;
   final VoidCallback onTap;
 
   const _PageButton({
@@ -1158,16 +1188,16 @@ class _PageButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color:        enabled ? const Color(0xFF6C63FF) : Colors.grey.shade200,
+      color: enabled ? const Color(0xFF6C63FF) : Colors.grey.shade200,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap:        enabled ? onTap : null,
+        onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(6),
           child: Icon(
             icon,
-            size:  20,
+            size: 20,
             color: enabled ? Colors.white : Colors.grey.shade400,
           ),
         ),
@@ -1186,11 +1216,11 @@ class _HamburgerIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width:  22,
+      width: 22,
       height: 16,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment:  MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _bar(22),
           _bar(14, opacity: 0.8),
@@ -1201,10 +1231,10 @@ class _HamburgerIcon extends StatelessWidget {
   }
 
   Widget _bar(double w, {double opacity = 1.0}) => Container(
-        width:  w,
+        width: w,
         height: 2.5,
         decoration: BoxDecoration(
-          color:        Colors.white.withValues(alpha: opacity),
+          color: Colors.white.withValues(alpha: opacity),
           borderRadius: BorderRadius.circular(2),
         ),
       );
