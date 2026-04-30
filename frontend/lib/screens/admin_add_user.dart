@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../services/api_service.dart';
 import '../widgets/app_theme.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 class AddUserScreen extends StatefulWidget {
   const AddUserScreen({super.key});
@@ -107,8 +107,7 @@ class _AddUserScreenState extends State<AddUserScreen>
   Widget build(BuildContext context) {
     // WRAP IN CONTAINER: This correctly pushes the background image behind 
     // the entire Scaffold, including the transparent AppBar.
-    return Container(
-      decoration: AppTheme.spaceBackground,
+    return AppBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent, // Lets the container image show through
         appBar: AppBar(

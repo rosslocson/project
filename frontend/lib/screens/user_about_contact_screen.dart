@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/sidebar_provider.dart';
 import '../widgets/user_layout.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 class UserAboutScreen extends StatelessWidget {
   const UserAboutScreen({super.key});
@@ -18,26 +18,17 @@ class UserAboutScreen extends StatelessWidget {
   Widget _buildContent(BuildContext context) {
     final sidebar = context.watch<SidebarProvider>();
 
-    return Stack(
-      children: [
-        // ── Background ─────────────────────────────────────────────
-        Positioned.fill(
-          child: Container(
-            decoration: AppTheme.spaceBackground,
-          ),
-        ),
-
-        Positioned.fill(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Top bar ───────────────────────────────────────────
-              SizedBox(
-                height: 72,
-                child: Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [
-                    Padding(
+    return AppBackground(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Top bar ───────────────────────────────────────────
+          SizedBox(
+            height: 72,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Padding(
                       padding:
                           const EdgeInsets.only(left: 100, right: 100, top: 28),
                       child: Text(
@@ -273,9 +264,7 @@ class UserAboutScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ],
-    );
+        );
   }
 }
 

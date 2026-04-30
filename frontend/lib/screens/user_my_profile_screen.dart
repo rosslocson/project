@@ -5,7 +5,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/user_sidebar.dart';
 import '../widgets/app_theme.dart';
 import '../services/api_service.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 // ── Custom Hamburger Icon ────────────────────────────────────────────────────
 class HamburgerIcon extends StatelessWidget {
@@ -32,7 +32,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Colors.white.withOpacity(0.8), // Fixed from withValues
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -138,8 +138,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
+        // Changed queryParameters from null to {} to properly clear them
         finalAvatarUrl =
-            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
+            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: const {}).toString().replaceAll('/api', '')}$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -164,186 +165,176 @@ class _MyProfileScreenState extends State<MyProfileScreen>
 
           // ── Main content ─────────────────────────────────────────
           Expanded(
-            child: Stack(
-              children: [
-                // Background
-                Positioned.fill(
-                  child: Container(
-                    decoration: AppTheme.spaceBackground,
-                  ),
-                ),
-
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // ── Top bar ───────────────────────────────────
-                      SizedBox(
-                        height: 72,
-                        child: Stack(
-                          alignment: Alignment.centerLeft,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 100, right: 100, top: 28),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    'My Profile',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .displaySmall
-                                        ?.copyWith(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: 0.5,
-                                        ),
-                                  ),
-                                  const Spacer(),
-                                ],
-                              ),
-                            ),
-                            if (!_isSidebarOpen)
-                              Positioned(
-                                left: 20,
-                                top: 28,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: Colors.white.withOpacity(0.15)),
-                                  ),
-                                  child: IconButton(
-                                    padding: const EdgeInsets.all(12),
-                                    onPressed: () =>
-                                        setState(() => _isSidebarOpen = true),
-                                    icon: const HamburgerIcon(),
-                                    tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withOpacity(0.1),
-                                    highlightColor: Colors.transparent,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      // ── Main container ────────────────────────────
-                      Expanded(
-                        child: Padding(
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Top bar ───────────────────────────────────
+                  SizedBox(
+                    height: 72,
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Padding(
                           padding: const EdgeInsets.only(
-                              left: 100, right: 100, bottom: 28),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.95),
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.18),
-                                  blurRadius: 40,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: _loading
-                                  ? const Center(
-                                      child: CircularProgressIndicator(
-                                          color: kCrimsonDeep))
-                                  : Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        // ── LEFT PANEL: Avatar + Identity ──
-                                        _buildLeftPanel(
-                                          user,
-                                          first,
-                                          last,
-                                          initials,
-                                          finalAvatarUrl,
-                                        ),
-
-                                        // ── RIGHT PANEL: Tabs + Content ───
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.stretch,
-                                            children: [
-                                              // Error banner
-                                              if (_fetchError != null)
-                                                _retryBanner(_fetchError!),
-
-                                              // Tabs
-                                              Container(
-                                                decoration: BoxDecoration(
-                                                  border: Border(
-                                                    bottom: BorderSide(
-                                                        color: Colors
-                                                            .grey.shade200),
-                                                  ),
-                                                ),
-                                                padding: const EdgeInsets.only(
-                                                    top: 8),
-                                                child: TabBar(
-                                                  controller: _tabs,
-                                                  labelColor: Colors.black,
-                                                  unselectedLabelColor:
-                                                      Colors.grey.shade500,
-                                                  indicatorColor: kCrimsonDeep,
-                                                  indicatorWeight: 3,
-                                                  dividerColor:
-                                                      Colors.transparent,
-                                                  tabs: const [
-                                                    Tab(
-                                                      iconMargin:
-                                                          EdgeInsets.only(
-                                                              bottom: 4),
-                                                      icon: Icon(
-                                                          Icons.school_outlined,
-                                                          size: 18),
-                                                      text: 'Academic Info',
-                                                    ),
-                                                    Tab(
-                                                      iconMargin:
-                                                          EdgeInsets.only(
-                                                              bottom: 4),
-                                                      icon: Icon(
-                                                          Icons.stars_outlined,
-                                                          size: 18),
-                                                      text: 'Skills & Profile',
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-
-                                              // Tab content
-                                              Expanded(
-                                                child: TabBarView(
-                                                  controller: _tabs,
-                                                  children: [
-                                                    _buildAcademicTab(user),
-                                                    _buildSkillsTab(user),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
+                              left: 100, right: 100, top: 28),
+                          child: Row(
+                            children: [
+                              Text(
+                                'My Profile',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displaySmall
+                                    ?.copyWith(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
                                     ),
-                            ),
+                              ),
+                              const Spacer(),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                        if (!_isSidebarOpen)
+                          Positioned(
+                            left: 20,
+                            top: 28,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.15)),
+                              ),
+                              child: IconButton(
+                                padding: const EdgeInsets.all(12),
+                                onPressed: () =>
+                                    setState(() => _isSidebarOpen = true),
+                                icon: const HamburgerIcon(),
+                                tooltip: 'Open Sidebar',
+                                splashColor: Colors.white.withOpacity(0.1),
+                                highlightColor: Colors.transparent,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 15),
+
+                  // ── Main container ────────────────────────────
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, bottom: 28),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.18),
+                              blurRadius: 40,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: _loading
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                      color: kCrimsonDeep),
+                                )
+                              : Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    // ── LEFT PANEL: Avatar + Identity ──
+                                    _buildLeftPanel(
+                                      user,
+                                      first,
+                                      last,
+                                      initials,
+                                      finalAvatarUrl,
+                                    ),
+
+                                    // ── RIGHT PANEL: Tabs + Content ───
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          // Error banner
+                                          if (_fetchError != null)
+                                            _retryBanner(_fetchError!),
+
+                                          // Tabs
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                bottom: BorderSide(
+                                                    color: Colors
+                                                        .grey.shade200),
+                                              ),
+                                            ),
+                                            padding: const EdgeInsets.only(
+                                                top: 8),
+                                            child: TabBar(
+                                              controller: _tabs,
+                                              labelColor: Colors.black,
+                                              unselectedLabelColor:
+                                                  Colors.grey.shade500,
+                                              indicatorColor: kCrimsonDeep,
+                                              indicatorWeight: 3,
+                                              dividerColor:
+                                                  Colors.transparent,
+                                              tabs: const [
+                                                Tab(
+                                                  iconMargin:
+                                                      EdgeInsets.only(
+                                                          bottom: 4),
+                                                  icon: Icon(
+                                                      Icons.school_outlined,
+                                                      size: 18),
+                                                  text: 'Academic Info',
+                                                ),
+                                                Tab(
+                                                  iconMargin:
+                                                      EdgeInsets.only(
+                                                          bottom: 4),
+                                                  icon: Icon(
+                                                      Icons.stars_outlined,
+                                                      size: 18),
+                                                  text: 'Skills & Profile',
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // Tab content
+                                          Expanded(
+                                            child: TabBarView(
+                                              controller: _tabs,
+                                              children: [
+                                                _buildAcademicTab(user),
+                                                _buildSkillsTab(user),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -362,13 +353,13 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   ) {
     return Container(
       width: 260,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
             kCrimsonDeep,
-            const Color(0xFF00022E),
+            Color(0xFF00022E),
           ],
         ),
       ),
@@ -432,7 +423,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                       ),
                     ],
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.edit_rounded,
                     color: kCrimsonDeep,
                     size: 16,
@@ -735,9 +726,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
         margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.orange.withValues(alpha: 0.12),
+          color: Colors.orange.withOpacity(0.12), // Fixed from withValues
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+          border: Border.all(color: Colors.orange.withOpacity(0.4)), // Fixed
         ),
         child: Row(children: [
           Icon(Icons.wifi_off_rounded, color: Colors.orange.shade700, size: 18),
@@ -938,9 +929,9 @@ class _SkillChips extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.08),
+                    color: color.withOpacity(0.08), // Fixed from withValues
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: color.withValues(alpha: 0.25)),
+                    border: Border.all(color: color.withOpacity(0.25)), // Fixed
                   ),
                   child: Text(
                     s,

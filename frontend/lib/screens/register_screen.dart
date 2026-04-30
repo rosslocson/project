@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
+import '../widgets/app_background.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/register_widgets/register_form.dart';
@@ -180,13 +181,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
             return Row(
               children: [
                 Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/star_background.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                  child: AppBackground(backgroundAsset: 'assets/images/star_background.png', 
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -234,31 +229,21 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
             );
           } else {
             // Mobile Layout
-            return Stack(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/star_background.png'),
-                      fit: BoxFit.cover,
-                    ),
+            return AppBackground(backgroundAsset: 'assets/images/star_background.png', 
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 30, spreadRadius: 5),
+                    ],
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: formWidget.buildForm(isMobile: true, context: context),
                 ),
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(32),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 30, spreadRadius: 5),
-                      ],
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: formWidget.buildForm(isMobile: true, context: context),
-                  ),
-                ),
-              ],
+              ),
             );
           }
         },

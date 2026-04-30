@@ -13,7 +13,7 @@ import '../widgets/admin_layout.dart';
 import 'admin_glass_topbar.dart';
 import 'intern_widgets.dart';
 import 'intern_directory_screen.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 // Dashboard Widgets (Your new separated files)
 import '../widgets/admin_dashboard_widgets/intern_carousel_section.dart';
@@ -249,137 +249,130 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return AdminLayout(
       title: 'Admin Dashboard',
       currentRoute: GoRouterState.of(context).matchedLocation,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: AppTheme.spaceBackground,
+      child: AppBackground(
+        child: Column(
+          children: [
+            GlassTopBar(
+              isSidebarOpen: sidebar.isAdminSidebarOpen,
+              onToggleSidebar: sidebar.toggleAdminSidebar,
+              user: auth.user,
             ),
-          ),
-          Column(
-            children: [
-              GlassTopBar(
-                isSidebarOpen: sidebar.isAdminSidebarOpen,
-                onToggleSidebar: sidebar.toggleAdminSidebar,
-                user: auth.user,
-              ),
-              Expanded(
-                child: Stack(
-                  children: [
-                    SingleChildScrollView(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 16),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            Expanded(
+              child: Stack(
+                children: [
+                  SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Meet Our Interns',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  // Navigate to the new directory page
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
+                                  );
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xFF8A84FF), // Matches your accent purple/blue
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Text('View All'),
+                                    SizedBox(width: 4),
+                                    Icon(Icons.arrow_forward_ios, size: 12),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 1. Extracted Intern Carousel
+                        InternCarouselSection(
+                          interns: _interns,
+                          loading: _loadingInterns,
+                          error: _internsError,
+                          onRetry: _fetchInterns,
+                        ),
+                        const SizedBox(height: 32),
+                        if (_loading)
+                          const Center(
+                            child: CircularProgressIndicator(
+                                color: Colors.white),
+                          )
+                        else ...[
+                          // 2. Extracted Stats Grid
+                          DashboardStatsGrid(stats: _stats),
+                          const SizedBox(height: 100),
+
+                          Container(
+                            key: _cardsKey,
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Meet Our Interns',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                                // 3. Extracted Recent Users
+                                Expanded(
+                                  child: RecentUsersCard(
+                                    stats: _stats,
+                                    usersPage: _usersPage,
+                                    totalPages: _totalUsersPages,
+                                    onPageChanged: _updateUsersPage,
                                   ),
                                 ),
-                                TextButton(
-                                  onPressed: () {
-                                    // Navigate to the new directory page
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
-                                    );
-                                  },
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: const Color(0xFF8A84FF), // Matches your accent purple/blue
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      Text('View All'),
-                                      SizedBox(width: 4),
-                                      Icon(Icons.arrow_forward_ios, size: 12),
-                                    ],
+                                const SizedBox(width: 32),
+                                // 4. Extracted Recent Activity
+                                Expanded(
+                                  child: RecentActivityCard(
+                                    activityLogs: _activityLogs,
+                                    activityPage: _activityPage,
+                                    totalPages: _totalActivityPages,
+                                    onPageChanged: _updateActivityPage,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          // 1. Extracted Intern Carousel
-                          InternCarouselSection(
-                            interns: _interns,
-                            loading: _loadingInterns,
-                            error: _internsError,
-                            onRetry: _fetchInterns,
-                          ),
-                          const SizedBox(height: 32),
-                          if (_loading)
-                            const Center(
-                              child: CircularProgressIndicator(
-                                  color: Colors.white),
-                            )
-                          else ...[
-                            // 2. Extracted Stats Grid
-                            DashboardStatsGrid(stats: _stats),
-                            const SizedBox(height: 100),
-
-                            Container(
-                              key: _cardsKey,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // 3. Extracted Recent Users
-                                  Expanded(
-                                    child: RecentUsersCard(
-                                      stats: _stats,
-                                      usersPage: _usersPage,
-                                      totalPages: _totalUsersPages,
-                                      onPageChanged: _updateUsersPage,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 32),
-                                  // 4. Extracted Recent Activity
-                                  Expanded(
-                                    child: RecentActivityCard(
-                                      activityLogs: _activityLogs,
-                                      activityPage: _activityPage,
-                                      totalPages: _totalActivityPages,
-                                      onPageChanged: _updateActivityPage,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 40),
-                          ],
+                          const SizedBox(height: 40),
                         ],
-                      ),
+                      ],
                     ),
-                    // 5. Extracted Bouncing Arrow
-                    Positioned(
-                      bottom: 16,
-                      left: 0,
-                      right: 0,
-                      child: AnimatedOpacity(
-                        opacity: _showScrollIndicator ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 300),
-                        child: IgnorePointer(
-                          ignoring: !_showScrollIndicator,
-                          child: Center(
-                            child: BouncingArrow(onTap: _scrollToCards),
-                          ),
+                  ),
+                  // 5. Extracted Bouncing Arrow
+                  Positioned(
+                    bottom: 16,
+                    left: 0,
+                    right: 0,
+                    child: AnimatedOpacity(
+                      opacity: _showScrollIndicator ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 300),
+                      child: IgnorePointer(
+                        ignoring: !_showScrollIndicator,
+                        child: Center(
+                          child: BouncingArrow(onTap: _scrollToCards),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

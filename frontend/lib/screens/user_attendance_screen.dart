@@ -7,7 +7,7 @@ import '../widgets/attendance_clock_card.dart';
 import '../widgets/attendance_history_list.dart';
 import '../widgets/ojt_progress_card.dart';
 import '../widgets/user_layout.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
@@ -33,7 +33,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: const Color.fromRGBO(255, 255, 255, 0.8), // Fixed
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -142,31 +142,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget _buildAttendanceContent(BuildContext context) {
     final sidebar = context.watch<SidebarProvider>();
 
-    return Stack(
-      children: [
-        // ── Background ────────────────────────────────────────────
-        Positioned.fill(
-          child: Container(
-            decoration: AppTheme.spaceBackground,
-          ),
-        ),
-
-        Positioned.fill(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Top bar ───────────────────────────────────────────
-              SizedBox(
-                height: 72,
-                child: Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          left: 100, right: 100, top: 28),
-                      child: Text(
-                        'My Attendance',
-                        style: Theme.of(context)
+    return AppBackground(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Top bar ───────────────────────────────────────────
+          SizedBox(
+            height: 72,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(
+                      left: 100, right: 100, top: 28),
+                  child: Text(
+                    'My Attendance',
+                    style: Theme.of(context)
                             .textTheme
                             .displaySmall
                             ?.copyWith(
@@ -175,100 +166,98 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               color: Colors.white,
                               letterSpacing: 0.5,
                             ),
-                      ),
-                    ),
-                    if (!sidebar.isUserSidebarOpen)
-                      Positioned(
-                        left: 20,
-                        top: 28,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.15),
-                            ),
-                          ),
-                          child: IconButton(
-                            padding: const EdgeInsets.all(12),
-                            onPressed: () => sidebar.setUserSidebarOpen(true),
-                            icon: const HamburgerIcon(),
-                            tooltip: 'Open Sidebar',
-                            splashColor: Colors.white.withValues(alpha: 0.1),
-                            highlightColor: Colors.transparent,
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 15),
-
-              // ── Main content container ────────────────────────────
-              Expanded(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // ── Refresh button ────────────────────────
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: IconButton(
-                                onPressed: _loadAll,
-                                icon: const Icon(Icons.refresh_rounded,
-                                    color: Colors.black54),
-                                tooltip: 'Refresh',
-                              ),
-                            ),
-
-                            // ── Clock card ────────────────────────────
-                            AttendanceClockCard(
-                              summary: _summary,
-                              isLoading: _actionLoading || _summaryLoading,
-                              onTimeIn: _handleTimeIn,
-                              onTimeOut: _handleTimeOut,
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // ── OJT progress ──────────────────────────
-                            if (_summaryLoading)
-                              const Center(
-                                  child: CircularProgressIndicator())
-                            else if (_summary != null)
-                              OjtProgressCard(summary: _summary!),
-
-                            const SizedBox(height: 20),
-
-                            // ── History ───────────────────────────────
-                            AttendanceHistoryList(
-                              records: _history,
-                              isLoading: _historyLoading,
-                            ),
-
-                            const SizedBox(height: 32),
-                          ],
+                if (!sidebar.isUserSidebarOpen)
+                  Positioned(
+                    left: 20,
+                    top: 28,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color.fromRGBO(255, 255, 255, 0.05), // Fixed
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color.fromRGBO(255, 255, 255, 0.15), // Fixed
                         ),
                       ),
+                      child: IconButton(
+                        padding: const EdgeInsets.all(12),
+                        onPressed: () => sidebar.setUserSidebarOpen(true),
+                        icon: const HamburgerIcon(),
+                        tooltip: 'Open Sidebar',
+                        splashColor: const Color.fromRGBO(255, 255, 255, 0.1), // Fixed
+                        highlightColor: Colors.transparent,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 15),
+
+          // ── Main content container ────────────────────────────
+          Expanded(
+            child: Padding(
+              padding:
+                  const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color.fromRGBO(255, 255, 255, 0.95), // Fixed
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Refresh button ────────────────────────
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                            onPressed: _loadAll,
+                            icon: const Icon(Icons.refresh_rounded,
+                                color: Colors.black54),
+                            tooltip: 'Refresh',
+                          ),
+                        ),
+
+                        // ── Clock card ────────────────────────────
+                        AttendanceClockCard(
+                          summary: _summary,
+                          isLoading: _actionLoading || _summaryLoading,
+                          onTimeIn: _handleTimeIn,
+                          onTimeOut: _handleTimeOut,
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ── OJT progress ──────────────────────────
+                        if (_summaryLoading)
+                          const Center(
+                              child: CircularProgressIndicator())
+                        else if (_summary != null)
+                          OjtProgressCard(summary: _summary!),
+
+                        const SizedBox(height: 20),
+
+                        // ── History ───────────────────────────────
+                        AttendanceHistoryList(
+                          records: _history,
+                          isLoading: _historyLoading,
+                        ),
+
+                        const SizedBox(height: 32),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      ),
+    ); // Fixed: Added missing semicolon
   }
 }

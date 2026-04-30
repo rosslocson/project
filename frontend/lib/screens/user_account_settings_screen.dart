@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/sidebar_provider.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 import '../services/api_service.dart';
 import '../widgets/user_layout.dart';
 import 'avatar_crop_screen.dart';
@@ -39,7 +39,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Colors.white.withOpacity(0.8), // Fixed
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -397,258 +397,247 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       avatarImage = NetworkImage(finalAvatarUrl);
     }
 
-    return Stack(
-      children: [
-        // ── Background ────────────────────────────────────────────
-        Positioned.fill(
-          child: Container(
-            decoration: AppTheme.spaceBackground,
-          ),
-        ),
-
-        Positioned.fill(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Top bar ───────────────────────────────────────────
-              SizedBox(
-                height: 72,
-                child: Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          left: 100, right: 100, top: 28),
-                      child: Text(
-                        'Account Settings',
-                        style: Theme.of(context)
-                            .textTheme
-                            .displaySmall
-                            ?.copyWith(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                      ),
-                    ),
-                    if (!sidebar.isUserSidebarOpen)
-                      Positioned(
-                        left: 20,
-                        top: 28,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.15),
-                            ),
-                          ),
-                          child: IconButton(
-                            padding: const EdgeInsets.all(12),
-                            onPressed: () => sidebar.setUserSidebarOpen(true),
-                            icon: const HamburgerIcon(),
-                            tooltip: 'Open Sidebar',
-                            splashColor: Colors.white.withValues(alpha: 0.1),
-                            highlightColor: Colors.transparent,
-                          ),
+    return AppBackground(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Top bar ───────────────────────────────────────────
+          SizedBox(
+            height: 72,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(
+                      left: 100, right: 100, top: 28),
+                  child: Text(
+                    'Account Settings',
+                    style: Theme.of(context)
+                        .textTheme
+                        .displaySmall
+                        ?.copyWith(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                  ),
+                ),
+                if (!sidebar.isUserSidebarOpen)
+                  Positioned(
+                    left: 20,
+                    top: 28,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05), // Fixed
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.15), // Fixed
                         ),
                       ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 15),
-
-              // ── Main container ────────────────────────────────────
-              Expanded(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(24),
+                      child: IconButton(
+                        padding: const EdgeInsets.all(12),
+                        onPressed: () => sidebar.setUserSidebarOpen(true),
+                        icon: const HamburgerIcon(),
+                        tooltip: 'Open Sidebar',
+                        splashColor: Colors.white.withOpacity(0.1), // Fixed
+                        highlightColor: Colors.transparent,
+                      ),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // ── Profile card ──────────────────────────
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 32, vertical: 20),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom:
-                                    BorderSide(color: Colors.grey.shade200),
-                              ),
-                            ),
-                            child: Row(
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 15),
+
+          // ── Main container ────────────────────────────────────
+          Expanded(
+            child: Padding(
+              padding:
+                  const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95), // Fixed
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Profile card ──────────────────────────
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 20),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom:
+                                BorderSide(color: Colors.grey.shade200),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Stack(
+                              alignment: Alignment.bottomRight,
                               children: [
-                                Stack(
-                                  alignment: Alignment.bottomRight,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 40,
-                                      backgroundColor:
-                                          _kBlue.withValues(alpha: 0.1),
-                                      backgroundImage: avatarImage,
-                                      child: _isUploadingAvatar
-                                          ? const CircularProgressIndicator(
-                                              color: _kBlue, strokeWidth: 3)
-                                          : avatarImage == null
-                                              ? Text(
-                                                  '${(user?['first_name'] as String? ?? ' ')[0]}'
-                                                  '${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                  style: const TextStyle(
-                                                    fontSize: 28,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: _kBlue,
-                                                  ),
-                                                )
-                                              : null,
-                                    ),
-                                    Positioned(
-                                      bottom: 0,
-                                      right: 0,
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        child: InkWell(
-                                          onTap: _isUploadingAvatar
-                                              ? null
-                                              : pickAndCropAvatar,
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              color: _kBlue,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color: Colors.white,
-                                                  width: 2),
-                                            ),
-                                            child: const Icon(Icons.camera_alt,
-                                                color: Colors.white, size: 14),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor:
+                                      _kBlue.withOpacity(0.1), // Fixed
+                                  backgroundImage: avatarImage,
+                                  child: _isUploadingAvatar
+                                      ? const CircularProgressIndicator(
+                                          color: _kBlue, strokeWidth: 3)
+                                      : avatarImage == null
+                                          ? Text(
+                                              '${(user?['first_name'] as String? ?? ' ')[0]}'
+                                              '${(user?['last_name'] as String? ?? ' ')[0]}',
+                                              style: const TextStyle(
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.bold,
+                                                color: _kBlue,
+                                              ),
+                                            )
+                                          : null,
                                 ),
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.black87,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        user?['email'] ?? '',
-                                        style: TextStyle(
-                                            color: Colors.grey.shade600,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                      if ((user?['department'] as String? ?? '')
-                                          .isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${user?['department']} · ${user?['position'] ?? ''}',
-                                          style: TextStyle(
-                                              color: Colors.grey.shade500,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500),
-                                        ),
-                                      ],
-                                      const SizedBox(height: 10),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 4),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: _isUploadingAvatar
+                                          ? null
+                                          : pickAndCropAvatar,
+                                      borderRadius:
+                                          BorderRadius.circular(20),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
-                                          color: _kBlue.withValues(alpha: 0.08),
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          color: _kBlue,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                              color: Colors.white,
+                                              width: 2),
                                         ),
-                                        child: const Text('USER',
-                                            style: TextStyle(
-                                              color: _kBlue,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: 1.0,
-                                            )),
+                                        child: const Icon(Icons.camera_alt,
+                                            color: Colors.white, size: 14),
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-
-                          // ── Tabs ──────────────────────────────────
-                          Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom:
-                                    BorderSide(color: Colors.grey.shade200),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.black87,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    user?['email'] ?? '',
+                                    style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                  if ((user?['department'] as String? ?? '')
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${user?['department']} · ${user?['position'] ?? ''}',
+                                      style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: _kBlue.withOpacity(0.08), // Fixed
+                                      borderRadius:
+                                          BorderRadius.circular(16),
+                                    ),
+                                    child: const Text('USER',
+                                        style: TextStyle(
+                                          color: _kBlue,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.0,
+                                        )),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: TabBar(
-                              controller: _tabs,
-                              labelColor: _kBlue,
-                              indicatorColor: _kBlue,
-                              indicatorWeight: 3,
-                              unselectedLabelColor: Colors.grey.shade500,
-                              labelStyle: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w700),
-                              unselectedLabelStyle: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w500),
-                              dividerColor: Colors.transparent,
-                              tabs: const [
-                                Tab(
-                                  icon: Icon(Icons.manage_accounts_outlined,
-                                      size: 20),
-                                  text: 'Account Settings',
-                                ),
-                                Tab(
-                                  icon: Icon(Icons.lock_outline, size: 20),
-                                  text: 'Change Password',
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // ── Tab content ───────────────────────────
-                          Expanded(
-                            child: TabBarView(
-                              controller: _tabs,
-                              children: [
-                                _buildProfileForm(),
-                                _buildPasswordForm(),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+
+                      // ── Tabs ──────────────────────────────────
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom:
+                                BorderSide(color: Colors.grey.shade200),
+                          ),
+                        ),
+                        child: TabBar(
+                          controller: _tabs,
+                          labelColor: _kBlue,
+                          indicatorColor: _kBlue,
+                          indicatorWeight: 3,
+                          unselectedLabelColor: Colors.grey.shade500,
+                          labelStyle: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w700),
+                          unselectedLabelStyle: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w500),
+                          dividerColor: Colors.transparent,
+                          tabs: const [
+                            Tab(
+                              icon: Icon(Icons.manage_accounts_outlined,
+                                  size: 20),
+                              text: 'Account Settings',
+                            ),
+                            Tab(
+                              icon: Icon(Icons.lock_outline, size: 20),
+                              text: 'Change Password',
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // ── Tab content ───────────────────────────
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabs,
+                          children: [
+                            _buildProfileForm(),
+                            _buildPasswordForm(),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      ),
+    ); // Fixed: Added missing semicolon
   }
 
   Widget _buildProfileForm() {

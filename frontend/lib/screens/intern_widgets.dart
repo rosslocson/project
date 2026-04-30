@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import '../services/api_service.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 // ── Brand colors ──────────────────────────────────────────────────────────────
 const kBlue = Color(0xFF1E40AF);
@@ -215,21 +215,9 @@ class InternDetailPage extends StatelessWidget {
       body: GestureDetector(
         onTap: () => Navigator.of(context).pop(),
         behavior: HitTestBehavior.opaque,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Sharp Background Gradient (No blur)
-            Container(
-              decoration: AppTheme.spaceBackground,
-            ),
-            
-            // Dark Overlay to make the background blacker/darker
-            Container(
-              color: Colors.black.withValues(alpha: 0.6),
-            ),
-            
-            // Foreground Content
-            SafeArea(
+        child: AppBackground(          child: Container(
+            color: Colors.black.withValues(alpha: 0.6),
+            child: SafeArea(
               child: Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
@@ -291,7 +279,7 @@ class InternDetailPage extends StatelessWidget {
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

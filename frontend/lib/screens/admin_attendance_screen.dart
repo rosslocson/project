@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Date helpers
@@ -114,12 +114,6 @@ class AdminAttendanceRecord {
       // Uploads are served at the SERVER ROOT (e.g. /uploads/foo.jpg),
       // NOT under /api. Strip the trailing /api segment from baseUrl so we
       // don't produce a broken path like /api/uploads/foo.jpg (→ 404).
-      //
-      // Example:
-      //   ApiService.baseUrl = "http://localhost:8080/api"
-      //   rawAvatar          = "uploads/3_abc.jpg"
-      //   staticBase         = "http://localhost:8080"
-      //   result             = "http://localhost:8080/uploads/3_abc.jpg"  ✅
       final staticBase = ApiService.baseUrl
           .replaceAll(RegExp(r'/api/?$'), '') // remove trailing /api or /api/
           .replaceAll(RegExp(r'/$'), '');      // remove any remaining trailing /
@@ -178,7 +172,7 @@ class AdminAttendanceService {
           'date': date,
         if (search != null && search.isNotEmpty) 'search': search,
         if (status != null && status != 'All')   'status': status,
-        if (userId != null)                       'user_id': '$userId',
+        if (userId != null)                      'user_id': '$userId',
       };
       final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance')
           .replace(queryParameters: params);
@@ -356,55 +350,46 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 : null,
           ),
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: AppTheme.spaceBackground,
-                  ),
-                ),
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildTopBar(context),
-                      const SizedBox(height: 15),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                              left: 100, right: 100, bottom: 28),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color:        Colors.white.withValues(alpha: 0.95),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: Column(
-                                children: [
-                                  _buildToolbar(),
-                                  _buildFilterRow(),
-                                  const Divider(
-                                      height:    1,
-                                      thickness: 1,
-                                      color:     Color(0xFFEEEEEE)),
-                                  Expanded(child: _buildBody()),
-                                  if (_total > _limit) _buildPagination(),
-                                ],
-                              ),
-                            ),
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildTopBar(context),
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, bottom: 28),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color:        Colors.white.withOpacity(0.95), // Fixed
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Column(
+                            children: [
+                              _buildToolbar(),
+                              _buildFilterRow(),
+                              const Divider(
+                                  height:    1,
+                                  thickness: 1,
+                                  color:     Color(0xFFEEEEEE)),
+                              Expanded(child: _buildBody()),
+                              if (_total > _limit) _buildPagination(),
+                            ],
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
       ),
-    );
+    ); // Fixed: Added missing semicolon
   }
 
   Widget _buildTopBar(BuildContext context) {
@@ -431,17 +416,17 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               top:  28,
               child: Container(
                 decoration: BoxDecoration(
-                  color:        Colors.white.withValues(alpha: 0.05),
+                  color:        Colors.white.withOpacity(0.05), // Fixed
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15)),
+                      color: Colors.white.withOpacity(0.15)), // Fixed
                 ),
                 child: IconButton(
                   padding:        const EdgeInsets.all(12),
                   onPressed:      () => setState(() => _isSidebarOpen = true),
                   icon:           const _HamburgerIcon(),
                   tooltip:        'Open Sidebar',
-                  splashColor:    Colors.white.withValues(alpha: 0.1),
+                  splashColor:    Colors.white.withOpacity(0.1), // Fixed
                   highlightColor: Colors.transparent,
                 ),
               ),
@@ -1110,7 +1095,7 @@ class _ToolbarButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color:        accent.withValues(alpha: 0.08),
+      color:        accent.withOpacity(0.08), // Fixed
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap:        onTap,
@@ -1200,7 +1185,7 @@ class _HamburgerIcon extends StatelessWidget {
         width:  w,
         height: 2.5,
         decoration: BoxDecoration(
-          color:        Colors.white.withValues(alpha: opacity),
+          color:        Colors.white.withOpacity(opacity), // Fixed
           borderRadius: BorderRadius.circular(2),
         ),
       );

@@ -5,7 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/app_theme.dart';
 import '../../widgets/user_sidebar.dart';
-import '../../theme.dart';
+import '../widgets/app_background.dart';
 
 // ── Imported Extracted Widgets ──
 import '../../widgets/user_edit_profile_widgets/edit_profile_hamburger_icon.dart';
@@ -194,177 +194,168 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
                 : null,
           ),
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: AppTheme.spaceBackground,
-                  ),
-                ),
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: 72,
-                        child: Stack(
-                          alignment: Alignment.centerLeft,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
-                              child: Text(
-                                'Edit Profile',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
-                              ),
-                            ),
-                            if (!_sidebarVisible)
-                              Positioned(
-                                left: 20,
-                                top: 28,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white.withOpacity(0.15)),
-                                  ),
-                                  child: IconButton(
-                                    padding: const EdgeInsets.all(12),
-                                    onPressed: () => setState(() => _sidebarVisible = true),
-                                    icon: const EditProfileHamburgerIcon(),
-                                    tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withOpacity(0.1),
-                                    highlightColor: Colors.transparent,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.95),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: _initialLoading
-                                  ? const Center(child: CircularProgressIndicator(color: kCrimsonDeep))
-                                  : Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        if (_successMsg != null)
-                                          EditProfileStatusBanner(
-                                            msg: _successMsg!,
-                                            success: true,
-                                            onClose: () => setState(() => _successMsg = null),
-                                          ),
-                                        if (_errorMsg != null)
-                                          EditProfileStatusBanner(
-                                            msg: _errorMsg!,
-                                            success: false,
-                                            onClose: () => setState(() => _errorMsg = null),
-                                          ),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                                          ),
-                                          child: TabBar(
-                                            controller: _tabs,
-                                            labelColor: Colors.black,
-                                            unselectedLabelColor: Colors.grey.shade500,
-                                            indicatorColor: kCrimsonDeep,
-                                            indicatorWeight: 3,
-                                            dividerColor: Colors.transparent,
-                                            tabs: const [
-                                              Tab(
-                                                iconMargin: EdgeInsets.only(bottom: 4),
-                                                icon: Icon(Icons.school_outlined, size: 18),
-                                                text: 'Academic Info',
-                                              ),
-                                              Tab(
-                                                iconMargin: EdgeInsets.only(bottom: 4),
-                                                icon: Icon(Icons.stars_outlined, size: 18),
-                                                text: 'Skills',
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: TabBarView(
-                                            controller: _tabs,
-                                            children: [
-                                              AcademicInfoTab(
-                                                formKey: _academicKey,
-                                                departments: _departments,
-                                                selectedDept: _selectedDept,
-                                                defaultPosition: _defaultPosition,
-                                                schoolCtrl: _schoolCtrl,
-                                                programCtrl: _programCtrl,
-                                                specCtrl: _specCtrl,
-                                                yearCtrl: _yearCtrl,
-                                                internNumCtrl: _internNumCtrl,
-                                                startCtrl: _startCtrl,
-                                                endCtrl: _endCtrl,
-                                                onDeptChanged: (v) => setState(() => _selectedDept = v),
-                                                onPickStart: () => _pickDate(_startCtrl),
-                                                onPickEnd: () => _pickDate(_endCtrl),
-                                              ),
-                                              SkillsProfileTab(
-                                                formKey: _skillsKey,
-                                                bioCtrl: _bioCtrl,
-                                                techSkillsCtrl: _techSkillsCtrl,
-                                                softSkillsCtrl: _softSkillsCtrl,
-                                                linkedinCtrl: _linkedinCtrl,
-                                                githubCtrl: _githubCtrl,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-                                          child: SizedBox(
-                                            height: 48,
-                                            width: double.infinity,
-                                            child: ElevatedButton(
-                                              onPressed: _saving ? null : _save,
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: kCrimsonDeep,
-                                                foregroundColor: Colors.white,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                elevation: 0,
-                                              ),
-                                              child: _saving
-                                                  ? const SizedBox(
-                                                      height: 20,
-                                                      width: 20,
-                                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                                    )
-                                                  : const Text(
-                                                      'SAVE CHANGES',
-                                                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.8),
-                                                    ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 72,
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
+                          child: Text(
+                            'Edit Profile',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        if (!_sidebarVisible)
+                          Positioned(
+                            left: 20,
+                            top: 28,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color.fromRGBO(255, 255, 255, 0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color.fromRGBO(255, 255, 255, 0.15)),
+                              ),
+                              child: IconButton(
+                                padding: const EdgeInsets.all(12),
+                                onPressed: () => setState(() => _sidebarVisible = true),
+                                icon: const EditProfileHamburgerIcon(),
+                                tooltip: 'Open Sidebar',
+                                splashColor: const Color.fromRGBO(255, 255, 255, 0.1),
+                                highlightColor: Colors.transparent,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(255, 255, 255, 0.95),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: _initialLoading
+                              ? const Center(child: CircularProgressIndicator(color: kCrimsonDeep))
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (_successMsg != null)
+                                      EditProfileStatusBanner(
+                                        msg: _successMsg!,
+                                        success: true,
+                                        onClose: () => setState(() => _successMsg = null),
+                                      ),
+                                    if (_errorMsg != null)
+                                      EditProfileStatusBanner(
+                                        msg: _errorMsg!,
+                                        success: false,
+                                        onClose: () => setState(() => _errorMsg = null),
+                                      ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                                      ),
+                                      child: TabBar(
+                                        controller: _tabs,
+                                        labelColor: Colors.black,
+                                        unselectedLabelColor: Colors.grey.shade500,
+                                        indicatorColor: kCrimsonDeep,
+                                        indicatorWeight: 3,
+                                        dividerColor: Colors.transparent,
+                                        tabs: const [
+                                          Tab(
+                                            iconMargin: EdgeInsets.only(bottom: 4),
+                                            icon: Icon(Icons.school_outlined, size: 18),
+                                            text: 'Academic Info',
+                                          ),
+                                          Tab(
+                                            iconMargin: EdgeInsets.only(bottom: 4),
+                                            icon: Icon(Icons.stars_outlined, size: 18),
+                                            text: 'Skills',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: TabBarView(
+                                        controller: _tabs,
+                                        children: [
+                                          AcademicInfoTab(
+                                            formKey: _academicKey,
+                                            departments: _departments,
+                                            selectedDept: _selectedDept,
+                                            defaultPosition: _defaultPosition,
+                                            schoolCtrl: _schoolCtrl,
+                                            programCtrl: _programCtrl,
+                                            specCtrl: _specCtrl,
+                                            yearCtrl: _yearCtrl,
+                                            internNumCtrl: _internNumCtrl,
+                                            startCtrl: _startCtrl,
+                                            endCtrl: _endCtrl,
+                                            onDeptChanged: (v) => setState(() => _selectedDept = v),
+                                            onPickStart: () => _pickDate(_startCtrl),
+                                            onPickEnd: () => _pickDate(_endCtrl),
+                                          ),
+                                          SkillsProfileTab(
+                                            formKey: _skillsKey,
+                                            bioCtrl: _bioCtrl,
+                                            techSkillsCtrl: _techSkillsCtrl,
+                                            softSkillsCtrl: _softSkillsCtrl,
+                                            linkedinCtrl: _linkedinCtrl,
+                                            githubCtrl: _githubCtrl,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+                                      child: SizedBox(
+                                        height: 48,
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed: _saving ? null : _save,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: kCrimsonDeep,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            elevation: 0,
+                                          ),
+                                          child: _saving
+                                              ? const SizedBox(
+                                                  height: 20,
+                                                  width: 20,
+                                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                                )
+                                              : const Text(
+                                                  'SAVE CHANGES',
+                                                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.8),
+                                                ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

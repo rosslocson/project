@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../theme.dart';
+import '../widgets/app_background.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
 import 'avatar_crop_screen.dart';
@@ -82,11 +82,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
     _phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
 
-    // ❌ Remove this block — _loadDepartments() will set _selectedDept correctly
-    // final dept = user?['department'] as String? ?? '';
-    // if (dept.isNotEmpty) _selectedDept = dept;
-
-    _loadDepartments(); // This now sets _selectedDept after validating against the list
+    _loadDepartments();
   }
 
   @override
@@ -108,7 +104,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
   Future<void> _loadDepartments() async {
     try {
-      final res = await ApiService.getDepartments(); // ← swap this
+      final res = await ApiService.getDepartments();
       if (!mounted) return;
       if (res['ok'] == true) {
         final List items = res['items'] ?? [];
@@ -321,8 +317,9 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
+        // Fixed: Use an empty map instead of null to properly clear queries
         finalAvatarUrl =
-            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: null).toString().replaceAll('/api', '')}$rawAvatarUrl';
+            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: const {}).toString().replaceAll('/api', '')}$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -344,314 +341,287 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                 : null,
           ),
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: AppTheme.spaceBackground,
-                  ),
-                ),
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: 72,
-                        child: Stack(
-                          alignment: Alignment.centerLeft,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 100, right: 100, top: 28),
-                              child: Text(
-                                'Account Settings',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displaySmall
-                                    ?.copyWith(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
-                              ),
-                            ),
-                            if (!_isSidebarOpen)
-                              Positioned(
-                                left: 20,
-                                top: 28,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: Colors.white.withOpacity(0.15)),
-                                  ),
-                                  child: IconButton(
-                                    padding: const EdgeInsets.all(12),
-                                    onPressed: () =>
-                                        setState(() => _isSidebarOpen = true),
-                                    icon: const HamburgerIcon(),
-                                    tooltip: 'Open Sidebar',
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Expanded(
-                        child: Padding(
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 72,
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Padding(
                           padding: const EdgeInsets.only(
-                              left: 100, right: 100, bottom: 28),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.95),
-                              borderRadius: BorderRadius.circular(24),
+                              left: 100, right: 100, top: 28),
+                          child: Text(
+                            'Account Settings',
+                            style: Theme.of(context)
+                                .textTheme
+                                .displaySmall
+                                ?.copyWith(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                          ),
+                        ),
+                        if (!_isSidebarOpen)
+                          Positioned(
+                            left: 20,
+                            top: 28,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.15)),
+                              ),
+                              child: IconButton(
+                                padding: const EdgeInsets.all(12),
+                                onPressed: () =>
+                                    setState(() => _isSidebarOpen = true),
+                                icon: const HamburgerIcon(),
+                                tooltip: 'Open Sidebar',
+                              ),
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Profile Header (Avatar and Name) handled directly here since it applies globally to the card
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 32, vertical: 20),
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                          bottom: BorderSide(
-                                              color: Colors.grey.shade200)),
-                                    ),
-                                    child: Row(
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, bottom: 28),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 32, vertical: 20),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                      bottom: BorderSide(
+                                          color: Colors.grey.shade200)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Stack(
+                                      alignment: Alignment.bottomRight,
                                       children: [
-                                        Stack(
-                                          alignment: Alignment.bottomRight,
-                                          children: [
-                                            CircleAvatar(
-                                              radius: 40,
-                                              backgroundColor:
-                                                  _kBlue.withOpacity(0.1),
-                                              backgroundImage: _avatarFile !=
-                                                      null
-                                                  ? FileImage(_avatarFile!)
-                                                  : (_localAvatarBytes != null
-                                                          ? MemoryImage(
-                                                              _localAvatarBytes!)
-                                                          : (finalAvatarUrl
-                                                                  .isNotEmpty
-                                                              ? NetworkImage(
-                                                                  finalAvatarUrl)
-                                                              : null))
-                                                      as ImageProvider?,
-                                              child: _isUploadingAvatar
-                                                  ? const CircularProgressIndicator(
-                                                      color: _kBlue,
-                                                      strokeWidth: 3)
-                                                  : (_avatarFile == null &&
-                                                          _localAvatarBytes ==
-                                                              null &&
-                                                          finalAvatarUrl
-                                                              .isEmpty)
-                                                      ? Text(
-                                                          '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize: 28,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                  color:
-                                                                      _kBlue),
-                                                        )
-                                                      : null,
-                                            ),
-                                            Positioned(
-                                              bottom: 0,
-                                              right: 0,
-                                              child: Material(
-                                                color: Colors.transparent,
-                                                child: InkWell(
-                                                  onTap: _isUploadingAvatar
-                                                      ? null
-                                                      : pickAndCropAvatar,
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets.all(6),
-                                                    decoration: BoxDecoration(
-                                                      color: _kBlue,
-                                                      shape: BoxShape.circle,
-                                                      border: Border.all(
-                                                          color: Colors.white,
-                                                          width: 2),
-                                                    ),
-                                                    child: const Icon(
-                                                        Icons.camera_alt,
-                                                        color: Colors.white,
-                                                        size: 14),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                        CircleAvatar(
+                                          radius: 40,
+                                          backgroundColor:
+                                              _kBlue.withOpacity(0.1),
+                                          backgroundImage: _avatarFile != null
+                                              ? FileImage(_avatarFile!)
+                                              : (_localAvatarBytes != null
+                                                  ? MemoryImage(
+                                                      _localAvatarBytes!)
+                                                  : (finalAvatarUrl.isNotEmpty
+                                                      ? NetworkImage(
+                                                          finalAvatarUrl)
+                                                      : null)) as ImageProvider?,
+                                          child: _isUploadingAvatar
+                                              ? const CircularProgressIndicator(
+                                                  color: _kBlue, strokeWidth: 3)
+                                              : (_avatarFile == null &&
+                                                      _localAvatarBytes ==
+                                                          null &&
+                                                      finalAvatarUrl.isEmpty)
+                                                  ? Text(
+                                                      '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
+                                                      style: const TextStyle(
+                                                          fontSize: 28,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: _kBlue),
+                                                    )
+                                                  : null,
                                         ),
-                                        const SizedBox(width: 20),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                  '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                                  style: const TextStyle(
-                                                      fontSize: 22,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      color: Colors.black87)),
-                                              const SizedBox(height: 2),
-                                              Text(user?['email'] ?? '',
-                                                  style: TextStyle(
-                                                      color:
-                                                          Colors.grey.shade600,
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w500)),
-                                              if ((user?['department']
-                                                          as String? ??
-                                                      '')
-                                                  .isNotEmpty) ...[
-                                                const SizedBox(height: 4),
-                                                Text('${user?['department']}',
-                                                    style: TextStyle(
-                                                        color: Colors
-                                                            .grey.shade500,
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w500)),
-                                              ],
-                                              const SizedBox(height: 10),
-                                              Container(
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: _isUploadingAvatar
+                                                  ? null
+                                                  : pickAndCropAvatar,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              child: Container(
                                                 padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 4),
+                                                    const EdgeInsets.all(6),
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      _kBlue.withOpacity(0.08),
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
+                                                  color: _kBlue,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                      color: Colors.white,
+                                                      width: 2),
                                                 ),
-                                                child: Text(
-                                                    (user?['role'] ?? 'user')
-                                                        .toUpperCase(),
-                                                    style: TextStyle(
-                                                        color: _kBlue
-                                                            .withOpacity(0.9),
-                                                        fontSize: 11,
-                                                        fontWeight:
-                                                            FontWeight.w800,
-                                                        letterSpacing: 1.0)),
+                                                child: const Icon(
+                                                    Icons.camera_alt,
+                                                    color: Colors.white,
+                                                    size: 14),
                                               ),
-                                            ],
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ),
-
-                                  // Tabs
-                                  Container(
-                                    decoration: BoxDecoration(
-                                        border: Border(
-                                            bottom: BorderSide(
-                                                color: Colors.grey.shade200))),
-                                    child: TabBar(
-                                      controller: _tabs,
-                                      labelColor: _kBlue,
-                                      indicatorColor: _kBlue,
-                                      indicatorWeight: 3,
-                                      unselectedLabelColor:
-                                          Colors.grey.shade500,
-                                      labelStyle: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700),
-                                      unselectedLabelStyle: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500),
-                                      dividerColor: Colors.transparent,
-                                      tabs: const [
-                                        Tab(
-                                            icon: Icon(
-                                                Icons.manage_accounts_outlined,
-                                                size: 20),
-                                            text: 'Account Settings'),
-                                        Tab(
-                                            icon: Icon(Icons.lock_outline,
-                                                size: 20),
-                                            text: 'Change Password'),
-                                      ],
+                                    const SizedBox(width: 20),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                              '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
+                                              style: const TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.black87)),
+                                          const SizedBox(height: 2),
+                                          Text(user?['email'] ?? '',
+                                              style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500)),
+                                          if ((user?['department']
+                                                      as String? ??
+                                                  '')
+                                              .isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text('${user?['department']}',
+                                                style: TextStyle(
+                                                    color: Colors.grey.shade500,
+                                                    fontSize: 13,
+                                                    fontWeight:
+                                                        FontWeight.w500)),
+                                          ],
+                                          const SizedBox(height: 10),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: _kBlue.withOpacity(0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            child: Text(
+                                                (user?['role'] ?? 'user')
+                                                    .toUpperCase(),
+                                                style: TextStyle(
+                                                    color: _kBlue
+                                                        .withOpacity(0.9),
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 1.0)),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-
-                                  // Tab Content Modules
-                                  Expanded(
-                                    child: TabBarView(
-                                      controller: _tabs,
-                                      children: [
-                                        ProfileFormTab(
-                                          formKey: _profileKey,
-                                          firstCtrl: _firstCtrl,
-                                          lastCtrl: _lastCtrl,
-                                          emailCtrl: _emailCtrl,
-                                          selectedDept: _selectedDept,
-                                          departments: _departments,
-                                          isLoadingDepartments:
-                                              _isLoadingDepartments,
-                                          profileMsg: _profileMsg,
-                                          profileSuccess: _profileSuccess,
-                                          savingProfile: _savingProfile,
-                                          onDeptChanged: (v) =>
-                                              setState(() => _selectedDept = v),
-                                          onSave: _saveProfile,
-                                        ),
-                                        PasswordFormTab(
-                                          formKey: _passKey,
-                                          curPassCtrl: _curPassCtrl,
-                                          newPassCtrl: _newPassCtrl,
-                                          confirmPassCtrl: _confirmPassCtrl,
-                                          obscureCur: _obscureCur,
-                                          obscureNew: _obscureNew,
-                                          obscureConf: _obscureConf,
-                                          passMsg: _passMsg,
-                                          passSuccess: _passSuccess,
-                                          savingPass: _savingPass,
-                                          onToggleCur: () => setState(
-                                              () => _obscureCur = !_obscureCur),
-                                          onToggleNew: () => setState(
-                                              () => _obscureNew = !_obscureNew),
-                                          onToggleConf: () => setState(() =>
-                                              _obscureConf = !_obscureConf),
-                                          onSave: _changePassword,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
+
+                              // Tabs
+                              Container(
+                                decoration: BoxDecoration(
+                                    border: Border(
+                                        bottom: BorderSide(
+                                            color: Colors.grey.shade200))),
+                                child: TabBar(
+                                  controller: _tabs,
+                                  labelColor: _kBlue,
+                                  indicatorColor: _kBlue,
+                                  indicatorWeight: 3,
+                                  unselectedLabelColor: Colors.grey.shade500,
+                                  labelStyle: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700),
+                                  unselectedLabelStyle: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500),
+                                  dividerColor: Colors.transparent,
+                                  tabs: const [
+                                    Tab(
+                                        icon: Icon(
+                                            Icons.manage_accounts_outlined,
+                                            size: 20),
+                                        text: 'Account Settings'),
+                                    Tab(
+                                        icon: Icon(Icons.lock_outline,
+                                            size: 20),
+                                        text: 'Change Password'),
+                                  ],
+                                ),
+                              ),
+
+                              // Tab Content Modules
+                              Expanded(
+                                child: TabBarView(
+                                  controller: _tabs,
+                                  children: [
+                                    ProfileFormTab(
+                                      formKey: _profileKey,
+                                      firstCtrl: _firstCtrl,
+                                      lastCtrl: _lastCtrl,
+                                      emailCtrl: _emailCtrl,
+                                      selectedDept: _selectedDept,
+                                      departments: _departments,
+                                      isLoadingDepartments:
+                                          _isLoadingDepartments,
+                                      profileMsg: _profileMsg,
+                                      profileSuccess: _profileSuccess,
+                                      savingProfile: _savingProfile,
+                                      onDeptChanged: (v) =>
+                                          setState(() => _selectedDept = v),
+                                      onSave: _saveProfile,
+                                    ),
+                                    PasswordFormTab(
+                                      formKey: _passKey,
+                                      curPassCtrl: _curPassCtrl,
+                                      newPassCtrl: _newPassCtrl,
+                                      confirmPassCtrl: _confirmPassCtrl,
+                                      obscureCur: _obscureCur,
+                                      obscureNew: _obscureNew,
+                                      obscureConf: _obscureConf,
+                                      passMsg: _passMsg,
+                                      passSuccess: _passSuccess,
+                                      savingPass: _savingPass,
+                                      onToggleCur: () => setState(
+                                          () => _obscureCur = !_obscureCur),
+                                      onToggleNew: () => setState(
+                                          () => _obscureNew = !_obscureNew),
+                                      onToggleConf: () => setState(
+                                          () => _obscureConf = !_obscureConf),
+                                      onSave: _changePassword,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
       ),
-    );
+    ); // <-- The missing semicolon was added right here
   }
 }

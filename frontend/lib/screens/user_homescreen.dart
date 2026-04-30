@@ -7,7 +7,7 @@ import '../widgets/user_layout.dart';
 import 'user_glass_topbar.dart';
 import 'intern_widgets.dart';
 import 'intern_directory_screen.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/user_homescreen_widgets/user_intern_carousel.dart';
@@ -70,84 +70,77 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
     return UserLayout(
       currentRoute: '/home',
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: AppTheme.spaceBackground,
+      child: AppBackground(
+        child: Column(
+          children: [
+            GlassTopBar(
+              key: const Key('user_topbar'),
+              isSidebarOpen: _isSidebarOpen,
+              onToggleSidebar: () => setState(() => _isSidebarOpen = !_isSidebarOpen),
+              user: user,
             ),
-          ),
-          Column(
-            children: [
-              GlassTopBar(
-                key: const Key('user_topbar'),
-                isSidebarOpen: _isSidebarOpen,
-                onToggleSidebar: () => setState(() => _isSidebarOpen = !_isSidebarOpen),
-                user: user,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 48, right: 48, bottom: 24),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Meet Our Interns',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 48, right: 48, bottom: 24),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Meet Our Interns',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
-                              TextButton(
-                                onPressed: () {
-                                  // Navigate to the new directory page
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
-                                  );
-                                },
-                                style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFF8A84FF), // Matches your accent purple/blue
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Text('View All'),
-                                    SizedBox(width: 4),
-                                    Icon(Icons.arrow_forward_ios, size: 12),
-                                  ],
-                                ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                // Navigate to the new directory page
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF8A84FF), // Matches your accent purple/blue
                               ),
-                            ],
-                          ),
+                              child: const Row(
+                                children: [
+                                  Text('View All'),
+                                  SizedBox(width: 4),
+                                  Icon(Icons.arrow_forward_ios, size: 12),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 32),
-                        
-                        // Extracted Carousel Component
-                        UserInternCarousel(
-                          interns: _interns,
-                          loading: _loadingInterns,
-                          error: _internsError,
-                          onRetry: _fetchInterns,
-                        ),
-                        
-                        const SizedBox(height: 36),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      // Extracted Carousel Component
+                      UserInternCarousel(
+                        interns: _interns,
+                        loading: _loadingInterns,
+                        error: _internsError,
+                        onRetry: _fetchInterns,
+                      ),
+                      
+                      const SizedBox(height: 36),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

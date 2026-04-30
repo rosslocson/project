@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/admin_user_management_widgets/user_utils.dart';
@@ -118,7 +118,7 @@ class _UsersScreenState extends State<UsersScreen> {
         title: Row(children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: const Color(0xFF4A5E9A).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: const Color(0xFF4A5E9A).withOpacity(0.1), borderRadius: BorderRadius.circular(8)), // Fixed
             child: const Icon(Icons.archive_outlined, color: Color(0xFF4A5E9A), size: 22),
           ),
           const SizedBox(width: 12),
@@ -253,167 +253,158 @@ class _UsersScreenState extends State<UsersScreen> {
                 : null,
           ),
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: AppTheme.spaceBackground,
-                  ),
-                ),
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: 72,
-                        child: Stack(
-                          alignment: Alignment.centerLeft,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
-                              child: Text(
-                                'User Management',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 72,
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
+                          child: Text(
+                            'User Management',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                          ),
+                        ),
+                        if (!_isSidebarOpen)
+                          Positioned(
+                            left: 20,
+                            top: 28,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05), // Fixed
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withOpacity(0.15)), // Fixed
+                              ),
+                              child: IconButton(
+                                padding: const EdgeInsets.all(12),
+                                onPressed: () => setState(() => _isSidebarOpen = true),
+                                icon: const UsersHamburgerIcon(),
+                                tooltip: 'Open Sidebar',
+                                splashColor: Colors.white.withOpacity(0.1), // Fixed
+                                highlightColor: Colors.transparent,
                               ),
                             ),
-                            if (!_isSidebarOpen)
-                              Positioned(
-                                left: 20,
-                                top: 28,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                                  ),
-                                  child: IconButton(
-                                    padding: const EdgeInsets.all(12),
-                                    onPressed: () => setState(() => _isSidebarOpen = true),
-                                    icon: const UsersHamburgerIcon(),
-                                    tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withValues(alpha: 0.1),
-                                    highlightColor: Colors.transparent,
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Extracted Search & Filter Row
+                            TextField(
+                              controller: _searchCtrl,
+                              style: const TextStyle(color: Colors.black87, fontSize: 13),
+                              decoration: InputDecoration(
+                                hintText: 'Search by name or email...',
+                                hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                                prefixIcon: IconButton(
+                                  icon: const Icon(Icons.search, color: Colors.grey),
+                                  onPressed: () {
+                                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                                    _loadUsers(search: _searchCtrl.text);
+                                  },
+                                ),
+                                suffixIcon: _searchCtrl.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, color: Colors.grey),
+                                        onPressed: () {
+                                          _searchCtrl.clear();
+                                          _loadUsers();
+                                          setState(() {});
+                                        },
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                              onChanged: (v) {
+                                setState(() {});
+                                if (_debounce?.isActive ?? false) _debounce!.cancel();
+                                _debounce = Timer(const Duration(milliseconds: 300), () => _loadUsers(search: v));
+                              },
+                              onSubmitted: (v) => _loadUsers(search: v),
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            // Extracted Filter Pills
+                            FilterPillGroup(
+                              tabs: tabs,
+                              filterStatus: _filterStatus,
+                              onTabChanged: _onTabChanged,
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Tables
+                            if (_loading)
+                              const Padding(
+                                padding: EdgeInsets.all(48),
+                                child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                              )
+                            else if (admins.isEmpty && internUsers.isEmpty)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.95), // Fixed
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                padding: const EdgeInsets.all(48),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.people_outline, size: 56, color: Colors.grey.shade300),
+                                      const SizedBox(height: 12),
+                                      Text('No users found in this category.', style: TextStyle(color: Colors.grey.shade500)),
+                                    ],
                                   ),
                                 ),
-                              ),
+                              )
+                            else ...[
+                              if (admins.isNotEmpty)
+                                UserListSection(
+                                  title: 'Administrators',
+                                  users: admins,
+                                  currentUserId: currentUserId,
+                                  onToggleActive: _toggleActive,
+                                  onArchive: _archiveUser,
+                                  onRestore: _restoreUser,
+                                ),
+                              if (internUsers.isNotEmpty)
+                                UserListSection(
+                                  title: 'Interns',
+                                  users: internUsers,
+                                  currentUserId: currentUserId,
+                                  onToggleActive: _toggleActive,
+                                  onArchive: _archiveUser,
+                                  onRestore: _restoreUser,
+                                ),
+                            ],
                           ],
                         ),
                       ),
-                      const SizedBox(height: 15),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Extracted Search & Filter Row
-                                TextField(
-                                  controller: _searchCtrl,
-                                  style: const TextStyle(color: Colors.black87, fontSize: 13),
-                                  decoration: InputDecoration(
-                                    hintText: 'Search by name or email...',
-                                    hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                                    prefixIcon: IconButton(
-                                      icon: const Icon(Icons.search, color: Colors.grey),
-                                      onPressed: () {
-                                        if (_debounce?.isActive ?? false) _debounce!.cancel();
-                                        _loadUsers(search: _searchCtrl.text);
-                                      },
-                                    ),
-                                    suffixIcon: _searchCtrl.text.isNotEmpty
-                                        ? IconButton(
-                                            icon: const Icon(Icons.clear, color: Colors.grey),
-                                            onPressed: () {
-                                              _searchCtrl.clear();
-                                              _loadUsers();
-                                              setState(() {});
-                                            },
-                                          )
-                                        : null,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                  ),
-                                  onChanged: (v) {
-                                    setState(() {});
-                                    if (_debounce?.isActive ?? false) _debounce!.cancel();
-                                    _debounce = Timer(const Duration(milliseconds: 300), () => _loadUsers(search: v));
-                                  },
-                                  onSubmitted: (v) => _loadUsers(search: v),
-                                ),
-                                const SizedBox(height: 24),
-                                
-                                // Extracted Filter Pills
-                                FilterPillGroup(
-                                  tabs: tabs,
-                                  filterStatus: _filterStatus,
-                                  onTabChanged: _onTabChanged,
-                                ),
-                                const SizedBox(height: 24),
-
-                                // Tables
-                                if (_loading)
-                                  const Padding(
-                                    padding: EdgeInsets.all(48),
-                                    child: Center(child: CircularProgressIndicator(color: Colors.white)),
-                                  )
-                                else if (admins.isEmpty && internUsers.isEmpty)
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.95),
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                    padding: const EdgeInsets.all(48),
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.people_outline, size: 56, color: Colors.grey.shade300),
-                                          const SizedBox(height: 12),
-                                          Text('No users found in this category.', style: TextStyle(color: Colors.grey.shade500)),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                else ...[
-                                  if (admins.isNotEmpty)
-                                    UserListSection(
-                                      title: 'Administrators',
-                                      users: admins,
-                                      currentUserId: currentUserId,
-                                      onToggleActive: _toggleActive,
-                                      onArchive: _archiveUser,
-                                      onRestore: _restoreUser,
-                                    ),
-                                  if (internUsers.isNotEmpty)
-                                    UserListSection(
-                                      title: 'Interns',
-                                      users: internUsers,
-                                      currentUserId: currentUserId,
-                                      onToggleActive: _toggleActive,
-                                      onArchive: _archiveUser,
-                                      onRestore: _restoreUser,
-                                    ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
       ),
-    );
+    ); // <-- Fixed: Added missing semicolon here
   }
 }

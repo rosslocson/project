@@ -6,7 +6,7 @@ import '../services/api_service.dart';
 import 'intern_widgets.dart';
 
 class InternDirectoryScreen extends StatefulWidget {
-  const InternDirectoryScreen({Key? key}) : super(key: key);
+  const InternDirectoryScreen({super.key});
 
   @override
   State<InternDirectoryScreen> createState() => _InternDirectoryScreenState();
@@ -332,7 +332,7 @@ class OrbitRingsPainter extends CustomPainter {
 // THE CENTRAL GLOWING STAR (Blue/Cyan Theme)
 // ---------------------------------------------------------
 class CentralBlueStar extends StatelessWidget {
-  const CentralBlueStar({Key? key}) : super(key: key);
+  const CentralBlueStar({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -391,7 +391,7 @@ class OrbitalPlanetNode extends StatelessWidget {
   final InternProfile intern;
   final int ringIndex;
 
-  const OrbitalPlanetNode({Key? key, required this.intern, required this.ringIndex}) : super(key: key);
+  const OrbitalPlanetNode({super.key, required this.intern, required this.ringIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -526,7 +526,7 @@ class OrbitalPlanetNode extends StatelessWidget {
 // Intercepts touches for the UI overlay buttons
 class PointerInterceptor extends StatelessWidget {
   final Widget child;
-  const PointerInterceptor({Key? key, required this.child}) : super(key: key);
+  const PointerInterceptor({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
-import '../theme.dart';
+import '../widgets/app_background.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/admin_departments_widgets/departments_hamburger_icon.dart';
@@ -118,84 +118,75 @@ class _ConfigScreenState extends State<ConfigScreen> with TickerProviderStateMix
                 : null,
           ),
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: AppTheme.spaceBackground,
-                  ),
-                ),
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: 72,
-                        child: Stack(
-                          alignment: Alignment.centerLeft,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
-                              child: Text(
-                                'Departments',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
-                              ),
-                            ),
-                            if (!_isSidebarOpen)
-                              Positioned(
-                                left: 20,
-                                top: 28,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                                  ),
-                                  child: IconButton(
-                                    padding: const EdgeInsets.all(12),
-                                    onPressed: () => setState(() => _isSidebarOpen = true),
-                                    icon: const DepartmentsHamburgerIcon(),
-                                    tooltip: 'Open Sidebar',
-                                    splashColor: Colors.white.withValues(alpha: 0.1),
-                                    highlightColor: Colors.transparent,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.95),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: DepartmentListContent(
-                                loading: _loadingDept,
-                                items: _departments,
-                                searchHint: 'Search departments...',
-                                onAdd: _addDepartment,
-                                onEdit: (id, name) => _editItem(id: id, currentName: name),
-                                onDelete: (id, name) => _deleteItem(id: id, name: name),
-                              ),
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 72,
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
+                          child: Text(
+                            'Departments',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        if (!_isSidebarOpen)
+                          Positioned(
+                            left: 20,
+                            top: 28,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color.fromRGBO(255, 255, 255, 0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color.fromRGBO(255, 255, 255, 0.15)),
+                              ),
+                              child: IconButton(
+                                padding: const EdgeInsets.all(12),
+                                onPressed: () => setState(() => _isSidebarOpen = true),
+                                icon: const DepartmentsHamburgerIcon(),
+                                tooltip: 'Open Sidebar',
+                                splashColor: const Color.fromRGBO(255, 255, 255, 0.1),
+                                highlightColor: Colors.transparent,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(255, 255, 255, 0.95),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: DepartmentListContent(
+                            loading: _loadingDept,
+                            items: _departments,
+                            searchHint: 'Search departments...',
+                            onAdd: _addDepartment,
+                            onEdit: (id, name) => _editItem(id: id, currentName: name),
+                            onDelete: (id, name) => _deleteItem(id: id, name: name),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
