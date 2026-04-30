@@ -32,7 +32,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8), // Fixed from withValues
+              color: Colors.white.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -64,6 +64,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   bool _isSidebarOpen = true;
   late TabController _tabs;
 
+  // ── Stored after profile fetch so it's available for the read-only view ──
+  int? _requiredHours;
+
   @override
   void initState() {
     super.initState();
@@ -88,30 +91,54 @@ class _MyProfileScreenState extends State<MyProfileScreen>
       final res = await ApiService.getProfile();
       if (!mounted) return;
 
+      Map<String, dynamic>? profileData;
+
       if (res['id'] != null) {
-        await context
-            .read<AuthProvider>()
-            .updateUserData(Map<String, dynamic>.from(res));
-        if (mounted) setState(() => _loading = false);
+        profileData = Map<String, dynamic>.from(res);
+        await context.read<AuthProvider>().updateUserData(profileData);
       } else if (res['ok'] == true && res['data'] != null) {
-        await context.read<AuthProvider>().updateUserData(
-            Map<String, dynamic>.from(res['data'] as Map<String, dynamic>));
-        if (mounted) setState(() => _loading = false);
+        profileData =
+            Map<String, dynamic>.from(res['data'] as Map<String, dynamic>);
+        await context.read<AuthProvider>().updateUserData(profileData);
+      }
+
+      if (!mounted) return;
+
+      if (profileData != null) {
+        // ── Parse required_hours once here and store in state ──
+        final raw = profileData['required_ojt_hours'];
+        final hours =
+            raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+        debugPrint(
+            '✅ MyProfile required_hours: $hours (raw: $raw, type: ${raw?.runtimeType})');
+
+        setState(() {
+          _loading = false;
+          _requiredHours = hours;
+        });
       } else {
-        if (mounted) {
-          setState(() {
-            _loading = false;
-            _fetchError =
-                'Could not load your profile from the server. Showing cached data.';
-          });
-        }
+        setState(() {
+          _loading = false;
+          _fetchError =
+              'Could not load your profile from the server. Showing cached data.';
+          // Also try reading from cached user data
+          final raw = context.read<AuthProvider>().user?['required_ojt_hours'];
+          _requiredHours =
+              raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+        });
       }
     } catch (e) {
       debugPrint('MyProfileScreen _fetchProfile error: $e');
       if (mounted) {
         setState(() {
           _loading = false;
-          _fetchError = 'Network error. Check your connection and tap Retry.';
+          _fetchError =
+              'Network error. Check your connection and tap Retry.';
+          // Fall back to cached value
+          final raw =
+              context.read<AuthProvider>().user?['required_hours'];
+          _requiredHours =
+              raw is int ? raw : int.tryParse(raw?.toString() ?? '');
         });
       }
     }
@@ -124,6 +151,35 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     return s.isEmpty ? '—' : s;
   }
 
+  /// Counts ceil([requiredHours] / 8) weekdays (Mon–Fri) forward
+  /// from [startDateStr] and returns 'YYYY-MM-DD', or null on parse error.
+  String? _computeEstimatedEndDate(String startDateStr, int requiredHours) {
+    DateTime start;
+    try {
+      start = DateTime.parse(startDateStr);
+    } catch (_) {
+      return null;
+    }
+
+    final int daysNeeded = (requiredHours / 8).ceil();
+    DateTime current = start;
+    int daysWorked = 0;
+
+    while (daysWorked < daysNeeded) {
+      if (current.weekday != DateTime.saturday &&
+          current.weekday != DateTime.sunday) {
+        daysWorked++;
+      }
+      if (daysWorked < daysNeeded) {
+        current = current.add(const Duration(days: 1));
+      }
+    }
+
+    return '${current.year}-'
+        '${current.month.toString().padLeft(2, '0')}-'
+        '${current.day.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
@@ -134,15 +190,16 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     if (first.isNotEmpty) initials += first[0];
     if (last.isNotEmpty) initials += last[0];
 
-String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+    String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        // Same logic as admin_attendance_screen for consistency
         final staticBase = ApiService.baseUrl
-            .replaceAll(RegExp(r'/api/?$'), '') // remove trailing /api or /api/
-            .replaceAll(RegExp(r'/$'), ''); // remove any remaining trailing /
-        final cleanPath = rawAvatarUrl.startsWith('/') ? rawAvatarUrl : '/$rawAvatarUrl';
+            .replaceAll(RegExp(r'/api/?$'), '')
+            .replaceAll(RegExp(r'/$'), '');
+        final cleanPath = rawAvatarUrl.startsWith('/')
+            ? rawAvatarUrl
+            : '/$rawAvatarUrl';
         finalAvatarUrl = '$staticBase$cleanPath';
         debugPrint('Avatar URL: $finalAvatarUrl');
       } else {
@@ -209,7 +266,8 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                                 color: Colors.white.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                    color: Colors.white.withOpacity(0.15)),
+                                    color: Colors.white
+                                        .withValues(alpha: 0.15)),
                               ),
                               child: IconButton(
                                 padding: const EdgeInsets.all(12),
@@ -217,7 +275,8 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                                     setState(() => _isSidebarOpen = true),
                                 icon: const HamburgerIcon(),
                                 tooltip: 'Open Sidebar',
-                                splashColor: Colors.white.withOpacity(0.1),
+                                splashColor:
+                                    Colors.white.withValues(alpha: 0.1),
                                 highlightColor: Colors.transparent,
                               ),
                             ),
@@ -256,7 +315,7 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    // ── LEFT PANEL: Avatar + Identity ──
+                                    // ── LEFT PANEL ──
                                     _buildLeftPanel(
                                       user,
                                       first,
@@ -265,17 +324,14 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                                       finalAvatarUrl,
                                     ),
 
-                                    // ── RIGHT PANEL: Tabs + Content ───
+                                    // ── RIGHT PANEL ──
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: [
-                                          // Error banner
                                           if (_fetchError != null)
                                             _retryBanner(_fetchError!),
-
-                                          // Tabs
                                           Container(
                                             decoration: BoxDecoration(
                                               border: Border(
@@ -297,18 +353,16 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                                                   Colors.transparent,
                                               tabs: const [
                                                 Tab(
-                                                  iconMargin:
-                                                      EdgeInsets.only(
-                                                          bottom: 4),
+                                                  iconMargin: EdgeInsets
+                                                      .only(bottom: 4),
                                                   icon: Icon(
                                                       Icons.school_outlined,
                                                       size: 18),
                                                   text: 'Academic Info',
                                                 ),
                                                 Tab(
-                                                  iconMargin:
-                                                      EdgeInsets.only(
-                                                          bottom: 4),
+                                                  iconMargin: EdgeInsets
+                                                      .only(bottom: 4),
                                                   icon: Icon(
                                                       Icons.stars_outlined,
                                                       size: 18),
@@ -317,8 +371,6 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                                               ],
                                             ),
                                           ),
-
-                                          // Tab content
                                           Expanded(
                                             child: TabBarView(
                                               controller: _tabs,
@@ -361,10 +413,7 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            kCrimsonDeep,
-            Color(0xFF00022E),
-          ],
+          colors: [kCrimsonDeep, Color(0xFF00022E)],
         ),
       ),
       child: Column(
@@ -411,7 +460,6 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                       : null,
                 ),
               ),
-              // Edit avatar button
               GestureDetector(
                 onTap: () => context.go('/edit-profile'),
                 child: Container(
@@ -427,11 +475,8 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.edit_rounded,
-                    color: kCrimsonDeep,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.edit_rounded,
+                      color: kCrimsonDeep, size: 16),
                 ),
               ),
             ],
@@ -443,7 +488,9 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              first.isEmpty && last.isEmpty ? 'Name Not Set' : '$first $last',
+              first.isEmpty && last.isEmpty
+                  ? 'Name Not Set'
+                  : '$first $last',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 20,
@@ -478,11 +525,13 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
 
           // ── Badge ─────────────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.25)),
+              border:
+                  Border.all(color: Colors.white.withValues(alpha: 0.25)),
             ),
             child: const Text(
               'INTERN',
@@ -497,7 +546,6 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
 
           const SizedBox(height: 24),
 
-          // ── Divider ───────────────────────────────────────────────
           Divider(
             color: Colors.white.withOpacity(0.15),
             height: 1,
@@ -544,10 +592,7 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
                 icon: const Icon(Icons.edit_outlined, size: 16),
                 label: const Text(
                   'Edit Profile',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -566,14 +611,31 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     );
   }
 
-  // ── Academic tab ─────────────────────────────────────────────────────────
+  // ── Academic tab ──────────────────────────────────────────────────────────
 
   Widget _buildAcademicTab(Map<String, dynamic>? user) {
+    // Use _requiredHours from state (set during _fetchProfile)
+    // so it's always reliable regardless of user map contents.
+    final requiredHours = _requiredHours;
+
+    // Compute estimated end date from start date + required hours
+    String? computedEndDate;
+    if (requiredHours != null && requiredHours > 0) {
+      final startStr = user?['start_date']?.toString().trim() ?? '';
+      if (startStr.isNotEmpty) {
+        computedEndDate =
+            _computeEstimatedEndDate(startStr, requiredHours);
+      }
+    }
+
+    final displayedEndDate = _val(user, 'end_date');
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Department + Position ──────────────────────────────
           Row(
             children: [
               Expanded(
@@ -592,16 +654,22 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
             ],
           ),
           const SizedBox(height: 16),
+
+          // ── School ────────────────────────────────────────────
           _ReadonlyField(
             label: 'School / University',
             value: _val(user, 'school'),
           ),
           const SizedBox(height: 16),
+
+          // ── Program ───────────────────────────────────────────
           _ReadonlyField(
             label: 'Program / Course',
             value: _val(user, 'program'),
           ),
           const SizedBox(height: 16),
+
+          // ── Specialization + Year ─────────────────────────────
           Row(
             children: [
               Expanded(
@@ -620,12 +688,32 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
             ],
           ),
           const SizedBox(height: 16),
-          _ReadonlyField(
-            label: 'Intern Number',
-            value: _val(user, 'intern_number'),
+
+          // ── Intern Number + Required OJT Hours ────────────────
+          Row(
+            children: [
+              Expanded(
+                child: _ReadonlyField(
+                  label: 'Intern Number',
+                  value: _val(user, 'intern_number'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _ReadonlyField(
+                  label: 'Required OJT Hours',
+                  value:
+                      requiredHours != null ? '$requiredHours hrs' : '—',
+                  icon: Icons.access_time_rounded,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
+
+          // ── Start + End dates ─────────────────────────────────
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _ReadonlyField(
@@ -636,15 +724,58 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _ReadonlyField(
-                  label: 'Internship End',
-                  value: _val(user, 'end_date'),
-                  icon: Icons.calendar_today,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _ReadonlyField(
+                      label: 'Internship End',
+                      value: displayedEndDate,
+                      icon: Icons.calendar_today,
+                    ),
+                    // ── Estimated end date badge ──────────────
+                    if (computedEndDate != null) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: kCrimsonDeep.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color:
+                                  kCrimsonDeep.withValues(alpha: 0.20)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.auto_awesome_rounded,
+                                size: 11,
+                                color:
+                                    kCrimsonDeep.withValues(alpha: 0.75)),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                'Est. end: $computedEndDate · $requiredHours hrs @ 8 hrs/day, Mon–Fri',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: kCrimsonDeep
+                                      .withValues(alpha: 0.80),
+                                  fontStyle: FontStyle.italic,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
+
+          // ── Email ─────────────────────────────────────────────
           _ReadonlyField(
             label: 'Email',
             value: _val(user, 'email'),
@@ -701,21 +832,7 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     );
   }
 
-  // ── Shared helpers ────────────────────────────────────────────────────────
-
-  Widget _sectionTitle(String title, String sub) => Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black)),
-          const SizedBox(height: 4),
-          Text(sub,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-        ]),
-      );
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
@@ -728,19 +845,22 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
 
   Widget _retryBanner(String msg) => Container(
         margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.12), // Fixed from withValues
+          color: Colors.orange.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.orange.withOpacity(0.4)), // Fixed
+          border:
+              Border.all(color: Colors.orange.withValues(alpha: 0.4)),
         ),
         child: Row(children: [
-          Icon(Icons.wifi_off_rounded, color: Colors.orange.shade700, size: 18),
+          Icon(Icons.wifi_off_rounded,
+              color: Colors.orange.shade700, size: 18),
           const SizedBox(width: 10),
           Expanded(
               child: Text(msg,
-                  style:
-                      TextStyle(color: Colors.orange.shade900, fontSize: 12))),
+                  style: TextStyle(
+                      color: Colors.orange.shade900, fontSize: 12))),
           TextButton(
             onPressed: _fetchProfile,
             style: TextButton.styleFrom(
@@ -750,13 +870,14 @@ String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: const Text('Retry',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ]),
       );
 }
 
-// ── Quick Info Tile (used in left panel) ──────────────────────────────────────
+// ── Quick Info Tile ───────────────────────────────────────────────────────────
 
 class _QuickInfoTile extends StatelessWidget {
   final IconData icon;
@@ -783,7 +904,8 @@ class _QuickInfoTile extends StatelessWidget {
               color: Colors.white.withOpacity(0.10),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Colors.white.withOpacity(0.85), size: 16),
+            child: Icon(icon,
+                color: Colors.white.withValues(alpha: 0.85), size: 16),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -852,7 +974,8 @@ class _ReadonlyField extends StatelessWidget {
         ),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: const Color(0xFFF3F4F6),
             borderRadius: BorderRadius.circular(12),
@@ -871,7 +994,8 @@ class _ReadonlyField extends StatelessWidget {
                   style: TextStyle(
                     color: isEmpty ? Colors.grey.shade400 : Colors.black,
                     fontSize: 14,
-                    fontWeight: isEmpty ? FontWeight.w400 : FontWeight.w500,
+                    fontWeight:
+                        isEmpty ? FontWeight.w400 : FontWeight.w500,
                   ),
                 ),
               ),
@@ -900,7 +1024,8 @@ class _SkillChips extends StatelessWidget {
     if (raw == '—' || raw.trim().isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(12),
@@ -914,8 +1039,11 @@ class _SkillChips extends StatelessWidget {
       );
     }
 
-    final skills =
-        raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    final skills = raw
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
 
     return Container(
       width: double.infinity,
@@ -930,12 +1058,13 @@ class _SkillChips extends StatelessWidget {
         runSpacing: 8,
         children: skills
             .map((s) => Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.08), // Fixed from withValues
+                    color: color.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: color.withOpacity(0.25)), // Fixed
+                    border: Border.all(
+                        color: color.withValues(alpha: 0.25)),
                   ),
                   child: Text(
                     s,

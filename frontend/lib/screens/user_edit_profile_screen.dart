@@ -7,7 +7,6 @@ import '../../widgets/app_theme.dart';
 import '../../widgets/user_sidebar.dart';
 import '../widgets/app_background.dart';
 
-// ── Imported Extracted Widgets ──
 import '../../widgets/user_edit_profile_widgets/edit_profile_hamburger_icon.dart';
 import '../../widgets/user_edit_profile_widgets/edit_profile_status_banner.dart';
 import '../../widgets/user_edit_profile_widgets/academic_info_tab.dart';
@@ -19,7 +18,8 @@ class UserEditProfileScreen extends StatefulWidget {
   State<UserEditProfileScreen> createState() => _UserEditProfileScreenState();
 }
 
-class _UserEditProfileScreenState extends State<UserEditProfileScreen> with TickerProviderStateMixin {
+class _UserEditProfileScreenState extends State<UserEditProfileScreen>
+    with TickerProviderStateMixin {
   late TabController _tabs;
   bool _sidebarVisible = true;
 
@@ -29,6 +29,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
 
   bool _initialLoading = true;
   String? _selectedDept;
+  int? _requiredHours; // ← stored in state, not read from context in build()
 
   late TextEditingController _schoolCtrl;
   late TextEditingController _programCtrl;
@@ -64,7 +65,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
     _startCtrl = TextEditingController(text: user['start_date'] ?? '');
     _endCtrl = TextEditingController(text: user['end_date'] ?? '');
     _bioCtrl = TextEditingController(text: user['bio'] ?? '');
-    _techSkillsCtrl = TextEditingController(text: user['technical_skills'] ?? '');
+    _techSkillsCtrl =
+        TextEditingController(text: user['technical_skills'] ?? '');
     _softSkillsCtrl = TextEditingController(text: user['soft_skills'] ?? '');
     _linkedinCtrl = TextEditingController(text: user['linked_in'] ?? '');
     _githubCtrl = TextEditingController(text: user['git_hub'] ?? '');
@@ -78,7 +80,20 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
   @override
   void dispose() {
     _tabs.dispose();
-    for (final c in [_schoolCtrl, _programCtrl, _specCtrl, _yearCtrl, _internNumCtrl, _startCtrl, _endCtrl, _bioCtrl, _techSkillsCtrl, _softSkillsCtrl, _linkedinCtrl, _githubCtrl]) {
+    for (final c in [
+      _schoolCtrl,
+      _programCtrl,
+      _specCtrl,
+      _yearCtrl,
+      _internNumCtrl,
+      _startCtrl,
+      _endCtrl,
+      _bioCtrl,
+      _techSkillsCtrl,
+      _softSkillsCtrl,
+      _linkedinCtrl,
+      _githubCtrl,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -88,14 +103,22 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
     final result = await ApiService.getConfig(type: 'department');
     if (!mounted) return;
 
-    final depts = (result['items'] as List? ?? []).map((e) => e['name'] as String).toList();
+    final depts = (result['items'] as List? ?? [])
+        .map((e) => e['name'] as String)
+        .toList();
 
     if (_selectedDept != null && !depts.contains(_selectedDept!)) {
       depts.add(_selectedDept!);
     }
 
+    // ── Read required_hours from the user profile ──
+    final raw = context.read<AuthProvider>().user?['required_ojt_hours'];
+    final hours = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+    debugPrint('✅ _requiredHours loaded: $hours (raw: $raw, type: ${raw?.runtimeType})');
+
     setState(() {
       _departments = depts;
+      _requiredHours = hours;
       _initialLoading = false;
     });
   }
@@ -144,7 +167,9 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
       if (mounted) {
         setState(() {
           _saving = false;
-          _errorMsg = res['error'] ?? res['details'] ?? 'Save failed. Please try again.';
+          _errorMsg = res['error'] ??
+              res['details'] ??
+              'Save failed. Please try again.';
           _successMsg = null;
         });
       }
@@ -171,7 +196,10 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
       ),
     );
     if (picked != null) {
-      ctrl.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      ctrl.text =
+          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      // The AcademicInfoTab listener handles end-date computation automatically.
+      // setState here just keeps the screen in sync.
       setState(() {});
     }
   }
@@ -204,15 +232,19 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
                       alignment: Alignment.centerLeft,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
+                          padding: const EdgeInsets.only(
+                              left: 100, right: 100, top: 28),
                           child: Text(
                             'Edit Profile',
-                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .displaySmall
+                                ?.copyWith(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
                           ),
                         ),
                         if (!_sidebarVisible)
@@ -221,16 +253,21 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
                             top: 28,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: const Color.fromRGBO(255, 255, 255, 0.05),
+                                color:
+                                    const Color.fromRGBO(255, 255, 255, 0.05),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color.fromRGBO(255, 255, 255, 0.15)),
+                                border: Border.all(
+                                    color: const Color.fromRGBO(
+                                        255, 255, 255, 0.15)),
                               ),
                               child: IconButton(
                                 padding: const EdgeInsets.all(12),
-                                onPressed: () => setState(() => _sidebarVisible = true),
+                                onPressed: () =>
+                                    setState(() => _sidebarVisible = true),
                                 icon: const EditProfileHamburgerIcon(),
                                 tooltip: 'Open Sidebar',
-                                splashColor: const Color.fromRGBO(255, 255, 255, 0.1),
+                                splashColor:
+                                    const Color.fromRGBO(255, 255, 255, 0.1),
                                 highlightColor: Colors.transparent,
                               ),
                             ),
@@ -241,7 +278,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
                   const SizedBox(height: 15),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
                           color: const Color.fromRGBO(255, 255, 255, 0.95),
@@ -250,42 +288,54 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: _initialLoading
-                              ? const Center(child: CircularProgressIndicator(color: kCrimsonDeep))
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                      color: kCrimsonDeep))
                               : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     if (_successMsg != null)
                                       EditProfileStatusBanner(
                                         msg: _successMsg!,
                                         success: true,
-                                        onClose: () => setState(() => _successMsg = null),
+                                        onClose: () =>
+                                            setState(() => _successMsg = null),
                                       ),
                                     if (_errorMsg != null)
                                       EditProfileStatusBanner(
                                         msg: _errorMsg!,
                                         success: false,
-                                        onClose: () => setState(() => _errorMsg = null),
+                                        onClose: () =>
+                                            setState(() => _errorMsg = null),
                                       ),
                                     Container(
                                       decoration: BoxDecoration(
-                                        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                                        border: Border(
+                                            bottom: BorderSide(
+                                                color: Colors.grey.shade200)),
                                       ),
                                       child: TabBar(
                                         controller: _tabs,
                                         labelColor: Colors.black,
-                                        unselectedLabelColor: Colors.grey.shade500,
+                                        unselectedLabelColor:
+                                            Colors.grey.shade500,
                                         indicatorColor: kCrimsonDeep,
                                         indicatorWeight: 3,
                                         dividerColor: Colors.transparent,
                                         tabs: const [
                                           Tab(
-                                            iconMargin: EdgeInsets.only(bottom: 4),
-                                            icon: Icon(Icons.school_outlined, size: 18),
+                                            iconMargin:
+                                                EdgeInsets.only(bottom: 4),
+                                            icon: Icon(Icons.school_outlined,
+                                                size: 18),
                                             text: 'Academic Info',
                                           ),
                                           Tab(
-                                            iconMargin: EdgeInsets.only(bottom: 4),
-                                            icon: Icon(Icons.stars_outlined, size: 18),
+                                            iconMargin:
+                                                EdgeInsets.only(bottom: 4),
+                                            icon: Icon(Icons.stars_outlined,
+                                                size: 18),
                                             text: 'Skills',
                                           ),
                                         ],
@@ -307,9 +357,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
                                             internNumCtrl: _internNumCtrl,
                                             startCtrl: _startCtrl,
                                             endCtrl: _endCtrl,
-                                            onDeptChanged: (v) => setState(() => _selectedDept = v),
-                                            onPickStart: () => _pickDate(_startCtrl),
-                                            onPickEnd: () => _pickDate(_endCtrl),
+                                            onDeptChanged: (v) => setState(
+                                                () => _selectedDept = v),
+                                            onPickStart: () =>
+                                                _pickDate(_startCtrl),
+                                            onPickEnd: () =>
+                                                _pickDate(_endCtrl),
+                                            requiredHours: _requiredHours, // ← clean state field
                                           ),
                                           SkillsProfileTab(
                                             formKey: _skillsKey,
@@ -323,7 +377,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
                                       ),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+                                      padding: const EdgeInsets.fromLTRB(
+                                          40, 0, 40, 28),
                                       child: SizedBox(
                                         height: 48,
                                         width: double.infinity,
@@ -332,18 +387,27 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen> with Tick
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: kCrimsonDeep,
                                             foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12)),
                                             elevation: 0,
                                           ),
                                           child: _saving
                                               ? const SizedBox(
                                                   height: 20,
                                                   width: 20,
-                                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          color: Colors.white,
+                                                          strokeWidth: 2),
                                                 )
                                               : const Text(
                                                   'SAVE CHANGES',
-                                                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.8),
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      fontSize: 15,
+                                                      letterSpacing: 0.8),
                                                 ),
                                         ),
                                       ),
