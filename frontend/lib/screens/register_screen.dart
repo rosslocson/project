@@ -25,7 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  final _ojtHoursCtrl = TextEditingController(text: '486');
+  final _ojtHoursCtrl = TextEditingController(text: '400');
 
   bool _obscurePass = true;
   bool _obscureConfirm = true;
