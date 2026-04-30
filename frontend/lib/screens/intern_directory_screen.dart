@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:math' as math;
+import 'package:go_router/go_router.dart';
 
 import '../services/api_service.dart';
 import 'intern_widgets.dart';
@@ -14,8 +15,14 @@ class InternDirectoryScreen extends StatefulWidget {
 
 class _InternDirectoryScreenState extends State<InternDirectoryScreen> with SingleTickerProviderStateMixin {
   List<InternProfile> _interns = [];
+  List<InternProfile> _filteredInterns = [];
   bool _loading = true;
   String? _error;
+  
+  // Search Controls
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearching = false;
 
   // Map Controls
   final TransformationController _transformationController = TransformationController();
@@ -35,6 +42,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
   void initState() {
     super.initState();
     _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _searchController.addListener(_onSearchChanged);
     _fetchInterns();
   }
 
@@ -42,6 +50,8 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
   void dispose() {
     _transformationController.dispose();
     _animController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -64,6 +74,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
         // 1. Sort Alphabetically A-Z
         loaded.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         _interns = loaded;
+        _filteredInterns = loaded;
         
         // 2. Adjust canvas size if there are tons of users
         if (_interns.length > 128) {
@@ -84,6 +95,169 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
         _loading = false;
       });
     }
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredInterns = _interns;
+      } else {
+        _filteredInterns = _interns.where((intern) =>
+          intern.name.toLowerCase().contains(query) ||
+          intern.internNumber.toLowerCase().contains(query)
+        ).toList();
+      }
+    });
+  }
+
+  List<Widget> _buildUIChildren(BuildContext context) {
+    List<Widget> children = [];
+    
+    // Top Header Layer (Wrapped in PointerInterceptor so interactions don't drag the map)
+    children.add(
+      PointerInterceptor(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // CENTER: Title (using Stack to keep it perfectly centered regardless of side buttons)
+              const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'SYSTEM DIRECTORY',
+                    style: TextStyle(
+                      color: Color(0xFF8A84FF), // Purple accent
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 4.0,
+                    ),
+                  ),
+                  Text(
+                    'Orbital View',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              
+              // EDGES: Back Button and Dynamic Search Bar
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                    onPressed: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        context.go('/dashboard');
+                      }
+                    },
+                  ),
+                  
+                  // Expandable Inline Search Bar
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                    width: _isSearching ? 280 : 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _isSearching ? const Color(0xFF141526).withOpacity(0.9) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _isSearching ? const Color(0xFF8A84FF) : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _isSearching
+                              ? Padding(
+                                  padding: const EdgeInsets.only(left: 20),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    focusNode: _searchFocusNode,
+                                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    decoration: const InputDecoration(
+                                      hintText: 'Search name or number...',
+                                      hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            _isSearching ? Icons.close : Icons.search,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              if (_isSearching) {
+                                _isSearching = false;
+                                _searchController.clear();
+                                _searchFocusNode.unfocus();
+                              } else {
+                                _isSearching = true;
+                                _searchFocusNode.requestFocus();
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (_loading) {
+      children.add(const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF8A84FF)))));
+    }
+    if (_error != null) {
+      children.add(Expanded(child: Center(child: Text(_error!, style: const TextStyle(color: Colors.redAccent)))));
+    }
+    
+    children.add(const Spacer());
+    
+    if (!_loading && _error == null) {
+      children.add(
+        PointerInterceptor(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 30.0),
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF141526).withOpacity(0.9),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  side: const BorderSide(color: Color(0xFF8A84FF), width: 1),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              onPressed: _recenterMap,
+              icon: const Icon(Icons.adjust, size: 18, color: Color(0xFF8A84FF)),
+              label: const Text('Focus Core', style: TextStyle(letterSpacing: 1.0)),
+            ),
+          ),
+        ),
+      );
+    }
+    return children;
   }
 
   void _recenterMap({bool animated = true}) {
@@ -169,81 +343,8 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
 
           // UI Overlay
           SafeArea(
-            child: IgnorePointer(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        PointerInterceptor(
-                          child: IconButton(
-                            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ),
-                        const Column(
-                          children: [
-                            Text(
-                              'SYSTEM DIRECTORY',
-                              style: TextStyle(
-                                color: Color(0xFF00E5FF), // Cyan accent
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 4.0,
-                              ),
-                            ),
-                            Text(
-                              'Orbital View',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w300,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                        PointerInterceptor(
-                          child: IconButton(
-                            icon: const Icon(Icons.search, color: Colors.white),
-                            onPressed: () {},
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  if (_loading)
-                    const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF00E5FF)))),
-                  if (_error != null)
-                    Expanded(child: Center(child: Text(_error!, style: const TextStyle(color: Colors.redAccent)))),
-                    
-                  const Spacer(),
-                  
-                  if (!_loading && _error == null)
-                    PointerInterceptor(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 30.0),
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF141526).withOpacity(0.9),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              side: const BorderSide(color: Color(0xFF00E5FF), width: 1),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          ),
-                          onPressed: _recenterMap,
-                          icon: const Icon(Icons.adjust, size: 18, color: Color(0xFF00E5FF)),
-                          label: const Text('Focus Core', style: TextStyle(letterSpacing: 1.0)),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            child: Column(
+              children: _buildUIChildren(context),
             ),
           ),
         ],
@@ -260,13 +361,13 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     int currentInternIndex = 0;
 
     for (int ringIndex = 0; ringIndex < _orbitRadiiX.length; ringIndex++) {
-      if (currentInternIndex >= _interns.length) break;
+      if (currentInternIndex >= _filteredInterns.length) break;
 
       double radiusX = _orbitRadiiX[ringIndex];
       double radiusY = radiusX * _perspectiveRatio; // Squish Y to create the 3D angle
       
       int capacity = _orbitCapacities[ringIndex];
-      int internsOnThisRing = math.min(capacity, _interns.length - currentInternIndex);
+      int internsOnThisRing = math.min(capacity, _filteredInterns.length - currentInternIndex);
 
       for (int i = 0; i < internsOnThisRing; i++) {
         // Evenly space them along the ellipse
@@ -286,7 +387,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
             left: x - 60, // Center the widget (assuming width is 120)
             top: y - 140, // Offset Y more so the avatar "stands up" on the line
             child: OrbitalPlanetNode(
-              intern: _interns[currentInternIndex], 
+              intern: _filteredInterns[currentInternIndex], 
               ringIndex: ringIndex,
             ),
           ),
@@ -329,7 +430,7 @@ class OrbitRingsPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------
-// THE CENTRAL GLOWING STAR (Blue/Cyan Theme)
+// THE CENTRAL GLOWING STAR (Blue-Purple Gradient Theme)
 // ---------------------------------------------------------
 class CentralBlueStar extends StatelessWidget {
   const CentralBlueStar({super.key});
@@ -350,8 +451,8 @@ class CentralBlueStar extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  const Color(0xFF00E5FF).withOpacity(0.15),
-                  const Color(0xFF5A54FF).withOpacity(0.05),
+                  const Color(0xFF8A84FF).withOpacity(0.15), // Purple
+                  const Color(0xFF5A54FF).withOpacity(0.05), // Deep Purple
                   Colors.transparent,
                 ],
               ),
@@ -365,7 +466,7 @@ class CentralBlueStar extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF00E5FF).withOpacity(0.6),
+                  color: const Color(0xFF8A84FF).withOpacity(0.6), // Purple
                   blurRadius: 80,
                   spreadRadius: 20,
                 ),
@@ -397,11 +498,11 @@ class OrbitalPlanetNode extends StatelessWidget {
   Widget build(BuildContext context) {
     // Alternate accent colors based on their ring to give depth
     final List<Color> accents = [
-      const Color(0xFF00E5FF), // Cyan
-      const Color(0xFF8A84FF), // Light Purple
+      const Color(0xFF8A84FF), // Purple
       const Color(0xFF5A54FF), // Deep Purple
-      const Color(0xFFFFFFFF), // White
       const Color(0xFF42A5F5), // Blue
+      const Color(0xFFFFFFFF), // White
+      const Color(0xFFAB47BC), // Purple variant
     ];
     Color accentColor = accents[ringIndex % accents.length];
 
