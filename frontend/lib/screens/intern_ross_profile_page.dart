@@ -58,7 +58,7 @@ class Intern28ProfilePage extends StatelessWidget {
           children: [
             // Background
             Image.asset(
-              'assets/images/space_background.png',
+              'assets/images/space_background.jpg',
               fit: BoxFit.cover,
             ),
             Container(color: Colors.black.withValues(alpha: 0.65)),
