@@ -233,7 +233,7 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 //   all_dates   bool    "true"         — skip date filtering entirely
 //   period      string  "today" | "week" | "month" | "year"
 //   search      string  — partial match on intern full name (ILIKE)
-//   status      string  "Present" | "Late" | "In Progress" | "Missed Clock Out" | "Absent"
+//   status      string  "Present" | "Late" | "On Shift" | "Missed Clock Out" | "Absent"
 //   user_id     int     — filter to a single intern
 
 func (h *Handler) GetAdminAttendance(c *gin.Context) {
@@ -308,7 +308,7 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 	// status from the attendance columns — adapt as needed.
 	//
 	// status derivation (PostgreSQL):
-	//   'In Progress'    — time_in set, time_out NULL, date = today
+	//   'On Shift'    — time_in set, time_out NULL, date = today
 	//   'Missed Clock Out' — time_in set, time_out NULL, date < today
 	//   'Present'        — time_out set, time_in before 09:00
 	//   'Late'           — time_out set, time_in at/after 09:00
@@ -338,7 +338,7 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			a.hours_rendered,
 			CASE
 				WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date = CURRENT_DATE
-					THEN 'In Progress'
+					THEN 'On Shift'
 				WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date < CURRENT_DATE
 					THEN 'Missed Clock Out'
 				WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) < 9
