@@ -134,13 +134,17 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     if (first.isNotEmpty) initials += first[0];
     if (last.isNotEmpty) initials += last[0];
 
-    String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        // Changed queryParameters from null to {} to properly clear them
-        finalAvatarUrl =
-            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: const {}).toString().replaceAll('/api', '')}$rawAvatarUrl';
+        // Same logic as admin_attendance_screen for consistency
+        final staticBase = ApiService.baseUrl
+            .replaceAll(RegExp(r'/api/?$'), '') // remove trailing /api or /api/
+            .replaceAll(RegExp(r'/$'), ''); // remove any remaining trailing /
+        final cleanPath = rawAvatarUrl.startsWith('/') ? rawAvatarUrl : '/$rawAvatarUrl';
+        finalAvatarUrl = '$staticBase$cleanPath';
+        debugPrint('Avatar URL: $finalAvatarUrl');
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }

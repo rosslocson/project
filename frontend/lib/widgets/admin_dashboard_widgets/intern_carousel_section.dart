@@ -1,9 +1,10 @@
   import 'dart:async';
   import 'package:flutter/material.dart';
 
-  // Intern profile & detail page models
+// Intern profile & detail page models
   import '../../screens/intern_widgets.dart';
- import '../../screens/intern_ross_profile_page.dart';
+  import '../../screens/intern_directory_screen.dart';
+  import '../../screens/intern_ross_profile_page.dart';
 
 
 
@@ -109,25 +110,53 @@
   });
 }
 
-    @override
-    Widget build(BuildContext context) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Meet Our Interns',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+@override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            children: [
+              Text(
+                'Meet Our Interns',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF8A84FF),
                 ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('View All'),
+                    SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_ios, size: 12),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          _buildCarouselBody(),
-          const SizedBox(height: 16),
-          if (!widget.loading && widget.interns.isNotEmpty) _buildDotNavigation(),
-        ],
-      );
-    }
+        ),
+        const SizedBox(height: 16),
+        _buildCarouselBody(),
+        const SizedBox(height: 16),
+        if (!widget.loading && widget.interns.isNotEmpty) _buildDotNavigation(),
+      ],
+    );
+  }
 
     Widget _buildCarouselBody() {
       if (widget.loading) {

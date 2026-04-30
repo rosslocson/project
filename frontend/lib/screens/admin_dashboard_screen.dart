@@ -266,42 +266,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Meet Our Interns',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  // Navigate to the new directory page
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
-                                  );
-                                },
-                                style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFF8A84FF), // Matches your accent purple/blue
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Text('View All'),
-                                    SizedBox(width: 4),
-                                    Icon(Icons.arrow_forward_ios, size: 12),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+const SizedBox(height: 16),
                         // 1. Extracted Intern Carousel
                         InternCarouselSection(
                           interns: _interns,

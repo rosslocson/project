@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 // Adjust this import path based on where InternProfile and InternDetailPage are located
 import '../../screens/intern_widgets.dart'; 
+import '../../screens/intern_directory_screen.dart';
 import 'user_intern_card.dart';
 
 class UserInternCarousel extends StatefulWidget {
@@ -157,9 +158,46 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
       );
     }
 
-    // Main Carousel
+// Main Carousel
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              Text(
+                'Meet Our Interns',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const InternDirectoryScreen()),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF8A84FF),
+                ),
+                child: const Row(
+                  children: [
+                    Text('View All'),
+                    SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_ios, size: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
         SizedBox(
           height: 320,
           child: PageView.builder(
