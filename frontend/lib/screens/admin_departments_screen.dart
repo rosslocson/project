@@ -140,7 +140,7 @@ class _ConfigScreenState extends State<ConfigScreen> with TickerProviderStateMix
                  child: Container(
                    decoration: const BoxDecoration(
                      image: DecorationImage(
-                       image: AssetImage('assets/images/space_background.png'),
+                       image: AssetImage('assets/images/space_background.jpg'),
                        fit: BoxFit.cover,
                      ),
                    ),

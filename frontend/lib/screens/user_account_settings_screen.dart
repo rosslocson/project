@@ -388,6 +388,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
             ? rawAvatarUrl
             : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
 
+    // Debug prints
+    debugPrint('🖼️ User Avatar Debug: rawAvatarUrl="$rawAvatarUrl", finalAvatarUrl="$finalAvatarUrl"');
+
     ImageProvider? avatarImage;
     if (_avatarFile != null) {
       avatarImage = FileImage(_avatarFile!);

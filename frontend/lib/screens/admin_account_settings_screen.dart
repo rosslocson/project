@@ -317,13 +317,15 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
     if (rawAvatarUrl.isNotEmpty) {
       if (!rawAvatarUrl.startsWith('http')) {
-        // Fixed: Use an empty map instead of null to properly clear queries
-        finalAvatarUrl =
-            '${Uri.parse(ApiService.baseUrl).replace(queryParameters: const {}).toString().replaceAll('/api', '')}$rawAvatarUrl';
+        // Simplified URL construction to match user screen
+        finalAvatarUrl = '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
     }
+
+    // Debug prints
+    debugPrint('🖼️ Admin Avatar Debug: rawAvatarUrl="$rawAvatarUrl", finalAvatarUrl="$finalAvatarUrl"');
 
     return Scaffold(
       resizeToAvoidBottomInset: false,

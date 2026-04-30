@@ -323,17 +323,17 @@ class _UsersScreenState extends State<UsersScreen> {
          Expanded(
            child: Stack(
              children: [
-               Positioned.fill(
-                 child: Container(
-                   decoration: const BoxDecoration(
-                     color: Color(0xFF0A0A14),
-                     image: DecorationImage(
-                       image: AssetImage('assets/images/space_background.png'),
-                       fit: BoxFit.cover,
-                     ),
-                   ),
-                 ),
-               ),
+Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0A0A14),
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/space_background.jpg'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
                Positioned.fill(
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.stretch,
