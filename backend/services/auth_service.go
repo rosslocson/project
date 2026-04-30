@@ -30,8 +30,7 @@ func NewAuthService(userRepo *repositories.UserRepository) *AuthService {
 	return &AuthService{userRepo: userRepo}
 }
 
-func (s *AuthService) Register(firstName, lastName, email, password, phone, department, position string, role models.Role) (*models.User, string, error) {
-	// Reject admin registration
+func (s *AuthService) Register(firstName, lastName, email, password, phone, department, position string, role models.Role, requiredOjtHours int) (*models.User, string, error) { // Reject admin registration
 	if role == models.RoleAdmin {
 		return nil, "", errors.New("admin role cannot be registered. Contact administrator.")
 	}
@@ -50,15 +49,16 @@ func (s *AuthService) Register(firstName, lastName, email, password, phone, depa
 	log.Printf("✅ Password hashed successfully for registration - Hash: %.20s...", string(hashed))
 
 	user := &models.User{
-		FirstName:  firstName,
-		LastName:   lastName,
-		Email:      strings.ToLower(email),
-		Password:   string(hashed),
-		Phone:      phone,
-		Department: department,
-		Position:   position,
-		Role:       models.RoleUser, // Force user role
-		IsActive:   true,
+		FirstName:        firstName,
+		LastName:         lastName,
+		Email:            strings.ToLower(email),
+		Password:         string(hashed),
+		Phone:            phone,
+		Department:       department,
+		Position:         position,
+		Role:             models.RoleUser, // Force user role
+		IsActive:         true,
+		RequiredOjtHours: requiredOjtHours,
 	}
 	if err := s.userRepo.Create(user); err != nil {
 		return nil, "", err

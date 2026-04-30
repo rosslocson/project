@@ -145,7 +145,7 @@ func (h *Handler) GetAttendanceSummary(c *gin.Context) {
 
 	var user models.User
 	h.DB.Select("required_ojt_hours").First(&user, userID)
-	requiredHours := 486.0
+	requiredHours := 400.0
 	if user.RequiredOjtHours > 0 {
 		requiredHours = float64(user.RequiredOjtHours)
 	}
