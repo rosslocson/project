@@ -78,6 +78,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   late TextEditingController _lastCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
+  late TextEditingController _ojtHoursCtrl;
 
   final _curPassCtrl = TextEditingController();
   final _newPassCtrl = TextEditingController();
@@ -108,6 +109,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
     _lastCtrl = TextEditingController(text: user?['last_name'] ?? '');
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
     _phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
+    _ojtHoursCtrl = TextEditingController(
+      text: (user?['required_ojt_hours'] ?? '').toString(),
+    );
 
     _selectedDept = (user?['department'] as String? ?? '').isEmpty
         ? null
@@ -124,6 +128,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       _lastCtrl,
       _emailCtrl,
       _phoneCtrl,
+      _ojtHoursCtrl,
       _curPassCtrl,
       _newPassCtrl,
       _confirmPassCtrl,
@@ -275,6 +280,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
 
   Future<void> _saveProfile() async {
     if (!_profileKey.currentState!.validate()) return;
+    final hoursValue = int.tryParse(_ojtHoursCtrl.text.trim());
+  debugPrint('🕒 OJT Hours being sent: $hoursValue'); // Add this
+
     setState(() {
       _savingProfile = true;
       _profileMsg = null;
@@ -285,6 +293,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       'last_name': _lastCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
       'department': _selectedDept ?? '',
+      'required_ojt_hours': int.tryParse(_ojtHoursCtrl.text.trim()) ?? 0,
     });
 
     if (!mounted) return;
@@ -296,6 +305,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         context
             .read<AuthProvider>()
             .updateUserData(Map<String, dynamic>.from(fresh));
+        _ojtHoursCtrl.text = (fresh['required_ojt_hours'] ??
+                res['user']?['required_ojt_hours'] ??
+                '')
+            .toString();
       }
       setState(() {
         _profileMsg = 'Profile updated successfully!';
@@ -389,7 +402,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
             : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
 
     // Debug prints
-    debugPrint('🖼️ User Avatar Debug: rawAvatarUrl="$rawAvatarUrl", finalAvatarUrl="$finalAvatarUrl"');
+    //debugPrint('🖼️ User Avatar Debug: rawAvatarUrl="$rawAvatarUrl", finalAvatarUrl="$finalAvatarUrl"');
 
     ImageProvider? avatarImage;
     if (_avatarFile != null) {
@@ -411,14 +424,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               alignment: Alignment.centerLeft,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(
-                      left: 100, right: 100, top: 28),
+                  padding:
+                      const EdgeInsets.only(left: 100, right: 100, top: 28),
                   child: Text(
                     'Account Settings',
-                    style: Theme.of(context)
-                        .textTheme
-                        .displaySmall
-                        ?.copyWith(
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
@@ -456,8 +466,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           // ── Main container ────────────────────────────────────
           Expanded(
             child: Padding(
-              padding:
-                  const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+              padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.95), // Fixed
@@ -474,8 +483,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                             horizontal: 32, vertical: 20),
                         decoration: BoxDecoration(
                           border: Border(
-                            bottom:
-                                BorderSide(color: Colors.grey.shade200),
+                            bottom: BorderSide(color: Colors.grey.shade200),
                           ),
                         ),
                         child: Row(
@@ -512,16 +520,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                       onTap: _isUploadingAvatar
                                           ? null
                                           : pickAndCropAvatar,
-                                      borderRadius:
-                                          BorderRadius.circular(20),
+                                      borderRadius: BorderRadius.circular(20),
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
                                           color: _kBlue,
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                              color: Colors.white,
-                                              width: 2),
+                                              color: Colors.white, width: 2),
                                         ),
                                         child: const Icon(Icons.camera_alt,
                                             color: Colors.white, size: 14),
@@ -534,8 +540,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                             const SizedBox(width: 20),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
@@ -571,8 +576,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                         horizontal: 12, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: _kBlue.withOpacity(0.08), // Fixed
-                                      borderRadius:
-                                          BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: const Text('USER',
                                         style: TextStyle(
@@ -593,8 +597,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                       Container(
                         decoration: BoxDecoration(
                           border: Border(
-                            bottom:
-                                BorderSide(color: Colors.grey.shade200),
+                            bottom: BorderSide(color: Colors.grey.shade200),
                           ),
                         ),
                         child: TabBar(
@@ -703,6 +706,24 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                           items: _departments,
                           onChanged: (v) => setState(() => _selectedDept = v),
                         ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _ojtHoursCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w500),
+                    decoration: _getFormDecoration(
+                      'Required OJT Hours',
+                      prefixIcon: Icons.access_time_outlined,
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Required';
+                      final parsed = int.tryParse(v.trim());
+                      if (parsed == null || parsed <= 0)
+                        return 'Enter a valid number of hours';
+                      return null;
+                    },
+                  ),
                 ],
               ),
             ),
@@ -792,7 +813,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                         setState(() => _obscureConf = !_obscureConf),
                     validator: (v) {
                       if (v!.isEmpty) return 'Required';
-                      if (v != _newPassCtrl.text) return 'Passwords do not match';
+                      if (v != _newPassCtrl.text)
+                        return 'Passwords do not match';
                       return null;
                     },
                   ),
@@ -951,9 +973,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               child: Text(msg,
                   style: TextStyle(
                       fontSize: 13,
-                      color: success
-                          ? Colors.green.shade800
-                          : Colors.red.shade800,
+                      color:
+                          success ? Colors.green.shade800 : Colors.red.shade800,
                       fontWeight: FontWeight.w600)),
             ),
           ],

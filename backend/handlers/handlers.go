@@ -52,11 +52,12 @@ type ChangePasswordRequest struct {
 
 type UpdateProfileRequest struct {
 	// Account Settings fields
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Phone      string `json:"phone"`
-	Department string `json:"department"`
-	Position   string `json:"position"`
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
+	Phone            string `json:"phone"`
+	Department       string `json:"department"`
+	Position         string `json:"position"`
+	RequiredOjtHours *int   `json:"required_ojt_hours"`
 
 	// Edit Profile fields
 	School         string `json:"school"`
@@ -275,6 +276,9 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		}
 	}
 
+	if req.RequiredOjtHours != nil {
+		updates["required_ojt_hours"] = *req.RequiredOjtHours
+	}
 	if req.School != "" {
 		updates["school"] = req.School
 	}
