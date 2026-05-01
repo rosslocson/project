@@ -104,8 +104,9 @@ class CustomDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final safeValue = (value != null && items.contains(value)) ? value : null;
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: safeValue, 
       validator: validator,
       style: const TextStyle(color: Colors.black, fontSize: 14),
       dropdownColor: Colors.white,

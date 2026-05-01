@@ -114,7 +114,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     // ── Read required_hours from the user profile ──
     final raw = context.read<AuthProvider>().user?['required_ojt_hours'];
     final hours = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
-    debugPrint('✅ _requiredHours loaded: $hours (raw: $raw, type: ${raw?.runtimeType})');
+    debugPrint(
+        '✅ _requiredHours loaded: $hours (raw: $raw, type: ${raw?.runtimeType})');
 
     setState(() {
       _departments = depts;
@@ -153,7 +154,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
     if (res['ok'] == true) {
       final auth = context.read<AuthProvider>();
-      await auth.updateUserData(payload);
+
+      // Optimistically merge the saved payload into local cache first
+      final currentUser = Map<String, dynamic>.from(auth.user ?? {});
+      currentUser.addAll(payload);
+      await auth.updateUserData(currentUser);
+
+      // Then let the server response confirm/correct it
       await auth.refreshProfile();
 
       if (mounted) {
@@ -161,16 +168,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           _saving = false;
           _successMsg = 'Profile updated successfully!';
           _errorMsg = null;
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-          _errorMsg = res['error'] ??
-              res['details'] ??
-              'Save failed. Please try again.';
-          _successMsg = null;
         });
       }
     }
@@ -357,13 +354,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                             internNumCtrl: _internNumCtrl,
                                             startCtrl: _startCtrl,
                                             endCtrl: _endCtrl,
+                                            // This should already be there but confirm it's setState, not just assignment:
                                             onDeptChanged: (v) => setState(
                                                 () => _selectedDept = v),
                                             onPickStart: () =>
                                                 _pickDate(_startCtrl),
                                             onPickEnd: () =>
                                                 _pickDate(_endCtrl),
-                                            requiredHours: _requiredHours, // ← clean state field
+                                            requiredHours:
+                                                _requiredHours, // ← clean state field
                                           ),
                                           SkillsProfileTab(
                                             formKey: _skillsKey,

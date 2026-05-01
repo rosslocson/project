@@ -28,7 +28,8 @@ class AuthProvider extends ChangeNotifier {
       try {
         _user = jsonDecode(userStr) as Map<String, dynamic>;
         notifyListeners();
-        debugPrint('📦 _loadFromStorage: restored ${_user!.keys.length} keys from cache');
+        debugPrint(
+            '📦 _loadFromStorage: restored ${_user!.keys.length} keys from cache');
         debugPrint('📦 cached keys: ${_user!.keys.toList()}');
       } catch (_) {
         await prefs.remove('user');
@@ -117,52 +118,69 @@ class AuthProvider extends ChangeNotifier {
     try {
       final res = await ApiService.getProfile();
 
-      // ── DIAGNOSTIC — remove these prints once the bug is confirmed fixed ─
-      debugPrint('🔄 refreshProfile raw response: $res');
-      debugPrint('🔄 refreshProfile keys: ${res.keys.toList()}');
-      if (res['data'] != null) debugPrint('⚠️  server wraps data under "data" key');
-      if (res['user'] != null) debugPrint('⚠️  server wraps data under "user" key');
-      for (final k in [
-        'linked_in', 'linkedin', 'git_hub', 'github',
-        'bio', 'technical_skills', 'soft_skills',
-        'school', 'program', 'department', 'position'
-      ]) {
-        if (res.containsKey(k)) debugPrint('  field "$k" = ${res[k]}');
-      }
-      // ─────────────────────────────────────────────────────────────────────
-
-      // Handle backends that wrap the user in { data: {...} } or { user: {...} }
       Map<String, dynamic> profile;
       if (res['id'] != null) {
         profile = res;
       } else if (res['data'] is Map && (res['data'] as Map)['id'] != null) {
         profile = Map<String, dynamic>.from(res['data'] as Map);
-        debugPrint('🔄 unwrapped profile from res["data"]');
       } else if (res['user'] is Map && (res['user'] as Map)['id'] != null) {
         profile = Map<String, dynamic>.from(res['user'] as Map);
-        debugPrint('🔄 unwrapped profile from res["user"]');
       } else {
-        debugPrint('⚠️ refreshProfile: no id found — skipping merge. Full response: $res');
+        debugPrint('⚠️ refreshProfile: no id found — skipping merge.');
         return;
       }
 
-      // FIX: Only merge keys whose server value is non-null.
-      // When a backend returns null for extended fields (bio, school, etc.)
-      // on a fresh login response, those nulls must NOT overwrite the
-      // correctly saved values in the local cache.
+      // Fields where an empty string from the server should NOT overwrite
+      // a locally-saved non-empty value (e.g. after the user just saved them).
+      const _preserveIfEmpty = {
+        'department',
+        'position',
+        'school',
+        'program',
+        'specialization',
+        'year_level',
+        'intern_number',
+        'start_date',
+        'end_date',
+        'bio',
+        'technical_skills',
+        'soft_skills',
+        'linked_in',
+        'git_hub',
+        'phone',
+        'avatar_url',
+      };
+
       final merged = Map<String, dynamic>.from(_user ?? {});
       for (final entry in profile.entries) {
-        if (entry.value != null) {
-          merged[entry.key] = entry.value;
-        } else {
-          debugPrint('  ⚠️ server null for "${entry.key}" — keeping cached value');
+        final serverVal = entry.value;
+        final cachedVal = merged[entry.key];
+
+        if (serverVal == null) {
+          // Never overwrite with null
+          debugPrint(
+              '  ⚠️ server null for "${entry.key}" — keeping cached: $cachedVal');
+          continue;
         }
+
+        if (_preserveIfEmpty.contains(entry.key) &&
+            serverVal is String &&
+            serverVal.trim().isEmpty &&
+            cachedVal is String &&
+            cachedVal.trim().isNotEmpty) {
+          // Server returned "" but we have a real value locally — keep local
+          debugPrint(
+              '  ⚠️ server empty string for "${entry.key}" — keeping cached: $cachedVal');
+          continue;
+        }
+
+        merged[entry.key] = serverVal;
       }
 
       _user = merged;
       await _persistUser();
       notifyListeners();
-      debugPrint('✅ refreshProfile complete — ${_user!.keys.length} keys in user');
+      debugPrint('✅ refreshProfile complete — ${_user!.keys.length} keys');
     } catch (e, st) {
       debugPrint('⚠️ refreshProfile error: $e\n$st');
     }

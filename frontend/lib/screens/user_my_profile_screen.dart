@@ -88,59 +88,34 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     });
 
     try {
-      final res = await ApiService.getProfile();
+      // Use refreshProfile() which has the null/empty-string protection
+      await context.read<AuthProvider>().refreshProfile();
       if (!mounted) return;
 
-      Map<String, dynamic>? profileData;
+      // Read the merged, authoritative user data from the provider
+      final user = context.read<AuthProvider>().user;
+      final raw = user?['required_ojt_hours'];
+      final hours = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
 
-      if (res['id'] != null) {
-        profileData = Map<String, dynamic>.from(res);
-        await context.read<AuthProvider>().updateUserData(profileData);
-      } else if (res['ok'] == true && res['data'] != null) {
-        profileData =
-            Map<String, dynamic>.from(res['data'] as Map<String, dynamic>);
-        await context.read<AuthProvider>().updateUserData(profileData);
-      }
+      debugPrint('✅ MyProfile required_hours: $hours (raw: $raw)');
 
-      if (!mounted) return;
-
-      if (profileData != null) {
-        // ── Parse required_hours once here and store in state ──
-        final raw = profileData['required_ojt_hours'];
-        final hours =
-            raw is int ? raw : int.tryParse(raw?.toString() ?? '');
-        debugPrint(
-            '✅ MyProfile required_hours: $hours (raw: $raw, type: ${raw?.runtimeType})');
-
-        setState(() {
-          _loading = false;
-          _requiredHours = hours;
-        });
-      } else {
-        setState(() {
-          _loading = false;
-          _fetchError =
-              'Could not load your profile from the server. Showing cached data.';
-          // Also try reading from cached user data
-          final raw = context.read<AuthProvider>().user?['required_ojt_hours'];
-          _requiredHours =
-              raw is int ? raw : int.tryParse(raw?.toString() ?? '');
-        });
-      }
+      setState(() {
+        _loading = false;
+        _requiredHours = hours;
+      });
     } catch (e) {
       debugPrint('MyProfileScreen _fetchProfile error: $e');
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _fetchError =
-              'Network error. Check your connection and tap Retry.';
-          // Fall back to cached value
-          final raw =
-              context.read<AuthProvider>().user?['required_hours'];
-          _requiredHours =
-              raw is int ? raw : int.tryParse(raw?.toString() ?? '');
-        });
-      }
+      if (!mounted) return;
+
+      // Fall back to whatever is already cached in the provider
+      final raw = context
+          .read<AuthProvider>()
+          .user?['required_ojt_hours']; // ✅ fixed typo
+      setState(() {
+        _loading = false;
+        _fetchError = 'Network error. Check your connection and tap Retry.';
+        _requiredHours = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+      });
     }
   }
 
@@ -197,9 +172,8 @@ class _MyProfileScreenState extends State<MyProfileScreen>
         final staticBase = ApiService.baseUrl
             .replaceAll(RegExp(r'/api/?$'), '')
             .replaceAll(RegExp(r'/$'), '');
-        final cleanPath = rawAvatarUrl.startsWith('/')
-            ? rawAvatarUrl
-            : '/$rawAvatarUrl';
+        final cleanPath =
+            rawAvatarUrl.startsWith('/') ? rawAvatarUrl : '/$rawAvatarUrl';
         finalAvatarUrl = '$staticBase$cleanPath';
         debugPrint('Avatar URL: $finalAvatarUrl');
       } else {
@@ -266,8 +240,8 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                 color: Colors.white.withOpacity(0.05),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                    color: Colors.white
-                                        .withValues(alpha: 0.15)),
+                                    color:
+                                        Colors.white.withValues(alpha: 0.15)),
                               ),
                               child: IconButton(
                                 padding: const EdgeInsets.all(12),
@@ -336,12 +310,12 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                             decoration: BoxDecoration(
                                               border: Border(
                                                 bottom: BorderSide(
-                                                    color: Colors
-                                                        .grey.shade200),
+                                                    color:
+                                                        Colors.grey.shade200),
                                               ),
                                             ),
-                                            padding: const EdgeInsets.only(
-                                                top: 8),
+                                            padding:
+                                                const EdgeInsets.only(top: 8),
                                             child: TabBar(
                                               controller: _tabs,
                                               labelColor: Colors.black,
@@ -349,20 +323,19 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                                   Colors.grey.shade500,
                                               indicatorColor: kCrimsonDeep,
                                               indicatorWeight: 3,
-                                              dividerColor:
-                                                  Colors.transparent,
+                                              dividerColor: Colors.transparent,
                                               tabs: const [
                                                 Tab(
-                                                  iconMargin: EdgeInsets
-                                                      .only(bottom: 4),
+                                                  iconMargin: EdgeInsets.only(
+                                                      bottom: 4),
                                                   icon: Icon(
                                                       Icons.school_outlined,
                                                       size: 18),
                                                   text: 'Academic Info',
                                                 ),
                                                 Tab(
-                                                  iconMargin: EdgeInsets
-                                                      .only(bottom: 4),
+                                                  iconMargin: EdgeInsets.only(
+                                                      bottom: 4),
                                                   icon: Icon(
                                                       Icons.stars_outlined,
                                                       size: 18),
@@ -488,9 +461,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              first.isEmpty && last.isEmpty
-                  ? 'Name Not Set'
-                  : '$first $last',
+              first.isEmpty && last.isEmpty ? 'Name Not Set' : '$first $last',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 20,
@@ -525,13 +496,11 @@ class _MyProfileScreenState extends State<MyProfileScreen>
 
           // ── Badge ─────────────────────────────────────────────────
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: Colors.white.withValues(alpha: 0.25)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
             ),
             child: const Text(
               'INTERN',
@@ -623,8 +592,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     if (requiredHours != null && requiredHours > 0) {
       final startStr = user?['start_date']?.toString().trim() ?? '';
       if (startStr.isNotEmpty) {
-        computedEndDate =
-            _computeEstimatedEndDate(startStr, requiredHours);
+        computedEndDate = _computeEstimatedEndDate(startStr, requiredHours);
       }
     }
 
@@ -702,8 +670,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
               Expanded(
                 child: _ReadonlyField(
                   label: 'Required OJT Hours',
-                  value:
-                      requiredHours != null ? '$requiredHours hrs' : '—',
+                  value: requiredHours != null ? '$requiredHours hrs' : '—',
                   icon: Icons.access_time_rounded,
                 ),
               ),
@@ -742,23 +709,20 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                           color: kCrimsonDeep.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color:
-                                  kCrimsonDeep.withValues(alpha: 0.20)),
+                              color: kCrimsonDeep.withValues(alpha: 0.20)),
                         ),
                         child: Row(
                           children: [
                             Icon(Icons.auto_awesome_rounded,
                                 size: 11,
-                                color:
-                                    kCrimsonDeep.withValues(alpha: 0.75)),
+                                color: kCrimsonDeep.withValues(alpha: 0.75)),
                             const SizedBox(width: 5),
                             Expanded(
                               child: Text(
                                 'Est. end: $computedEndDate · $requiredHours hrs @ 8 hrs/day, Mon–Fri',
                                 style: TextStyle(
                                   fontSize: 10.5,
-                                  color: kCrimsonDeep
-                                      .withValues(alpha: 0.80),
+                                  color: kCrimsonDeep.withValues(alpha: 0.80),
                                   fontStyle: FontStyle.italic,
                                   height: 1.4,
                                 ),
@@ -845,22 +809,19 @@ class _MyProfileScreenState extends State<MyProfileScreen>
 
   Widget _retryBanner(String msg) => Container(
         margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.orange.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
-          border:
-              Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
         ),
         child: Row(children: [
-          Icon(Icons.wifi_off_rounded,
-              color: Colors.orange.shade700, size: 18),
+          Icon(Icons.wifi_off_rounded, color: Colors.orange.shade700, size: 18),
           const SizedBox(width: 10),
           Expanded(
               child: Text(msg,
-                  style: TextStyle(
-                      color: Colors.orange.shade900, fontSize: 12))),
+                  style:
+                      TextStyle(color: Colors.orange.shade900, fontSize: 12))),
           TextButton(
             onPressed: _fetchProfile,
             style: TextButton.styleFrom(
@@ -870,8 +831,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: const Text('Retry',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 12)),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ]),
       );
@@ -974,8 +934,7 @@ class _ReadonlyField extends StatelessWidget {
         ),
         Container(
           width: double.infinity,
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: const Color(0xFFF3F4F6),
             borderRadius: BorderRadius.circular(12),
@@ -994,8 +953,7 @@ class _ReadonlyField extends StatelessWidget {
                   style: TextStyle(
                     color: isEmpty ? Colors.grey.shade400 : Colors.black,
                     fontSize: 14,
-                    fontWeight:
-                        isEmpty ? FontWeight.w400 : FontWeight.w500,
+                    fontWeight: isEmpty ? FontWeight.w400 : FontWeight.w500,
                   ),
                 ),
               ),
@@ -1024,8 +982,7 @@ class _SkillChips extends StatelessWidget {
     if (raw == '—' || raw.trim().isEmpty) {
       return Container(
         width: double.infinity,
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(12),
@@ -1039,11 +996,8 @@ class _SkillChips extends StatelessWidget {
       );
     }
 
-    final skills = raw
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
+    final skills =
+        raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
     return Container(
       width: double.infinity,
@@ -1058,13 +1012,12 @@ class _SkillChips extends StatelessWidget {
         runSpacing: 8,
         children: skills
             .map((s) => Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: color.withValues(alpha: 0.25)),
+                    border: Border.all(color: color.withValues(alpha: 0.25)),
                   ),
                   child: Text(
                     s,

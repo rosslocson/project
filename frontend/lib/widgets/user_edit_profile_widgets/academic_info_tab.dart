@@ -44,10 +44,12 @@ class AcademicInfoTab extends StatefulWidget {
 
 class _AcademicInfoTabState extends State<AcademicInfoTab> {
   String? _computedEnd;
+  String? _localDept;
 
   @override
   void initState() {
     super.initState();
+    _localDept = widget.selectedDept;
     // Listen directly to the start controller — fires even inside TabBarView
     widget.startCtrl.addListener(_onStartChanged);
     // Compute immediately in case start date is already populated
@@ -63,6 +65,9 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
   @override
   void didUpdateWidget(AcademicInfoTab old) {
     super.didUpdateWidget(old);
+    if (old.selectedDept != widget.selectedDept) {
+      setState(() => _localDept = widget.selectedDept);
+    }
     // If the controller instance ever changes, re-wire the listener
     if (old.startCtrl != widget.startCtrl) {
       old.startCtrl.removeListener(_onStartChanged);
@@ -150,12 +155,17 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                   children: [
                     const FormLabel(text: 'Department'),
                     CustomDropdown(
-                      value: widget.selectedDept,
+                      // Key forces a full rebuild when value changes
+                      key: ValueKey(_localDept),
+                      value: _localDept,
                       hint: widget.departments.isEmpty
                           ? 'No departments yet'
                           : 'Select Department',
                       items: widget.departments,
-                      onChanged: widget.onDeptChanged,
+                      onChanged: (v) {
+                        setState(() => _localDept = v); // ← update local state
+                        widget.onDeptChanged(v); // ← notify parent
+                      },
                       validator: _requiredValidator,
                     ),
                   ],
@@ -177,8 +187,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                               horizontal: 16, vertical: 14),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
                         icon: Icon(Icons.keyboard_arrow_down,
@@ -206,7 +215,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
             const FormLabel(text: 'School / University'),
             CustomTextField(
               ctrl: widget.schoolCtrl,
-              hint: 'e.g. University of Santo Tomas',
+              hint: 'e.g. Laguna State Polytechnic University',
               validator: _requiredValidator,
             ),
             const SizedBox(height: 16),
