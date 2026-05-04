@@ -51,6 +51,31 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   String? _errorMsg;
   bool _academicTabInvalid = false;
   bool _skillsTabInvalid = false;
+  int _formResetVersion = 0;
+  late Map<String, String> _savedProfileValues;
+
+  Map<String, String> get _currentProfileValues => {
+        'department': _selectedDept ?? '',
+        'school': _schoolCtrl.text,
+        'program': _programCtrl.text,
+        'specialization': _specCtrl.text,
+        'year_level': _yearCtrl.text,
+        'intern_number': _internNumCtrl.text,
+        'start_date': _startCtrl.text,
+        'end_date': _endCtrl.text,
+        'bio': _bioCtrl.text,
+        'technical_skills': _techSkillsCtrl.text,
+        'soft_skills': _softSkillsCtrl.text,
+        'linked_in': _linkedinCtrl.text,
+        'git_hub': _githubCtrl.text,
+      };
+
+  bool get _hasUnsavedChanges {
+    final current = _currentProfileValues;
+    return current.entries.any(
+      (entry) => entry.value != (_savedProfileValues[entry.key] ?? ''),
+    );
+  }
 
   bool get _isAcademicComplete {
     return _selectedDept?.isNotEmpty == true &&
@@ -69,6 +94,14 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   }
 
   void _handleProfileFieldChanged() {
+    if (!mounted) return;
+
+    setState(() {
+      if (_successMsg != null && _hasUnsavedChanges) {
+        _successMsg = null;
+      }
+    });
+
     // Only attempt to clear badges if error exists (after user tried to save)
     if (_errorMsg == null) return;
 
@@ -125,6 +158,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
     final dept = user['department'] as String? ?? '';
     _selectedDept = dept.isNotEmpty ? dept : null;
+    _savedProfileValues = _currentProfileValues;
 
     _loadConfig();
   }
@@ -236,6 +270,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       await auth.refreshProfile();
 
       if (mounted) {
+        _savedProfileValues = _currentProfileValues;
         setState(() {
           _saving = false;
           _successMsg = 'Profile updated successfully!';
@@ -252,6 +287,37 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
         });
       }
     }
+  }
+
+  void _cancelChanges() {
+    setState(() {
+      _selectedDept = _savedProfileValues['department']?.isNotEmpty == true
+          ? _savedProfileValues['department']
+          : null;
+      _schoolCtrl.text = _savedProfileValues['school'] ?? '';
+      _programCtrl.text = _savedProfileValues['program'] ?? '';
+      _specCtrl.text = _savedProfileValues['specialization'] ?? '';
+      _yearCtrl.text = _savedProfileValues['year_level'] ?? '';
+      _internNumCtrl.text = _savedProfileValues['intern_number'] ?? '';
+      _startCtrl.text = _savedProfileValues['start_date'] ?? '';
+      _endCtrl.text = _savedProfileValues['end_date'] ?? '';
+      _bioCtrl.text = _savedProfileValues['bio'] ?? '';
+      _techSkillsCtrl.text = _savedProfileValues['technical_skills'] ?? '';
+      _softSkillsCtrl.text = _savedProfileValues['soft_skills'] ?? '';
+      _linkedinCtrl.text = _savedProfileValues['linked_in'] ?? '';
+      _githubCtrl.text = _savedProfileValues['git_hub'] ?? '';
+      _successMsg = null;
+      _errorMsg = null;
+      _academicTabInvalid = false;
+      _skillsTabInvalid = false;
+      _formResetVersion++;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _academicKey.currentState?.reset();
+      _skillsKey.currentState?.reset();
+    });
   }
 
   Future<void> _pickDate(TextEditingController ctrl) async {
@@ -478,6 +544,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                         controller: _tabs,
                                         children: [
                                           AcademicInfoTab(
+                                            key: ValueKey(
+                                                'academic-$_formResetVersion'),
                                             formKey: _academicKey,
                                             departments: _departments,
                                             selectedDept: _selectedDept,
@@ -489,8 +557,11 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                             internNumCtrl: _internNumCtrl,
                                             startCtrl: _startCtrl,
                                             endCtrl: _endCtrl,
-                                            onDeptChanged: (v) => setState(
-                                                () => _selectedDept = v),
+                                            onDeptChanged: (v) {
+                                              setState(
+                                                  () => _selectedDept = v);
+                                              _handleProfileFieldChanged();
+                                            },
                                             onPickStart: () =>
                                                 _pickDate(_startCtrl),
                                             onPickEnd: () =>
@@ -500,6 +571,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                             requiredHours: _requiredHours,
                                           ),
                                           SkillsProfileTab(
+                                            key: ValueKey(
+                                                'skills-$_formResetVersion'),
                                             formKey: _skillsKey,
                                             bioCtrl: _bioCtrl,
                                             techSkillsCtrl: _techSkillsCtrl,
@@ -515,37 +588,81 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                     Padding(
                                       padding: const EdgeInsets.fromLTRB(
                                           40, 0, 40, 28),
-                                      child: SizedBox(
-                                        height: 48,
-                                        width: double.infinity,
-                                        child: ElevatedButton(
-                                          onPressed: _saving ? null : _save,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: kCrimsonDeep,
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12)),
-                                            elevation: 0,
-                                          ),
-                                          child: _saving
-                                              ? const SizedBox(
-                                                  height: 20,
-                                                  width: 20,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                          color: Colors.white,
-                                                          strokeWidth: 2),
-                                                )
-                                              : const Text(
-                                                  'SAVE CHANGES',
-                                                  style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      fontSize: 15,
-                                                      letterSpacing: 0.8),
+                                      child: Row(
+                                        children: [
+                                          if (_hasUnsavedChanges) ...[
+                                            Expanded(
+                                              child: SizedBox(
+                                                height: 48,
+                                                child: OutlinedButton(
+                                                  onPressed: _saving
+                                                      ? null
+                                                      : _cancelChanges,
+                                                  style:
+                                                      OutlinedButton.styleFrom(
+                                                    foregroundColor:
+                                                        kCrimsonDeep,
+                                                    side: const BorderSide(
+                                                        color: kCrimsonDeep),
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                    'CANCEL CHANGES',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        fontSize: 15,
+                                                        letterSpacing: 0.8),
+                                                  ),
                                                 ),
-                                        ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                          ],
+                                          Expanded(
+                                            child: SizedBox(
+                                              height: 48,
+                                              child: ElevatedButton(
+                                                onPressed:
+                                                    _saving ? null : _save,
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor:
+                                                      kCrimsonDeep,
+                                                  foregroundColor: Colors.white,
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12)),
+                                                  elevation: 0,
+                                                ),
+                                                child: _saving
+                                                    ? const SizedBox(
+                                                        height: 20,
+                                                        width: 20,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                                color: Colors
+                                                                    .white,
+                                                                strokeWidth:
+                                                                    2),
+                                                      )
+                                                    : const Text(
+                                                        'SAVE CHANGES',
+                                                        style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w800,
+                                                            fontSize: 15,
+                                                            letterSpacing: 0.8),
+                                                      ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],

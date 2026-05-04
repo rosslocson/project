@@ -310,8 +310,8 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
               style: const TextStyle(fontSize: 14, color: Colors.black87),
               decoration: _buildInputDecoration(context,
                       hintText: showProgramPrefix
-                          ? 'Computer Science'
-                          : 'e.g. Computer Science')
+                          ? 'Information Systems'
+                          : 'e.g. Information Systems')
                   .copyWith(
                 prefixText:
                     showProgramPrefix ? 'Bachelor of Science in ' : null,
