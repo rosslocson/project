@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	_ "image/png"
 	"io"
 	"net/http"
 	"net/url"
@@ -20,6 +21,7 @@ import (
 	"gorm.io/gorm"
 
 	"project/backend/models"
+	"project/backend/services"
 )
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -336,7 +338,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		}
 	}
 
-	if req.RequiredOjtHours != nil {
+	if role == string(models.RoleAdmin) && req.RequiredOjtHours != nil {
 		updates["required_ojt_hours"] = *req.RequiredOjtHours
 	}
 	if req.School != "" {
@@ -399,8 +401,8 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "New passwords do not match"})
 		return
 	}
-	if errs := validatePassword(req.NewPassword); len(errs) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Password too weak: " + strings.Join(errs, ", ")})
+	if err := services.ValidatePasswordStrength(req.NewPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password too weak: " + err.Error()})
 		return
 	}
 	var user models.User
@@ -515,8 +517,8 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 
 	// Detect content type
 	contentType := http.DetectContentType(buffer[:n])
-	if !strings.HasPrefix(contentType, "image/") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid type"})
+	if contentType != "image/jpeg" && contentType != "image/png" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only JPEG and PNG images are allowed"})
 		return
 	}
 
@@ -535,6 +537,10 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 
 	// Compress and resize image for faster storage and delivery
 	compressedData, err := compressImage(fileData)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or corrupted image"})
+		return
+	}
 	if err != nil {
 		// If compression fails, use original file
 		fmt.Printf("⚠️ Image compression failed: %v, using original\n", err)
