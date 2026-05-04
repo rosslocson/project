@@ -1,0 +1,47 @@
+name: user_app
+description: User Management App with Dashboard
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP & API
+  http: ^1.6.0
+  
+  # State management
+  provider: ^6.1.1
+  
+  # Local storage (for JWT token)
+  shared_preferences: ^2.2.2
+  
+  # UI
+  google_fonts: ^6.1.0
+  fl_chart: ^0.66.0
+  cached_network_image: ^3.3.1
+  image_picker: ^1.0.7
+  image_cropper: ^12.2.0
+  crop_your_image: ^1.0.0
+  path_provider: ^2.1.3
+  mime: ^1.0.4
+  image: ^4.0.0
+  
+  # Navigation
+  go_router: ^13.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+# Only one flutter block down here!
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/

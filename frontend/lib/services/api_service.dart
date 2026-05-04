@@ -1,0 +1,524 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart'
+    show debugPrint, defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ApiService {
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:8080/api';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // Android emulator uses 10.0.2.2 to reach host machine localhost
+      return 'http://10.0.2.2:8080/api';
+    }
+    return 'http://localhost:8080/api';
+  }
+
+  /// Public alias so AttendanceService can reuse auth headers.
+  static Future<Map<String, String>> authHeaders() => _authHeaders();
+
+  /// Public alias so AttendanceService can reuse response parsing.
+  static Map<String, dynamic> parse(http.Response res) => _parse(res);
+
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token');
+  }
+
+  static Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token);
+  }
+
+  static Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('user');
+  }
+
+  static Future<Map<String, String>> _authHeaders() async {
+    final token = await getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  // For multipart requests, only include Authorization (not Content-Type)
+  static Future<Map<String, String>> _authHeadersForMultipart() async {
+    final token = await getToken();
+    return {
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> register(
+      Map<String, dynamic> data) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(data),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword(
+      String token, String newPassword, String confirmPassword) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'token': token,
+          'new_password': newPassword,
+          'confirm_password': confirmPassword,
+        }),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Profile ───────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getProfile() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/profile'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateProfile(
+      Map<String, dynamic> data) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/profile'),
+        headers: await _authHeaders(),
+        body: jsonEncode(data),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> changePassword(
+      Map<String, dynamic> data) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/profile/password'),
+        headers: await _authHeaders(),
+        body: jsonEncode(data),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> uploadAvatar(XFile imageFile) async {
+    try {
+      debugPrint('📤 Starting avatar upload...');
+      debugPrint('📄 File: ${imageFile.name}');
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/profile/avatar'),
+      );
+
+      // Add auth headers
+      final headers = await _authHeadersForMultipart();
+      request.headers.addAll(headers);
+
+      // Add file using bytes on web, path on native platforms.
+      if (kIsWeb) {
+        final bytes = await imageFile.readAsBytes();
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'avatar',
+            bytes,
+            filename: imageFile.name.isNotEmpty ? imageFile.name : 'avatar.jpg',
+          ),
+        );
+      } else {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'avatar', // MUST MATCH BACKEND
+            imageFile.path,
+            filename: imageFile.name,
+          ),
+        );
+      }
+
+      debugPrint('✅ File attached to request');
+
+      // Send request with timeout
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Upload request timed out');
+        },
+      );
+
+      var response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('🔙 Server response - Status: ${response.statusCode}');
+      debugPrint('📋 Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        debugPrint('✅ Upload successful');
+        return {
+          'ok': true,
+          'user': data['user'] ?? data,
+        };
+      } else {
+        debugPrint('❌ Upload error - Status: ${response.statusCode}');
+        try {
+          final errorData = jsonDecode(response.body);
+          return {
+            'ok': false,
+            'error': errorData['error'] ?? 'Server error',
+          };
+        } catch (_) {
+          return {
+            'ok': false,
+            'error': 'Server error: ${response.statusCode}',
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Avatar upload exception: $e');
+      return {
+        'ok': false,
+        'error': 'Failed to upload: ${e.toString()}',
+      };
+    }
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getDashboardStats({int page = 1, int limit = 5}) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/dashboard/stats?page=$page&limit=$limit'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  /// Fetches all users with role = 'user' (intern).
+  /// Hits GET /api/interns — must be accessible to authenticated non-admin users.
+  static Future<Map<String, dynamic>> getInterns({int limit = 1000}) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/interns?limit=$limit'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Users (Admin) ─────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getUsers({String? search, String? status}) async {
+    try {
+      var url = '$baseUrl/users';
+      final params = <String, String>{};
+      if (search != null && search.isNotEmpty) params['search'] = search;
+      if (status != null && status.isNotEmpty) params['status'] = status;
+      if (params.isNotEmpty) {
+        url += '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
+      }
+      final res = await http.get(Uri.parse(url), headers: await _authHeaders());
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createUser(
+      Map<String, dynamic> data) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/users'),
+        headers: await _authHeaders(),
+        body: jsonEncode(data),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateUser(
+      int id, Map<String, dynamic> data) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/users/$id'),
+        headers: await _authHeaders(),
+        body: jsonEncode(data), // data must use typed values (bool not string)
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Departments ───────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getDepartmentsWithPositions() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/departments-with-positions'),
+        headers: {'Content-Type': 'application/json'}, // Public endpoint, no auth needed
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getDepartments() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/departments'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createDepartment(String name) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/departments'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateDepartment(
+      int id, String name) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/departments/$id'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteDepartment(int id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/departments/$id'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Positions ─────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getPositions() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/positions'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createPosition(String name) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/positions'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updatePosition(
+      int id, String name) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/positions/$id'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deletePosition(int id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/positions/$id'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Legacy getConfig wrapper (used by register/profile dropdowns) ──────────
+  static Future<Map<String, dynamic>> getConfig({required String type}) async {
+    if (type == 'department') return getDepartments();
+    if (type == 'position') return getPositions();
+    return {'ok': false, 'error': 'Unknown type'};
+  }
+
+  static Future<Map<String, dynamic>> deleteUser(int id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/users/$id'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Config (departments / positions) ─────────────────────────────
+
+  static Future<Map<String, dynamic>> updateConfig(int id, String name) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/config/$id'),
+        headers: await _authHeaders(),
+        body: jsonEncode({'name': name}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteConfig(int id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/config/$id'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Activity Logs ─────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getActivityLogs({int page = 1, int limit = 5}) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/activity?page=$page&limit=$limit'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAllActivityLogs() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/activity?page=1&limit=1000'), // Large limit to get all
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> fetchData() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/data'));
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  // ── Helper ────────────────────────────────────────────────────────────────
+
+  static Map<String, dynamic> _parse(http.Response res) {
+    final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+    decoded['statusCode'] = res.statusCode;
+    decoded['ok'] = res.statusCode >= 200 && res.statusCode < 300;
+    return decoded;
+  }
+}
