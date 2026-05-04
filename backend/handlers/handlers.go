@@ -250,7 +250,7 @@ func normalizeAvatarURL(c *gin.Context, avatarURL string) string {
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	role := c.GetString("role")
+	//role := c.GetString("role")
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -327,13 +327,8 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		updates["phone"] = req.Phone
 	}
 
-	if role == string(models.RoleAdmin) {
-		if req.Department != "" {
-			updates["department"] = req.Department
-		}
-		if req.Position != "" {
-			updates["position"] = req.Position
-		}
+	if req.Department != "" {
+		updates["department"] = req.Department
 	}
 
 	if req.RequiredOjtHours != nil {
