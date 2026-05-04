@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 
+	"project/backend/email"
 	"project/backend/models"
 	"project/backend/repositories"
 	"project/backend/services"
@@ -156,8 +157,10 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
+	recipientEmail := strings.ToLower(strings.TrimSpace(req.Email))
+
 	var user models.User
-	if err := h.DB.Where("email = ?", strings.TrimSpace(req.Email)).First(&user).Error; err != nil {
+	if err := h.DB.Where("email = ?", recipientEmail).First(&user).Error; err != nil {
 		// Prevent email enumeration by returning a success message regardless
 		c.JSON(http.StatusOK, gin.H{"ok": true, "message": "If the email exists, an OTP was sent."})
 		return
@@ -169,12 +172,18 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	expiry := time.Now().Add(15 * time.Minute)
+	expiry := time.Now().Add(5 * time.Minute)
 	user.ResetOTP = otp
 	user.ResetOTPExpiry = &expiry
-	h.DB.Save(&user)
+	if err := h.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Could not save OTP"})
+		return
+	}
 
-	// TODO: Call your email package here! e.g., email.SendResetOTP(user.Email, otp)
+	if err := email.SendPasswordResetEmail(user.Email, otp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Could not send OTP email"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"ok":      true,
