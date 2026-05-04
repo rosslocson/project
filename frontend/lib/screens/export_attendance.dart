@@ -460,7 +460,7 @@ class AttendanceExporter {
     if (opts.allDates) return 'All Dates';
     if (opts.period != null) {
       return switch (opts.period) {
-        'today' => 'Today — ${_todayStr()}',
+        'today' => 'Today ${_todayStr()}',
         'week'  => 'This Week',
         'month' => 'This Month',
         'year'  => 'This Year',
