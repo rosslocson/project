@@ -348,7 +348,7 @@ class _UsersScreenState extends State<UsersScreen> {
                     decoration: const BoxDecoration(
                       color: Color(0xFF0A0A14),
                       image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.png'),
+                        image: AssetImage('assets/images/space_background.jpg'),
                         fit: BoxFit.cover,
                       ),
                     ),
