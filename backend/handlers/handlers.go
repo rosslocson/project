@@ -333,9 +333,10 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		updates["department"] = req.Department
 	}
 
-	if role == string(models.RoleAdmin) && req.RequiredOjtHours != nil {
+	if req.RequiredOjtHours != nil {
 		updates["required_ojt_hours"] = *req.RequiredOjtHours
 	}
+
 	if req.School != "" {
 		updates["school"] = req.School
 	}
