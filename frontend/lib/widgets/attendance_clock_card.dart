@@ -25,14 +25,14 @@ class AttendanceClockCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF00022E), Color(0xFF1A1F5A)], // Replaced with Cosmic Blue and Deep Navy
+          colors: [Color(0xFF00022E), Color(0xFF1A1F5A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00022E).withValues(alpha: 0.35), // Updated shadow color
+            color: const Color(0xFF00022E).withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -106,6 +106,25 @@ class AttendanceClockCard extends StatelessWidget {
     required bool timedIn,
     required bool timedOut,
   }) {
+    // ── Weekend guard — no attendance on Sat/Sun ───────────────────────
+    final weekday = DateTime.now().weekday;
+    if (weekday == DateTime.saturday || weekday == DateTime.sunday) {
+      return ElevatedButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.weekend_rounded),
+        label: const Text('No Attendance on Weekends'),
+        style: ElevatedButton.styleFrom(
+          disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
+          disabledForegroundColor: Colors.white60,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+          ),
+        ),
+      );
+    }
+
     // Already timed out for today
     if (timedIn && timedOut) {
       return ElevatedButton.icon(
@@ -136,14 +155,14 @@ class AttendanceClockCard extends StatelessWidget {
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Color(0xFF00022E), // Updated loading indicator color
+                  color: Color(0xFF00022E),
                 ),
               )
             : const Icon(Icons.logout_rounded),
         label: Text(isLoading ? 'Processing...' : 'Time Out'),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF00022E), // Updated text/icon color
+          foregroundColor: const Color(0xFF00022E),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -161,14 +180,14 @@ class AttendanceClockCard extends StatelessWidget {
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Color(0xFF00022E), // Updated loading indicator color
+                color: Color(0xFF00022E),
               ),
             )
           : const Icon(Icons.login_rounded),
       label: Text(isLoading ? 'Processing...' : 'Time In'),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF00022E), // Updated text/icon color
+        foregroundColor: const Color(0xFF00022E),
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
