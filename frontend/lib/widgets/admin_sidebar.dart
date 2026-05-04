@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'logout_confirmation_dialog.dart';
 
 class AdminSidebar extends StatelessWidget {
   final String currentRoute;
@@ -29,7 +30,8 @@ class AdminSidebar extends StatelessWidget {
           // Logo / brand & Close Button
           Padding(
             // Adjusted left padding to 20 to align with the 'MENU' label
-            padding: const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
+            padding:
+                const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
             child: Row(
               children: [
                 // ──────────────────────────────────────────────────────────────
@@ -42,7 +44,8 @@ class AdminSidebar extends StatelessWidget {
                     width: 48,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.public, color: _textLight, size: 24);
+                      return const Icon(Icons.public,
+                          color: _textLight, size: 24);
                     },
                   ),
                 ),
@@ -61,7 +64,7 @@ class AdminSidebar extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 _CloseButton(onClose: onClose),
               ],
             ),
@@ -168,7 +171,8 @@ class _NavItemState extends State<_NavItem> {
         child: ListTile(
           dense: true,
           hoverColor: Colors.transparent, // Disable default material hover
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           leading: Icon(
             widget.icon,
             size: 20,
@@ -182,7 +186,8 @@ class _NavItemState extends State<_NavItem> {
               color: active ? AdminSidebar._textDark : AdminSidebar._textLight,
             ),
           ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           onTap: active ? null : () => context.go(widget.route),
         ),
       ),
@@ -234,18 +239,26 @@ class _SignOutButtonState extends State<_SignOutButton> {
           color: Colors.transparent,
           child: InkWell(
             hoverColor: Colors.transparent, // Prevent duplicate hover effects
-            onTap: () {
-              context.read<AuthProvider>().logout();
-              context.go('/login');
+            onTap: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                barrierDismissible: true,
+                builder: (context) => const LogoutConfirmationDialog(),
+              );
+              if (confirmed == true) {
+                context.read<AuthProvider>().logout();
+                context.go('/login');
+              }
             },
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Row(
                 children: [
-                  Icon(Icons.logout_rounded, color: AdminSidebar._textLight, size: 22),
+                  Icon(Icons.logout_rounded,
+                      color: AdminSidebar._textLight, size: 22),
                   SizedBox(width: 16),
                   Text(
-                    'Sign Out',
+                    'Log Out',
                     style: TextStyle(
                       color: AdminSidebar._textLight,
                       fontSize: 14,

@@ -330,7 +330,8 @@ class RegisterForm {
                   ),
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Please confirm your password';
+                  if (v == null || v.isEmpty)
+                    return 'Please confirm your password';
                   if (v != passCtrl.text) return 'Passwords do not match';
                   return null;
                 },
@@ -341,15 +342,14 @@ class RegisterForm {
                 Padding(
                   padding: const EdgeInsets.only(left: 12),
                   child: Text(confirmError!,
-                      style:
-                          const TextStyle(fontSize: 11, color: Colors.red)),
+                      style: const TextStyle(fontSize: 11, color: Colors.red)),
                 ),
               ],
               const Spacer(flex: 3),
 
               // ── Submit ──────────────────────────────────────────────────
               BlueButton(
-                label: 'SIGN UP',
+                label: 'Create Account',
                 onPressed: auth.isLoading ? null : onRegister,
                 loading: auth.isLoading,
               ),
@@ -359,11 +359,10 @@ class RegisterForm {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text('Already have an account? ',
-                      style: TextStyle(
-                          fontSize: 13, color: Color(0xFF6B7280))),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/login'),
-                    child: const Text('Login Now',
+                    child: const Text('Log In',
                         style: TextStyle(
                             fontSize: 13,
                             color: kCosmicBlue,

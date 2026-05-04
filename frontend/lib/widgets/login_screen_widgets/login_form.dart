@@ -35,7 +35,8 @@ class LoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dec = pillInputDecoration(); // Assuming this comes from app_theme.dart
+    final dec =
+        pillInputDecoration(); // Assuming this comes from app_theme.dart
 
     return Container(
       alignment: Alignment.center,
@@ -50,20 +51,27 @@ class LoginForm extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'LOGIN',
+                'Log In',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: kCrimsonDeep, letterSpacing: 1.2),
+                style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: kCrimsonDeep,
+                    letterSpacing: 1.2),
               ),
               const SizedBox(height: 40),
-              
               if (isLocked) ...[
-                LockedBanner(lockSecsLeft: lockSecsLeft, onForgotPassword: onForgotPassword),
+                LockedBanner(
+                    lockSecsLeft: lockSecsLeft,
+                    onForgotPassword: onForgotPassword),
                 const SizedBox(height: 20),
               ] else if (auth.error != null) ...[
-                ErrorBanner(auth: auth, attemptsLeft: attemptsLeft, onForgotPassword: onForgotPassword),
+                ErrorBanner(
+                    auth: auth,
+                    attemptsLeft: attemptsLeft,
+                    onForgotPassword: onForgotPassword),
                 const SizedBox(height: 20),
               ],
-
               fieldLabel('Email Address'),
               const SizedBox(height: 6),
               TextFormField(
@@ -78,7 +86,6 @@ class LoginForm extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 20),
-              
               fieldLabel('Password'),
               const SizedBox(height: 6),
               TextFormField(
@@ -91,7 +98,9 @@ class LoginForm extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 8),
                     child: IconButton(
                       icon: Icon(
-                        obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        obscure
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
                         color: const Color(0xFF9CA3AF),
                         size: 22,
                       ),
@@ -99,10 +108,10 @@ class LoginForm extends StatelessWidget {
                     ),
                   ),
                 ),
-                validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Password is required' : null,
               ),
               const SizedBox(height: 12),
-              
               Row(
                 children: [
                   const Spacer(),
@@ -110,27 +119,33 @@ class LoginForm extends StatelessWidget {
                     onTap: onForgotPassword,
                     child: const Text(
                       'Forgot Password?',
-                      style: TextStyle(fontSize: 13, color: kCrimsonDeep, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: kCrimsonDeep,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 36),
-              
               BlueButton(
-                label: isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'LOGIN',
+                label: isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'Log In',
                 onPressed: (auth.isLoading || isLocked) ? null : onLogin,
                 loading: auth.isLoading,
               ),
               const SizedBox(height: 28),
-              
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Don't have an account? ", style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+                  const Text("Don't have an account? ",
+                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/register'),
-                    child: const Text('Sign Up Now', style: TextStyle(fontSize: 13, color: kCrimsonDeep, fontWeight: FontWeight.bold)),
+                    child: const Text('Create Account',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: kCrimsonDeep,
+                            fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

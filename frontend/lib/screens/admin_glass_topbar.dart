@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/logout_confirmation_dialog.dart';
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
@@ -145,7 +146,7 @@ class GlassTopBar extends StatelessWidget {
           const Spacer(),
           // ── User menu ─────────────────────────────────────────────────
           PopupMenuButton<String>(
-            onSelected: (String choice) {
+            onSelected: (String choice) async {
               if (choice == 'profile') {
                 if (isAdmin) {
                   context.push('/admin/account-settings');
@@ -153,8 +154,15 @@ class GlassTopBar extends StatelessWidget {
                   context.go('/profile');
                 }
               } else if (choice == 'logout') {
-                context.read<AuthProvider>().logout();
-                context.go('/login');
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: true,
+                  builder: (context) => const LogoutConfirmationDialog(),
+                );
+                if (confirmed == true) {
+                  context.read<AuthProvider>().logout();
+                  context.go('/login');
+                }
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -175,7 +183,7 @@ class GlassTopBar extends StatelessWidget {
                   children: [
                     Icon(Icons.logout, size: 18, color: Colors.red),
                     SizedBox(width: 12),
-                    Text('Sign out', style: TextStyle(color: Colors.red)),
+                    Text('Log Out', style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
@@ -195,9 +203,8 @@ class GlassTopBar extends StatelessWidget {
                   const SizedBox(width: 16),
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor:
-                        const Color.fromARGB(255, 205, 210, 251)
-                            .withValues(alpha: 0.1),
+                    backgroundColor: const Color.fromARGB(255, 205, 210, 251)
+                        .withValues(alpha: 0.1),
                     backgroundImage: finalAvatarUrl.isNotEmpty
                         ? NetworkImage(finalAvatarUrl)
                         : null,
@@ -221,8 +228,9 @@ class GlassTopBar extends StatelessWidget {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color.fromARGB(255, 122, 116, 212)
-                                      .withValues(alpha: 0.4),
+                                  color:
+                                      const Color.fromARGB(255, 122, 116, 212)
+                                          .withValues(alpha: 0.4),
                                   blurRadius: 12,
                                   spreadRadius: 2,
                                 ),

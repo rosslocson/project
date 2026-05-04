@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/logout_confirmation_dialog.dart';
 import '../providers/sidebar_provider.dart';
 import '../services/api_service.dart';
 
@@ -143,12 +144,19 @@ class GlassTopBar extends StatelessWidget {
           const Spacer(),
           // ── User menu ─────────────────────────────────────────────────
           PopupMenuButton<String>(
-            onSelected: (String choice) {
+            onSelected: (String choice) async {
               if (choice == 'profile') {
                 context.go('/profile');
               } else if (choice == 'logout') {
-                context.read<AuthProvider>().logout();
-                context.go('/login');
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: true,
+                  builder: (context) => const LogoutConfirmationDialog(),
+                );
+                if (confirmed == true) {
+                  context.read<AuthProvider>().logout();
+                  context.go('/login');
+                }
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -169,7 +177,7 @@ class GlassTopBar extends StatelessWidget {
                   children: [
                     Icon(Icons.logout, size: 18, color: Colors.red),
                     SizedBox(width: 12),
-                    Text('Sign out', style: TextStyle(color: Colors.red)),
+                    Text('Log Out', style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),

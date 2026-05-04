@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'logout_confirmation_dialog.dart';
 
 class UserSidebar extends StatelessWidget {
   final String currentRoute;
@@ -242,9 +243,16 @@ class _SignOutButtonState extends State<_SignOutButton> {
             : Colors.transparent,
         child: InkWell(
           hoverColor: Colors.transparent,
-          onTap: () {
-            context.read<AuthProvider>().logout();
-            context.go('/login');
+          onTap: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              barrierDismissible: true,
+              builder: (context) => const LogoutConfirmationDialog(),
+            );
+            if (confirmed == true) {
+              context.read<AuthProvider>().logout();
+              context.go('/login');
+            }
           },
           child: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -254,7 +262,7 @@ class _SignOutButtonState extends State<_SignOutButton> {
                     color: UserSidebar._textLight, size: 22),
                 SizedBox(width: 16),
                 Text(
-                  'Sign Out',
+                  'Log Out',
                   style: TextStyle(
                     color: UserSidebar._textLight,
                     fontSize: 14,

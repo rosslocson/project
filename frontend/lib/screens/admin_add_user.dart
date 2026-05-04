@@ -89,7 +89,7 @@ class _AddUserScreenState extends State<AddUserScreen>
 
     if (res['ok'] == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('User created successfully!'),
+        content: const Text('Account created successfully!'),
         backgroundColor: Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -97,7 +97,7 @@ class _AddUserScreenState extends State<AddUserScreen>
       context.pop();
     } else {
       setState(() {
-        _error = res['error'] ?? 'Failed to create user';
+        _error = res['error'] ?? 'Failed to create account';
         _loading = false;
       });
     }
@@ -105,13 +105,14 @@ class _AddUserScreenState extends State<AddUserScreen>
 
   @override
   Widget build(BuildContext context) {
-    // WRAP IN CONTAINER: This correctly pushes the background image behind 
+    // WRAP IN CONTAINER: This correctly pushes the background image behind
     // the entire Scaffold, including the transparent AppBar.
     return AppBackground(
       child: Scaffold(
-        backgroundColor: Colors.transparent, // Lets the container image show through
+        backgroundColor:
+            Colors.transparent, // Lets the container image show through
         appBar: AppBar(
-          title: const Text('Add New User'),
+          title: const Text('Create Account'),
           backgroundColor: Colors.transparent,
           foregroundColor: kCosmicBlue,
           elevation: 0,
@@ -155,7 +156,7 @@ class _AddUserScreenState extends State<AddUserScreen>
                                       color: kCosmicBlue),
                                 ),
                                 const SizedBox(width: 12),
-                                const Text('Create User Account',
+                                const Text('Create Account',
                                     style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold)),
@@ -172,8 +173,8 @@ class _AddUserScreenState extends State<AddUserScreen>
                                         Border.all(color: Colors.red.shade200),
                                   ),
                                   child: Text(_error!,
-                                      style:
-                                          TextStyle(color: Colors.red.shade700)),
+                                      style: TextStyle(
+                                          color: Colors.red.shade700)),
                                 ),
                                 const SizedBox(height: 14),
                               ],
@@ -183,7 +184,8 @@ class _AddUserScreenState extends State<AddUserScreen>
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const Text(
                                           'First Name',
@@ -199,12 +201,15 @@ class _AddUserScreenState extends State<AddUserScreen>
                                           decoration: InputDecoration(
                                             labelText: 'First Name',
                                             border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                             filled: true,
                                             fillColor: Colors.grey.shade100,
                                           ),
-                                          validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                                          validator: (v) => v?.isEmpty ?? true
+                                              ? 'Required'
+                                              : null,
                                         ),
                                       ],
                                     ),
@@ -212,7 +217,8 @@ class _AddUserScreenState extends State<AddUserScreen>
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const Text(
                                           'Last Name',
@@ -228,12 +234,15 @@ class _AddUserScreenState extends State<AddUserScreen>
                                           decoration: InputDecoration(
                                             labelText: 'Last Name',
                                             border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                             filled: true,
                                             fillColor: Colors.grey.shade100,
                                           ),
-                                          validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                                          validator: (v) => v?.isEmpty ?? true
+                                              ? 'Required'
+                                              : null,
                                         ),
                                       ],
                                     ),
@@ -243,7 +252,11 @@ class _AddUserScreenState extends State<AddUserScreen>
                               const SizedBox(height: 12),
 
                               // Email
-                              const Text('Email', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+                              const Text('Email',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.black87)),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _emailCtrl,
@@ -265,21 +278,28 @@ class _AddUserScreenState extends State<AddUserScreen>
                               const SizedBox(height: 12),
 
                               // Password
-                              const Text('Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+                              const Text('Password',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.black87)),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _passCtrl,
                                 obscureText: _obscurePass,
                                 decoration: InputDecoration(
-                                  hintText: 'Min 8 chars, uppercase, number, symbol',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  hintText:
+                                      'Min 8 chars, uppercase, number, symbol',
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12)),
                                   filled: true,
                                   fillColor: Colors.grey.shade100,
                                   suffixIcon: IconButton(
-                                    icon: Icon(_obscurePass 
-                                      ? Icons.visibility_off 
-                                      : Icons.visibility),
-                                    onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                                    icon: Icon(_obscurePass
+                                        ? Icons.visibility_off
+                                        : Icons.visibility),
+                                    onPressed: () => setState(
+                                        () => _obscurePass = !_obscurePass),
                                   ),
                                 ),
                                 validator: (v) {
@@ -301,7 +321,11 @@ class _AddUserScreenState extends State<AddUserScreen>
                               const SizedBox(height: 12),
 
                               // Phone
-                              const Text('Phone (optional)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+                              const Text('Phone (optional)',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.black87)),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _phoneCtrl,
@@ -318,76 +342,117 @@ class _AddUserScreenState extends State<AddUserScreen>
                               const SizedBox(height: 12),
 
                               // Department
-                              const Text('Department', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+                              const Text('Department',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.black87)),
                               const SizedBox(height: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButtonFormField<String>(
                                     initialValue: _selectedDept,
                                     decoration: InputDecoration.collapsed(
                                       hintText: _departments.isEmpty
-                                        ? 'No departments yet — add via Settings'
-                                        : 'Select Department',
-                                      hintStyle: TextStyle(color: Colors.grey[400]), // Removed const here
+                                          ? 'No departments yet — add via Settings'
+                                          : 'Select Department',
+                                      hintStyle: TextStyle(
+                                          color: Colors
+                                              .grey[400]), // Removed const here
                                     ),
-                                    items: _departments.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                                    onChanged: _departments.isEmpty ? null : (v) => setState(() => _selectedDept = v),
+                                    items: _departments
+                                        .map((s) => DropdownMenuItem(
+                                            value: s, child: Text(s)))
+                                        .toList(),
+                                    onChanged: _departments.isEmpty
+                                        ? null
+                                        : (v) =>
+                                            setState(() => _selectedDept = v),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 12),
 
                               // Position
-                              const Text('Position', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+                              const Text('Position',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.black87)),
                               const SizedBox(height: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButtonFormField<String>(
                                     initialValue: _selectedPos,
                                     decoration: InputDecoration.collapsed(
                                       hintText: _positions.isEmpty
-                                        ? 'No positions yet — add via Settings'
-                                        : 'Select Position',
-                                      hintStyle: TextStyle(color: Colors.grey[400]), // Removed const here
+                                          ? 'No positions yet — add via Settings'
+                                          : 'Select Position',
+                                      hintStyle: TextStyle(
+                                          color: Colors
+                                              .grey[400]), // Removed const here
                                     ),
-                                    items: _positions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                                    onChanged: _positions.isEmpty ? null : (v) => setState(() => _selectedPos = v),
+                                    items: _positions
+                                        .map((s) => DropdownMenuItem(
+                                            value: s, child: Text(s)))
+                                        .toList(),
+                                    onChanged: _positions.isEmpty
+                                        ? null
+                                        : (v) =>
+                                            setState(() => _selectedPos = v),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 12),
 
                               // Role
-                              const Text('Role', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+                              const Text('Role',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: Colors.black87)),
                               const SizedBox(height: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButtonFormField<String>(
                                     initialValue: _role,
-                                    decoration: InputDecoration.collapsed( // Removed const here
+                                    decoration: InputDecoration.collapsed(
+                                      // Removed const here
                                       hintText: 'Select Role',
-                                      hintStyle: TextStyle(color: Colors.grey[400]), // Removed const here
+                                      hintStyle: TextStyle(
+                                          color: Colors
+                                              .grey[400]), // Removed const here
                                     ),
-                                    items: const ['user', 'admin'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                                    onChanged: (v) => setState(() => _role = v ?? 'user'),
+                                    items: const ['user', 'admin']
+                                        .map((s) => DropdownMenuItem(
+                                            value: s, child: Text(s)))
+                                        .toList(),
+                                    onChanged: (v) =>
+                                        setState(() => _role = v ?? 'user'),
                                   ),
                                 ),
                               ),
@@ -405,22 +470,22 @@ class _AddUserScreenState extends State<AddUserScreen>
                                     ),
                                     elevation: 2,
                                   ),
-                                  child: _loading 
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2,
+                                  child: _loading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Text(
+                                          'CREATE ACCOUNT',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
-                                      )
-                                    : const Text(
-                                        'CREATE USER',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
                                 ),
                               ),
                             ],
