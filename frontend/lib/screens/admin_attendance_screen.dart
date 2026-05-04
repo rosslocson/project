@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
+import 'export_attendance.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Date helpers
@@ -543,19 +544,21 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
           // Export button
           _ExportButton(
-            onTap: () {
+            onTap: () async {
               final isAllDates = _period == AttendancePeriod.allDates;
               final isCustom = _period == AttendancePeriod.custom;
-              final url = AdminAttendanceService.exportUrl(
-                allDates: isAllDates,
-                period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-                date: isCustom ? _toApiDate(_customDate) : null,
-                search: _searchCtrl.text.trim().isEmpty
-                    ? null
-                    : _searchCtrl.text.trim(),
-                status: _selectedStatus == 'All' ? null : _selectedStatus,
+              await AttendanceExporter.export(
+                context,
+                options: AttendanceExportOptions(
+                  allDates: isAllDates,
+                  period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+                  date: isCustom ? _toApiDate(_customDate) : null,
+                  search: _searchCtrl.text.trim().isEmpty
+                      ? null
+                      : _searchCtrl.text.trim(),
+                  status: _selectedStatus == 'All' ? null : _selectedStatus,
+                ),
               );
-              _snack(url);
             },
           ),
         ],
@@ -998,7 +1001,7 @@ class _ExportButton extends StatelessWidget {
               Icon(Icons.download_rounded, size: 16, color: Colors.white),
               SizedBox(width: 8),
               Text(
-                'Export CSV',
+                'Export PDF',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
