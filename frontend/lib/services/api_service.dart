@@ -99,13 +99,13 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> resetPassword(
-      String token, String newPassword, String confirmPassword) async {
+      String otp, String newPassword, String confirmPassword) async {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/auth/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'token': token,
+          'otp': otp,
           'new_password': newPassword,
           'confirm_password': confirmPassword,
         }),
@@ -117,6 +117,19 @@ class ApiService {
   }
 
   // ── Profile ───────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> verifyResetOtp(String otp) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/verify-reset-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'otp': otp}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
 
   static Future<Map<String, dynamic>> getProfile() async {
     try {

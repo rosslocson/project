@@ -42,7 +42,7 @@ const resetEmailHTML = `
             <td colspan="2" style="text-align: center; background-color: #00022E; padding: 35px 20px; border-radius: 8px; margin: 30px 0;">
               <p style="color: #f3f4f6; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Verification Code</p>
               <div style="font-size: 42px; font-weight: bold; letter-spacing: 12px; font-family: monospace; color: #ffffff; margin: 15px 0;">{{.OTP}}</div>
-              <p style="font-size: 12px; color: #d1d5db; margin: 10px 0 0 0;">Expires in 5 minutes</p>
+              <p style="font-size: 12px; color: #d1d5db; margin: 10px 0 0 0;">Expires in 2 minutes</p>
             </td>
           </tr>
           <tr>

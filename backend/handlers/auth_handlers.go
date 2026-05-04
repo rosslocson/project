@@ -37,6 +37,10 @@ type ForgotPasswordRequest struct {
 	Email string `json:"email"`
 }
 
+type VerifyResetOTPRequest struct {
+	OTP string `json:"otp"`
+}
+
 type ResetPasswordRequest struct {
 	OTP             string `json:"otp"`
 	NewPassword     string `json:"new_password"`
@@ -172,7 +176,7 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	expiry := time.Now().Add(5 * time.Minute)
+	expiry := time.Now().Add(2 * time.Minute)
 	user.ResetOTP = otp
 	user.ResetOTPExpiry = &expiry
 	if err := h.DB.Save(&user).Error; err != nil {
@@ -185,10 +189,37 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
+	expiresInSecs := int(time.Until(expiry).Seconds())
+	if expiresInSecs < 0 {
+		expiresInSecs = 0
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"ok":      true,
-		"message": "Step 2 of 2 — Verify OTP & set password",
+		"ok":              true,
+		"message":         "Step 2 of 2 — Verify OTP & set password",
+		"expires_in_secs": expiresInSecs,
 	})
+}
+
+func (h *Handler) VerifyResetOTP(c *gin.Context) {
+	var req VerifyResetOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	var user models.User
+	if err := h.DB.Where("reset_otp = ?", strings.TrimSpace(req.OTP)).First(&user).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid or expired OTP"})
+		return
+	}
+
+	if user.ResetOTPExpiry == nil || user.ResetOTPExpiry.Before(time.Now()) {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "OTP has expired"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "OTP verified"})
 }
 
 func (h *Handler) ResetPassword(c *gin.Context) {
