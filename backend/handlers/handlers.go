@@ -238,7 +238,7 @@ func normalizeAvatarURL(c *gin.Context, avatarURL string) string {
 
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	
+
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -527,6 +527,32 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Avatar uploaded successfully",
+		"user":       user,
+		"avatar_url": user.AvatarURL,
+	})
+}
+
+func (h *Handler) RemoveAvatar(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	if err := h.DB.Model(&models.User{}).Where("id = ?", userID).Update("avatar_url", "").Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove avatar"})
+		return
+	}
+
+	var user models.User
+	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated user"})
+		return
+	}
+
+	user.EstimatedEndDate = computeEstimatedEndDate(user.StartDate, user.RequiredOjtHours)
+	user.AvatarURL = normalizeAvatarURL(c, user.AvatarURL)
+
+	h.logActivity(userID, "AVATAR_REMOVE", "Avatar removed", c.ClientIP())
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Avatar removed successfully",
 		"user":       user,
 		"avatar_url": user.AvatarURL,
 	})

@@ -251,6 +251,19 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> removeAvatar() async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/profile/avatar'),
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      debugPrint('❌ Avatar remove exception: $e');
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getDashboardStats(

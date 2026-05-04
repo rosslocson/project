@@ -11,6 +11,7 @@ import '../providers/auth_provider.dart';
 import '../providers/sidebar_provider.dart';
 import '../widgets/app_background.dart';
 import '../services/api_service.dart';
+import '../widgets/avatar_action_dialog.dart';
 import '../widgets/user_layout.dart';
 import 'avatar_crop_screen.dart';
 
@@ -27,7 +28,8 @@ class AccountSettingsScreen extends StatefulWidget {
   State<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
 }
 
-class _AccountSettingsScreenState extends State<AccountSettingsScreen> with SingleTickerProviderStateMixin {
+class _AccountSettingsScreenState extends State<AccountSettingsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabs;
 
   List<String> _departments = [];
@@ -53,7 +55,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
   String? _passMsg;
   bool _profileSuccess = false;
   bool _passSuccess = false;
-  
+
   bool _obscureCur = true;
   bool _obscureNew = true;
   bool _obscureConf = true;
@@ -73,9 +75,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
     _lastCtrl = TextEditingController(text: user?['last_name'] ?? '');
     _emailCtrl = TextEditingController(text: user?['email'] ?? '');
     _phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
-    _ojtHoursCtrl = TextEditingController(text: (user?['required_ojt_hours'] ?? '').toString());
+    _ojtHoursCtrl = TextEditingController(
+        text: (user?['required_ojt_hours'] ?? '').toString());
 
-    _selectedDept = (user?['department'] as String? ?? '').isEmpty ? null : user?['department'] as String?;
+    _selectedDept = (user?['department'] as String? ?? '').isEmpty
+        ? null
+        : user?['department'] as String?;
 
     _fetchDepartments();
   }
@@ -83,7 +88,16 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
   @override
   void dispose() {
     _tabs.dispose();
-    for (final c in [_firstCtrl, _lastCtrl, _emailCtrl, _phoneCtrl, _ojtHoursCtrl, _curPassCtrl, _newPassCtrl, _confirmPassCtrl]) {
+    for (final c in [
+      _firstCtrl,
+      _lastCtrl,
+      _emailCtrl,
+      _phoneCtrl,
+      _ojtHoursCtrl,
+      _curPassCtrl,
+      _newPassCtrl,
+      _confirmPassCtrl
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -128,7 +142,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please select a valid image file (JPG, PNG, JPEG)'),
+              content:
+                  Text('Please select a valid image file (JPG, PNG, JPEG)'),
               backgroundColor: Colors.red,
             ),
           );
@@ -218,6 +233,57 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
     }
   }
 
+  Future<void> _removeAvatar() async {
+    if (_isUploadingAvatar) return;
+    setState(() => _isUploadingAvatar = true);
+
+    final res = await ApiService.removeAvatar();
+    if (!mounted) return;
+
+    setState(() {
+      _avatarFile = null;
+      _localAvatarBytes = null;
+      _isUploadingAvatar = false;
+    });
+
+    if (res['ok'] == true) {
+      context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Avatar removed successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['error'] ?? 'Failed to remove avatar'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showAvatarActions() async {
+    final user = context.read<AuthProvider>().user;
+    final rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+    final fullAvatarUrl = rawAvatarUrl.isEmpty || rawAvatarUrl!.startsWith('http')
+        ? rawAvatarUrl
+        : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
+
+    final action = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AvatarActionDialog(currentAvatarUrl: fullAvatarUrl),
+    );
+
+    if (action == 'upload') {
+      await pickAndCropAvatar();
+    } else if (action == 'remove') {
+      await _removeAvatar();
+    }
+  }
+
   Future<void> _saveProfile() async {
     if (!_profileKey.currentState!.validate()) return;
     final hoursValue = int.tryParse(_ojtHoursCtrl.text.trim());
@@ -242,8 +308,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
       context.read<AuthProvider>().updateUserData(res['user'] ?? {});
       final fresh = await ApiService.getProfile();
       if (mounted && (fresh['ok'] == true || fresh['id'] != null)) {
-        context.read<AuthProvider>().updateUserData(Map<String, dynamic>.from(fresh));
-        _ojtHoursCtrl.text = (fresh['required_ojt_hours'] ?? res['user']?['required_ojt_hours'] ?? '').toString();
+        context
+            .read<AuthProvider>()
+            .updateUserData(Map<String, dynamic>.from(fresh));
+        _ojtHoursCtrl.text = (fresh['required_ojt_hours'] ??
+                res['user']?['required_ojt_hours'] ??
+                '')
+            .toString();
       }
       setState(() {
         _profileMsg = 'Profile updated successfully!';
@@ -264,15 +335,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
       _savingPass = true;
       _passMsg = null;
     });
-    
+
     final res = await ApiService.changePassword({
       'current_password': _curPassCtrl.text,
       'new_password': _newPassCtrl.text,
       'confirm_password': _confirmPassCtrl.text,
     });
-    
+
     if (!mounted) return;
-    
+
     if (res['ok'] == true) {
       _curPassCtrl.clear();
       _newPassCtrl.clear();
@@ -329,7 +400,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
               alignment: Alignment.centerLeft,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
+                  padding:
+                      const EdgeInsets.only(left: 100, right: 100, top: 28),
                   child: Text(
                     'Account Settings',
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -348,7 +420,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withOpacity(0.15)),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.15)),
                       ),
                       child: IconButton(
                         padding: const EdgeInsets.all(12),
@@ -381,8 +454,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
                     children: [
                       // Profile Header Card
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 20),
+                        decoration: BoxDecoration(
+                            border: Border(
+                                bottom:
+                                    BorderSide(color: Colors.grey.shade200))),
                         child: Row(
                           children: [
                             Stack(
@@ -393,11 +470,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
                                   backgroundColor: _kBlue.withOpacity(0.1),
                                   backgroundImage: avatarImage,
                                   child: _isUploadingAvatar
-                                      ? const CircularProgressIndicator(color: _kBlue, strokeWidth: 3)
+                                      ? const CircularProgressIndicator(
+                                          color: _kBlue, strokeWidth: 3)
                                       : avatarImage == null
                                           ? Text(
                                               '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
-                                              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _kBlue),
+                                              style: const TextStyle(
+                                                  fontSize: 28,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _kBlue),
                                             )
                                           : null,
                                 ),
@@ -407,16 +488,20 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
-                                      onTap: _isUploadingAvatar ? null : pickAndCropAvatar,
+                                      onTap: _isUploadingAvatar
+                                          ? null
+                                          : _showAvatarActions,
                                       borderRadius: BorderRadius.circular(20),
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
                                           color: _kBlue,
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 2),
+                                          border: Border.all(
+                                              color: Colors.white, width: 2),
                                         ),
-                                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                                        child: const Icon(Icons.camera_alt,
+                                            color: Colors.white, size: 14),
                                       ),
                                     ),
                                   ),
@@ -430,30 +515,46 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
                                 children: [
                                   Text(
                                     '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black87, letterSpacing: 0.5),
+                                    style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.black87,
+                                        letterSpacing: 0.5),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     user?['email'] ?? '',
-                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14, fontWeight: FontWeight.w500),
+                                    style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500),
                                   ),
-                                  if ((user?['department'] as String? ?? '').isNotEmpty) ...[
+                                  if ((user?['department'] as String? ?? '')
+                                      .isNotEmpty) ...[
                                     const SizedBox(height: 4),
                                     Text(
                                       '${user?['department']} · ${user?['position'] ?? ''}',
-                                      style: TextStyle(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w500),
+                                      style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500),
                                     ),
                                   ],
                                   const SizedBox(height: 10),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: _kBlue.withOpacity(0.08),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: const Text(
                                       'USER',
-                                      style: TextStyle(color: _kBlue, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.0),
+                                      style: TextStyle(
+                                          color: _kBlue,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.0),
                                     ),
                                   ),
                                 ],
@@ -465,19 +566,29 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
 
                       // Tabs Header
                       Container(
-                        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+                        decoration: BoxDecoration(
+                            border: Border(
+                                bottom:
+                                    BorderSide(color: Colors.grey.shade200))),
                         child: TabBar(
                           controller: _tabs,
                           labelColor: _kBlue,
                           indicatorColor: _kBlue,
                           indicatorWeight: 3,
                           unselectedLabelColor: Colors.grey.shade500,
-                          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                          unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                          labelStyle: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w700),
+                          unselectedLabelStyle: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w500),
                           dividerColor: Colors.transparent,
                           tabs: const [
-                            Tab(icon: Icon(Icons.manage_accounts_outlined, size: 20), text: 'Account Settings'),
-                            Tab(icon: Icon(Icons.lock_outline, size: 20), text: 'Change Password'),
+                            Tab(
+                                icon: Icon(Icons.manage_accounts_outlined,
+                                    size: 20),
+                                text: 'Account Settings'),
+                            Tab(
+                                icon: Icon(Icons.lock_outline, size: 20),
+                                text: 'Change Password'),
                           ],
                         ),
                       ),
@@ -499,7 +610,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
                               profileMsg: _profileMsg,
                               profileSuccess: _profileSuccess,
                               savingProfile: _savingProfile,
-                              onDeptChanged: (v) => setState(() => _selectedDept = v),
+                              onDeptChanged: (v) =>
+                                  setState(() => _selectedDept = v),
                               onSave: _saveProfile,
                             ),
                             UserPasswordTab(
@@ -513,9 +625,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
                               passMsg: _passMsg,
                               passSuccess: _passSuccess,
                               savingPass: _savingPass,
-                              onToggleCur: () => setState(() => _obscureCur = !_obscureCur),
-                              onToggleNew: () => setState(() => _obscureNew = !_obscureNew),
-                              onToggleConf: () => setState(() => _obscureConf = !_obscureConf),
+                              onToggleCur: () =>
+                                  setState(() => _obscureCur = !_obscureCur),
+                              onToggleNew: () =>
+                                  setState(() => _obscureNew = !_obscureNew),
+                              onToggleConf: () =>
+                                  setState(() => _obscureConf = !_obscureConf),
                               onSave: _changePassword,
                             ),
                           ],

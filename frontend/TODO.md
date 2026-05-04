@@ -1,8 +1,7 @@
-# Fix Admin Sidebar Auto-Closing
-- [x] Plan confirmed with user
-- [x] Step 1: Refactor admin_dashboard_screen.dart to use AdminLayout + SidebarProvider (remove local _isSidebarOpen, manual Row/AnimatedContainer/AdminSidebar)
-- [x] Step 2: Refactor admin_user_management.dart to use AdminLayout + SidebarProvider (same changes)
-- [x] Step 3: Check other admin screens for similar issues (search for _isSidebarOpen)
-- [ ] Step 4: Test navigation: sidebar open → click Dashboard → confirm stays open
-- [ ] Complete: attempt_completion
+# Avatar Popup Improvements ✅ COMPLETE
+
+- [x] Step 1: Refactor `avatar_action_dialog.dart` - add currentAvatarUrl param, preview CircleAvatar, size constraints (maxWidth 320, vertical layout)
+- [x] Step 2: Update `user_account_settings_screen.dart` - pass avatar_url to dialog in `_showAvatarActions()`
+- [x] Step 3: Update `admin_account_settings_screen.dart` - pass avatar_url to dialog in `_showAvatarActions()`
+- [x] Step 4: Changes implemented. Hot reload Flutter app to test: popup now smaller vertical rectangle (~320px wide) with current profile avatar/initials preview at top.
 

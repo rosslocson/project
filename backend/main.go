@@ -217,6 +217,7 @@ func main() {
 		api.PUT("/profile", h.UpdateProfile)
 		api.PUT("/profile/password", h.ChangePassword)
 		api.POST("/profile/avatar", h.UploadAvatar)
+		api.DELETE("/profile/avatar", h.RemoveAvatar)
 
 		// Dashboard stats
 		api.GET("/dashboard/stats", h.GetDashboardStats)

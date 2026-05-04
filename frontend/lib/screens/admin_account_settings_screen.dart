@@ -12,6 +12,7 @@ import '../widgets/app_background.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
 import 'avatar_crop_screen.dart';
+import '../widgets/avatar_action_dialog.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/admin_account_settings_widgets/hamburger_icon.dart';
@@ -246,6 +247,53 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     }
   }
 
+  Future<void> _removeAvatar() async {
+    if (_isUploadingAvatar) return;
+    setState(() => _isUploadingAvatar = true);
+
+    final res = await ApiService.removeAvatar();
+    if (!mounted) return;
+
+    setState(() {
+      _avatarFile = null;
+      _localAvatarBytes = null;
+      _isUploadingAvatar = false;
+    });
+
+    if (res['ok'] == true) {
+      context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Avatar removed successfully!'),
+        backgroundColor: Colors.green,
+      ));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(res['error'] ?? 'Failed to remove avatar'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
+  Future<void> _showAvatarActions() async {
+    final user = context.read<AuthProvider>().user;
+    final rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+    final fullAvatarUrl = rawAvatarUrl.isEmpty || rawAvatarUrl!.startsWith('http')
+        ? rawAvatarUrl
+        : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
+
+    final action = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AvatarActionDialog(currentAvatarUrl: fullAvatarUrl),
+    );
+
+    if (action == 'upload') {
+      await pickAndCropAvatar();
+    } else if (action == 'remove') {
+      await _removeAvatar();
+    }
+  }
+
   Future<void> _saveProfile() async {
     if (!_profileKey.currentState!.validate()) return;
     setState(() {
@@ -419,35 +467,46 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                     Stack(
                                       alignment: Alignment.bottomRight,
                                       children: [
-                                        CircleAvatar(
-                                          radius: 40,
-                                          backgroundColor:
-                                              _kBlue.withOpacity(0.1),
-                                          backgroundImage: _avatarFile != null
-                                              ? FileImage(_avatarFile!)
-                                              : (_localAvatarBytes != null
-                                                  ? MemoryImage(
-                                                      _localAvatarBytes!)
-                                                  : (finalAvatarUrl.isNotEmpty
-                                                      ? NetworkImage(
-                                                          finalAvatarUrl)
-                                                      : null)) as ImageProvider?,
-                                          child: _isUploadingAvatar
-                                              ? const CircularProgressIndicator(
-                                                  color: _kBlue, strokeWidth: 3)
-                                              : (_avatarFile == null &&
-                                                      _localAvatarBytes ==
-                                                          null &&
-                                                      finalAvatarUrl.isEmpty)
-                                                  ? Text(
-                                                      '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                      style: const TextStyle(
-                                                          fontSize: 28,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: _kBlue),
-                                                    )
-                                                  : null,
+                                        Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius:
+                                                BorderRadius.circular(40),
+                                            onTap: _isUploadingAvatar
+                                                ? null
+                                                : _showAvatarActions,
+                                            child: CircleAvatar(
+                                              radius: 40,
+                                              backgroundColor:
+                                                  _kBlue.withOpacity(0.1),
+                                              backgroundImage: _avatarFile != null
+                                                  ? FileImage(_avatarFile!)
+                                                  : (_localAvatarBytes != null
+                                                      ? MemoryImage(
+                                                          _localAvatarBytes!)
+                                                      : (finalAvatarUrl.isNotEmpty
+                                                          ? NetworkImage(
+                                                              finalAvatarUrl)
+                                                          : null)) as ImageProvider?,
+                                              child: _isUploadingAvatar
+                                                  ? const CircularProgressIndicator(
+                                                      color: _kBlue,
+                                                      strokeWidth: 3)
+                                                  : (_avatarFile == null &&
+                                                          _localAvatarBytes ==
+                                                              null &&
+                                                          finalAvatarUrl.isEmpty)
+                                                      ? Text(
+                                                          '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
+                                                          style: const TextStyle(
+                                                              fontSize: 28,
+                                                              fontWeight:
+                                                                  FontWeight.bold,
+                                                              color: _kBlue),
+                                                        )
+                                                      : null,
+                                            ),
+                                          ),
                                         ),
                                         Positioned(
                                           bottom: 0,
@@ -457,7 +516,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             child: InkWell(
                                               onTap: _isUploadingAvatar
                                                   ? null
-                                                  : pickAndCropAvatar,
+                                                  : _showAvatarActions,
                                               borderRadius:
                                                   BorderRadius.circular(20),
                                               child: Container(
