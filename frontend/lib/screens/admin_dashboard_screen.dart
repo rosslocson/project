@@ -252,8 +252,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _totalActivityPages =
               (_allFilteredActivities.length / activitiesPerPage).ceil();
           if (_totalActivityPages == 0) _totalActivityPages = 1;
-          if (_activityPage > _totalActivityPages)
+          if (_activityPage > _totalActivityPages) {
             _activityPage = _totalActivityPages;
+          }
           if (_activityPage < 1) _activityPage = 1;
 
           final activityStartIndex = (_activityPage - 1) * activitiesPerPage;

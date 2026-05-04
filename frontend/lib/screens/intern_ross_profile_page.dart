@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
-import '../services/api_service.dart';
 import 'intern_widgets.dart';
 
 // ── Intern #28 Special Profile Page ──────────────────────────────────────────
