@@ -67,6 +67,10 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   // ── Stored after profile fetch so it's available for the read-only view ──
   int? _requiredHours;
 
+  // Custom Dark Blue Theme for the Left Card
+  final Color _cardDarkBlue = const Color(0xFF0B132B);
+  final Color _cardDarkerBlue = const Color(0xFF060A17);
+
   @override
   void initState() {
     super.initState();
@@ -88,11 +92,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     });
 
     try {
-      // Use refreshProfile() which has the null/empty-string protection
       await context.read<AuthProvider>().refreshProfile();
       if (!mounted) return;
 
-      // Read the merged, authoritative user data from the provider
       final user = context.read<AuthProvider>().user;
       final raw = user?['required_ojt_hours'];
       final hours = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
@@ -107,10 +109,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
       debugPrint('MyProfileScreen _fetchProfile error: $e');
       if (!mounted) return;
 
-      // Fall back to whatever is already cached in the provider
-      final raw = context
-          .read<AuthProvider>()
-          .user?['required_ojt_hours']; // ✅ fixed typo
+      final raw = context.read<AuthProvider>().user?['required_ojt_hours'];
       setState(() {
         _loading = false;
         _fetchError = 'Network error. Check your connection and tap Retry.';
@@ -126,8 +125,6 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     return s.isEmpty ? '—' : s;
   }
 
-  /// Counts ceil([requiredHours] / 8) weekdays (Mon–Fri) forward
-  /// from [startDateStr] and returns 'YYYY-MM-DD', or null on parse error.
   String? _computeEstimatedEndDate(String startDateStr, int requiredHours) {
     DateTime start;
     try {
@@ -175,7 +172,6 @@ class _MyProfileScreenState extends State<MyProfileScreen>
         final cleanPath =
             rawAvatarUrl.startsWith('/') ? rawAvatarUrl : '/$rawAvatarUrl';
         finalAvatarUrl = '$staticBase$cleanPath';
-        debugPrint('Avatar URL: $finalAvatarUrl');
       } else {
         finalAvatarUrl = rawAvatarUrl;
       }
@@ -268,11 +264,11 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                           left: 100, right: 100, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.18),
+                              color: Colors.black.withOpacity(0.12),
                               blurRadius: 40,
                               offset: const Offset(0, 8),
                             ),
@@ -281,9 +277,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: _loading
-                              ? const Center(
+                              ? Center(
                                   child: CircularProgressIndicator(
-                                      color: kCrimsonDeep),
+                                      color: _cardDarkBlue),
                                 )
                               : Row(
                                   crossAxisAlignment:
@@ -318,39 +314,51 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                                 const EdgeInsets.only(top: 8),
                                             child: TabBar(
                                               controller: _tabs,
-                                              labelColor: Colors.black,
+                                              labelColor: _cardDarkBlue,
                                               unselectedLabelColor:
                                                   Colors.grey.shade500,
-                                              indicatorColor: kCrimsonDeep,
+                                              indicatorColor: _cardDarkBlue,
                                               indicatorWeight: 3,
                                               dividerColor: Colors.transparent,
+                                              labelStyle: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                              ),
+                                              unselectedLabelStyle:
+                                                  const TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 14,
+                                              ),
                                               tabs: const [
                                                 Tab(
                                                   iconMargin: EdgeInsets.only(
-                                                      bottom: 4),
+                                                      bottom: 6),
                                                   icon: Icon(
                                                       Icons.school_outlined,
-                                                      size: 18),
+                                                      size: 20),
                                                   text: 'Academic Info',
                                                 ),
                                                 Tab(
                                                   iconMargin: EdgeInsets.only(
-                                                      bottom: 4),
+                                                      bottom: 6),
                                                   icon: Icon(
                                                       Icons.stars_outlined,
-                                                      size: 18),
+                                                      size: 20),
                                                   text: 'Skills & Profile',
                                                 ),
                                               ],
                                             ),
                                           ),
                                           Expanded(
-                                            child: TabBarView(
-                                              controller: _tabs,
-                                              children: [
-                                                _buildAcademicTab(user),
-                                                _buildSkillsTab(user),
-                                              ],
+                                            child: Container(
+                                              color: Colors.white,
+                                              child: TabBarView(
+                                                controller: _tabs,
+                                                children: [
+                                                  _buildAcademicTab(user),
+                                                  _buildSkillsTab(user),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -381,196 +389,198 @@ class _MyProfileScreenState extends State<MyProfileScreen>
     String finalAvatarUrl,
   ) {
     return Container(
-      width: 260,
-      decoration: const BoxDecoration(
+      width: 280,
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [kCrimsonDeep, Color(0xFF00022E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_cardDarkBlue, _cardDarkerBlue],
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 36),
-
-          // ── Avatar ──────────────────────────────────────────────
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.35),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: Colors.white.withOpacity(0.10),
-                      blurRadius: 0,
-                      spreadRadius: 4,
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 72,
-                  backgroundColor: Colors.white.withOpacity(0.12),
-                  backgroundImage: finalAvatarUrl.isNotEmpty
-                      ? NetworkImage(finalAvatarUrl)
-                      : null,
-                  child: finalAvatarUrl.isEmpty
-                      ? Text(
-                          initials.isEmpty ? '?' : initials,
-                          style: const TextStyle(
-                            fontSize: 42,
-                            fontWeight: FontWeight.w800,
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 36, bottom: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // ── Avatar ──────────────────────────────────────────────
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              width: 4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.25),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 68,
+                          backgroundColor: Colors.white.withOpacity(0.10),
+                          backgroundImage: finalAvatarUrl.isNotEmpty
+                              ? NetworkImage(finalAvatarUrl)
+                              : null,
+                          child: finalAvatarUrl.isEmpty
+                              ? Text(
+                                  initials.isEmpty ? '?' : initials,
+                                  style: const TextStyle(
+                                    fontSize: 38,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: 2,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => context.go('/edit-profile'),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
                             color: Colors.white,
-                            letterSpacing: 2,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                        )
-                      : null,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => context.go('/edit-profile'),
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
+                          child: Icon(Icons.edit_rounded,
+                              color: _cardDarkBlue, size: 18),
+                        ),
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.edit_rounded,
-                      color: kCrimsonDeep, size: 16),
-                ),
-              ),
-            ],
-          ),
 
-          const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-          // ── Name ──────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              first.isEmpty && last.isEmpty ? 'Name Not Set' : '$first $last',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: 0.4,
-                height: 1.2,
+                  // ── Name ──────────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      first.isEmpty && last.isEmpty
+                          ? 'Name Not Set'
+                          : '$first $last',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  // ── Email ─────────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      user?['email'] ?? '',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.70),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        height: 1.4,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── Badge ─────────────────────────────────────────────────
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border:
+                          Border.all(color: Colors.blueAccent.withOpacity(0.3)),
+                    ),
+                    child: const Text(
+                      'INTERN',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                        color: Colors.lightBlueAccent,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Divider(
+                        color: Colors.white.withOpacity(0.10), height: 1),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Quick-info tiles ──────────────────────────────────────
+                  _QuickInfoTile(
+                    icon: Icons.business_rounded,
+                    label: 'Department',
+                    value: _val(user, 'department'),
+                  ),
+                  const SizedBox(height: 16),
+                  _QuickInfoTile(
+                    icon: Icons.work_outline_rounded,
+                    label: 'Position',
+                    value: _val(user, 'position'),
+                  ),
+                  const SizedBox(height: 16),
+                  _QuickInfoTile(
+                    icon: Icons.school_rounded,
+                    label: 'School',
+                    value: _val(user, 'school'),
+                  ),
+                ],
               ),
             ),
           ),
-
-          const SizedBox(height: 6),
-
-          // ── Email ─────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              user?['email'] ?? '',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.65),
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                height: 1.4,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Badge ─────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-            ),
-            child: const Text(
-              'INTERN',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2.0,
-                color: Colors.white,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          Divider(
-            color: Colors.white.withOpacity(0.15),
-            height: 1,
-            indent: 28,
-            endIndent: 28,
-          ),
-
-          const SizedBox(height: 24),
-
-          // ── Quick-info tiles ──────────────────────────────────────
-          _QuickInfoTile(
-            icon: Icons.business_rounded,
-            label: 'Department',
-            value: _val(user, 'department'),
-          ),
-          const SizedBox(height: 14),
-          _QuickInfoTile(
-            icon: Icons.work_outline_rounded,
-            label: 'Position',
-            value: _val(user, 'position'),
-          ),
-          const SizedBox(height: 14),
-          _QuickInfoTile(
-            icon: Icons.school_rounded,
-            label: 'School',
-            value: _val(user, 'school'),
-          ),
-          const SizedBox(height: 14),
-          _QuickInfoTile(
-            icon: Icons.badge_rounded,
-            label: 'Intern No.',
-            value: _val(user, 'intern_number'),
-          ),
-
-          const Spacer(),
 
           // ── Edit profile button ───────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () => context.go('/edit-profile'),
-                icon: const Icon(Icons.edit_outlined, size: 16),
+                icon: const Icon(Icons.edit_outlined, size: 18),
                 label: const Text(
                   'Edit Profile',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: kCrimsonDeep,
+                  foregroundColor: _cardDarkBlue,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  elevation: 0,
+                  elevation: 4,
+                  shadowColor: Colors.black.withOpacity(0.2),
                 ),
               ),
             ),
@@ -583,11 +593,8 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   // ── Academic tab ──────────────────────────────────────────────────────────
 
   Widget _buildAcademicTab(Map<String, dynamic>? user) {
-    // Use _requiredHours from state (set during _fetchProfile)
-    // so it's always reliable regardless of user map contents.
     final requiredHours = _requiredHours;
 
-    // Compute estimated end date from start date + required hours
     String? computedEndDate;
     if (requiredHours != null && requiredHours > 0) {
       final startStr = user?['start_date']?.toString().trim() ?? '';
@@ -603,146 +610,137 @@ class _MyProfileScreenState extends State<MyProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Department + Position ──────────────────────────────
+          _SectionTitle(
+              title: 'Timeline & Hours', icon: Icons.schedule_rounded),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _ReadonlyField(
-                  label: 'Department',
-                  value: _val(user, 'department'),
+                child: _CleanInfoCard(
+                  label: 'Internship Start',
+                  value: _val(user, 'start_date'),
+                  icon: Icons.event_rounded,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
-                child: _ReadonlyField(
-                  label: 'Position',
-                  value: _val(user, 'position'),
+                child: _CleanInfoCard(
+                  label: 'Internship End',
+                  value: displayedEndDate,
+                  icon: Icons.event_available_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _CleanInfoCard(
+                  label: 'Required OJT Hours',
+                  value: requiredHours != null ? '$requiredHours hrs' : '—',
+                  icon: Icons.hourglass_empty_rounded,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          if (computedEndDate != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade100),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome_rounded,
+                      size: 16, color: Colors.blue.shade700),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Estimated completion by $computedEndDate (based on $requiredHours hrs @ 8 hrs/day, Mon–Fri)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade800,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
-          // ── School ────────────────────────────────────────────
-          _ReadonlyField(
-            label: 'School / University',
-            value: _val(user, 'school'),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
-          // ── Program ───────────────────────────────────────────
-          _ReadonlyField(
-            label: 'Program / Course',
-            value: _val(user, 'program'),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Specialization + Year ─────────────────────────────
+          _SectionTitle(title: 'Placement Details', icon: Icons.work_rounded),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _ReadonlyField(
-                  label: 'Specialization',
-                  value: _val(user, 'specialization'),
+                child: _CleanInfoCard(
+                  label: 'Department',
+                  value: _val(user, 'department'),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
-                child: _ReadonlyField(
+                child: _CleanInfoCard(
+                  label: 'Position',
+                  value: _val(user, 'position'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _CleanInfoCard(
+                  label: 'Intern Number',
+                  value: _val(user, 'intern_number'),
+                  icon: Icons.badge_rounded,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          _SectionTitle(
+              title: 'Academic Background', icon: Icons.school_rounded),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _CleanInfoCard(
+                  label: 'School / University',
+                  value: _val(user, 'school'),
+                  icon: Icons.account_balance_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 1,
+                child: _CleanInfoCard(
                   label: 'Year Level',
                   value: _val(user, 'year_level'),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // ── Intern Number + Required OJT Hours ────────────────
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _ReadonlyField(
-                  label: 'Intern Number',
-                  value: _val(user, 'intern_number'),
+                child: _CleanInfoCard(
+                  label: 'Program / Course',
+                  value: _val(user, 'program'),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
-                child: _ReadonlyField(
-                  label: 'Required OJT Hours',
-                  value: requiredHours != null ? '$requiredHours hrs' : '—',
-                  icon: Icons.access_time_rounded,
+                child: _CleanInfoCard(
+                  label: 'Specialization',
+                  value: _val(user, 'specialization'),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-
-          // ── Start + End dates ─────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _ReadonlyField(
-                  label: 'Internship Start',
-                  value: _val(user, 'start_date'),
-                  icon: Icons.calendar_today,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ReadonlyField(
-                      label: 'Internship End',
-                      value: displayedEndDate,
-                      icon: Icons.calendar_today,
-                    ),
-                    // ── Estimated end date badge ──────────────
-                    if (computedEndDate != null) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: kCrimsonDeep.withValues(alpha: 0.07),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: kCrimsonDeep.withValues(alpha: 0.20)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.auto_awesome_rounded,
-                                size: 11,
-                                color: kCrimsonDeep.withValues(alpha: 0.75)),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                'Est. end: $computedEndDate · $requiredHours hrs @ 8 hrs/day, Mon–Fri',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  color: kCrimsonDeep.withValues(alpha: 0.80),
-                                  fontStyle: FontStyle.italic,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ── Email ─────────────────────────────────────────────
-          _ReadonlyField(
-            label: 'Email',
-            value: _val(user, 'email'),
           ),
         ],
       ),
@@ -760,33 +758,60 @@ class _MyProfileScreenState extends State<MyProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ReadonlyField(
+          _SectionTitle(title: 'About Me', icon: Icons.person_rounded),
+          const SizedBox(height: 12),
+          _CleanInfoCard(
             label: 'Bio',
             value: _val(user, 'bio'),
-            maxLines: 4,
+            isMultiline: true,
           ),
-          const SizedBox(height: 16),
-          _label('Technical Skills'),
-          _SkillChips(raw: techSkills, color: kCrimsonDeep),
-          const SizedBox(height: 16),
-          _label('Soft Skills'),
-          _SkillChips(raw: softSkills, color: const Color(0xFF00022E)),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 24),
+
+          _SectionTitle(title: 'Expertise', icon: Icons.psychology_rounded),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _SkillPanelClean(
+                  label: 'Technical Skills',
+                  raw: techSkills,
+                  accentColor: Colors.blue.shade600,
+                  bgColor: Colors.blue.shade50,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SkillPanelClean(
+                  label: 'Soft Skills',
+                  raw: softSkills,
+                  accentColor: Colors.blue.shade600, // Changed to Blue
+                  bgColor: Colors.blue.shade50,      // Changed to Blue
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          _SectionTitle(title: 'Links & Socials', icon: Icons.link_rounded),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _ReadonlyField(
+                child: _CleanInfoCard(
                   label: 'LinkedIn URL',
                   value: _val(user, 'linked_in'),
-                  icon: Icons.link,
+                  icon: Icons.open_in_new_rounded,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
-                child: _ReadonlyField(
+                child: _CleanInfoCard(
                   label: 'GitHub URL',
                   value: _val(user, 'git_hub'),
-                  icon: Icons.link,
+                  icon: Icons.code_rounded,
                 ),
               ),
             ],
@@ -797,15 +822,6 @@ class _MyProfileScreenState extends State<MyProfileScreen>
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87)),
-      );
 
   Widget _retryBanner(String msg) => Container(
         margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -837,7 +853,188 @@ class _MyProfileScreenState extends State<MyProfileScreen>
       );
 }
 
-// ── Quick Info Tile ───────────────────────────────────────────────────────────
+// ── Shared UI Components ──────────────────────────────────────────────────────
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final IconData icon;
+
+  const _SectionTitle({required this.title, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade400),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E293B),
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CleanInfoCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData? icon;
+  final bool isMultiline;
+
+  const _CleanInfoCard({
+    required this.label,
+    required this.value,
+    this.icon,
+    this.isMultiline = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isEmpty = value == '—';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12), // Reduced padding
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC), // Very soft slate
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: Colors.grey.shade500),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade500,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: isMultiline ? null : 1,
+            overflow:
+                isMultiline ? TextOverflow.visible : TextOverflow.ellipsis,
+            style: TextStyle(
+              color: isEmpty ? Colors.grey.shade400 : const Color(0xFF0F172A),
+              fontSize: 13,
+              fontWeight: FontWeight.w400, // Reduced from w600
+              height: isMultiline ? 1.5 : 1.0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkillPanelClean extends StatelessWidget {
+  final String label;
+  final String raw;
+  final Color accentColor;
+  final Color bgColor;
+
+  const _SkillPanelClean({
+    required this.label,
+    required this.raw,
+    required this.accentColor,
+    required this.bgColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16), // Reduced from 20
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade500,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _CleanSkillChips(
+              raw: raw, accentColor: accentColor, bgColor: bgColor),
+        ],
+      ),
+    );
+  }
+}
+
+class _CleanSkillChips extends StatelessWidget {
+  final String raw;
+  final Color accentColor;
+  final Color bgColor;
+
+  const _CleanSkillChips({
+    required this.raw,
+    required this.accentColor,
+    required this.bgColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (raw == '—' || raw.trim().isEmpty) {
+      return Text('—',
+          style: TextStyle(
+              color: Colors.grey.shade400,
+              fontSize: 13,
+              fontWeight: FontWeight.w400));
+    }
+
+    final skills =
+        raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: skills
+          .map((s) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  s,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: accentColor,
+                  ),
+                ),
+              ))
+          .toList(),
+    );
+  }
+}
 
 class _QuickInfoTile extends StatelessWidget {
   final IconData icon;
@@ -853,21 +1050,20 @@ class _QuickInfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(8),
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon,
-                color: Colors.white.withValues(alpha: 0.85), size: 16),
+            child: Icon(icon, color: Colors.blueAccent.shade100, size: 16),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,159 +1072,26 @@ class _QuickInfoTile extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withOpacity(0.50),
-                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.60),
+                    letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withOpacity(0.90),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Read-only field ───────────────────────────────────────────────────────────
-
-class _ReadonlyField extends StatelessWidget {
-  final String label;
-  final String value;
-  final int maxLines;
-  final IconData? icon;
-
-  const _ReadonlyField({
-    required this.label,
-    required this.value,
-    this.maxLines = 1,
-    this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isEmpty = value == '—';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Text(
-            label,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87),
-          ),
-        ),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Row(
-            crossAxisAlignment: maxLines > 1
-                ? CrossAxisAlignment.start
-                : CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  value,
-                  maxLines: maxLines,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isEmpty ? Colors.grey.shade400 : Colors.black,
-                    fontSize: 14,
-                    fontWeight: isEmpty ? FontWeight.w400 : FontWeight.w500,
-                  ),
-                ),
-              ),
-              if (icon != null) ...[
-                const SizedBox(width: 8),
-                Icon(icon, size: 18, color: Colors.grey.shade400),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Skill chips ───────────────────────────────────────────────────────────────
-
-class _SkillChips extends StatelessWidget {
-  final String raw;
-  final Color color;
-
-  const _SkillChips({required this.raw, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    if (raw == '—' || raw.trim().isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Text('—',
-            style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 14,
-                fontWeight: FontWeight.w400)),
-      );
-    }
-
-    final skills =
-        raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: skills
-            .map((s) => Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: color.withValues(alpha: 0.25)),
-                  ),
-                  child: Text(
-                    s,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                ))
-            .toList(),
       ),
     );
   }
