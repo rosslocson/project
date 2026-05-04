@@ -17,6 +17,7 @@ class AcademicInfoTab extends StatefulWidget {
   final void Function(String?) onDeptChanged;
   final VoidCallback onPickStart;
   final VoidCallback onPickEnd;
+  final VoidCallback? onChanged;
   final int? requiredHours;
 
   const AcademicInfoTab({
@@ -35,6 +36,7 @@ class AcademicInfoTab extends StatefulWidget {
     required this.onDeptChanged,
     required this.onPickStart,
     required this.onPickEnd,
+    this.onChanged,
     this.requiredHours,
   });
 
@@ -46,19 +48,62 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
   String? _computedEnd;
   String? _localDept;
 
+  // Local state for Program and Year Level
+  String? _selectedYearDropdown;
+  final TextEditingController _localProgramCtrl = TextEditingController();
+  final FocusNode _programFocus = FocusNode();
+
+  final List<String> _yearOptions = [
+    'SHS 12th Grade',
+    '1st Year',
+    '2nd Year',
+    '3rd Year',
+    '4th Year',
+  ];
+
   @override
   void initState() {
     super.initState();
     _localDept = widget.selectedDept;
-    // Listen directly to the start controller — fires even inside TabBarView
+
     widget.startCtrl.addListener(_onStartChanged);
-    // Compute immediately in case start date is already populated
+
+    // --- Initialize Program ---
+    if (widget.programCtrl.text.startsWith('Bachelor of Science in ')) {
+      _localProgramCtrl.text =
+          widget.programCtrl.text.replaceFirst('Bachelor of Science in ', '');
+    } else {
+      _localProgramCtrl.text = widget.programCtrl.text;
+    }
+
+    // --- Initialize Year Level ---
+    if (_yearOptions.contains(widget.yearCtrl.text)) {
+      _selectedYearDropdown = widget.yearCtrl.text;
+    }
+
+    // Listeners to format strings and update UI on focus change
+    _programFocus.addListener(() {
+      setState(() {});
+    });
+
+    _localProgramCtrl.addListener(() {
+      if (_localProgramCtrl.text.isNotEmpty) {
+        widget.programCtrl.text =
+            'Bachelor of Science in ${_localProgramCtrl.text}';
+      } else {
+        widget.programCtrl.text = '';
+      }
+      widget.onChanged?.call();
+    });
+
     _recalculate();
   }
 
   @override
   void dispose() {
     widget.startCtrl.removeListener(_onStartChanged);
+    _localProgramCtrl.dispose();
+    _programFocus.dispose();
     super.dispose();
   }
 
@@ -68,18 +113,19 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     if (old.selectedDept != widget.selectedDept) {
       setState(() => _localDept = widget.selectedDept);
     }
-    // If the controller instance ever changes, re-wire the listener
     if (old.startCtrl != widget.startCtrl) {
       old.startCtrl.removeListener(_onStartChanged);
       widget.startCtrl.addListener(_onStartChanged);
     }
-    // Also recalculate if requiredHours changed
     if (old.requiredHours != widget.requiredHours) {
       _recalculate();
     }
   }
 
-  void _onStartChanged() => _recalculate();
+  void _onStartChanged() {
+    _recalculate();
+    widget.onChanged?.call();
+  }
 
   void _recalculate() {
     final startVal = widget.startCtrl.text.trim();
@@ -93,14 +139,12 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     final result = _computeEndDate(startVal, hours);
     if (result != _computedEnd) {
       setState(() => _computedEnd = result);
-      // Also write into the end controller so it saves correctly
       if (result != null && widget.endCtrl.text != result) {
         widget.endCtrl.text = result;
       }
     }
   }
 
-  /// Counts ceil(requiredHours / 8) weekdays (Mon–Fri) forward from startDateStr.
   String? _computeEndDate(String startDateStr, int hours) {
     DateTime start;
     try {
@@ -133,12 +177,48 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     return null;
   }
 
+  // A unified styling helper to guarantee all fields have the exact same box format
+  InputDecoration _buildInputDecoration(BuildContext context,
+      {required String hintText, Widget? suffixIcon}) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Theme.of(context).primaryColor),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
+      ),
+      suffixIcon: suffixIcon,
+      // Provide a slight margin below the error text to prevent crowding
+      errorStyle: const TextStyle(height: 1.2),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    bool showProgramPrefix =
+        _programFocus.hasFocus || _localProgramCtrl.text.isNotEmpty;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(28),
       child: Form(
         key: widget.formKey,
+        // THIS IS THE MAGIC LINE: It instantly checks rules as the user types or clears data
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -154,17 +234,24 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const FormLabel(text: 'Department'),
-                    CustomDropdown(
-                      // Key forces a full rebuild when value changes
+                    DropdownButtonFormField<String>(
                       key: ValueKey(_localDept),
-                      value: _localDept,
-                      hint: widget.departments.isEmpty
-                          ? 'No departments yet'
-                          : 'Select Department',
-                      items: widget.departments,
+                      initialValue: _localDept,
+                      icon: Icon(Icons.keyboard_arrow_down,
+                          color: Colors.grey.shade600),
+                      style:
+                          const TextStyle(fontSize: 14, color: Colors.black87),
+                      decoration: _buildInputDecoration(context,
+                          hintText: widget.departments.isEmpty
+                              ? 'No departments yet'
+                              : 'Select Department'),
+                      items: widget.departments.map((dept) {
+                        return DropdownMenuItem(value: dept, child: Text(dept));
+                      }).toList(),
                       onChanged: (v) {
-                        setState(() => _localDept = v); // ← update local state
-                        widget.onDeptChanged(v); // ← notify parent
+                        setState(() => _localDept = v);
+                        widget.onDeptChanged(v);
+                        widget.onChanged?.call();
                       },
                       validator: _requiredValidator,
                     ),
@@ -180,25 +267,17 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                     IgnorePointer(
                       child: DropdownButtonFormField<String>(
                         initialValue: widget.defaultPosition,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                        ),
                         icon: Icon(Icons.keyboard_arrow_down,
                             color: Colors.grey.shade300),
+                        decoration:
+                            _buildInputDecoration(context, hintText: ''),
                         items: [
                           DropdownMenuItem(
                             value: widget.defaultPosition,
                             child: Text(
                               widget.defaultPosition,
                               style: const TextStyle(
-                                  color: Colors.black54, fontSize: 13),
+                                  color: Colors.black54, fontSize: 14),
                             ),
                           ),
                         ],
@@ -213,33 +292,56 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
 
             // ── School ────────────────────────────────────────────
             const FormLabel(text: 'School / University'),
-            CustomTextField(
-              ctrl: widget.schoolCtrl,
-              hint: 'e.g. Laguna State Polytechnic University',
+            TextFormField(
+              controller: widget.schoolCtrl,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              decoration: _buildInputDecoration(context,
+                  hintText: 'e.g. Laguna State Polytechnic University'),
               validator: _requiredValidator,
+              onChanged: (_) => widget.onChanged?.call(),
             ),
             const SizedBox(height: 16),
 
             // ── Program ───────────────────────────────────────────
-            const FormLabel(text: 'Program / Course'),
-            CustomTextField(
-              ctrl: widget.programCtrl,
-              hint: 'e.g. BS Computer Science',
+            const FormLabel(text: 'Program'),
+            TextFormField(
+              controller: _localProgramCtrl,
+              focusNode: _programFocus,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              decoration: _buildInputDecoration(context,
+                      hintText: showProgramPrefix
+                          ? 'Computer Science'
+                          : 'e.g. Computer Science')
+                  .copyWith(
+                prefixText:
+                    showProgramPrefix ? 'Bachelor of Science in ' : null,
+                prefixStyle: TextStyle(
+                  color: _programFocus.hasFocus
+                      ? Colors.grey.shade500
+                      : Colors.black87,
+                  fontSize: 14,
+                ),
+              ),
               validator: _requiredValidator,
+              onChanged: (_) => widget.onChanged?.call(),
             ),
             const SizedBox(height: 16),
 
             // ── Specialization + Year ─────────────────────────────
-            Row(children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const FormLabel(text: 'Specialization'),
-                    CustomTextField(
-                      ctrl: widget.specCtrl,
-                      hint: 'e.g. Web Development',
+                    TextFormField(
+                      controller: widget.specCtrl,
+                      style:
+                          const TextStyle(fontSize: 14, color: Colors.black87),
+                      decoration: _buildInputDecoration(context,
+                          hintText: 'e.g. Web Development'),
                       validator: _requiredValidator,
+                      onChanged: (_) => widget.onChanged?.call(),
                     ),
                   ],
                 ),
@@ -250,9 +352,26 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const FormLabel(text: 'Year Level'),
-                    CustomTextField(
-                      ctrl: widget.yearCtrl,
-                      hint: 'e.g. 4th Year',
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedYearDropdown,
+                      icon: Icon(Icons.keyboard_arrow_down,
+                          color: Colors.grey.shade600),
+                      style:
+                          const TextStyle(fontSize: 14, color: Colors.black87),
+                      decoration: _buildInputDecoration(context,
+                          hintText: 'Select Year'),
+                      items: _yearOptions.map((year) {
+                        return DropdownMenuItem(value: year, child: Text(year));
+                      }).toList(),
+                      onChanged: (v) {
+                        setState(() {
+                          _selectedYearDropdown = v;
+                          if (v != null) {
+                            widget.yearCtrl.text = v;
+                          }
+                        });
+                        widget.onChanged?.call();
+                      },
                       validator: _requiredValidator,
                     ),
                   ],
@@ -263,10 +382,12 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
 
             // ── Intern Number ─────────────────────────────────────
             const FormLabel(text: 'Intern Number'),
-            CustomTextField(
-              ctrl: widget.internNumCtrl,
-              hint: 'e.g. 12',
+            TextFormField(
+              controller: widget.internNumCtrl,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              decoration: _buildInputDecoration(context, hintText: 'e.g. 12'),
               validator: _requiredValidator,
+              onChanged: (_) => widget.onChanged?.call(),
             ),
             const SizedBox(height: 16),
 
@@ -280,15 +401,21 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const FormLabel(text: 'Internship Start'),
-                      CustomTextField(
-                        ctrl: widget.startCtrl,
-                        hint: 'YYYY-MM-DD',
-                        validator: _requiredValidator,
-                        suffix: IconButton(
-                          icon: Icon(Icons.calendar_today,
-                              size: 18, color: Colors.grey.shade600),
-                          onPressed: widget.onPickStart,
+                      TextFormField(
+                        controller: widget.startCtrl,
+                        style: const TextStyle(
+                            fontSize: 14, color: Colors.black87),
+                        decoration: _buildInputDecoration(
+                          context,
+                          hintText: 'YYYY-MM-DD',
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.calendar_today,
+                                size: 18, color: Colors.grey.shade600),
+                            onPressed: widget.onPickStart,
+                          ),
                         ),
+                        validator: _requiredValidator,
+                        onChanged: (_) => widget.onChanged?.call(),
                       ),
                       if (widget.requiredHours != null &&
                           widget.requiredHours! > 0) ...[
@@ -322,17 +449,23 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const FormLabel(text: 'Internship End'),
-                      CustomTextField(
-                        ctrl: widget.endCtrl,
-                        hint: 'YYYY-MM-DD',
-                        validator: _requiredValidator,
-                        suffix: IconButton(
-                          icon: Icon(Icons.calendar_today,
-                              size: 18, color: Colors.grey.shade600),
-                          onPressed: widget.onPickEnd,
+                      TextFormField(
+                        controller: widget.endCtrl,
+                        style: const TextStyle(
+                            fontSize: 14, color: Colors.black87),
+                        decoration: _buildInputDecoration(
+                          context,
+                          hintText: 'YYYY-MM-DD',
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.calendar_today,
+                                size: 18, color: Colors.grey.shade600),
+                            onPressed: widget.onPickEnd,
+                          ),
                         ),
+                        validator: _requiredValidator,
+                        onChanged: (_) => widget.onChanged?.call(),
                       ),
-                      // Auto-computed badge — only shown when computed
+                      // Auto-computed badge
                       if (_computedEnd != null) ...[
                         const SizedBox(height: 6),
                         Container(

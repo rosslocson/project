@@ -49,6 +49,58 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   bool _saving = false;
   String? _successMsg;
   String? _errorMsg;
+  bool _academicTabInvalid = false;
+  bool _skillsTabInvalid = false;
+
+  bool get _isAcademicComplete {
+    return _selectedDept?.isNotEmpty == true &&
+        _schoolCtrl.text.trim().isNotEmpty &&
+        _programCtrl.text.trim().isNotEmpty &&
+        _specCtrl.text.trim().isNotEmpty &&
+        _yearCtrl.text.trim().isNotEmpty &&
+        _internNumCtrl.text.trim().isNotEmpty &&
+        _startCtrl.text.trim().isNotEmpty &&
+        _endCtrl.text.trim().isNotEmpty;
+  }
+
+  bool get _isSkillsComplete {
+    return _techSkillsCtrl.text.trim().isNotEmpty &&
+        _softSkillsCtrl.text.trim().isNotEmpty;
+  }
+
+  void _handleProfileFieldChanged() {
+    // Only attempt to clear badges if error exists (after user tried to save)
+    if (_errorMsg == null) return;
+
+    if (!mounted) return;
+
+    // Clear Academic badge and reset form if all academic fields are filled
+    if (_isAcademicComplete && _academicTabInvalid) {
+      _academicKey.currentState?.reset();
+      // Re-validate with the filled values
+      _academicKey.currentState?.validate();
+      setState(() {
+        _academicTabInvalid = false;
+      });
+    }
+
+    // Clear Skills badge and reset form if only Tech and Soft Skills are filled
+    if (_isSkillsComplete && _skillsTabInvalid) {
+      _skillsKey.currentState?.reset();
+      // Re-validate with the filled values
+      _skillsKey.currentState?.validate();
+      setState(() {
+        _skillsTabInvalid = false;
+      });
+    }
+
+    // Only clear main error when both tabs are completely valid
+    if (_isAcademicComplete && _isSkillsComplete) {
+      setState(() {
+        _errorMsg = null;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -131,6 +183,26 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       _errorMsg = null;
     });
 
+    final academicValid = _isAcademicComplete;
+    final skillsValid = _isSkillsComplete;
+
+    _academicKey.currentState?.validate();
+    _skillsKey.currentState?.validate();
+
+    setState(() {
+      _academicTabInvalid = !academicValid;
+      _skillsTabInvalid = !skillsValid;
+    });
+
+    if (!academicValid || !skillsValid) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _errorMsg = 'Please complete all required fields before saving.';
+      });
+      return;
+    }
+
     final payload = {
       'department': _selectedDept ?? '',
       'position': _defaultPosition,
@@ -168,6 +240,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           _saving = false;
           _successMsg = 'Profile updated successfully!';
           _errorMsg = null;
+          _academicTabInvalid = false;
+          _skillsTabInvalid = false;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _errorMsg = res['error'] ?? 'Update failed. Please try again.';
         });
       }
     }
@@ -196,7 +277,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       ctrl.text =
           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
       // The AcademicInfoTab listener handles end-date computation automatically.
-      // setState here just keeps the screen in sync.
+      _handleProfileFieldChanged();
       setState(() {});
     }
   }
@@ -320,20 +401,74 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                         indicatorColor: kCrimsonDeep,
                                         indicatorWeight: 3,
                                         dividerColor: Colors.transparent,
-                                        tabs: const [
+                                        tabs: [
                                           Tab(
-                                            iconMargin:
-                                                EdgeInsets.only(bottom: 4),
-                                            icon: Icon(Icons.school_outlined,
+                                            iconMargin: const EdgeInsets.only(
+                                                bottom: 4),
+                                            icon: const Icon(
+                                                Icons.school_outlined,
                                                 size: 18),
-                                            text: 'Academic Info',
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Text('Academic Info'),
+                                                if (_academicTabInvalid) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    width: 18,
+                                                    height: 18,
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.redAccent,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    alignment: Alignment.center,
+                                                    child: const Text(
+                                                      '!',
+                                                      style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                          height: 1.1,
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                ]
+                                              ],
+                                            ),
                                           ),
                                           Tab(
-                                            iconMargin:
-                                                EdgeInsets.only(bottom: 4),
-                                            icon: Icon(Icons.stars_outlined,
+                                            iconMargin: const EdgeInsets.only(
+                                                bottom: 4),
+                                            icon: const Icon(
+                                                Icons.stars_outlined,
                                                 size: 18),
-                                            text: 'Skills',
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Text('Skills'),
+                                                if (_skillsTabInvalid) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    width: 18,
+                                                    height: 18,
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.redAccent,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    alignment: Alignment.center,
+                                                    child: const Text(
+                                                      '!',
+                                                      style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                          height: 1.1,
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                ]
+                                              ],
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -354,15 +489,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                             internNumCtrl: _internNumCtrl,
                                             startCtrl: _startCtrl,
                                             endCtrl: _endCtrl,
-                                            // This should already be there but confirm it's setState, not just assignment:
                                             onDeptChanged: (v) => setState(
                                                 () => _selectedDept = v),
                                             onPickStart: () =>
                                                 _pickDate(_startCtrl),
                                             onPickEnd: () =>
                                                 _pickDate(_endCtrl),
-                                            requiredHours:
-                                                _requiredHours, // ← clean state field
+                                            onChanged:
+                                                _handleProfileFieldChanged,
+                                            requiredHours: _requiredHours,
                                           ),
                                           SkillsProfileTab(
                                             formKey: _skillsKey,
@@ -371,6 +506,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                             softSkillsCtrl: _softSkillsCtrl,
                                             linkedinCtrl: _linkedinCtrl,
                                             githubCtrl: _githubCtrl,
+                                            onChanged:
+                                                _handleProfileFieldChanged,
                                           ),
                                         ],
                                       ),

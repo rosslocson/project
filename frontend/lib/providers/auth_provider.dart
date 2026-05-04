@@ -132,7 +132,7 @@ class AuthProvider extends ChangeNotifier {
 
       // Fields where an empty string from the server should NOT overwrite
       // a locally-saved non-empty value (e.g. after the user just saved them).
-      const _preserveIfEmpty = {
+      const preserveIfEmpty = {
         'department',
         'position',
         'school',
@@ -163,7 +163,7 @@ class AuthProvider extends ChangeNotifier {
           continue;
         }
 
-        if (_preserveIfEmpty.contains(entry.key) &&
+        if (preserveIfEmpty.contains(entry.key) &&
             serverVal is String &&
             serverVal.trim().isEmpty &&
             cachedVal is String &&

@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
-import '../widgets/app_background.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Date helpers
@@ -847,11 +846,12 @@ class _InternAvatarState extends State<_InternAvatar> {
 
   Future<void> _fetchImage() async {
     if (widget.url.isEmpty) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
           _failed = true;
         });
+      }
       return;
     }
     try {
@@ -872,11 +872,12 @@ class _InternAvatarState extends State<_InternAvatar> {
         });
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
           _failed = true;
         });
+      }
     }
   }
 

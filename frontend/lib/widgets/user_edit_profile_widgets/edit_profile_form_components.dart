@@ -14,9 +14,14 @@ class FormSectionTitle extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black)),
           const SizedBox(height: 4),
-          Text(sub, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+          Text(sub,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
         ],
       ),
     );
@@ -34,7 +39,8 @@ class FormLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+        style: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
       ),
     );
   }
@@ -47,6 +53,7 @@ class CustomTextField extends StatelessWidget {
   final TextInputType keyboardType;
   final Widget? suffix;
   final String? Function(String?)? validator;
+  final ValueChanged<String>? onChanged;
 
   const CustomTextField({
     super.key,
@@ -56,6 +63,7 @@ class CustomTextField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.suffix,
     this.validator,
+    this.onChanged,
   });
 
   @override
@@ -65,6 +73,7 @@ class CustomTextField extends StatelessWidget {
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
+      onChanged: onChanged,
       style: const TextStyle(color: Colors.black, fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
@@ -72,14 +81,24 @@ class CustomTextField extends StatelessWidget {
         suffixIcon: suffix,
         filled: true,
         fillColor: const Color(0xFFF3F4F6),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
+          borderSide: BorderSide(
+              color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
         ),
       ),
     );
@@ -106,29 +125,34 @@ class CustomDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final safeValue = (value != null && items.contains(value)) ? value : null;
     return DropdownButtonFormField<String>(
-      value: safeValue, 
+      initialValue: safeValue,
       validator: validator,
       style: const TextStyle(color: Colors.black, fontSize: 14),
       dropdownColor: Colors.white,
       decoration: InputDecoration(
         filled: true,
         fillColor: const Color(0xFFF3F4F6),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
+          borderSide: BorderSide(
+              color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
         ),
       ),
-      hint: Text(hint, style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+      hint: Text(hint,
+          style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
       icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
       items: items
           .map((s) => DropdownMenuItem(
                 value: s,
-                child: Text(s, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black, fontSize: 13)),
+                child: Text(s,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.black, fontSize: 13)),
               ))
           .toList(),
       onChanged: items.isEmpty ? null : onChanged,

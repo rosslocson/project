@@ -418,7 +418,7 @@ class _RightPanel extends StatelessWidget {
           _Divider(),
 
           // Education
-          _SectionLabel('EDUCATION'),
+          const _SectionLabel('EDUCATION'),
           const SizedBox(height: 14),
           _TimelineEntry(
             year: intern.startDate?.substring(0, 4) ?? '2024',
@@ -430,7 +430,7 @@ class _RightPanel extends StatelessWidget {
           _Divider(),
 
           // Experience / Deployment
-          _SectionLabel('EXPERIENCE'),
+          const _SectionLabel('EXPERIENCE'),
           const SizedBox(height: 14),
           if (intern.position != null)
             _TimelineEntry(
@@ -445,7 +445,7 @@ class _RightPanel extends StatelessWidget {
           // Skills chips if any
           if (intern.technicalSkills.isNotEmpty) ...[
             _Divider(),
-            _SectionLabel('TECHNICAL SKILLS'),
+            const _SectionLabel('TECHNICAL SKILLS'),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -458,7 +458,7 @@ class _RightPanel extends StatelessWidget {
 
           if (intern.softSkills.isNotEmpty) ...[
             const SizedBox(height: 20),
-            _SectionLabel('SOFT SKILLS'),
+            const _SectionLabel('SOFT SKILLS'),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,

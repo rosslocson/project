@@ -719,8 +719,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Required';
                       final parsed = int.tryParse(v.trim());
-                      if (parsed == null || parsed <= 0)
+                      if (parsed == null || parsed <= 0) {
                         return 'Enter a valid number of hours';
+                      }
                       return null;
                     },
                   ),
@@ -813,8 +814,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                         setState(() => _obscureConf = !_obscureConf),
                     validator: (v) {
                       if (v!.isEmpty) return 'Required';
-                      if (v != _newPassCtrl.text)
+                      if (v != _newPassCtrl.text) {
                         return 'Passwords do not match';
+                      }
                       return null;
                     },
                   ),
