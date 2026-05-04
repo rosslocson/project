@@ -113,9 +113,109 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> with Sing
   }
 
   Future<void> pickAndCropAvatar() async {
-    // ... (Keep ALL your existing avatar picking/cropping logic exactly as is)
-    // I am omitting the 100+ lines of pickAndCropAvatar to save space, but DO NOT delete it from your actual file.
-    // Keep the entire try/catch block exactly as it was.
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+      if (pickedFile == null) return;
+
+      final pickedFileBytes = await pickedFile.readAsBytes();
+      final mimeType =
+          lookupMimeType(pickedFile.name, headerBytes: pickedFileBytes);
+
+      if (mimeType == null || !mimeType.startsWith('image/')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select a valid image file (JPG, PNG, JPEG)'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (!mounted) return;
+      final croppedBytes = await Navigator.push<Uint8List>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AvatarCropScreen(
+            imageBytes: pickedFileBytes,
+            fileName: pickedFile.name,
+          ),
+        ),
+      );
+      if (croppedBytes == null || !mounted) return;
+
+      setState(() {
+        _localAvatarBytes = croppedBytes;
+        _avatarFile = null;
+        _isUploadingAvatar = true;
+      });
+
+      final XFile uploadFile;
+      if (kIsWeb) {
+        uploadFile = XFile.fromData(
+          croppedBytes,
+          name: pickedFile.name.isNotEmpty ? pickedFile.name : 'avatar.jpg',
+        );
+      } else {
+        final tempFile =
+            File('${(await getTemporaryDirectory()).path}/cropped_avatar.jpg');
+        await tempFile.writeAsBytes(croppedBytes);
+        if (!mounted) return;
+
+        setState(() {
+          _avatarFile = tempFile;
+          _localAvatarBytes = null;
+        });
+        uploadFile = XFile(tempFile.path);
+      }
+
+      final res = await ApiService.uploadAvatar(uploadFile);
+      if (!mounted) return;
+      setState(() => _isUploadingAvatar = false);
+
+      if (res['ok'] == true) {
+        context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+        setState(() {
+          _avatarFile = null;
+          _localAvatarBytes = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Avatar updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        setState(() {
+          _avatarFile = null;
+          _localAvatarBytes = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['error'] ?? 'Failed to upload avatar'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _avatarFile = null;
+          _localAvatarBytes = null;
+          _isUploadingAvatar = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveProfile() async {
