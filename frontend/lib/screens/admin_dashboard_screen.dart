@@ -51,7 +51,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   // Filter activity logs to current week (Monday to Sunday)
 
-
   void _updateActivityPage(int newPage) {
     setState(() {
       _activityPage = newPage;
@@ -164,12 +163,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _loadAll({int page = 1, bool isPagination = false}) async {
     setState(() => _loading = true);
     try {
+      // ✅ Fetch both dashboard stats AND attendance in parallel
       final results = await Future.wait([
         ApiService.getDashboardStats(page: page, limit: 100),
-        // Remove the separate activity logs call since we now get weekly_logs from dashboard stats
+        ApiService.getWeeklyAttendance(), // <-- add this
       ]);
 
       if (!mounted) return;
+
+      // ✅ Build attendance logs BEFORE setState (await is not allowed inside setState)
+      final List<Map<String, dynamic>> attendanceLogs = [];
+      if (results[1]['ok'] == true) {
+        final rows = (results[1]['data'] as List?) ?? [];
+
+        String formatTime(String iso) {
+          final dt = DateTime.parse(iso).toLocal();
+          final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+          final m = dt.minute.toString().padLeft(2, '0');
+          final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+          return '$h:$m $ampm';
+        }
+
+        for (final row in rows) {
+          final user = row['user'] as Map<String, dynamic>?;
+          final timeIn = row['time_in'] as String?;
+          final timeOut = row['time_out'] as String?;
+
+          if (timeIn != null) {
+            attendanceLogs.add({
+              'action': 'CLOCK_IN',
+              'details': 'CLOCK_IN:${formatTime(timeIn)}',
+              'created_at': timeIn,
+              'user': user,
+            });
+          }
+          if (timeOut != null) {
+            attendanceLogs.add({
+              'action': 'CLOCK_OUT',
+              'details': 'CLOCK_OUT:${formatTime(timeOut)}',
+              'created_at': timeOut,
+              'user': user,
+            });
+          }
+        }
+      }
 
       setState(() {
         if (results[0]['ok'] == true) {
@@ -180,12 +217,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const int usersPerPage = 5;
           _totalUsersPages = (_allRecentUsers.length / usersPerPage).ceil();
           if (_totalUsersPages == 0) _totalUsersPages = 1;
-
-          // Ensure usersPage is within bounds
           if (_usersPage > _totalUsersPages) _usersPage = _totalUsersPages;
           if (_usersPage < 1) _usersPage = 1;
 
-          // Get current page users
           final startIndex = (_usersPage - 1) * usersPerPage;
           final endIndex = startIndex + usersPerPage;
           _stats!['recent_users'] = _allRecentUsers.sublist(
@@ -195,28 +229,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 : endIndex,
           );
 
-          // Process weekly activity logs from dashboard stats
-          final allActivities = (results[0]['weekly_logs'] as List?) ?? [];
-          debugPrint('✅ DASHBOARD: Received ${allActivities.length} activity logs');
-          if (allActivities.isNotEmpty) {
-            debugPrint('✅ DASHBOARD: First log action: ${allActivities[0]['action']}');
-            debugPrint('✅ DASHBOARD: First log created_at: ${allActivities[0]['created_at']}');
-          }
-          _allFilteredActivities = allActivities; // No need to filter since backend already filtered for current week
+          // ✅ Merge weekly_logs + attendance logs, then sort newest first
+          final combined = [
+            ...List<Map<String, dynamic>>.from(
+              (results[0]['weekly_logs'] as List?) ?? [],
+            ),
+            ...attendanceLogs,
+          ]..sort((a, b) {
+              final aTime =
+                  DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(0);
+              final bTime =
+                  DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(0);
+              return bTime.compareTo(aTime);
+            });
+
+          _allFilteredActivities = combined;
+          debugPrint(
+              '✅ DASHBOARD: ${combined.length} total logs (activity + attendance)');
 
           // Frontend pagination for activities
           const int activitiesPerPage = 5;
           _totalActivityPages =
               (_allFilteredActivities.length / activitiesPerPage).ceil();
           if (_totalActivityPages == 0) _totalActivityPages = 1;
-
-          // Ensure activityPage is within bounds
           if (_activityPage > _totalActivityPages) {
             _activityPage = _totalActivityPages;
           }
           if (_activityPage < 1) _activityPage = 1;
 
-          // Get current page activities
           final activityStartIndex = (_activityPage - 1) * activitiesPerPage;
           final activityEndIndex = activityStartIndex + activitiesPerPage;
           _activityLogs = _allFilteredActivities.sublist(
@@ -225,12 +265,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ? _allFilteredActivities.length
                 : activityEndIndex,
           );
-          debugPrint('✅ DASHBOARD: Activity pagination - Page $_activityPage of $_totalActivityPages, showing ${_activityLogs.length} logs on this page');
         } else {
           debugPrint('❌ DASHBOARD: API returned ok=false: ${results[0]}');
         }
         _loading = false;
       });
+
       if (!isPagination) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _checkScrollable());
       }
@@ -265,7 +305,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-const SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         // 1. Extracted Intern Carousel
                         InternCarouselSection(
                           interns: _interns,
@@ -276,8 +316,8 @@ const SizedBox(height: 16),
                         const SizedBox(height: 32),
                         if (_loading)
                           const Center(
-                            child: CircularProgressIndicator(
-                                color: Colors.white),
+                            child:
+                                CircularProgressIndicator(color: Colors.white),
                           )
                         else ...[
                           // 2. Extracted Stats Grid

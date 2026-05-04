@@ -1,5 +1,3 @@
-// lib/screens/admin_attendance_screen.dart
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -15,7 +13,6 @@ import '../widgets/admin_sidebar.dart';
 
 String _pad(int n) => n.toString().padLeft(2, '0');
 
-/// "2026-04-27" → "04/27/2026"
 String _formatDate(String iso) {
   try {
     final dt = DateTime.parse(iso);
@@ -25,11 +22,9 @@ String _formatDate(String iso) {
   }
 }
 
-/// DateTime → "YYYY-MM-DD"
 String _toApiDate(DateTime dt) =>
     '${dt.year}-${_pad(dt.month)}-${_pad(dt.day)}';
 
-/// DateTime → "Apr 27, 2026"
 String _toDisplayDate(DateTime dt) {
   const months = [
     'Jan',
@@ -87,6 +82,21 @@ const _kStatuses = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Design tokens
+// ─────────────────────────────────────────────────────────────────────────────
+
+const _kPrimary = Color(0xFF0A0A14);
+const _kAccent = Color(0xFF6C63FF);
+const _kCardBg = Color(0xFFFAFAFC);
+const _kSurface = Color(0xFFFFFFFF);
+const _kBorder = Color(0xFFEEEFF4);
+const _kTextDark = Color(0xFF1A1F3A);
+const _kTextMid = Color(0xFF64748B);
+const _kTextLight = Color(0xFF94A3B8);
+const _kBlue = Color(0xFF00022E);
+const _kButtonDark = Color(0xFF0D0D2B);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Model
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -120,13 +130,9 @@ class AdminAttendanceRecord {
     if (rawAvatar.isNotEmpty &&
         !rawAvatar.startsWith('http://') &&
         !rawAvatar.startsWith('https://')) {
-      // Uploads are served at the SERVER ROOT (e.g. /uploads/foo.jpg),
-      // NOT under /api. Strip the trailing /api segment from baseUrl so we
-      // don't produce a broken path like /api/uploads/foo.jpg (→ 404).
       final staticBase = ApiService.baseUrl
-          .replaceAll(RegExp(r'/api/?$'), '') // remove trailing /api or /api/
-          .replaceAll(RegExp(r'/$'), ''); // remove any remaining trailing /
-
+          .replaceAll(RegExp(r'/api/?$'), '')
+          .replaceAll(RegExp(r'/$'), '');
       final cleanPath = rawAvatar.startsWith('/') ? rawAvatar : '/$rawAvatar';
       avatarUrl = '$staticBase$cleanPath';
     }
@@ -180,8 +186,8 @@ class AdminAttendanceService {
         else if (date != null)
           'date': date,
         if (search != null && search.isNotEmpty) 'search': search,
-        if (status != null && status != 'All')   'status': status,
-        if (userId != null)                       'user_id': '$userId',
+        if (status != null && status != 'All') 'status': status,
+        if (userId != null) 'user_id': '$userId',
       };
       final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance')
           .replace(queryParameters: params);
@@ -195,7 +201,7 @@ class AdminAttendanceService {
         return {
           'ok': true,
           'records': records,
-          'total': body['total'] as int? ?? 0,
+          'total': body['total'] as int? ?? 0
         };
       }
       return {'ok': false, 'error': body['error'] ?? 'Unknown error'};
@@ -241,16 +247,13 @@ class AdminAttendanceScreen extends StatefulWidget {
 class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   bool _isSidebarOpen = true;
 
-  // ── filter state ──────────────────────────────────────────────────────────
   AttendancePeriod _period = AttendancePeriod.today;
   DateTime _customDate = DateTime.now();
   String _selectedStatus = 'All';
 
-  // Search
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _debounce;
 
-  // ── pagination ────────────────────────────────────────────────────────────
   int _page = 1;
   final int _limit = 20;
   int _total = 0;
@@ -298,6 +301,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       page: page,
       limit: _limit,
     );
+
     if (!mounted) return;
     if (result['ok'] == true) {
       setState(() {
@@ -322,7 +326,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF6C63FF),
+            primary: _kAccent,
             onPrimary: Colors.white,
             surface: Color(0xFF1A1F3A),
           ),
@@ -371,16 +375,19 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           Expanded(
             child: Stack(
               children: [
-Positioned.fill(
+                // ── background ──
+                Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
                       image: DecorationImage(
                         image: AssetImage('assets/images/space_background.jpg'),
-                        fit:   BoxFit.cover,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
                 ),
+
+                // ── content ──
                 Positioned.fill(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -393,19 +400,26 @@ Positioned.fill(
                               left: 100, right: 100, bottom: 28),
                           child: Container(
                             decoration: BoxDecoration(
-                              color:        Colors.white.withValues(alpha: 0.95),
+                              color: _kSurface,
                               borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _kBlue.withValues(alpha: 0.08),
+                                  blurRadius: 32,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(24),
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  _buildCardHeader(),
                                   _buildToolbar(),
-                                  _buildFilterRow(),
+                                  _buildPeriodRow(),
                                   const Divider(
-                                      height:    1,
-                                      thickness: 1,
-                                      color:     Color(0xFFEEEEEE)),
+                                      height: 1, thickness: 1, color: _kBorder),
                                   Expanded(child: _buildBody()),
                                   if (_total > _limit) _buildPagination(),
                                 ],
@@ -422,8 +436,10 @@ Positioned.fill(
           ),
         ],
       ),
-    ); // Fixed: Added missing semicolon
+    );
   }
+
+  // ── top bar ───────────────────────────────────────────────────────────────
 
   Widget _buildTopBar(BuildContext context) {
     return SizedBox(
@@ -449,17 +465,17 @@ Positioned.fill(
               top: 28,
               child: Container(
                 decoration: BoxDecoration(
-                  color:        Colors.white.withValues(alpha: 0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: IconButton(
-                  padding:        const EdgeInsets.all(12),
-                  onPressed:      () => setState(() => _isSidebarOpen = true),
-                  icon:           const _HamburgerIcon(),
-                  tooltip:        'Open Sidebar',
-                  splashColor:    Colors.white.withValues(alpha: 0.1),
+                  padding: const EdgeInsets.all(12),
+                  onPressed: () => setState(() => _isSidebarOpen = true),
+                  icon: const _HamburgerIcon(),
+                  tooltip: 'Open Sidebar',
+                  splashColor: Colors.white.withValues(alpha: 0.1),
                   highlightColor: Colors.transparent,
                 ),
               ),
@@ -469,74 +485,60 @@ Positioned.fill(
     );
   }
 
-  // ── toolbar ───────────────────────────────────────────────────────────────
+  // ── card header (title + count) ───────────────────────────────────────────
 
-  Widget _buildToolbar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+  Widget _buildCardHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(28, 22, 28, 18),
+      decoration: const BoxDecoration(
+        color: _kCardBg,
+        border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
+      ),
       child: Row(
         children: [
-          // Search
+          // icon
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _kButtonDark,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.fact_check_outlined,
+                color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 14),
+
+          // title + subtitle
           Expanded(
-            child: SizedBox(
-              height: 40,
-              child: TextField(
-                controller: _searchCtrl,
-                decoration: InputDecoration(
-                  hintText: 'Search intern by name…',
-                  hintStyle:
-                      const TextStyle(fontSize: 13, color: Colors.black38),
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      size: 18, color: Colors.black38),
-                  suffixIcon: _searchCtrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close_rounded,
-                              size: 16, color: Colors.black38),
-                          padding: EdgeInsets.zero,
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            _load();
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: const Color(0xFFF4F4F8),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Attendance Records',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: _kTextDark,
+                    letterSpacing: 0.1,
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                 ),
-                style: const TextStyle(fontSize: 13),
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  _loading
+                      ? 'Loading…'
+                      : '$_total ${_total == 1 ? 'record' : 'records'} found',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: _kTextMid,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
 
-          // Status dropdown
-          _StatusDropdown(
-            value: _selectedStatus,
-            onChanged: (v) {
-              setState(() => _selectedStatus = v ?? 'All');
-              _load();
-            },
-          ),
-          const SizedBox(width: 12),
-
-          // Refresh
-          IconButton(
-            onPressed: () => _load(page: _page),
-            icon: const Icon(Icons.refresh_rounded, color: Colors.black54),
-            tooltip: 'Refresh',
-          ),
-          const SizedBox(width: 8),
-
-          // Export CSV
-          _ToolbarButton(
-            icon: Icons.download_rounded,
-            label: 'Export CSV',
-            accent: const Color(0xFF22C55E),
+          // Export button
+          _ExportButton(
             onTap: () {
               final isAllDates = _period == AttendancePeriod.allDates;
               final isCustom = _period == AttendancePeriod.custom;
@@ -549,8 +551,6 @@ Positioned.fill(
                     : _searchCtrl.text.trim(),
                 status: _selectedStatus == 'All' ? null : _selectedStatus,
               );
-              // TODO: replace with launchUrl(Uri.parse(url)) once
-              // url_launcher is added to pubspec.yaml
               _snack(url);
             },
           ),
@@ -559,49 +559,45 @@ Positioned.fill(
     );
   }
 
-  // ── filter row ────────────────────────────────────────────────────────────
+  // ── toolbar (search + status + refresh) ──────────────────────────────────
 
-  Widget _buildFilterRow() {
-    const periods = [
-      AttendancePeriod.today,
-      AttendancePeriod.week,
-      AttendancePeriod.month,
-      AttendancePeriod.year,
-      AttendancePeriod.allDates,
-    ];
-
+  Widget _buildToolbar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+      padding: const EdgeInsets.fromLTRB(28, 18, 28, 10),
       child: Row(
         children: [
-          ...periods.map((p) {
-            final selected = _period == p;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _PeriodChip(
-                label: p.label,
-                selected: selected,
-                onTap: () {
-                  setState(() => _period = p);
-                  _load();
-                },
-              ),
-            );
-          }),
+          // Search field
+          Expanded(
+            child: _SearchField(
+              controller: _searchCtrl,
+              onClear: () {
+                _searchCtrl.clear();
+                _load();
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
 
-          // Custom date picker chip
-          _PeriodChip(
-            label: _period == AttendancePeriod.custom
-                ? _toDisplayDate(_customDate)
-                : 'Custom Date',
-            selected: _period == AttendancePeriod.custom,
-            icon: Icons.calendar_today_rounded,
-            onTap: _pickCustomDate,
+          // Status dropdown
+          _StatusDropdown(
+            value: _selectedStatus,
+            onChanged: (v) {
+              setState(() => _selectedStatus = v ?? 'All');
+              _load();
+            },
+          ),
+          const SizedBox(width: 10),
+
+          // Refresh
+          _IconActionButton(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Refresh',
+            onTap: () => _load(page: _page),
           ),
 
-          const Spacer(),
-
-          if (_searchCtrl.text.isNotEmpty || _selectedStatus != 'All')
+          // Active filter badge
+          if (_searchCtrl.text.isNotEmpty || _selectedStatus != 'All') ...[
+            const SizedBox(width: 10),
             _ActiveFiltersBadge(
               count: (_searchCtrl.text.isNotEmpty ? 1 : 0) +
                   (_selectedStatus != 'All' ? 1 : 0),
@@ -611,15 +607,57 @@ Positioned.fill(
                 _load();
               },
             ),
+          ],
         ],
       ),
     );
   }
 
+  // ── period row ────────────────────────────────────────────────────────────
+
+  Widget _buildPeriodRow() {
+    const periods = [
+      AttendancePeriod.today,
+      AttendancePeriod.week,
+      AttendancePeriod.month,
+      AttendancePeriod.year,
+      AttendancePeriod.allDates,
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 4, 28, 16),
+      child: Row(
+        children: [
+          ...periods.map((p) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _PeriodChip(
+                  label: p.label,
+                  selected: _period == p,
+                  onTap: () {
+                    setState(() => _period = p);
+                    _load();
+                  },
+                ),
+              )),
+          _PeriodChip(
+            label: _period == AttendancePeriod.custom
+                ? _toDisplayDate(_customDate)
+                : 'Custom Date',
+            selected: _period == AttendancePeriod.custom,
+            icon: Icons.calendar_today_rounded,
+            onTap: _pickCustomDate,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── body ──────────────────────────────────────────────────────────────────
+
   Widget _buildBody() {
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
+        child: CircularProgressIndicator(color: _kAccent, strokeWidth: 2.5),
       );
     }
     if (_error != null) {
@@ -627,53 +665,90 @@ Positioned.fill(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 40),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.error_outline_rounded,
+                  color: Colors.red.shade400, size: 36),
+            ),
             const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.red)),
+            Text(_error!,
+                style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () => _load(page: _page),
-              icon: const Icon(Icons.refresh_rounded),
+              icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Retry'),
+              style: TextButton.styleFrom(foregroundColor: _kAccent),
             ),
           ],
         ),
       );
     }
     if (_records.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.event_busy_rounded, size: 48, color: Colors.black26),
-            SizedBox(height: 12),
-            Text(
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F4F8),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.event_busy_rounded,
+                  size: 40, color: _kTextLight),
+            ),
+            const SizedBox(height: 14),
+            const Text(
               'No attendance records found',
-              style: TextStyle(color: Colors.black45, fontSize: 15),
+              style: TextStyle(
+                color: _kTextMid,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Try adjusting your filters or date range',
+              style: TextStyle(color: _kTextLight, fontSize: 12),
             ),
           ],
         ),
       );
     }
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: _AttendanceTable(records: _records),
-      ),
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      child: _AttendanceTable(records: _records),
     );
   }
 
+  // ── pagination ────────────────────────────────────────────────────────────
+
   Widget _buildPagination() {
     final totalPages = (_total / _limit).ceil();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+      decoration: const BoxDecoration(
+        color: _kCardBg,
+        border: Border(top: BorderSide(color: _kBorder)),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Text(
-            'Page $_page of $totalPages  ($_total records)',
-            style: const TextStyle(color: Colors.black45, fontSize: 13),
+            'Page $_page of $totalPages',
+            style: const TextStyle(
+                color: _kTextMid, fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '· $_total records total',
+            style: const TextStyle(color: _kTextLight, fontSize: 12),
           ),
           const SizedBox(width: 16),
           _PageButton(
@@ -681,7 +756,7 @@ Positioned.fill(
             enabled: _page > 1,
             onTap: () => _load(page: _page - 1),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           _PageButton(
             icon: Icons.chevron_right_rounded,
             enabled: _page < totalPages,
@@ -711,12 +786,14 @@ class _AttendanceTable extends StatelessWidget {
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(200),
-    1: FixedColumnWidth(130),
-    2: FixedColumnWidth(110),
-    3: FixedColumnWidth(110),
-    4: FixedColumnWidth(120),
-    5: FixedColumnWidth(160),
+    0: FixedColumnWidth(28), // left spacer
+    1: FlexColumnWidth(3), // Intern
+    2: FlexColumnWidth(2), // Date
+    3: FlexColumnWidth(1.5), // Time In
+    4: FlexColumnWidth(1.5), // Time Out
+    5: FlexColumnWidth(1.5), // Hours Worked
+    6: FlexColumnWidth(2), // Status
+    7: FixedColumnWidth(28), // right spacer
   };
 
   @override
@@ -729,7 +806,7 @@ class _AttendanceTable extends StatelessWidget {
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
         _buildHeader(),
-        ...records.map(_buildRow),
+        ...records.asMap().entries.map((e) => _buildRow(e.value, e.key)),
       ],
     );
   }
@@ -737,32 +814,42 @@ class _AttendanceTable extends StatelessWidget {
   TableRow _buildHeader() {
     return TableRow(
       decoration: const BoxDecoration(
-        color: Color(0xFFF8F9FB),
-        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 2)),
+        color: _kCardBg,
+        border: Border(bottom: BorderSide(color: _kBorder, width: 1.5)),
       ),
-      children: _headers
-          .map((h) => Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-                child: Text(
-                  h,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF1A1F3A),
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ))
-          .toList(),
+      children: [
+        const SizedBox.shrink(),
+        ..._headers.map((h) {
+          final isCentered = h == 'Date' || h == 'Status';
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+            child: Text(
+              h.toUpperCase(),
+              textAlign: isCentered ? TextAlign.center : TextAlign.left,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+                color: _kTextMid,
+                letterSpacing: 0.6,
+              ),
+            ),
+          );
+        }),
+        const SizedBox.shrink(),
+      ],
     );
   }
 
-  TableRow _buildRow(AdminAttendanceRecord r) {
+  TableRow _buildRow(AdminAttendanceRecord r, int index) {
     return TableRow(
+      decoration: BoxDecoration(
+        color: index.isEven ? _kSurface : const Color(0xFFFAFAFC),
+      ),
       children: [
+        const SizedBox.shrink(),
+        // Intern
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: Row(
             children: [
               _InternAvatar(url: r.avatarUrl, name: r.internName),
@@ -773,7 +860,7 @@ class _AttendanceTable extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    color: Color(0xFF1A1F3A),
+                    color: _kTextDark,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -781,149 +868,148 @@ class _AttendanceTable extends StatelessWidget {
             ],
           ),
         ),
-        _cell(r.formattedDate),
+        _cell(r.formattedDate, centered: true),
         _cell(r.timeIn ?? '--'),
         _cell(r.timeOut ?? '--'),
         _cell(r.formattedHours),
+        // Status
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-          child: _StatusBadge(status: r.status),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+          child: Center(child: _StatusBadge(status: r.status)),
         ),
+        const SizedBox.shrink(),
       ],
     );
   }
 
-  Widget _cell(String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+  Widget _cell(String text, {bool centered = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
         child: Text(
           text,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF444444)),
+          textAlign: centered ? TextAlign.center : TextAlign.left,
+          style: const TextStyle(fontSize: 13, color: _kTextMid),
         ),
       );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// _InternAvatar
-//
-// Fetches the avatar image manually with auth headers (so protected upload
-// routes work). The URL is already fully resolved in fromJson, so this widget
-// just fires a GET with the bearer token and renders the bytes.
-// Falls back gracefully to initials on any error or empty URL.
+// Search field
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _InternAvatar extends StatefulWidget {
-  final String url;
-  final String name;
-  const _InternAvatar({required this.url, required this.name});
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onClear;
 
-  @override
-  State<_InternAvatar> createState() => _InternAvatarState();
-}
-
-class _InternAvatarState extends State<_InternAvatar> {
-  Uint8List? _imageBytes;
-  bool _loading = true;
-  bool _failed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchImage();
-  }
-
-  @override
-  void didUpdateWidget(_InternAvatar old) {
-    super.didUpdateWidget(old);
-    if (old.url != widget.url) {
-      setState(() {
-        _loading = true;
-        _failed = false;
-        _imageBytes = null;
-      });
-      _fetchImage();
-    }
-  }
-
-  Future<void> _fetchImage() async {
-    if (widget.url.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _failed = true;
-        });
-      }
-      return;
-    }
-    try {
-      final res = await http.get(
-        Uri.parse(widget.url),
-        headers: await ApiService.authHeaders(),
-      );
-      if (!mounted) return;
-      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
-        setState(() {
-          _imageBytes = res.bodyBytes;
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _loading = false;
-          _failed = true;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _failed = true;
-        });
-      }
-    }
-  }
-
-  String get _initials {
-    final trimmed = widget.name.trim();
-    if (trimmed.isEmpty) return '?';
-    return trimmed
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .map((w) => w[0])
-        .take(2)
-        .join()
-        .toUpperCase();
-  }
+  const _SearchField({required this.controller, required this.onClear});
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: 18,
-      backgroundColor: const Color(0xFF6C63FF),
-      child: _loading
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: Colors.white54,
-              ),
-            )
-          : _imageBytes != null
-              ? ClipOval(
-                  child: Image.memory(
-                    _imageBytes!,
-                    width: 36,
-                    height: 36,
-                    fit: BoxFit.cover,
-                  ),
+    return SizedBox(
+      height: 42,
+      child: TextField(
+        controller: controller,
+        style: const TextStyle(fontSize: 13, color: _kTextDark),
+        decoration: InputDecoration(
+          hintText: 'Search intern by name…',
+          hintStyle: const TextStyle(fontSize: 13, color: _kTextLight),
+          prefixIcon:
+              const Icon(Icons.search_rounded, size: 18, color: _kTextLight),
+          suffixIcon: controller.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded,
+                      size: 16, color: _kTextLight),
+                  padding: EdgeInsets.zero,
+                  onPressed: onClear,
                 )
-              : Text(
-                  _initials,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+              : null,
+          filled: true,
+          fillColor: const Color(0xFFF4F5F8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: _kAccent, width: 1.5),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Icon action button
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _IconActionButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _IconActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: const Color(0xFFF4F5F8),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: const Padding(
+            padding: EdgeInsets.all(10),
+            child: Icon(Icons.refresh_rounded, color: _kTextMid, size: 18),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Export button
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ExportButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ExportButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _kButtonDark,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.download_rounded, size: 16, color: Colors.white),
+              SizedBox(width: 8),
+              Text(
+                'Export CSV',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -947,17 +1033,16 @@ class _PeriodChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF0A0A14);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? accent : const Color(0xFFF4F4F8),
+          color: selected ? _kButtonDark : const Color(0xFFF4F5F8),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? accent : Colors.transparent,
+            color: selected ? _kButtonDark : Colors.transparent,
             width: 1.5,
           ),
         ),
@@ -965,8 +1050,7 @@ class _PeriodChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon,
-                  size: 13, color: selected ? Colors.white : Colors.black54),
+              Icon(icon, size: 13, color: selected ? Colors.white : _kTextMid),
               const SizedBox(width: 5),
             ],
             Text(
@@ -974,7 +1058,7 @@ class _PeriodChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : Colors.black54,
+                color: selected ? Colors.white : _kTextMid,
               ),
             ),
           ],
@@ -997,20 +1081,20 @@ class _StatusDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F4F8),
-        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFF4F5F8),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           onChanged: onChanged,
           isDense: true,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF1A1F3A)),
+          style: const TextStyle(fontSize: 13, color: _kTextDark),
           icon: const Icon(Icons.keyboard_arrow_down_rounded,
-              size: 18, color: Colors.black45),
+              size: 18, color: _kTextMid),
           items: _kStatuses.map((s) {
             return DropdownMenuItem<String>(
               value: s,
@@ -1036,11 +1120,11 @@ class _ActiveFiltersBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFFEEF2FF),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF6C63FF), width: 1.2),
+        border: Border.all(color: _kAccent, width: 1.2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1089,7 +1173,7 @@ class _StatusBadge extends StatelessWidget {
         text = const Color(0xFFB45309);
         bg = const Color(0xFFFFFBEB);
       case 'On Shift':
-        border = const Color(0xFF6C63FF);
+        border = _kAccent;
         text = const Color(0xFF4F46E5);
         bg = const Color(0xFFEEF2FF);
       case 'Missed Clock Out':
@@ -1104,63 +1188,20 @@ class _StatusBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      constraints: const BoxConstraints(minWidth: 110),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: border, width: 1.5),
       ),
-      child: Center(
-        child: Text(
-          status,
-          textAlign: TextAlign.center,
-          style:
-              TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 11),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Toolbar button
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ToolbarButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color accent;
-  final VoidCallback onTap;
-
-  const _ToolbarButton({
-    required this.icon,
-    required this.label,
-    required this.accent,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color:        accent.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: accent),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                    color: accent, fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
+      child: Text(
+        status,
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        softWrap: false,
+        style:
+            TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 12),
       ),
     );
   }
@@ -1184,20 +1225,126 @@ class _PageButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: enabled ? const Color(0xFF6C63FF) : Colors.grey.shade200,
+      color: enabled ? _kButtonDark : const Color(0xFFF4F5F8),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(7),
           child: Icon(
             icon,
-            size: 20,
-            color: enabled ? Colors.white : Colors.grey.shade400,
+            size: 18,
+            color: enabled ? Colors.white : _kTextLight,
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Intern avatar
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _InternAvatar extends StatefulWidget {
+  final String url;
+  final String name;
+  const _InternAvatar({required this.url, required this.name});
+
+  @override
+  State<_InternAvatar> createState() => _InternAvatarState();
+}
+
+class _InternAvatarState extends State<_InternAvatar> {
+  Uint8List? _imageBytes;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchImage();
+  }
+
+  @override
+  void didUpdateWidget(_InternAvatar old) {
+    super.didUpdateWidget(old);
+    if (old.url != widget.url) {
+      setState(() {
+        _loading = true;
+        _imageBytes = null;
+      });
+      _fetchImage();
+    }
+  }
+
+  Future<void> _fetchImage() async {
+    if (widget.url.isEmpty) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    try {
+      final res = await http.get(
+        Uri.parse(widget.url),
+        headers: await ApiService.authHeaders(),
+      );
+      if (!mounted) return;
+      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+        setState(() {
+          _imageBytes = res.bodyBytes;
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String get _initials {
+    final trimmed = widget.name.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0])
+        .take(2)
+        .join()
+        .toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: const Color(0xFFDCEEFD),
+      child: _loading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Colors.white54,
+              ),
+            )
+          : _imageBytes != null
+              ? ClipOval(
+                  child: Image.memory(
+                    _imageBytes!,
+                    width: 36,
+                    height: 36,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Text(
+                  _initials,
+                  style: const TextStyle(
+                    color: Color(0xFF5B9BD5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
     );
   }
 }
@@ -1230,7 +1377,7 @@ class _HamburgerIcon extends StatelessWidget {
         width: w,
         height: 2.5,
         decoration: BoxDecoration(
-          color:        Colors.white.withValues(alpha: opacity),
+          color: Colors.white.withValues(alpha: opacity),
           borderRadius: BorderRadius.circular(2),
         ),
       );

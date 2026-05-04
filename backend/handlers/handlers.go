@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -49,8 +50,6 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" binding:"required,min=8"`
 	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
-
-// ── Replace your UpdateProfileRequest struct ──────────────────────────────────
 
 type UpdateProfileRequest struct {
 	// Account Settings fields
@@ -123,12 +122,12 @@ func validatePassword(password string) []string {
 	}
 	return errs
 }
+
 func validateProfileURL(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return "", nil
 	}
-
 	u, err := url.Parse(raw)
 	if err != nil {
 		return "", fmt.Errorf("invalid URL")
@@ -169,14 +168,10 @@ func generateToken(userID uint, role models.Role) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
-// ── Random token generator ───────────────────────────────────────────────────
-
 // ── Auth Handlers ────────────────────────────────────────────────────────────
 
 // Register moved to auth_handlers.go with service layer
-
 // Login moved to auth_handlers.go with service layer (simplified lockout)
-
 // Password reset moved to auth_handlers.go
 
 // ── Profile Handlers ─────────────────────────────────────────────────────────
@@ -198,15 +193,12 @@ func computeEstimatedEndDate(startDateStr string, requiredHours int) string {
 	if startDateStr == "" || requiredHours <= 0 {
 		return ""
 	}
-
 	current, err := time.Parse("2006-01-02", startDateStr)
 	if err != nil {
 		return ""
 	}
-
 	daysNeeded := (requiredHours + 7) / 8
 	daysWorked := 0
-
 	for daysWorked < daysNeeded {
 		if current.Weekday() != time.Saturday && current.Weekday() != time.Sunday {
 			daysWorked++
@@ -215,7 +207,6 @@ func computeEstimatedEndDate(startDateStr string, requiredHours int) string {
 			current = current.AddDate(0, 0, 1)
 		}
 	}
-
 	return current.Format("2006-01-02")
 }
 
@@ -224,11 +215,9 @@ func normalizeAvatarURL(c *gin.Context, avatarURL string) string {
 	if avatarURL == "" {
 		return ""
 	}
-
 	if parsed, err := url.Parse(avatarURL); err == nil && parsed.IsAbs() {
 		return avatarURL
 	}
-
 	baseURL := strings.TrimRight(os.Getenv("PUBLIC_BASE_URL"), "/")
 	if baseURL == "" {
 		scheme := c.GetHeader("X-Forwarded-Proto")
@@ -244,29 +233,24 @@ func normalizeAvatarURL(c *gin.Context, avatarURL string) string {
 		}
 		baseURL = scheme + "://" + host
 	}
-
 	return baseURL + "/" + strings.TrimLeft(avatarURL, "/")
 }
 
-// ── Replace your UpdateProfile handler ───────────────────────────────────────
-
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	role := c.GetString("role")
+	
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Fetch current user first so we only overwrite fields that were sent
 	var user models.User
 	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	// Validate URLs before applying them
 	if req.LinkedIn != "" {
 		cleaned, err := validateProfileURL(req.LinkedIn)
 		if err != nil {
@@ -284,7 +268,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		req.GitHub = cleaned
 	}
 
-	// Validate chronological dates. Use existing values when only one side is updated.
 	startDateValue := user.StartDate
 	endDateValue := user.EndDate
 	if req.StartDate != "" {
@@ -328,12 +311,10 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	if req.Phone != "" {
 		updates["phone"] = req.Phone
 	}
-
 	if req.Department != "" {
 		updates["department"] = req.Department
 	}
-
-	if role == string(models.RoleAdmin) && req.RequiredOjtHours != nil {
+	if req.RequiredOjtHours != nil {
 		updates["required_ojt_hours"] = *req.RequiredOjtHours
 	}
 	if req.School != "" {
@@ -412,25 +393,17 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully"})
 }
 
-// ── Helper function: Compress and resize image ────────────────────────────────
+// ── Image helpers ─────────────────────────────────────────────────────────────
 
-// compressImage resizes and compresses an image to reduce file size
-// Max dimensions: 512x512, JPEG quality: 85%
-// Reduces file size by approximately 70-80%
 func compressImage(imageBytes []byte) ([]byte, error) {
-	// Decode image
 	img, _, err := image.Decode(bytes.NewReader(imageBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode image: %w", err)
 	}
-
-	// Resize if needed (max 512x512)
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
-
 	if width > 512 || height > 512 {
-		// Calculate new dimensions maintaining aspect ratio
 		var newWidth, newHeight int
 		if width > height {
 			newWidth = 512
@@ -439,31 +412,21 @@ func compressImage(imageBytes []byte) ([]byte, error) {
 			newHeight = 512
 			newWidth = (512 * width) / height
 		}
-
-		// Simple box filter resize
 		img = resizeImage(img, newWidth, newHeight)
 	}
-
-	// Encode as JPEG with 85% quality
 	var buf bytes.Buffer
 	opts := &jpeg.Options{Quality: 85}
 	if err := jpeg.Encode(&buf, img, opts); err != nil {
 		return nil, fmt.Errorf("failed to encode image: %w", err)
 	}
-
 	return buf.Bytes(), nil
 }
 
-// resizeImage performs a simple box filter resize
 func resizeImage(src image.Image, newWidth, newHeight int) image.Image {
 	srcBounds := src.Bounds()
 	srcWidth := srcBounds.Dx()
 	srcHeight := srcBounds.Dy()
-
-	// Create a new image
 	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
-
-	// Simple nearest-neighbor resize for speed
 	for y := 0; y < newHeight; y++ {
 		for x := 0; x < newWidth; x++ {
 			srcX := (x * srcWidth) / newWidth
@@ -471,21 +434,17 @@ func resizeImage(src image.Image, newWidth, newHeight int) image.Image {
 			dst.Set(x, y, src.At(srcBounds.Min.X+srcX, srcBounds.Min.Y+srcY))
 		}
 	}
-
 	return dst
 }
 
 func (h *Handler) UploadAvatar(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	// Get the file from the multipart form (field name must be 'avatar')
 	header, err := c.FormFile("avatar")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No avatar file provided"})
 		return
 	}
-
-	// Validate file size (max 5MB)
 	if header.Size > 5*1024*1024 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File size exceeds 5MB limit"})
 		return
@@ -498,7 +457,6 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// Read first 512 bytes for content type detection
 	buffer := make([]byte, 512)
 	n, err := file.Read(buffer)
 	if err != nil && err != io.EOF {
@@ -510,34 +468,25 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	// Detect content type
 	contentType := http.DetectContentType(buffer[:n])
 	if contentType != "image/jpeg" && contentType != "image/png" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Only JPEG and PNG images are allowed"})
 		return
 	}
 
-	// Reset file pointer for saving
 	if _, err := file.Seek(0, 0); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset file pointer"})
 		return
 	}
 
-	// Read entire file into memory for compression
 	fileData, err := io.ReadAll(file)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
 
-	// Compress and resize image for faster storage and delivery
 	compressedData, err := compressImage(fileData)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or corrupted image"})
-		return
-	}
-	if err != nil {
-		// If compression fails, use original file
 		fmt.Printf("⚠️ Image compression failed: %v, using original\n", err)
 		compressedData = fileData
 	} else {
@@ -546,31 +495,26 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 			float64(len(fileData)-len(compressedData))/float64(len(fileData))*100)
 	}
 
-	// Create uploads directory if it doesn't exist
 	uploadsDir := "./uploads"
 	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create uploads directory"})
 		return
 	}
 
-	// Generate unique filename (use .jpg extension for compressed images)
 	filename := fmt.Sprintf("%d_%d_%s.jpg", userID, time.Now().Unix(), strings.TrimSuffix(header.Filename, ".png"))
 	filepath := fmt.Sprintf("%s/%s", uploadsDir, filename)
 
-	// Save the compressed file
 	if err := os.WriteFile(filepath, compressedData, 0644); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file: " + err.Error()})
 		return
 	}
 
-	// Update user's avatar URL in database
 	avatarURL := fmt.Sprintf("/uploads/%s", filename)
 	if err := h.DB.Model(&models.User{}).Where("id = ?", userID).Update("avatar_url", avatarURL).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update avatar URL: " + err.Error()})
 		return
 	}
 
-	// Fetch updated user
 	var user models.User
 	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated user"})
@@ -590,56 +534,75 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
+// attendanceLogEntry is a unified log shape for both activity logs and
+// synthetic clock-in / clock-out entries derived from the attendance table.
+// Using interface{} for User lets us hold either a models.User value or a
+// plain map[string]interface{} (for attendance rows joined without Preload).
+type attendanceLogEntry struct {
+	ID        uint        `json:"id"`
+	Action    string      `json:"action"`
+	Details   string      `json:"details"`
+	CreatedAt time.Time   `json:"created_at"`
+	User      interface{} `json:"user"`
+}
+
+// formatClockTime converts a UTC time.Time to a local 12-hour string e.g. "9:31 AM".
+func formatClockTime(t time.Time) string {
+	local := t.Local()
+	hr := local.Hour() % 12
+	if hr == 0 {
+		hr = 12
+	}
+	ampm := "AM"
+	if local.Hour() >= 12 {
+		ampm = "PM"
+	}
+	return fmt.Sprintf("%d:%02d %s", hr, local.Minute(), ampm)
+}
+
 func (h *Handler) GetDashboardStats(c *gin.Context) {
+	// ── Counts ────────────────────────────────────────────────────────────
 	var totalUsers, activeUsers, adminUsers int64
 	h.DB.Model(&models.User{}).Count(&totalUsers)
 	h.DB.Model(&models.User{}).Where("is_active = true").Count(&activeUsers)
 	h.DB.Model(&models.User{}).Where("role = ?", models.RoleAdmin).Count(&adminUsers)
 
-	// Parse pagination parameters for recent users
+	// ── Pagination params ─────────────────────────────────────────────────
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "5")
-
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
 		page = 1
 	}
-
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 || limit > 100 {
 		limit = 5
 	}
-
 	offset := (page - 1) * limit
 
-	// Get total count of users for pagination
+	// ── Recent users (paginated) ──────────────────────────────────────────
 	var totalUserCount int64
 	h.DB.Model(&models.User{}).Count(&totalUserCount)
-
-	// Calculate total pages for users
 	totalPages := int((totalUserCount + int64(limit) - 1) / int64(limit))
 	if totalPages == 0 {
 		totalPages = 1
 	}
 
-	// Get paginated recent users
 	var recentUsers []models.User
 	h.DB.Order("created_at desc").Limit(limit).Offset(offset).Find(&recentUsers)
 
-	// Get recent logs (not paginated for dashboard, just recent 10)
+	// ── Recent logs (small preview, not paginated) ────────────────────────
 	var recentLogs []models.ActivityLog
 	h.DB.Preload("User").Order("created_at desc").Limit(10).Find(&recentLogs)
 
-	// Get all activity logs - SIMPLIFIED: Get last 7 days (past week)
-	var allWeeklyLogs []models.ActivityLog
-	now := time.Now().Local() // Use local time, not UTC
-
-	// Get activities from the last 7 days to ensure we capture everything from the past week
+	// ── Weekly activity logs ──────────────────────────────────────────────
+	now := time.Now().Local()
 	sevenDaysAgo := now.AddDate(0, 0, -7)
-	tomorrow := now.AddDate(0, 0, 1).Add(time.Hour) // Include remainder of today
+	tomorrow := now.AddDate(0, 0, 1).Add(time.Hour)
 
 	fmt.Printf("DEBUG: Dashboard Stats - Querying logs from %v to %v (past 7 days)\n", sevenDaysAgo, tomorrow)
 
+	var allWeeklyLogs []models.ActivityLog
 	h.DB.Preload("User").
 		Where("created_at >= ? AND created_at < ?", sevenDaysAgo, tomorrow).
 		Order("created_at desc").
@@ -647,6 +610,85 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 
 	fmt.Printf("DEBUG: Dashboard Stats - Found %d activity logs in the past 7 days\n", len(allWeeklyLogs))
 
+	// ── Weekly attendance rows (joined with users for names) ──────────────
+	//
+	// We use a raw scan into an anonymous struct so we don't need a
+	// gorm:"foreignKey" association on models.Attendance.
+	type attendanceRow struct {
+		UserID    uint       `gorm:"column:user_id"`
+		FirstName string     `gorm:"column:first_name"`
+		LastName  string     `gorm:"column:last_name"`
+		TimeIn    *time.Time `gorm:"column:time_in"`
+		TimeOut   *time.Time `gorm:"column:time_out"`
+	}
+
+	var attendanceRows []attendanceRow
+	h.DB.Raw(`
+		SELECT
+			a.user_id,
+			u.first_name,
+			u.last_name,
+			a.time_in,
+			a.time_out
+		FROM attendance a
+		LEFT JOIN users u ON u.id = a.user_id
+		WHERE a.date >= ? AND a.date <= ?
+	`,
+		sevenDaysAgo.Format("2006-01-02"),
+		now.Format("2006-01-02"),
+	).Scan(&attendanceRows)
+
+	fmt.Printf("DEBUG: Dashboard Stats - Found %d attendance records in the past 7 days\n", len(attendanceRows))
+
+	// ── Merge activity logs + attendance into one combined slice ──────────
+	combined := make([]attendanceLogEntry, 0, len(allWeeklyLogs)+len(attendanceRows)*2)
+
+	// Add existing activity logs
+	for i := range allWeeklyLogs {
+		log := allWeeklyLogs[i]
+		combined = append(combined, attendanceLogEntry{
+			ID:        log.ID,
+			Action:    log.Action,
+			Details:   log.Details,
+			CreatedAt: log.CreatedAt,
+			User:      log.User, // models.User — already preloaded
+		})
+	}
+
+	// Add synthetic CLOCK_IN / CLOCK_OUT entries from attendance
+	for _, row := range attendanceRows {
+		userMap := map[string]interface{}{
+			"first_name": row.FirstName,
+			"last_name":  row.LastName,
+		}
+
+		// CLOCK_IN — time_in must be non-nil
+		if row.TimeIn != nil {
+			combined = append(combined, attendanceLogEntry{
+				Action:    "CLOCK_IN",
+				Details:   "CLOCK_IN:" + formatClockTime(*row.TimeIn),
+				CreatedAt: *row.TimeIn,
+				User:      userMap,
+			})
+		}
+
+		// CLOCK_OUT — time_out must be non-nil (user has clocked out)
+		if row.TimeOut != nil {
+			combined = append(combined, attendanceLogEntry{
+				Action:    "CLOCK_OUT",
+				Details:   "CLOCK_OUT:" + formatClockTime(*row.TimeOut),
+				CreatedAt: *row.TimeOut,
+				User:      userMap,
+			})
+		}
+	}
+
+	// Sort newest-first
+	sort.Slice(combined, func(i, j int) bool {
+		return combined[i].CreatedAt.After(combined[j].CreatedAt)
+	})
+
+	// ── Response ──────────────────────────────────────────────────────────
 	c.JSON(http.StatusOK, gin.H{
 		"total_users":  totalUsers,
 		"active_users": activeUsers,
@@ -654,7 +696,7 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 		"new_users":    totalUsers - activeUsers,
 		"recent_users": recentUsers,
 		"recent_logs":  recentLogs,
-		"weekly_logs":  allWeeklyLogs,
+		"weekly_logs":  combined, // ✅ activity logs + clock-in/out merged
 		"total_pages":  totalPages,
 		"current_page": page,
 	})
@@ -666,13 +708,11 @@ func (h *Handler) ListUsers(c *gin.Context) {
 	var users []models.User
 	query := h.DB.Model(&models.User{})
 
-	// Search filter
 	if search := c.Query("search"); search != "" {
 		query = query.Where("first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ?",
 			"%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	// Status filter for tabs: 'all', 'active', 'archived', 'inactive'
 	statusFilter := c.Query("status")
 	if statusFilter != "" {
 		switch statusFilter {
@@ -682,13 +722,11 @@ func (h *Handler) ListUsers(c *gin.Context) {
 			query = query.Where("is_archived = ?", true)
 		case "inactive":
 			query = query.Where("is_active = ? AND is_archived = ?", false, false)
-			// 'all' or empty returns all users
 		}
 	}
 
 	query.Order("created_at desc").Find(&users)
 
-	// Calculate counts for all statuses
 	var allCount, activeCount, inactiveCount, archivedCount int64
 	h.DB.Model(&models.User{}).Count(&allCount)
 	h.DB.Model(&models.User{}).Where("is_active = ? AND is_archived = ?", true, false).Count(&activeCount)
@@ -737,10 +775,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Get current user ID from JWT
 	currentUserID := c.GetUint("user_id")
-
-	// Parse target user ID
 	targetUserIDStr := c.Param("id")
 	targetUserID, err := strconv.ParseUint(targetUserIDStr, 10, 32)
 	if err != nil {
@@ -748,22 +783,16 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Security Check 1: Cannot archive yourself
 	if body.IsArchived != nil && *body.IsArchived && uint(targetUserID) == currentUserID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "You cannot archive your own account"})
 		return
 	}
 
-	// Security Check 2: Last Admin Protection
 	if user.Role == models.RoleAdmin {
-		// Check if trying to deactivate or archive an admin
 		isTryingToDeactivate := (body.IsActive != nil && !*body.IsActive) || (body.IsArchived != nil && *body.IsArchived)
-
 		if isTryingToDeactivate {
-			// Count active admins (excluding archived and inactive)
 			var activeAdminCount int64
 			h.DB.Model(&models.User{}).Where("role = ? AND is_active = ? AND is_archived = ?", models.RoleAdmin, true, false).Count(&activeAdminCount)
-
 			if activeAdminCount <= 1 {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Action denied: At least one active admin must remain"})
 				return
@@ -771,7 +800,6 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		}
 	}
 
-	// Use Omit to allow false boolean updates (GORM skips zero values with Updates)
 	if body.FirstName != nil {
 		user.FirstName = *body.FirstName
 	}
@@ -796,7 +824,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 	if body.IsArchived != nil {
 		user.IsArchived = *body.IsArchived
 	}
-	// Save updates ALL fields including booleans
+
 	h.DB.Save(&user)
 	adminID := c.GetUint("user_id")
 	h.logActivity(adminID, "UPDATE_USER", fmt.Sprintf("Admin updated user %s (active=%v, archived=%v)", user.Email, user.IsActive, user.IsArchived), c.ClientIP())
@@ -826,7 +854,6 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	// Hard delete — bypass soft-delete scope entirely
 	delResult := h.DB.Unscoped().Where("id = ?", user.ID).Delete(&models.User{})
 	if delResult.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
@@ -844,7 +871,6 @@ func (h *Handler) GetActivityLogs(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	role := c.GetString("role")
 
-	// Parse pagination parameters
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "5")
 
@@ -852,31 +878,25 @@ func (h *Handler) GetActivityLogs(c *gin.Context) {
 	if err != nil || page < 1 {
 		page = 1
 	}
-
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 || limit > 100 {
 		limit = 5
 	}
-
 	offset := (page - 1) * limit
 
-	// Build base query
 	query := h.DB.Model(&models.ActivityLog{}).Preload("User")
 	if role != string(models.RoleAdmin) {
 		query = query.Where("user_id = ?", userID)
 	}
 
-	// Get total count for pagination
 	var totalCount int64
 	query.Count(&totalCount)
 
-	// Calculate total pages
 	totalPages := int((totalCount + int64(limit) - 1) / int64(limit))
 	if totalPages == 0 {
 		totalPages = 1
 	}
 
-	// Get paginated logs
 	var logs []models.ActivityLog
 	query.Order("created_at desc").Limit(limit).Offset(offset).Find(&logs)
 
@@ -922,7 +942,6 @@ func (h *Handler) GetDepartmentsWithPositions(c *gin.Context) {
 	var departments []models.Department
 	h.DB.Preload("Positions").Order("name asc").Find(&departments)
 
-	// Transform to the format expected by frontend
 	result := make(map[string][]string)
 	for _, dept := range departments {
 		var positions []string
@@ -937,7 +956,6 @@ func (h *Handler) GetDepartmentsWithPositions(c *gin.Context) {
 
 func (h *Handler) CreateDepartment(c *gin.Context) {
 	adminID := c.GetUint("user_id")
-
 	var body struct {
 		Name string `json:"name" binding:"required"`
 	}
@@ -950,15 +968,12 @@ func (h *Handler) CreateDepartment(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Department name already exists"})
 		return
 	}
-
 	h.logActivity(adminID, "CREATE_DEPARTMENT", "Admin created department: "+item.Name, c.ClientIP())
-
 	c.JSON(http.StatusCreated, gin.H{"message": "Department created", "item": item})
 }
 
 func (h *Handler) UpdateDepartment(c *gin.Context) {
 	adminID := c.GetUint("user_id")
-
 	var item models.Department
 	if h.DB.First(&item, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
@@ -977,23 +992,18 @@ func (h *Handler) UpdateDepartment(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Department name already exists"})
 		return
 	}
-
 	h.logActivity(adminID, "UPDATE_DEPARTMENT", fmt.Sprintf("Admin updated department: %s -> %s", oldName, item.Name), c.ClientIP())
-
 	c.JSON(http.StatusOK, gin.H{"message": "Department updated", "item": item})
 }
 
 func (h *Handler) DeleteDepartment(c *gin.Context) {
 	adminID := c.GetUint("user_id")
-
 	var item models.Department
 	if h.DB.First(&item, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Department not found"})
 		return
 	}
-
 	h.logActivity(adminID, "DELETE_DEPARTMENT", fmt.Sprintf("Admin deleted department: %s (id=%d)", item.Name, item.ID), c.ClientIP())
-
 	h.DB.Unscoped().Delete(&item)
 	c.JSON(http.StatusOK, gin.H{"message": "Department deleted"})
 }
@@ -1008,7 +1018,6 @@ func (h *Handler) ListPositions(c *gin.Context) {
 
 func (h *Handler) CreatePosition(c *gin.Context) {
 	adminID := c.GetUint("user_id")
-
 	var body struct {
 		DepartmentID uint   `json:"department_id" binding:"required"`
 		Name         string `json:"name" binding:"required"`
@@ -1017,14 +1026,11 @@ func (h *Handler) CreatePosition(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	// Verify department exists
 	var dept models.Department
 	if err := h.DB.First(&dept, body.DepartmentID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department ID"})
 		return
 	}
-
 	item := models.Position{
 		DepartmentID: body.DepartmentID,
 		Name:         strings.TrimSpace(body.Name),
@@ -1033,15 +1039,12 @@ func (h *Handler) CreatePosition(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists in this department"})
 		return
 	}
-
 	h.logActivity(adminID, "CREATE_POSITION", fmt.Sprintf("Admin created position: %s in %s", item.Name, dept.Name), c.ClientIP())
-
 	c.JSON(http.StatusCreated, gin.H{"message": "Position created", "item": item})
 }
 
 func (h *Handler) UpdatePosition(c *gin.Context) {
 	adminID := c.GetUint("user_id")
-
 	var item models.Position
 	if h.DB.First(&item, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Position not found"})
@@ -1055,9 +1058,7 @@ func (h *Handler) UpdatePosition(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	if body.DepartmentID != nil {
-		// Verify department exists
 		var dept models.Department
 		if err := h.DB.First(&dept, *body.DepartmentID).Error; err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid department ID"})
@@ -1065,30 +1066,24 @@ func (h *Handler) UpdatePosition(c *gin.Context) {
 		}
 		item.DepartmentID = *body.DepartmentID
 	}
-
 	oldName := item.Name
 	item.Name = strings.TrimSpace(body.Name)
 	if err := h.DB.Save(&item).Error; err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "Position name already exists in this department"})
 		return
 	}
-
 	h.logActivity(adminID, "UPDATE_POSITION", fmt.Sprintf("Admin updated position: %s -> %s", oldName, item.Name), c.ClientIP())
-
 	c.JSON(http.StatusOK, gin.H{"message": "Position updated", "item": item})
 }
 
 func (h *Handler) DeletePosition(c *gin.Context) {
 	adminID := c.GetUint("user_id")
-
 	var item models.Position
 	if h.DB.First(&item, c.Param("id")).Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Position not found"})
 		return
 	}
-
 	h.logActivity(adminID, "DELETE_POSITION", fmt.Sprintf("Admin deleted position: %s (id=%d)", item.Name, item.ID), c.ClientIP())
-
 	h.DB.Unscoped().Delete(&item)
 	c.JSON(http.StatusOK, gin.H{"message": "Position deleted"})
 }
