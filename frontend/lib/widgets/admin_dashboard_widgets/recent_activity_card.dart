@@ -27,32 +27,7 @@ class RecentActivityCard extends StatelessWidget {
   }
 
   // --- NEW: Format admin action strings into human-readable sentences ---
-  String formatAdminAction(String rawDetails) {
-    if (rawDetails.isEmpty) return 'Unknown action';
-    
-    // Regex to match: "Admin updated user [email] (active=X, archived=Y)"
-    final RegExp adminUpdatePattern = RegExp(
-      r'^Admin updated user ([^\s]+) \(active=(true|false),\s*archived=(true|false)\)$'
-    );
-
-    final match = adminUpdatePattern.firstMatch(rawDetails);
-    if (match != null) {
-      final email = match.group(1)!;
-      final active = match.group(2)!;
-      final archived = match.group(3)!;
-
-      if (active == 'false' && archived == 'false') {
-        return 'Admin deactivated user $email';
-      } else if (active == 'false' && archived == 'true') {
-        return 'Admin archived user $email';
-      } else if (active == 'true' && archived == 'false') {
-        return 'Admin activated user $email';
-      }
-    }
-
-    // If no match, return original string (it should already be human-readable from backend)
-    return rawDetails;
-  }
+  
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
@@ -68,10 +43,45 @@ class RecentActivityCard extends StatelessWidget {
     }
   }
 
+  String formatAdminAction(String rawDetails) {
+  if (rawDetails.isEmpty) return 'Unknown action';
+
+  // --- NEW: Handle clock-in/out patterns ---
+  final RegExp clockInPattern  = RegExp(r'^CLOCK_IN:(.+)$');
+  final RegExp clockOutPattern = RegExp(r'^CLOCK_OUT:(.+)$');
+
+  final clockIn = clockInPattern.firstMatch(rawDetails);
+  if (clockIn != null) return 'Clocked in at ${clockIn.group(1)!.trim()}';
+
+  final clockOut = clockOutPattern.firstMatch(rawDetails);
+  if (clockOut != null) return 'Clocked out at ${clockOut.group(1)!.trim()}';
+
+  // Existing admin update pattern
+  final RegExp adminUpdatePattern = RegExp(
+    r'^Admin updated user ([^\s]+) \(active=(true|false),\s*archived=(true|false)\)$'
+  );
+  final match = adminUpdatePattern.firstMatch(rawDetails);
+  if (match != null) {
+    final email   = match.group(1)!;
+    final active  = match.group(2)!;
+    final archived = match.group(3)!;
+    if (active == 'false' && archived == 'false') return 'Admin deactivated user $email';
+    if (active == 'false' && archived == 'true')  return 'Admin archived user $email';
+    if (active == 'true'  && archived == 'false') return 'Admin activated user $email';
+  }
+
+  return rawDetails;
+}
+
   Widget _actionIcon(String? action) {
     IconData icon;
     Color color;
     switch (action) {
+
+      // Attendance Actions
+      case 'CLOCK_IN':  icon = Icons.login_rounded;  color = Colors.green;      break;
+      case 'CLOCK_OUT': icon = Icons.logout_rounded; color = Colors.deepOrange;  break;
+
       // User Actions
       case 'LOGIN': icon = Icons.login; color = Colors.green; break;
       case 'REGISTER': icon = Icons.person_add; color = Colors.blue; break;

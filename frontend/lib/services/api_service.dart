@@ -240,7 +240,8 @@ class ApiService {
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> getDashboardStats({int page = 1, int limit = 5}) async {
+  static Future<Map<String, dynamic>> getDashboardStats(
+      {int page = 1, int limit = 5}) async {
     try {
       final res = await http.get(
         Uri.parse('$baseUrl/dashboard/stats?page=$page&limit=$limit'),
@@ -268,14 +269,16 @@ class ApiService {
 
   // ── Users (Admin) ─────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> getUsers({String? search, String? status}) async {
+  static Future<Map<String, dynamic>> getUsers(
+      {String? search, String? status}) async {
     try {
       var url = '$baseUrl/users';
       final params = <String, String>{};
       if (search != null && search.isNotEmpty) params['search'] = search;
       if (status != null && status.isNotEmpty) params['status'] = status;
       if (params.isNotEmpty) {
-        url += '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
+        url +=
+            '?${params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
       }
       final res = await http.get(Uri.parse(url), headers: await _authHeaders());
       return _parse(res);
@@ -318,7 +321,9 @@ class ApiService {
     try {
       final res = await http.get(
         Uri.parse('$baseUrl/departments-with-positions'),
-        headers: {'Content-Type': 'application/json'}, // Public endpoint, no auth needed
+        headers: {
+          'Content-Type': 'application/json'
+        }, // Public endpoint, no auth needed
       );
       return _parse(res);
     } catch (e) {
@@ -478,7 +483,8 @@ class ApiService {
 
   // ── Activity Logs ─────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> getActivityLogs({int page = 1, int limit = 5}) async {
+  static Future<Map<String, dynamic>> getActivityLogs(
+      {int page = 1, int limit = 5}) async {
     try {
       final res = await http.get(
         Uri.parse('$baseUrl/activity?page=$page&limit=$limit'),
@@ -493,7 +499,21 @@ class ApiService {
   static Future<Map<String, dynamic>> getAllActivityLogs() async {
     try {
       final res = await http.get(
-        Uri.parse('$baseUrl/activity?page=1&limit=1000'), // Large limit to get all
+        Uri.parse(
+            '$baseUrl/activity?page=1&limit=1000'), // Large limit to get all
+        headers: await _authHeaders(),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getWeeklyAttendance() async {
+    try {
+      final res = await http.get(
+        Uri.parse(
+            '$baseUrl/attendance/weekly'), // adjust endpoint to match your backend
         headers: await _authHeaders(),
       );
       return _parse(res);
