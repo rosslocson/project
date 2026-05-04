@@ -260,6 +260,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
   List<AdminAttendanceRecord> _records = [];
   bool _loading = true;
+  bool _isFirstLoad = true;
   String? _error;
 
   @override
@@ -287,6 +288,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       _loading = true;
       _error = null;
       _page = page;
+      _isFirstLoad = _records.isEmpty;
     });
 
     final isAllDates = _period == AttendancePeriod.allDates;
@@ -308,11 +310,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         _records = result['records'] as List<AdminAttendanceRecord>;
         _total = result['total'] as int;
         _loading = false;
+        _isFirstLoad = false; // ← add this      });
       });
     } else {
       setState(() {
         _error = result['error'] as String?;
         _loading = false;
+        _isFirstLoad = false;
       });
     }
   }
@@ -655,11 +659,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   // ── body ──────────────────────────────────────────────────────────────────
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: _kAccent, strokeWidth: 2.5),
-      );
-    }
     if (_error != null) {
       return Center(
         child: Column(
@@ -688,7 +687,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         ),
       );
     }
-    if (_records.isEmpty) {
+    if (_records.isEmpty && !_loading) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1035,8 +1034,7 @@ class _PeriodChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? _kButtonDark : const Color(0xFFF4F5F8),
@@ -1188,7 +1186,7 @@ class _StatusBadge extends StatelessWidget {
     }
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 110),
+      constraints: const BoxConstraints(minWidth: 140, maxWidth: 140),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
@@ -1319,32 +1317,23 @@ class _InternAvatarState extends State<_InternAvatar> {
     return CircleAvatar(
       radius: 18,
       backgroundColor: const Color(0xFFDCEEFD),
-      child: _loading
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: Colors.white54,
+      child: _imageBytes != null
+          ? ClipOval(
+              child: Image.memory(
+                _imageBytes!,
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
               ),
             )
-          : _imageBytes != null
-              ? ClipOval(
-                  child: Image.memory(
-                    _imageBytes!,
-                    width: 36,
-                    height: 36,
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : Text(
-                  _initials,
-                  style: const TextStyle(
-                    color: Color(0xFF5B9BD5),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+          : Text(
+              _initials,
+              style: const TextStyle(
+                color: Color(0xFF5B9BD5),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
     );
   }
 }
