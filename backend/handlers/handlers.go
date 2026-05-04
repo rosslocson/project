@@ -182,8 +182,68 @@ func generateToken(userID uint, role models.Role) (string, error) {
 func (h *Handler) GetProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	var user models.User
-	h.DB.First(&user, userID)
+	if err := h.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	user.EstimatedEndDate = computeEstimatedEndDate(user.StartDate, user.RequiredOjtHours)
+	user.AvatarURL = normalizeAvatarURL(c, user.AvatarURL)
 	c.JSON(http.StatusOK, user)
+}
+
+func computeEstimatedEndDate(startDateStr string, requiredHours int) string {
+	startDateStr = strings.TrimSpace(startDateStr)
+	if startDateStr == "" || requiredHours <= 0 {
+		return ""
+	}
+
+	current, err := time.Parse("2006-01-02", startDateStr)
+	if err != nil {
+		return ""
+	}
+
+	daysNeeded := (requiredHours + 7) / 8
+	daysWorked := 0
+
+	for daysWorked < daysNeeded {
+		if current.Weekday() != time.Saturday && current.Weekday() != time.Sunday {
+			daysWorked++
+		}
+		if daysWorked < daysNeeded {
+			current = current.AddDate(0, 0, 1)
+		}
+	}
+
+	return current.Format("2006-01-02")
+}
+
+func normalizeAvatarURL(c *gin.Context, avatarURL string) string {
+	avatarURL = strings.TrimSpace(avatarURL)
+	if avatarURL == "" {
+		return ""
+	}
+
+	if parsed, err := url.Parse(avatarURL); err == nil && parsed.IsAbs() {
+		return avatarURL
+	}
+
+	baseURL := strings.TrimRight(os.Getenv("PUBLIC_BASE_URL"), "/")
+	if baseURL == "" {
+		scheme := c.GetHeader("X-Forwarded-Proto")
+		if scheme == "" {
+			scheme = "http"
+			if c.Request.TLS != nil {
+				scheme = "https"
+			}
+		}
+		host := c.GetHeader("X-Forwarded-Host")
+		if host == "" {
+			host = c.Request.Host
+		}
+		baseURL = scheme + "://" + host
+	}
+
+	return baseURL + "/" + strings.TrimLeft(avatarURL, "/")
 }
 
 // ── Replace your UpdateProfile handler ───────────────────────────────────────
@@ -515,13 +575,15 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated user"})
 		return
 	}
+	user.EstimatedEndDate = computeEstimatedEndDate(user.StartDate, user.RequiredOjtHours)
+	user.AvatarURL = normalizeAvatarURL(c, user.AvatarURL)
 
 	h.logActivity(userID, "AVATAR_UPLOAD", "Avatar uploaded: "+filename, c.ClientIP())
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Avatar uploaded successfully",
 		"user":       user,
-		"avatar_url": avatarURL,
+		"avatar_url": user.AvatarURL,
 	})
 }
 

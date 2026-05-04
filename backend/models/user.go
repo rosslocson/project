@@ -47,6 +47,7 @@ type User struct {
 	InternNumber     string `json:"intern_number"`
 	StartDate        string `json:"start_date"`
 	EndDate          string `json:"end_date"`
+	EstimatedEndDate string `json:"estimated_end_date" gorm:"-"`
 	TechnicalSkills  string `json:"technical_skills"`
 	SoftSkills       string `json:"soft_skills"`
 	LinkedIn         string `json:"linked_in"`
