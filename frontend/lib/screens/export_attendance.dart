@@ -488,7 +488,7 @@ SnackBar _progressSnack() => SnackBar(
       backgroundColor: _kButtonDark,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      content: Row(
+      content: const Row(
         children: [
           SizedBox(
             width: 16,
@@ -498,8 +498,8 @@ SnackBar _progressSnack() => SnackBar(
               valueColor: AlwaysStoppedAnimation<Color>(_kAccent),
             ),
           ),
-          const SizedBox(width: 14),
-          const Text(
+          SizedBox(width: 14),
+          Text(
             'Preparing PDF export…',
             style: TextStyle(
               color: Colors.white,

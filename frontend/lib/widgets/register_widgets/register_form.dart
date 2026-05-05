@@ -22,6 +22,7 @@ class RegisterForm {
   final bool obscureConfirm;
   final List<String> departments;
   final bool loadingDepts;
+  final bool deptsFetched;
   final String? selectedDept;
   final String defaultPosition;
 
@@ -50,6 +51,7 @@ class RegisterForm {
     required this.obscureConfirm,
     required this.departments,
     required this.loadingDepts,
+    required this.deptsFetched,
     required this.selectedDept,
     required this.defaultPosition,
     required this.ojtHoursCtrl,
@@ -180,11 +182,8 @@ class RegisterForm {
                           : DropdownButtonFormField<String>(
                               initialValue: selectedDept,
                               decoration: dec,
-                              hint: Text(
-                                  departments.isEmpty
-                                      ? 'None available'
-                                      : 'Select Department',
-                                  style: const TextStyle(fontSize: 13)),
+                              hint: const Text('Select Department',
+                                  style: TextStyle(fontSize: 13)),
                               icon: Icon(Icons.keyboard_arrow_down,
                                   color: Colors.grey.shade500),
                               items: departments
@@ -197,6 +196,18 @@ class RegisterForm {
                                   .toList(),
                               onChanged: onDeptChanged,
                             ),
+                      if (deptsFetched && departments.isEmpty) ...[
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: Text(
+                            'No departments listed. Please contact the administrator.',
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: const Color.fromARGB(255, 245, 37, 0)),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -330,8 +341,9 @@ class RegisterForm {
                   ),
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty)
+                  if (v == null || v.isEmpty) {
                     return 'Please confirm your password';
+                  }
                   if (v != passCtrl.text) return 'Passwords do not match';
                   return null;
                 },
@@ -349,7 +361,7 @@ class RegisterForm {
 
               // ── Submit ──────────────────────────────────────────────────
               BlueButton(
-                label: 'Create Account',
+                label: 'CREATE ACCOUNT',
                 onPressed: auth.isLoading ? null : onRegister,
                 loading: auth.isLoading,
               ),
@@ -362,7 +374,7 @@ class RegisterForm {
                       style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/login'),
-                    child: const Text('Log In',
+                    child: const Text('LOG IN',
                         style: TextStyle(
                             fontSize: 13,
                             color: kCosmicBlue,

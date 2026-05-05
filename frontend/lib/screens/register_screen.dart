@@ -32,7 +32,8 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   // Departments
   List<String> _departments = [];
-  bool _loadingDepts = true;
+  bool _loadingDepts = false;
+  bool _deptsFetched = false;
   String? _selectedDept;
 
   // Position is always fixed to "Intern" on registration
@@ -52,7 +53,6 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   void dispose() {
-    // ✅ All controllers disposed BEFORE super.dispose()
     _firstCtrl.dispose();
     _lastCtrl.dispose();
     _emailCtrl.dispose();
@@ -77,14 +77,21 @@ class _RegisterScreenState extends State<RegisterScreen>
             _departments =
                 items.map<String>((d) => d['name'] as String).toList();
             _loadingDepts = false;
+            _deptsFetched = true;
           });
         }
       } else {
-        if (mounted) setState(() => _loadingDepts = false);
+        if (mounted) setState(() {
+          _loadingDepts = false;
+          _deptsFetched = true;
+        });
       }
     } catch (e) {
       debugPrint('Failed to fetch departments: $e');
-      if (mounted) setState(() => _loadingDepts = false);
+      if (mounted) setState(() {
+        _loadingDepts = false;
+        _deptsFetched = true;
+      });
     }
   }
 
@@ -153,7 +160,6 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    // Extracted Form Widget
     final formWidget = RegisterForm(
       formKey: _formKey,
       firstCtrl: _firstCtrl,
@@ -161,11 +167,12 @@ class _RegisterScreenState extends State<RegisterScreen>
       emailCtrl: _emailCtrl,
       passCtrl: _passCtrl,
       confirmCtrl: _confirmCtrl,
-      ojtHoursCtrl: _ojtHoursCtrl, // ← NEW
+      ojtHoursCtrl: _ojtHoursCtrl,
       obscurePass: _obscurePass,
       obscureConfirm: _obscureConfirm,
       departments: _departments,
       loadingDepts: _loadingDepts,
+      deptsFetched: _deptsFetched,
       selectedDept: _selectedDept,
       defaultPosition: _defaultPosition,
       passStrength: _passStrength,
@@ -188,7 +195,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth > 900) {
-            // Desktop Layout
             return Row(
               children: [
                 Expanded(
@@ -250,7 +256,6 @@ class _RegisterScreenState extends State<RegisterScreen>
               ],
             );
           } else {
-            // Mobile Layout
             return AppBackground(
               backgroundAsset: 'assets/images/star_background.png',
               child: Center(

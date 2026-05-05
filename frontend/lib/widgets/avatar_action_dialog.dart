@@ -59,7 +59,7 @@ class AvatarActionDialog extends StatelessWidget {
                 child: ClipOval(
                   child: avatarUrl != null
                       ? Image.network(
-                          avatarUrl!,
+                          avatarUrl,
                           fit: BoxFit.cover,
                           width: 150,
                           height: 150,

@@ -267,7 +267,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   Future<void> _showAvatarActions() async {
     final user = context.read<AuthProvider>().user;
     final rawAvatarUrl = user?['avatar_url'] as String? ?? '';
-    final fullAvatarUrl = rawAvatarUrl.isEmpty || rawAvatarUrl!.startsWith('http')
+    final fullAvatarUrl = rawAvatarUrl.isEmpty || rawAvatarUrl.startsWith('http')
         ? rawAvatarUrl
         : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
 
