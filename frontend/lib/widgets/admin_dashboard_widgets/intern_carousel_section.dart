@@ -92,9 +92,9 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
   void _openDetail(InternProfile intern) {
     _autoScrollTimer?.cancel();
 
-    final page = intern.id == 28 // ← ADD THIS CHECK
-        ? Intern28ProfilePage(intern: intern)
-        : InternDetailPage(intern: intern);
+    final page = intern.name == 'Rosalyn Locson'
+    ? RosalynProfilePage(intern: intern)
+    : InternDetailPage(intern: intern);
 
     Navigator.of(context)
         .push(PageRouteBuilder(

@@ -15,7 +15,7 @@ class UserInternCard extends StatelessWidget {
         if (intern.id == 28) {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => Intern28ProfilePage(intern: intern),
+              builder: (_) => RosalynProfilePage(intern: intern),
             ),
           );
         } else {

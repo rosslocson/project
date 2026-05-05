@@ -939,7 +939,7 @@ func (h *Handler) ListInterns(c *gin.Context) {
 	var interns []models.User
 	h.DB.Where("role = ? AND is_active = ?", models.RoleUser, true).
 		Select(`id, first_name, last_name, email, department, position,
-               avatar_url, school, program, specialization,
+               avatar_url, school, program, specialization, bio, year_level,
                technical_skills, soft_skills, intern_number, created_at`).
 		Order("first_name asc, last_name asc").
 		Find(&interns)

@@ -34,8 +34,11 @@ dependencies:
   go_router: ^13.0.0
 
   # PDF export
-  pdf:      ^3.11.1   # builds the PDF document in memory
-  printing: ^5.13.1   # save / share / print cross-platform (web + mobile + desktop)
+  pdf: ^3.11.1
+  printing: ^5.13.1
+
+  # Links
+  url_launcher: ^6.3.0        # ← moved here, inside the single dependencies block
 
 dev_dependencies:
   flutter_test:
