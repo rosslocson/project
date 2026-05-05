@@ -88,7 +88,7 @@ class _ConfigScreenState extends State<ConfigScreen>
       content: Text(msg),
       backgroundColor: Colors.red.shade700,
       behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 1),
     ));
   }
 
@@ -98,7 +98,7 @@ class _ConfigScreenState extends State<ConfigScreen>
       backgroundColor: Colors.green.shade700,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 1),
     ));
   }
 

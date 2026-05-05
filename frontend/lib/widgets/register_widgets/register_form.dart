@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../app_theme.dart'; // Adjust path if needed
+import '../app_theme.dart';
 import 'register_error_banner.dart';
 import 'password_strength_indicator.dart';
 
@@ -30,6 +30,7 @@ class RegisterForm {
   final Color passColor;
   final double passValue;
   final String? confirmError;
+  final bool deptTouched;
 
   final AuthProvider auth;
 
@@ -59,6 +60,7 @@ class RegisterForm {
     required this.passColor,
     required this.passValue,
     required this.confirmError,
+    required this.deptTouched,
     required this.auth,
     required this.onToggleObscurePass,
     required this.onToggleObscureConfirm,
@@ -169,76 +171,87 @@ class RegisterForm {
               const Spacer(flex: 1),
 
               // ── Department / Position ───────────────────────────────────
-              Row(children: [
-                Expanded(
-                  child: Column(
+              IntrinsicHeight(
+                child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      fieldLabel('Department'),
-                      const SizedBox(height: 4),
-                      loadingDepts
-                          ? _shimmerDropdown(dec)
-                          : DropdownButtonFormField<String>(
-                              initialValue: selectedDept,
-                              decoration: dec,
-                              hint: const Text('Select Department',
-                                  style: TextStyle(fontSize: 13)),
-                              icon: Icon(Icons.keyboard_arrow_down,
-                                  color: Colors.grey.shade500),
-                              items: departments
-                                  .map((s) => DropdownMenuItem(
-                                      value: s,
-                                      child: Text(s,
-                                          overflow: TextOverflow.ellipsis,
-                                          style:
-                                              const TextStyle(fontSize: 12))))
-                                  .toList(),
-                              onChanged: onDeptChanged,
-                            ),
-                      if (deptsFetched && departments.isEmpty) ...[
-                        const SizedBox(height: 4),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12),
-                          child: Text(
-                            'No departments listed. Please contact the administrator.',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: const Color.fromARGB(255, 245, 37, 0)),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      fieldLabel('Position'),
-                      const SizedBox(height: 4),
-                      IgnorePointer(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: defaultPosition,
-                          decoration: dec.copyWith(
-                              filled: true, fillColor: Colors.grey.shade100),
-                          icon: Icon(Icons.keyboard_arrow_down,
-                              color: Colors.grey.shade300),
-                          items: [
-                            DropdownMenuItem(
-                                value: defaultPosition,
-                                child: Text(defaultPosition,
-                                    style: const TextStyle(fontSize: 12))),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            fieldLabel('Department'),
+                            const SizedBox(height: 4),
+                            loadingDepts
+                                ? _shimmerDropdown(dec)
+                                : DropdownButtonFormField<String>(
+                                    initialValue: selectedDept,
+                                    decoration: dec,
+                                    hint: const Text('Select Department',
+                                        style: TextStyle(fontSize: 13)),
+                                    icon: Icon(Icons.keyboard_arrow_down,
+                                        color: Colors.grey.shade500),
+                                    items: departments
+                                        .map((s) => DropdownMenuItem(
+                                            value: s,
+                                            child: Text(s,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                    fontSize: 12))))
+                                        .toList(),
+                                    validator: (v) {
+                                      if (departments.isNotEmpty &&
+                                          (v == null || v.isEmpty)) {
+                                        return 'Please select a department';
+                                      }
+                                      return null;
+                                    },
+                                    onChanged: onDeptChanged,
+                                  ),
+                            if (deptsFetched && departments.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 12, top: 4),
+                                child: Text(
+                                  'No department listed. Contact the administrator.',
+                                  style: TextStyle(
+                                      fontSize: 9.5,
+                                      color: Color.fromARGB(255, 245, 37, 0)),
+                                ),
+                              ),
                           ],
-                          onChanged: null,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ]),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            fieldLabel('Position'),
+                            const SizedBox(height: 4),
+                            IgnorePointer(
+                              child: DropdownButtonFormField<String>(
+                                initialValue: defaultPosition,
+                                decoration: dec.copyWith(
+                                    filled: true,
+                                    fillColor: Colors.grey.shade100),
+                                icon: Icon(Icons.keyboard_arrow_down,
+                                    color: Colors.grey.shade300),
+                                items: [
+                                  DropdownMenuItem(
+                                      value: defaultPosition,
+                                      child: Text(defaultPosition,
+                                          style:
+                                              const TextStyle(fontSize: 12))),
+                                ],
+                                onChanged: null,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]),
+              ),
               const Spacer(flex: 1),
 
               // ── Required OJT Hours ──────────────────────────────────────

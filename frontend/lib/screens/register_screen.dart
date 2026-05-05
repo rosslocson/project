@@ -7,8 +7,6 @@ import 'package:http/http.dart' as http;
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/app_background.dart';
-
-// ── Imported Extracted Widgets ──
 import '../widgets/register_widgets/register_form.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -25,7 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  final _ojtHoursCtrl = TextEditingController(text: '400');
+  final _ojtHoursCtrl = TextEditingController();
 
   bool _obscurePass = true;
   bool _obscureConfirm = true;
@@ -35,8 +33,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _loadingDepts = false;
   bool _deptsFetched = false;
   String? _selectedDept;
+  bool _deptTouched = false;
 
-  // Position is always fixed to "Intern" on registration
   final String _defaultPosition = 'Intern';
 
   // Password strength
@@ -81,17 +79,21 @@ class _RegisterScreenState extends State<RegisterScreen>
           });
         }
       } else {
-        if (mounted) setState(() {
+        if (mounted) {
+          setState(() {
+            _loadingDepts = false;
+            _deptsFetched = true;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch departments: $e');
+      if (mounted) {
+        setState(() {
           _loadingDepts = false;
           _deptsFetched = true;
         });
       }
-    } catch (e) {
-      debugPrint('Failed to fetch departments: $e');
-      if (mounted) setState(() {
-        _loadingDepts = false;
-        _deptsFetched = true;
-      });
     }
   }
 
@@ -180,12 +182,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       passValue: _passValue,
       confirmError: _confirmError,
       auth: auth,
+      deptTouched: _deptTouched,
       onToggleObscurePass: () => setState(() => _obscurePass = !_obscurePass),
       onToggleObscureConfirm: () =>
           setState(() => _obscureConfirm = !_obscureConfirm),
       onPassChanged: _checkStrength,
       onConfirmChanged: _checkConfirm,
-      onDeptChanged: (v) => setState(() => _selectedDept = v),
+      onDeptChanged: (v) => setState(() {
+        _selectedDept = v;
+        _deptTouched = true;
+      }),
       onRegister: _register,
     );
 
