@@ -105,8 +105,9 @@ DateTime? _parseTime(dynamic raw, String? dateStr) {
 
   // ISO 8601 — always convert to local so wall-clock comparisons are correct.
   final iso = DateTime.tryParse(s);
-  if (iso != null)
+  if (iso != null) {
     return iso.toLocal(); // ← already there, confirm it's present
+  }
 
   // "hh:mm AM" short format from admin endpoints.
   if (dateStr != null) {
@@ -117,9 +118,9 @@ DateTime? _parseTime(dynamic raw, String? dateStr) {
         final min = int.parse(parts[1]);
         final isPm = parts[2].toUpperCase() == 'PM';
 
-        if (hour == 12)
+        if (hour == 12) {
           hour = isPm ? 12 : 0;
-        else if (isPm) hour += 12;
+        } else if (isPm) hour += 12;
 
         final d = DateTime.parse(dateStr);
         // Construct as local — no toLocal() needed since no timezone info.

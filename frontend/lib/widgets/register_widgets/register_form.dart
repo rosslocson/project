@@ -91,7 +91,7 @@ class RegisterForm {
         child: Form(
           key: formKey,
           child: Column(
-            mainAxisSize: MainAxisSize.max,
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
@@ -103,7 +103,7 @@ class RegisterForm {
                     color: kCosmicBlue,
                     letterSpacing: 1.2),
               ),
-              const Spacer(flex: 3),
+              const SizedBox(height: 24), // unchanged
 
               if (auth.error != null) ...[
                 RegisterErrorBanner(
@@ -147,7 +147,7 @@ class RegisterForm {
                   ),
                 ),
               ]),
-              const Spacer(flex: 1),
+              const SizedBox(height: 10), // reduced from 16
 
               // ── Email ───────────────────────────────────────────────────
               fieldLabel('Email Address'),
@@ -166,7 +166,7 @@ class RegisterForm {
                   return null;
                 },
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 10), // reduced from 16
 
               // ── Department / Position ───────────────────────────────────
               IntrinsicHeight(
@@ -206,11 +206,11 @@ class RegisterForm {
                               !loadingDepts &&
                               deptsFetched)
                             const Padding(
-                              padding: EdgeInsets.only(left: 12, top: 4),
+                              padding: EdgeInsets.only(left: 19, top: 4),
                               child: Text(
                                 'No department listed. Please contact the administrator.',
                                 style: TextStyle(
-                                    fontSize: 9.5,
+                                    fontSize: 8.5,
                                     color: Color.fromARGB(255, 245, 37, 0)),
                               ),
                             ),
@@ -248,7 +248,7 @@ class RegisterForm {
                   ],
                 ),
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 10), // reduced from 16
 
               // ── Required OJT Hours ──────────────────────────────────────
               fieldLabel('Required OJT Hours'),
@@ -259,13 +259,6 @@ class RegisterForm {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: dec.copyWith(
                   hintText: 'e.g. 400',
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Icon(Icons.timer_outlined,
-                        color: Color(0xFF9CA3AF), size: 20),
-                  ),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 0, minHeight: 0),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
@@ -281,7 +274,7 @@ class RegisterForm {
                   return null;
                 },
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 10), // reduced from 16
 
               // ── Password ────────────────────────────────────────────────
               fieldLabel('Password'),
@@ -325,7 +318,7 @@ class RegisterForm {
                     passColor: passColor,
                     passStrength: passStrength),
               ],
-              const Spacer(flex: 1),
+              const SizedBox(height: 10), // reduced from 16
 
               // ── Confirm Password ────────────────────────────────────────
               fieldLabel('Confirm Password'),
@@ -366,7 +359,8 @@ class RegisterForm {
                       style: const TextStyle(fontSize: 11, color: Colors.red)),
                 ),
               ],
-              const Spacer(flex: 3),
+
+              const SizedBox(height: 24), // pushes button to bottom
 
               // ── Submit ──────────────────────────────────────────────────
               BlueButton(
@@ -374,7 +368,8 @@ class RegisterForm {
                 onPressed: auth.isLoading ? null : onRegister,
                 loading: auth.isLoading,
               ),
-              const Spacer(flex: 2),
+
+              const SizedBox(height: 25), // unchanged
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

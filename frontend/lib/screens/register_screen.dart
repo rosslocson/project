@@ -254,8 +254,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                 Expanded(
                   child: Container(
                     color: Colors.white,
-                    child:
-                        formWidget.buildForm(isMobile: false, context: context),
+                    child: SingleChildScrollView(
+                      child: formWidget.buildForm(
+                          isMobile: true, context: context),
+                    ),
                   ),
                 ),
               ],
@@ -280,7 +282,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: formWidget.buildForm(isMobile: true, context: context),
+                  child: SingleChildScrollView(
+                    child:
+                        formWidget.buildForm(isMobile: true, context: context),
+                  ),
                 ),
               ),
             );
