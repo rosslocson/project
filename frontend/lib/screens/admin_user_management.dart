@@ -132,6 +132,7 @@ class _UsersScreenState extends State<UsersScreen> {
       content: Text(message),
       backgroundColor: Colors.red.shade700,
       behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 1),
     ));
   }
 
@@ -253,6 +254,8 @@ class _UsersScreenState extends State<UsersScreen> {
         user['is_active'] = isActive(user);
       });
       _showError('Archive failed: ${res['error'] ?? 'Unknown error'}');
+      duration:
+      const Duration(seconds: 1);
     }
   }
 
@@ -272,6 +275,8 @@ class _UsersScreenState extends State<UsersScreen> {
     if (res['ok'] == true) {
       _showSuccess('$name has been archived.');
       _silentReload();
+      duration:
+      const Duration(seconds: 1);
     }
   }
 

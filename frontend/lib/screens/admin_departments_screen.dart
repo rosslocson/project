@@ -88,7 +88,7 @@ class _ConfigScreenState extends State<ConfigScreen>
       content: Text(msg),
       backgroundColor: Colors.red.shade700,
       behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 1),
     ));
   }
 

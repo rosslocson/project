@@ -22,6 +22,7 @@ class RegisterForm {
   final bool obscureConfirm;
   final List<String> departments;
   final bool loadingDepts;
+  final bool deptsFetched;
   final String? selectedDept;
   final String defaultPosition;
 
@@ -50,6 +51,7 @@ class RegisterForm {
     required this.obscureConfirm,
     required this.departments,
     required this.loadingDepts,
+    required this.deptsFetched,
     required this.selectedDept,
     required this.defaultPosition,
     required this.ojtHoursCtrl,
@@ -167,67 +169,85 @@ class RegisterForm {
               const Spacer(flex: 1),
 
               // ── Department / Position ───────────────────────────────────
-              Row(children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      fieldLabel('Department'),
-                      const SizedBox(height: 4),
-                      loadingDepts
-                          ? _shimmerDropdown(dec)
-                          : DropdownButtonFormField<String>(
-                              initialValue: selectedDept,
-                              decoration: dec,
-                              hint: Text(
-                                  departments.isEmpty
-                                      ? 'None available'
-                                      : 'Select Department',
-                                  style: const TextStyle(fontSize: 13)),
-                              icon: Icon(Icons.keyboard_arrow_down,
-                                  color: Colors.grey.shade500),
-                              items: departments
-                                  .map((s) => DropdownMenuItem(
-                                      value: s,
-                                      child: Text(s,
-                                          overflow: TextOverflow.ellipsis,
-                                          style:
-                                              const TextStyle(fontSize: 12))))
-                                  .toList(),
-                              onChanged: onDeptChanged,
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          fieldLabel('Department'),
+                          const SizedBox(height: 4),
+                          loadingDepts
+                              ? _shimmerDropdown(dec)
+                              : DropdownButtonFormField<String>(
+                                  initialValue: selectedDept,
+                                  decoration: dec,
+                                  hint: Text(
+                                      departments.isEmpty
+                                          ? 'None available'
+                                          : 'Select Department',
+                                      style: const TextStyle(fontSize: 13)),
+                                  icon: Icon(Icons.keyboard_arrow_down,
+                                      color: Colors.grey.shade500),
+                                  items: departments
+                                      .map((s) => DropdownMenuItem(
+                                          value: s,
+                                          child: Text(s,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontSize: 12))))
+                                      .toList(),
+                                  onChanged: onDeptChanged,
+                                ),
+                          if (departments.isEmpty &&
+                              !loadingDepts &&
+                              deptsFetched)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 12, top: 4),
+                              child: Text(
+                                'No department listed. Please contact the administrator.',
+                                style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: Color.fromARGB(255, 245, 37, 0)),
+                              ),
                             ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      fieldLabel('Position'),
-                      const SizedBox(height: 4),
-                      IgnorePointer(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: defaultPosition,
-                          decoration: dec.copyWith(
-                              filled: true, fillColor: Colors.grey.shade100),
-                          icon: Icon(Icons.keyboard_arrow_down,
-                              color: Colors.grey.shade300),
-                          items: [
-                            DropdownMenuItem(
-                                value: defaultPosition,
-                                child: Text(defaultPosition,
-                                    style: const TextStyle(fontSize: 12))),
-                          ],
-                          onChanged: null,
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          fieldLabel('Position'),
+                          const SizedBox(height: 4),
+                          IgnorePointer(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: defaultPosition,
+                              decoration: dec.copyWith(
+                                  filled: true,
+                                  fillColor: Colors.grey.shade100),
+                              icon: Icon(Icons.keyboard_arrow_down,
+                                  color: Colors.grey.shade300),
+                              items: [
+                                DropdownMenuItem(
+                                    value: defaultPosition,
+                                    child: Text(defaultPosition,
+                                        style: const TextStyle(fontSize: 12))),
+                              ],
+                              onChanged: null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ]),
+              ),
               const Spacer(flex: 1),
 
               // ── Required OJT Hours ──────────────────────────────────────
@@ -350,7 +370,7 @@ class RegisterForm {
 
               // ── Submit ──────────────────────────────────────────────────
               BlueButton(
-                label: 'Create Account',
+                label: 'CREATE ACCOUNT',
                 onPressed: auth.isLoading ? null : onRegister,
                 loading: auth.isLoading,
               ),
@@ -363,7 +383,7 @@ class RegisterForm {
                       style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/login'),
-                    child: const Text('Log In',
+                    child: const Text('LOG IN',
                         style: TextStyle(
                             fontSize: 13,
                             color: kCosmicBlue,

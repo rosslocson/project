@@ -32,7 +32,8 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   // Departments
   List<String> _departments = [];
-  bool _loadingDepts = true;
+  bool _loadingDepts = false;
+  bool _deptsFetched = false;
   String? _selectedDept;
 
   // Position is always fixed to "Intern" on registration
@@ -77,14 +78,23 @@ class _RegisterScreenState extends State<RegisterScreen>
             _departments =
                 items.map<String>((d) => d['name'] as String).toList();
             _loadingDepts = false;
+            _deptsFetched = true;
           });
         }
       } else {
-        if (mounted) setState(() => _loadingDepts = false);
+        if (mounted)
+          setState(() {
+            _loadingDepts = false;
+            _deptsFetched = true;
+          });
       }
     } catch (e) {
       debugPrint('Failed to fetch departments: $e');
-      if (mounted) setState(() => _loadingDepts = false);
+      if (mounted)
+        setState(() {
+          _loadingDepts = false;
+          _deptsFetched = true;
+        });
     }
   }
 
@@ -166,6 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       obscureConfirm: _obscureConfirm,
       departments: _departments,
       loadingDepts: _loadingDepts,
+      deptsFetched: _deptsFetched,
       selectedDept: _selectedDept,
       defaultPosition: _defaultPosition,
       passStrength: _passStrength,
