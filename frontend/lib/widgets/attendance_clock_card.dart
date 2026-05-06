@@ -54,6 +54,28 @@ class AttendanceClockCard extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              // Weekend indicator pill
+              if (_isWeekend) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2)),
+                  ),
+                  child: const Text(
+                    'Weekend – No Attendance',
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
 
@@ -101,14 +123,18 @@ class AttendanceClockCard extends StatelessWidget {
     );
   }
 
+  bool get _isWeekend {
+    final weekday = DateTime.now().weekday;
+    return weekday == DateTime.saturday || weekday == DateTime.sunday;
+  }
+
   Widget _buildButton(
     BuildContext context, {
     required bool timedIn,
     required bool timedOut,
   }) {
     // ── Weekend guard — no attendance on Sat/Sun ───────────────────────
-    final weekday = DateTime.now().weekday;
-    if (weekday == DateTime.saturday || weekday == DateTime.sunday) {
+    if (_isWeekend) {
       return ElevatedButton.icon(
         onPressed: null,
         icon: const Icon(Icons.weekend_rounded),

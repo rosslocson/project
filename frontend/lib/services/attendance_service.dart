@@ -3,8 +3,9 @@
 // Drop-in companion to your existing ApiService.
 // Handles all attendance-related API calls.
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'api_service.dart';           // your existing file
+import 'api_service.dart'; // your existing file
 import '../models/attendance_model.dart';
 
 class AttendanceService {
@@ -75,13 +76,20 @@ class AttendanceService {
         headers: await ApiService.authHeaders(),
       );
       final data = ApiService.parse(res);
+      debugPrint('📡 getHistory status: ${res.statusCode}');
+      debugPrint('📡 getHistory body: ${res.body}');
+      debugPrint(
+          '📡 getHistory ok=${data['ok']}  records is List=${data['records'] is List}');
+
       if (data['ok'] == true && data['records'] is List) {
         return (data['records'] as List)
             .map((e) => AttendanceRecord.fromJson(e as Map<String, dynamic>))
             .toList();
       }
       return [];
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('❌ getHistory error: $e');
+      debugPrint('❌ getHistory stacktrace: $st');
       return [];
     }
   }

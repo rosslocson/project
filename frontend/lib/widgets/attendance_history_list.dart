@@ -1,6 +1,8 @@
 // lib/widgets/attendance_history_list.dart
 //
 // Scrollable list of past attendance records.
+// - Weekends are excluded from the list.
+// - Past records where the user timed in but never timed out show "Missed Clock Out".
 
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
@@ -15,8 +17,20 @@ class AttendanceHistoryList extends StatelessWidget {
     required this.isLoading,
   });
 
+  /// Returns only weekday records (Mon–Fri), sorted newest first.
+  List<AttendanceRecord> get _weekdayRecords {
+    return records
+        .where((r) =>
+            r.date.weekday != DateTime.saturday &&
+            r.date.weekday != DateTime.sunday)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filtered = _weekdayRecords;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -50,7 +64,7 @@ class AttendanceHistoryList extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${records.length} record${records.length != 1 ? 's' : ''}',
+                  '${filtered.length} record${filtered.length != 1 ? 's' : ''}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade500,
@@ -68,7 +82,7 @@ class AttendanceHistoryList extends StatelessWidget {
               padding: EdgeInsets.all(32),
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (records.isEmpty)
+          else if (filtered.isEmpty)
             Padding(
               padding: const EdgeInsets.all(32),
               child: Center(
@@ -93,11 +107,11 @@ class AttendanceHistoryList extends StatelessWidget {
               child: ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: records.length,
+                itemCount: filtered.length,
                 separatorBuilder: (_, __) =>
                     const Divider(height: 1, indent: 20),
                 itemBuilder: (context, i) =>
-                    _AttendanceRow(record: records[i]),
+                    _AttendanceRow(record: filtered[i]),
               ),
             ),
         ],
@@ -111,10 +125,23 @@ class _AttendanceRow extends StatelessWidget {
 
   const _AttendanceRow({required this.record});
 
+  /// A record is "missed clock out" when:
+  ///   - The user timed in (has a timeIn value)
+  ///   - The user never timed out (no timeOut value)
+  ///   - The date is in the past (not today)
+  bool get _isMissedClockOut {
+    final today = DateTime.now();
+    final isToday = record.date.year == today.year &&
+        record.date.month == today.month &&
+        record.date.day == today.day;
+    return record.hasTimedIn && !record.hasTimedOut && !isToday;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isComplete = record.isComplete;
-    final isOngoing = record.hasTimedIn && !record.hasTimedOut;
+    final isOngoing =
+        record.hasTimedIn && !record.hasTimedOut && !_isMissedClockOut;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -174,19 +201,30 @@ class _AttendanceRow extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       record.timeIn != null ? _fmtTime(record.timeIn!) : '--',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
                     const SizedBox(width: 10),
                     Icon(Icons.logout_rounded,
-                        size: 12, color: Colors.grey.shade400),
+                        size: 12,
+                        // Highlight the missing clock-out in red
+                        color: _isMissedClockOut
+                            ? Colors.red.shade300
+                            : Colors.grey.shade400),
                     const SizedBox(width: 4),
                     Text(
                       record.timeOut != null
                           ? _fmtTime(record.timeOut!)
-                          : '--',
+                          : (_isMissedClockOut ? 'Missing' : '--'),
                       style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
+                        fontSize: 12,
+                        color: _isMissedClockOut
+                            ? Colors.red.shade400
+                            : Colors.grey.shade600,
+                        fontWeight: _isMissedClockOut
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
                     ),
                   ],
                 ),
@@ -209,7 +247,11 @@ class _AttendanceRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              _StatusBadge(isComplete: isComplete, isOngoing: isOngoing),
+              _StatusBadge(
+                isComplete: isComplete,
+                isOngoing: isOngoing,
+                isMissedClockOut: _isMissedClockOut,
+              ),
             ],
           ),
         ],
@@ -233,16 +275,31 @@ class _AttendanceRow extends StatelessWidget {
 
   String _monthAbbr(int m) {
     const months = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC'
     ];
     return months[m - 1];
   }
 
   String _dayName(int wd) {
     const days = [
-      'Monday', 'Tuesday', 'Wednesday',
-      'Thursday', 'Friday', 'Saturday', 'Sunday'
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
     ];
     return days[wd - 1];
   }
@@ -251,27 +308,41 @@ class _AttendanceRow extends StatelessWidget {
 class _StatusBadge extends StatelessWidget {
   final bool isComplete;
   final bool isOngoing;
+  final bool isMissedClockOut;
 
-  const _StatusBadge({required this.isComplete, required this.isOngoing});
+  const _StatusBadge({
+    required this.isComplete,
+    required this.isOngoing,
+    this.isMissedClockOut = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final Color bg;
     final Color fg;
     final String label;
+    final IconData icon;
 
     if (isComplete) {
       bg = Colors.green.shade50;
       fg = Colors.green.shade700;
       label = 'Complete';
+      icon = Icons.check_circle_rounded;
     } else if (isOngoing) {
       bg = Colors.blue.shade50;
       fg = Colors.blue.shade700;
       label = 'Ongoing';
+      icon = Icons.timelapse_rounded;
+    } else if (isMissedClockOut) {
+      bg = Colors.red.shade50;
+      fg = Colors.red.shade700;
+      label = 'Missed Clock Out';
+      icon = Icons.alarm_off_rounded;
     } else {
       bg = Colors.orange.shade50;
       fg = Colors.orange.shade700;
       label = 'Incomplete';
+      icon = Icons.warning_amber_rounded;
     }
 
     return Container(
@@ -280,9 +351,17 @@ class _StatusBadge extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        label,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: fg),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style:
+                TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
+          ),
+        ],
       ),
     );
   }

@@ -153,11 +153,18 @@ class AdminAttendanceRecord {
 
   // ── Time-in punctuality ───────────────────────────────────────────────────
 
-  /// Parses a "HH:mm" or "HH:mm:ss" string into total minutes from midnight.
-  /// Returns null if unparseable.
+  /// Parses a "HH:mm", "HH:mm:ss", or full ISO 8601 timestamp into total
+  /// minutes from midnight (local time). Returns null if unparseable.
   static int? _toMinutes(String? time) {
     if (time == null) return null;
     try {
+      // Try ISO 8601 first (e.g. "2024-05-06T08:30:00Z" or "...+08:00")
+      final iso = DateTime.tryParse(time);
+      if (iso != null) {
+        final local = iso.toLocal();
+        return local.hour * 60 + local.minute;
+      }
+      // Fallback: plain "HH:mm" or "HH:mm:ss"
       final parts = time.split(':');
       return int.parse(parts[0]) * 60 + int.parse(parts[1]);
     } catch (_) {
@@ -177,34 +184,11 @@ class AdminAttendanceRecord {
   /// Computes actual worked minutes:
   ///   • Caps clock-out at 17:00 (5 PM) — overtime is ignored.
   ///   • Deducts the 12:00–13:00 lunch break if the worked window overlaps it.
+  // REMOVE the entire formattedHours getter and replace with:
   String get formattedHours {
-    final startMin = _toMinutes(timeIn);
-    if (startMin == null) return '--';
-
-    var endMin = _toMinutes(timeOut);
-    if (endMin == null) return '--';
-
-    // Cap at 17:00
-    const cap = 17 * 60; // 1020
-    if (endMin > cap) endMin = cap;
-
-    if (endMin <= startMin) return '--';
-
-    // Deduct lunch overlap with [12:00, 13:00)
-    const lunchStart = 12 * 60; // 720
-    const lunchEnd = 13 * 60;   // 780
-    int lunchDeducted = 0;
-    if (startMin < lunchEnd && endMin > lunchStart) {
-      final overlapStart = startMin < lunchStart ? lunchStart : startMin;
-      final overlapEnd = endMin > lunchEnd ? lunchEnd : endMin;
-      lunchDeducted = overlapEnd - overlapStart;
-    }
-
-    final workedMin = (endMin - startMin) - lunchDeducted;
-    if (workedMin <= 0) return '0h 0m';
-
-    final h = workedMin ~/ 60;
-    final m = workedMin % 60;
+    if (hoursRendered == null) return '--';
+    final h = hoursRendered!.floor();
+    final m = ((hoursRendered! - h) * 60).round();
     return '${h}h ${m}m';
   }
 
@@ -839,12 +823,12 @@ class _AttendanceTable extends StatelessWidget {
 
   static const _colWidths = <int, TableColumnWidth>{
     0: FixedColumnWidth(28), // left spacer
-    1: FlexColumnWidth(3),   // Intern
-    2: FlexColumnWidth(2),   // Date
+    1: FlexColumnWidth(3), // Intern
+    2: FlexColumnWidth(2), // Date
     3: FlexColumnWidth(1.5), // Time In
     4: FlexColumnWidth(1.5), // Time Out
     5: FlexColumnWidth(1.5), // Hours Worked
-    6: FlexColumnWidth(2),   // Status
+    6: FlexColumnWidth(2), // Status
     7: FixedColumnWidth(28), // right spacer
   };
 
