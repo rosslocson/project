@@ -28,20 +28,60 @@ String _toApiDate(DateTime dt) =>
 
 String _toDisplayDate(DateTime dt) {
   const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
   return '${months[dt.month - 1]} ${_pad(dt.day)}, ${dt.year}';
+}
+
+/// Short display: "May 06"
+String _toShortDate(DateTime dt) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  return '${months[dt.month - 1]} ${_pad(dt.day)}';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Date range helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Returns the (start, end) DateTime pair for a given period relative to [now].
+(DateTime, DateTime) _periodRange(AttendancePeriod period, DateTime now) {
+  switch (period) {
+    case AttendancePeriod.today:
+      return (now, now);
+    case AttendancePeriod.week:
+      // Monday → Sunday (or today if mid-week)
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final sunday = monday.add(const Duration(days: 6));
+      return (monday, sunday.isAfter(now) ? now : sunday);
+    case AttendancePeriod.month:
+      final start = DateTime(now.year, now.month, 1);
+      return (start, now);
+    case AttendancePeriod.year:
+      final start = DateTime(now.year, 1, 1);
+      return (start, now);
+    default:
+      return (now, now);
+  }
+}
+
+/// Formats a period range into a human-readable label.
+/// • Same day  → "May 06, 2025"
+/// • Same year → "Apr 30 – May 06"
+/// • Diff year → "Dec 30, 2024 – Jan 05, 2025"
+String _formatDateRange(DateTime start, DateTime end) {
+  if (start.year == end.year &&
+      start.month == end.month &&
+      start.day == end.day) {
+    return _toDisplayDate(start);
+  }
+  if (start.year == end.year) {
+    return '${_toShortDate(start)} – ${_toShortDate(end)}, ${end.year}';
+  }
+  return '${_toDisplayDate(start)} – ${_toDisplayDate(end)}';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,20 +191,14 @@ class AdminAttendanceRecord {
     );
   }
 
-  // ── Time-in punctuality ───────────────────────────────────────────────────
-
-  /// Parses a "HH:mm", "HH:mm:ss", or full ISO 8601 timestamp into total
-  /// minutes from midnight (local time). Returns null if unparseable.
   static int? _toMinutes(String? time) {
     if (time == null) return null;
     try {
-      // Try ISO 8601 first (e.g. "2024-05-06T08:30:00Z" or "...+08:00")
       final iso = DateTime.tryParse(time);
       if (iso != null) {
         final local = iso.toLocal();
         return local.hour * 60 + local.minute;
       }
-      // Fallback: plain "HH:mm" or "HH:mm:ss"
       final parts = time.split(':');
       return int.parse(parts[0]) * 60 + int.parse(parts[1]);
     } catch (_) {
@@ -172,19 +206,12 @@ class AdminAttendanceRecord {
     }
   }
 
-  /// True when the intern clocked in at or before 08:00.
   bool get isOnTime {
     final minutes = _toMinutes(timeIn);
     if (minutes == null) return false;
-    return minutes <= 8 * 60; // 480 min = 08:00
+    return minutes <= 8 * 60;
   }
 
-  // ── Hours worked (lunch-excluded, capped at 17:00) ────────────────────────
-
-  /// Computes actual worked minutes:
-  ///   • Caps clock-out at 17:00 (5 PM) — overtime is ignored.
-  ///   • Deducts the 12:00–13:00 lunch break if the worked window overlaps it.
-  // REMOVE the entire formattedHours getter and replace with:
   String get formattedHours {
     if (hoursRendered == null) return '--';
     final h = hoursRendered!.floor();
@@ -202,6 +229,8 @@ class AdminAttendanceRecord {
 class AdminAttendanceService {
   static Future<Map<String, dynamic>> fetchAttendance({
     String? date,
+    String? dateFrom,
+    String? dateTo,
     String? period,
     bool allDates = false,
     String? search,
@@ -218,7 +247,10 @@ class AdminAttendanceService {
           'all_dates': 'true'
         else if (period != null)
           'period': period
-        else if (date != null)
+        else if (dateFrom != null && dateTo != null) ...<String, String>{
+          'date_from': dateFrom,
+          'date_to': dateTo,
+        } else if (date != null)
           'date': date,
         if (search != null && search.isNotEmpty) 'search': search,
         if (status != null && status != 'All') 'status': status,
@@ -247,6 +279,8 @@ class AdminAttendanceService {
 
   static String exportUrl({
     String? date,
+    String? dateFrom,
+    String? dateTo,
     String? period,
     bool allDates = false,
     String? search,
@@ -257,7 +291,10 @@ class AdminAttendanceService {
         'all_dates': 'true'
       else if (period != null)
         'period': period
-      else if (date != null)
+      else if (dateFrom != null && dateTo != null) ...<String, String>{
+        'date_from': dateFrom,
+        'date_to': dateTo,
+      } else if (date != null)
         'date': date,
       if (search != null && search.isNotEmpty) 'search': search,
       if (status != null && status != 'All') 'status': status,
@@ -283,7 +320,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   bool _isSidebarOpen = true;
 
   AttendancePeriod _period = AttendancePeriod.today;
+
+  // Single-date custom
   DateTime _customDate = DateTime.now();
+
+  // Date-range custom
+  DateTime _customRangeStart = DateTime.now();
+  DateTime _customRangeEnd = DateTime.now();
+  bool _isRangeMode = false; // false = single day, true = range
+
   String _selectedStatus = 'All';
 
   final TextEditingController _searchCtrl = TextEditingController();
@@ -332,7 +377,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final result = await AdminAttendanceService.fetchAttendance(
       allDates: isAllDates,
       period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-      date: isCustom ? _toApiDate(_customDate) : null,
+      // Custom range vs single day
+      dateFrom: (isCustom && _isRangeMode)
+          ? _toApiDate(_customRangeStart)
+          : null,
+      dateTo: (isCustom && _isRangeMode)
+          ? _toApiDate(_customRangeEnd)
+          : null,
+      date: (isCustom && !_isRangeMode) ? _toApiDate(_customDate) : null,
       search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
       status: _selectedStatus == 'All' ? null : _selectedStatus,
       page: page,
@@ -356,30 +408,37 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     }
   }
 
+  // ── Date pickers ──────────────────────────────────────────────────────────
+
   Future<void> _pickCustomDate() async {
-    final picked = await showDatePicker(
+    // Show a small modal with two options: single date or date range
+    await showDialog(
       context: context,
-      initialDate: _customDate,
-      firstDate: DateTime(2024),
-      lastDate: DateTime.now(),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: _kAccent,
-            onPrimary: Colors.white,
-            surface: Color(0xFF1A1F3A),
-          ),
-        ),
-        child: child!,
+      builder: (ctx) => _CustomDatePickerDialog(
+        initialSingleDate: _customDate,
+        initialRangeStart: _customRangeStart,
+        initialRangeEnd: _customRangeEnd,
+        initialIsRange: _isRangeMode,
+        onConfirm: ({
+          required bool isRange,
+          DateTime? singleDate,
+          DateTime? rangeStart,
+          DateTime? rangeEnd,
+        }) {
+          setState(() {
+            _isRangeMode = isRange;
+            _period = AttendancePeriod.custom;
+            if (isRange) {
+              _customRangeStart = rangeStart!;
+              _customRangeEnd = rangeEnd!;
+            } else {
+              _customDate = singleDate!;
+            }
+          });
+          _load();
+        },
       ),
     );
-    if (picked != null) {
-      setState(() {
-        _customDate = picked;
-        _period = AttendancePeriod.custom;
-      });
-      _load();
-    }
   }
 
   void _snack(String msg, {bool isError = false}) {
@@ -390,6 +449,24 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
+  }
+
+  // ── Active date range label ───────────────────────────────────────────────
+
+  String get _activeDateRangeLabel {
+    final now = DateTime.now();
+    switch (_period) {
+      case AttendancePeriod.allDates:
+        return 'All Dates';
+      case AttendancePeriod.custom:
+        if (_isRangeMode) {
+          return _formatDateRange(_customRangeStart, _customRangeEnd);
+        }
+        return _toDisplayDate(_customDate);
+      default:
+        final (start, end) = _periodRange(_period, now);
+        return _formatDateRange(start, end);
+    }
   }
 
   // ── build ─────────────────────────────────────────────────────────────────
@@ -414,7 +491,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           Expanded(
             child: Stack(
               children: [
-                // ── background ──
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -425,8 +501,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                     ),
                   ),
                 ),
-
-                // ── content ──
                 Positioned.fill(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -524,7 +598,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── card header (title + count) ───────────────────────────────────────────
+  // ── card header ───────────────────────────────────────────────────────────
 
   Widget _buildCardHeader() {
     return Container(
@@ -535,7 +609,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       ),
       child: Row(
         children: [
-          // icon
           Container(
             width: 40,
             height: 40,
@@ -547,8 +620,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 color: Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
-
-          // title + subtitle
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,20 +634,41 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  _loading
-                      ? 'Loading…'
-                      : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: _kTextMid,
-                  ),
+                // ── Date range label ──────────────────────────────────────
+                Row(
+                  children: [
+                    Text(
+                      _loading
+                          ? 'Loading…'
+                          : '$_total ${_total == 1 ? 'record' : 'records'} found',
+                      style: const TextStyle(fontSize: 12, color: _kTextMid),
+                    ),
+                    if (!_loading && _period != AttendancePeriod.allDates) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 1,
+                        height: 11,
+                        color: _kBorder,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.calendar_today_rounded,
+                          size: 11, color: _kTextLight),
+                      const SizedBox(width: 4),
+                      Text(
+                        _activeDateRangeLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _kTextMid,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
-
-          // Export button
           _ExportButton(
             onTap: () async {
               final isAllDates = _period == AttendancePeriod.allDates;
@@ -586,7 +678,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
                   period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-                  date: isCustom ? _toApiDate(_customDate) : null,
+                  date: (isCustom && !_isRangeMode)
+                      ? _toApiDate(_customDate)
+                      : null,
                   search: _searchCtrl.text.trim().isEmpty
                       ? null
                       : _searchCtrl.text.trim(),
@@ -600,14 +694,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── toolbar (search + status + refresh) ──────────────────────────────────
+  // ── toolbar ───────────────────────────────────────────────────────────────
 
   Widget _buildToolbar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 18, 28, 10),
       child: Row(
         children: [
-          // Search field
           Expanded(
             child: _SearchField(
               controller: _searchCtrl,
@@ -618,8 +711,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Status dropdown
           _StatusDropdown(
             value: _selectedStatus,
             onChanged: (v) {
@@ -628,15 +719,11 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             },
           ),
           const SizedBox(width: 10),
-
-          // Refresh
           _IconActionButton(
             icon: Icons.refresh_rounded,
             tooltip: 'Refresh',
             onTap: () => _load(page: _page),
           ),
-
-          // Active filter badge
           if (_searchCtrl.text.isNotEmpty || _selectedStatus != 'All') ...[
             const SizedBox(width: 10),
             _ActiveFiltersBadge(
@@ -665,6 +752,18 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       AttendancePeriod.allDates,
     ];
 
+    // Build the Custom chip label
+    String customLabel;
+    if (_period == AttendancePeriod.custom) {
+      if (_isRangeMode) {
+        customLabel = _formatDateRange(_customRangeStart, _customRangeEnd);
+      } else {
+        customLabel = _toDisplayDate(_customDate);
+      }
+    } else {
+      customLabel = 'Custom Date';
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 4, 28, 16),
       child: Row(
@@ -681,9 +780,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 ),
               )),
           _PeriodChip(
-            label: _period == AttendancePeriod.custom
-                ? _toDisplayDate(_customDate)
-                : 'Custom Date',
+            label: customLabel,
             selected: _period == AttendancePeriod.custom,
             icon: Icons.calendar_today_rounded,
             onTap: _pickCustomDate,
@@ -805,6 +902,393 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Custom Date Picker Dialog (single date OR date range)
+// ─────────────────────────────────────────────────────────────────────────────
+
+typedef _DatePickerConfirm = void Function({
+  required bool isRange,
+  DateTime? singleDate,
+  DateTime? rangeStart,
+  DateTime? rangeEnd,
+});
+
+class _CustomDatePickerDialog extends StatefulWidget {
+  final DateTime initialSingleDate;
+  final DateTime initialRangeStart;
+  final DateTime initialRangeEnd;
+  final bool initialIsRange;
+  final _DatePickerConfirm onConfirm;
+
+  const _CustomDatePickerDialog({
+    required this.initialSingleDate,
+    required this.initialRangeStart,
+    required this.initialRangeEnd,
+    required this.initialIsRange,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_CustomDatePickerDialog> createState() =>
+      _CustomDatePickerDialogState();
+}
+
+class _CustomDatePickerDialogState extends State<_CustomDatePickerDialog> {
+  late bool _isRange;
+  late DateTime _singleDate;
+  late DateTime _rangeStart;
+  late DateTime _rangeEnd;
+
+  @override
+  void initState() {
+    super.initState();
+    _isRange = widget.initialIsRange;
+    _singleDate = widget.initialSingleDate;
+    _rangeStart = widget.initialRangeStart;
+    _rangeEnd = widget.initialRangeEnd;
+  }
+
+  Future<void> _pickSingleDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _singleDate,
+      firstDate: DateTime(2024),
+      lastDate: DateTime.now(),
+      builder: _datePickerTheme,
+    );
+    if (picked != null) setState(() => _singleDate = picked);
+  }
+
+  Future<void> _pickRangeStart() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _rangeStart,
+      firstDate: DateTime(2024),
+      lastDate: DateTime.now(),
+      builder: _datePickerTheme,
+    );
+    if (picked != null) {
+      setState(() {
+        _rangeStart = picked;
+        // If start is after end, clamp end to start
+        if (_rangeEnd.isBefore(_rangeStart)) {
+          _rangeEnd = _rangeStart;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickRangeEnd() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _rangeEnd.isBefore(_rangeStart) ? _rangeStart : _rangeEnd,
+      firstDate: _rangeStart, // can't pick end before start
+      lastDate: DateTime.now(),
+      builder: _datePickerTheme,
+    );
+    if (picked != null) {
+      setState(() => _rangeEnd = picked);
+    }
+  }
+
+  Widget _datePickerTheme(BuildContext ctx, Widget? child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: _kAccent,
+            onPrimary: Colors.white,
+            surface: Color(0xFF1A1F3A),
+            onSurface: Colors.white,
+          ),
+        ),
+        child: child!,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: _kSurface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header ──────────────────────────────────────────────────
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: _kButtonDark,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.date_range_rounded,
+                        color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Custom Date Filter',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _kTextDark,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded,
+                        size: 18, color: _kTextLight),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // ── Toggle: Single / Range ───────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4F5F8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    _ModeTab(
+                      label: 'Single Date',
+                      icon: Icons.today_rounded,
+                      selected: !_isRange,
+                      onTap: () => setState(() => _isRange = false),
+                    ),
+                    _ModeTab(
+                      label: 'Date Range',
+                      icon: Icons.date_range_rounded,
+                      selected: _isRange,
+                      onTap: () => setState(() => _isRange = true),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Date display / picker trigger ─────────────────────────
+              if (!_isRange) ...[
+                _DatePickerTile(
+                  label: 'Select Date',
+                  value: _toDisplayDate(_singleDate),
+                  onTap: _pickSingleDate,
+                ),
+              ] else ...[
+                _DatePickerTile(
+                  label: 'From',
+                  value: _toDisplayDate(_rangeStart),
+                  onTap: _pickRangeStart,
+                ),
+                const SizedBox(height: 10),
+                _DatePickerTile(
+                  label: 'To',
+                  value: _toDisplayDate(_rangeEnd),
+                  onTap: _pickRangeEnd,
+                ),
+                const SizedBox(height: 6),
+                // Range summary pill
+                if (_isRange)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: _kAccent.withValues(alpha: 0.3), width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded,
+                            size: 14, color: Color(0xFF4F46E5)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _formatDateRange(_rangeStart, _rangeEnd),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF4F46E5),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+
+              const SizedBox(height: 24),
+
+              // ── Actions ──────────────────────────────────────────────────
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: _kTextMid,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: _kBorder),
+                        ),
+                      ),
+                      child: const Text('Cancel',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        widget.onConfirm(
+                          isRange: _isRange,
+                          singleDate: _isRange ? null : _singleDate,
+                          rangeStart: _isRange ? _rangeStart : null,
+                          rangeEnd: _isRange ? _rangeEnd : null,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kButtonDark,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Apply',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Dialog sub-widgets ────────────────────────────────────────────────────────
+
+class _ModeTab extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ModeTab({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: selected ? _kButtonDark : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 14,
+                  color: selected ? Colors.white : _kTextMid),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.white : _kTextMid,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DatePickerTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _DatePickerTile({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4F5F8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _kTextLight,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const VerticalDivider(width: 1, thickness: 1, color: _kBorder),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _kTextDark,
+                ),
+              ),
+            ),
+            const Icon(Icons.calendar_month_rounded,
+                size: 16, color: _kTextLight),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Table
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -813,23 +1297,18 @@ class _AttendanceTable extends StatelessWidget {
   const _AttendanceTable({required this.records});
 
   static const _headers = [
-    'Intern',
-    'Date',
-    'Time In',
-    'Time Out',
-    'Hours Worked',
-    'Status',
+    'Intern', 'Date', 'Time In', 'Time Out', 'Hours Worked', 'Status',
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(28), // left spacer
-    1: FlexColumnWidth(3), // Intern
-    2: FlexColumnWidth(2), // Date
-    3: FlexColumnWidth(1.5), // Time In
-    4: FlexColumnWidth(1.5), // Time Out
-    5: FlexColumnWidth(1.5), // Hours Worked
-    6: FlexColumnWidth(2), // Status
-    7: FixedColumnWidth(28), // right spacer
+    0: FixedColumnWidth(28),
+    1: FlexColumnWidth(3),
+    2: FlexColumnWidth(2),
+    3: FlexColumnWidth(1.5),
+    4: FlexColumnWidth(1.5),
+    5: FlexColumnWidth(1.5),
+    6: FlexColumnWidth(2),
+    7: FixedColumnWidth(28),
   };
 
   @override
@@ -883,8 +1362,6 @@ class _AttendanceTable extends StatelessWidget {
       ),
       children: [
         const SizedBox.shrink(),
-
-        // Intern
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: Row(
@@ -905,11 +1382,7 @@ class _AttendanceTable extends StatelessWidget {
             ],
           ),
         ),
-
-        // Date
         _cell(r.formattedDate, centered: true),
-
-        // Time In — green if on time, red if late, grey if missing
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: r.timeIn != null
@@ -939,24 +1412,15 @@ class _AttendanceTable extends StatelessWidget {
                     ),
                   ],
                 )
-              : const Text(
-                  '--',
-                  style: TextStyle(fontSize: 13, color: _kTextMid),
-                ),
+              : const Text('--',
+                  style: TextStyle(fontSize: 13, color: _kTextMid)),
         ),
-
-        // Time Out
         _cell(r.timeOut ?? '--'),
-
-        // Hours Worked
         _cell(r.formattedHours),
-
-        // Status
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: Center(child: _StatusBadge(status: r.status)),
         ),
-
         const SizedBox.shrink(),
       ],
     );
