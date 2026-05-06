@@ -151,10 +151,60 @@ class AdminAttendanceRecord {
     );
   }
 
+  // ── Time-in punctuality ───────────────────────────────────────────────────
+
+  /// Parses a "HH:mm" or "HH:mm:ss" string into total minutes from midnight.
+  /// Returns null if unparseable.
+  static int? _toMinutes(String? time) {
+    if (time == null) return null;
+    try {
+      final parts = time.split(':');
+      return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// True when the intern clocked in at or before 08:00.
+  bool get isOnTime {
+    final minutes = _toMinutes(timeIn);
+    if (minutes == null) return false;
+    return minutes <= 8 * 60; // 480 min = 08:00
+  }
+
+  // ── Hours worked (lunch-excluded, capped at 17:00) ────────────────────────
+
+  /// Computes actual worked minutes:
+  ///   • Caps clock-out at 17:00 (5 PM) — overtime is ignored.
+  ///   • Deducts the 12:00–13:00 lunch break if the worked window overlaps it.
   String get formattedHours {
-    if (hoursRendered == null) return '--';
-    final h = hoursRendered!.floor();
-    final m = ((hoursRendered! - h) * 60).round();
+    final startMin = _toMinutes(timeIn);
+    if (startMin == null) return '--';
+
+    var endMin = _toMinutes(timeOut);
+    if (endMin == null) return '--';
+
+    // Cap at 17:00
+    const cap = 17 * 60; // 1020
+    if (endMin > cap) endMin = cap;
+
+    if (endMin <= startMin) return '--';
+
+    // Deduct lunch overlap with [12:00, 13:00)
+    const lunchStart = 12 * 60; // 720
+    const lunchEnd = 13 * 60;   // 780
+    int lunchDeducted = 0;
+    if (startMin < lunchEnd && endMin > lunchStart) {
+      final overlapStart = startMin < lunchStart ? lunchStart : startMin;
+      final overlapEnd = endMin > lunchEnd ? lunchEnd : endMin;
+      lunchDeducted = overlapEnd - overlapStart;
+    }
+
+    final workedMin = (endMin - startMin) - lunchDeducted;
+    if (workedMin <= 0) return '0h 0m';
+
+    final h = workedMin ~/ 60;
+    final m = workedMin % 60;
     return '${h}h ${m}m';
   }
 
@@ -311,7 +361,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         _records = result['records'] as List<AdminAttendanceRecord>;
         _total = result['total'] as int;
         _loading = false;
-        _isFirstLoad = false; // ← add this      });
+        _isFirstLoad = false;
       });
     } else {
       setState(() {
@@ -789,12 +839,12 @@ class _AttendanceTable extends StatelessWidget {
 
   static const _colWidths = <int, TableColumnWidth>{
     0: FixedColumnWidth(28), // left spacer
-    1: FlexColumnWidth(3), // Intern
-    2: FlexColumnWidth(2), // Date
+    1: FlexColumnWidth(3),   // Intern
+    2: FlexColumnWidth(2),   // Date
     3: FlexColumnWidth(1.5), // Time In
     4: FlexColumnWidth(1.5), // Time Out
     5: FlexColumnWidth(1.5), // Hours Worked
-    6: FlexColumnWidth(2), // Status
+    6: FlexColumnWidth(2),   // Status
     7: FixedColumnWidth(28), // right spacer
   };
 
@@ -849,6 +899,7 @@ class _AttendanceTable extends StatelessWidget {
       ),
       children: [
         const SizedBox.shrink(),
+
         // Intern
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
@@ -870,15 +921,58 @@ class _AttendanceTable extends StatelessWidget {
             ],
           ),
         ),
+
+        // Date
         _cell(r.formattedDate, centered: true),
-        _cell(r.timeIn ?? '--'),
+
+        // Time In — green if on time, red if late, grey if missing
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+          child: r.timeIn != null
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: r.isOnTime
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFEF4444),
+                      ),
+                    ),
+                    Text(
+                      r.timeIn!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: r.isOnTime
+                            ? const Color(0xFF16A34A)
+                            : const Color(0xFFDC2626),
+                      ),
+                    ),
+                  ],
+                )
+              : const Text(
+                  '--',
+                  style: TextStyle(fontSize: 13, color: _kTextMid),
+                ),
+        ),
+
+        // Time Out
         _cell(r.timeOut ?? '--'),
+
+        // Hours Worked
         _cell(r.formattedHours),
+
         // Status
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: Center(child: _StatusBadge(status: r.status)),
         ),
+
         const SizedBox.shrink(),
       ],
     );
