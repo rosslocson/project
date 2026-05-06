@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import '../app_theme.dart';
 import 'user_utils.dart';
 
 class UserTile extends StatelessWidget {
@@ -22,6 +23,7 @@ class UserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
     final isActiveUser = isActive(user);
     final isAdmin = user['role'] == 'admin';
 
@@ -73,9 +75,9 @@ class UserTile extends StatelessWidget {
                   width: 14,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: Colors.green,
+                        color: Colors.green,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(color: theme.listBackground, width: 2),
                   ),
                 ),
               )
@@ -90,7 +92,7 @@ class UserTile extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: isArchivedView
                     ? Colors.grey.shade700
-                    : (isActiveUser ? Colors.black87 : Colors.grey),
+                    : (isActiveUser ? theme.listText : Colors.grey),
                 decoration: (!isActiveUser && !isArchivedView)
                     ? TextDecoration.lineThrough
                     : null,
@@ -101,12 +103,12 @@ class UserTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: theme.formFill,
                     borderRadius: BorderRadius.circular(4)),
                 child: Text('You',
                     style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey.shade700,
+                        color: theme.listMutedText,
                         fontWeight: FontWeight.bold)),
               )
             ]
@@ -121,7 +123,7 @@ class UserTile extends StatelessWidget {
                     color: isArchivedView
                         ? Colors.grey.shade500
                         : (isActiveUser
-                            ? Colors.black54
+                            ? theme.listMutedText
                             : Colors.grey.shade400))),
             if ((user['department'] as String? ?? '').isNotEmpty)
               Text(
@@ -131,7 +133,7 @@ class UserTile extends StatelessWidget {
                     color: isArchivedView
                         ? Colors.grey.shade400
                         : (isActiveUser
-                            ? Colors.black38
+                            ? theme.listMutedText.withValues(alpha: 0.8)
                             : Colors.grey.shade400)),
               ),
           ],

@@ -13,6 +13,7 @@ import '../widgets/app_background.dart';
 import '../services/api_service.dart';
 import '../widgets/avatar_action_dialog.dart';
 import '../widgets/user_layout.dart';
+import '../widgets/app_theme.dart';
 import 'avatar_crop_screen.dart';
 
 // ── Imported Extracted Widgets ──
@@ -370,6 +371,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   }
 
   Widget _buildSettingsContent(BuildContext context) {
+    final theme = context.internTheme;
     final user = context.watch<AuthProvider>().user;
     final sidebar = context.watch<SidebarProvider>();
 
@@ -407,7 +409,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                          color: theme.topbarText,
                           letterSpacing: 0.5,
                         ),
                   ),
@@ -418,17 +420,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                     top: 28,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: theme.sidebarHoverBackground.withValues(
+                          alpha: context.isDarkInternTheme ? 0.8 : 1,
+                        ),
                         borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.15)),
+                        border: Border.all(color: theme.border),
                       ),
                       child: IconButton(
                         padding: const EdgeInsets.all(12),
                         onPressed: () => sidebar.setUserSidebarOpen(true),
                         icon: const UserAccountHamburger(),
                         tooltip: 'Open Sidebar',
-                        splashColor: Colors.white.withOpacity(0.1),
+                        splashColor: theme.sidebarHoverBackground,
                         highlightColor: Colors.transparent,
                       ),
                     ),
@@ -444,8 +447,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: context.isDarkInternTheme
+                      ? theme.surface
+                      : theme.sidebarBackground,
                   borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.shadowColor,
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
@@ -459,7 +471,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                         decoration: BoxDecoration(
                             border: Border(
                                 bottom:
-                                    BorderSide(color: Colors.grey.shade200))),
+                                    BorderSide(color: theme.border))),
                         child: Row(
                           children: [
                             Stack(
@@ -516,16 +528,16 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                   Text(
                                     '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
                                     style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.black87,
-                                        letterSpacing: 0.5),
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                    ).copyWith(color: theme.surfaceText),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     user?['email'] ?? '',
                                     style: TextStyle(
-                                        color: Colors.grey.shade600,
+                                        color: theme.mutedText,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500),
                                   ),
@@ -535,7 +547,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                     Text(
                                       '${user?['department']} · ${user?['position'] ?? ''}',
                                       style: TextStyle(
-                                          color: Colors.grey.shade500,
+                                          color: theme.mutedText,
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500),
                                     ),
@@ -569,13 +581,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                         decoration: BoxDecoration(
                             border: Border(
                                 bottom:
-                                    BorderSide(color: Colors.grey.shade200))),
+                                    BorderSide(color: theme.border))),
                         child: TabBar(
                           controller: _tabs,
-                          labelColor: _kBlue,
+                          labelColor: theme.surfaceText,
                           indicatorColor: _kBlue,
                           indicatorWeight: 3,
-                          unselectedLabelColor: Colors.grey.shade500,
+                          unselectedLabelColor: theme.mutedText,
                           labelStyle: const TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w700),
                           unselectedLabelStyle: const TextStyle(

@@ -1,6 +1,7 @@
 // lib/widgets/users/filter_pill_group.dart
 
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 
 class FilterPillGroup extends StatelessWidget {
   final List<Map<String, dynamic>> tabs;
@@ -16,10 +17,15 @@ class FilterPillGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: theme.sidebarHoverBackground.withValues(
+          alpha: context.isDarkInternTheme ? 0.85 : 1,
+        ),
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: theme.border),
       ),
       padding: const EdgeInsets.all(6),
       child: Row(
@@ -45,7 +51,7 @@ class FilterPillGroup extends StatelessWidget {
                 child: Text(
                   '$label ($count)',
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
+                    color: isSelected ? Colors.white : theme.topbarText.withValues(alpha: 0.8),
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     fontSize: 13,
                   ),

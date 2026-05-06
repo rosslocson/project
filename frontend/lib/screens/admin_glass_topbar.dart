@@ -2,13 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
+import '../widgets/app_theme.dart';
 import '../widgets/logout_confirmation_dialog.dart';
+
+const _lightTopbarStart = Color(0xFFF1F6FF);
+const _lightTopbarEnd = Color(0xFFDCE8FF);
+const _lightTopbarPanel = Color(0xFFF5F9FF);
+const _lightTopbarBorder = Color(0xFFD0DCF7);
+const _lightAvatarStart = Color(0xFF6366F1);
+const _lightAvatarEnd = Color(0xFFA78BFA);
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final color = theme.topbarText;
+
     return SizedBox(
       width: 22,
       height: 16,
@@ -20,7 +32,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 22,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: color,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -28,7 +40,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 14,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: color.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -36,7 +48,7 @@ class HamburgerIcon extends StatelessWidget {
             width: 22,
             height: 2.5,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: color,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -62,6 +74,8 @@ class GlassTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
     final String fullName =
@@ -82,18 +96,35 @@ class GlassTopBar extends StatelessWidget {
     final bool sidebarClosed = isSidebarOpen == false;
 
     return Container(
-      padding: const EdgeInsets.only(left: 32, right: 32, top: 24, bottom: 32),
+      padding: const EdgeInsets.only(
+        left: 32,
+        right: 32,
+        top: 24,
+        bottom: 32,
+      ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF050505).withValues(alpha: 0.95),
-            const Color(0xFF050505).withValues(alpha: 0.7),
-            Colors.transparent,
-          ],
-          stops: const [0.0, 0.6, 1.0],
-        ),
+        gradient: isDark
+            ? LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  theme.topbarScrim.withValues(alpha: 0.95),
+                  theme.topbarScrim.withValues(alpha: 0.7),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.6, 1.0],
+              )
+            : LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  _lightTopbarStart.withValues(alpha: 0.98),
+                  _lightTopbarEnd.withValues(alpha: 0.8),
+                  _lightAvatarStart.withValues(alpha: 0.18),
+                  _lightTopbarEnd.withValues(alpha: 0.0),
+                ],
+                stops: const [0.0, 0.32, 0.62, 1.0],
+              ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -102,10 +133,12 @@ class GlassTopBar extends StatelessWidget {
           if (sidebarClosed) ...[
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: isDark
+                    ? theme.sidebarHoverBackground.withValues(alpha: 0.8)
+                    : _lightTopbarPanel,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: isDark ? theme.border : _lightTopbarBorder,
                 ),
               ),
               child: IconButton(
@@ -113,7 +146,7 @@ class GlassTopBar extends StatelessWidget {
                 onPressed: onToggleSidebar,
                 icon: const HamburgerIcon(),
                 tooltip: 'Open Sidebar',
-                splashColor: Colors.white.withValues(alpha: 0.1),
+                splashColor: theme.sidebarHoverBackground,
                 highlightColor: Colors.transparent,
               ),
             ),
@@ -127,10 +160,10 @@ class GlassTopBar extends StatelessWidget {
             children: [
               Text(
                 isAdmin ? 'Admin Dashboard' : 'Home',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: theme.topbarText,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -138,7 +171,7 @@ class GlassTopBar extends StatelessWidget {
                 'Welcome, $firstName',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: theme.topbarMutedText,
                 ),
               ),
             ],
@@ -176,6 +209,10 @@ class GlassTopBar extends StatelessWidget {
                   ],
                 ),
               ),
+              const PopupMenuItem<String>(
+                enabled: false,
+                child: _ThemeToggleMenuItem(),
+              ),
               const PopupMenuDivider(),
               const PopupMenuItem<String>(
                 value: 'logout',
@@ -197,14 +234,16 @@ class GlassTopBar extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: theme.topbarText.withValues(alpha: 0.9),
                     ),
                   ),
                   const SizedBox(width: 16),
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: const Color.fromARGB(255, 205, 210, 251)
-                        .withValues(alpha: 0.1),
+                    backgroundColor: (isDark
+                            ? const Color.fromARGB(255, 205, 210, 251)
+                            : _lightAvatarStart)
+                        .withValues(alpha: isDark ? 0.18 : 0.14),
                     backgroundImage: finalAvatarUrl.isNotEmpty
                         ? NetworkImage(finalAvatarUrl)
                         : null,
@@ -214,23 +253,30 @@ class GlassTopBar extends StatelessWidget {
                             height: 44,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color.fromARGB(255, 116, 116, 212),
-                                  Color.fromARGB(255, 16, 19, 74),
-                                ],
+                              gradient: LinearGradient(
+                                colors: isDark
+                                    ? const [
+                                        Color.fromARGB(255, 116, 116, 212),
+                                        Color.fromARGB(255, 16, 19, 74),
+                                      ]
+                                    : const [
+                                        _lightAvatarStart,
+                                        _lightAvatarEnd,
+                                      ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.6),
+                                color: theme.topbarText.withValues(alpha: 0.35),
                                 width: 2,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      const Color.fromARGB(255, 122, 116, 212)
-                                          .withValues(alpha: 0.4),
+                                  color: (isDark
+                                          ? const Color.fromARGB(
+                                              255, 122, 116, 212)
+                                          : _lightAvatarStart)
+                                      .withValues(alpha: 0.4),
                                   blurRadius: 12,
                                   spreadRadius: 2,
                                 ),
@@ -255,6 +301,47 @@ class GlassTopBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ThemeToggleMenuItem extends StatelessWidget {
+  const _ThemeToggleMenuItem();
+
+  Future<void> _toggleTheme(BuildContext context) async {
+    await context.read<ThemeProvider>().toggleTheme();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        final darkMode = themeProvider.isDarkMode;
+
+        return InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => _toggleTheme(context),
+          child: Row(
+            children: [
+              Icon(
+                darkMode
+                    ? Icons.dark_mode_outlined
+                    : Icons.light_mode_outlined,
+                size: 18,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(darkMode ? 'Dark Mode' : 'Light Mode'),
+              ),
+              Switch(
+                value: darkMode,
+                activeColor: const Color(0xFF6B4EFF),
+                onChanged: (_) => _toggleTheme(context),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

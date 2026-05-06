@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../app_theme.dart';
 import 'profile_components.dart';
 import 'profile_utils.dart';
 
@@ -27,13 +28,15 @@ class ProfileLeftPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return Container(
       width: 280,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [cardDarkBlue, cardDarkerBlue],
+          colors: [theme.dashboardCardStart, theme.dashboardCardEnd],
         ),
       ),
       child: Column(
@@ -57,7 +60,7 @@ class ProfileLeftPanel extends StatelessWidget {
                         ),
                         child: CircleAvatar(
                           radius: 68,
-                          backgroundColor: Colors.white.withOpacity(0.10),
+                          backgroundColor: theme.topbarText.withValues(alpha: 0.1),
                           child: ClipOval(
                             child: finalAvatarUrl.isNotEmpty
                                 ? Image.network(
@@ -77,13 +80,13 @@ class ProfileLeftPanel extends StatelessWidget {
                         child: Container(
                           width: 36, height: 36,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: theme.surface,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 4)),
                             ],
                           ),
-                          child: Icon(Icons.edit_rounded, color: cardDarkBlue, size: 18),
+                          child: Icon(Icons.edit_rounded, color: theme.surfaceText, size: 18),
                         ),
                       ),
                     ],
@@ -94,7 +97,7 @@ class ProfileLeftPanel extends StatelessWidget {
                     child: Text(
                       first.isEmpty && last.isEmpty ? 'Name Not Set' : '$first $last',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5, height: 1.2),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: theme.dashboardCardText, letterSpacing: 0.5, height: 1.2),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -103,7 +106,7 @@ class ProfileLeftPanel extends StatelessWidget {
                     child: Text(
                       user?['email'] ?? '',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 12, fontWeight: FontWeight.w400, height: 1.4),
+                      style: TextStyle(color: theme.dashboardCardText.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w400, height: 1.4),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -137,13 +140,13 @@ class ProfileLeftPanel extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => context.go('/edit-profile'),
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: cardDarkBlue,
+                  child: ElevatedButton.icon(
+                    onPressed: () => context.go('/edit-profile'),
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                    style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.surface,
+                  foregroundColor: theme.surfaceText,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 4,

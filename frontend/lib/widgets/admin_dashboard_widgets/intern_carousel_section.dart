@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
+import '../intern_carousel_palette.dart';
 
 // Intern profile & detail page models
 import '../../screens/intern_widgets.dart';
@@ -110,6 +112,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -124,7 +128,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
                 'Meet Our Interns',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: theme.topbarText,
                     ),
               ),
               Expanded(
@@ -140,7 +144,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
                       );
                     },
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF8A84FF),
+                      foregroundColor: InternCarouselPalette.accent,
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -169,29 +173,43 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
 
   Widget _buildCarouselBody() {
     if (widget.loading) {
-      return const SizedBox(
+      return SizedBox(
         height: 180,
-        child: Center(child: CircularProgressIndicator(color: Colors.white54)),
+        child: Center(
+          child: CircularProgressIndicator(
+            color: InternCarouselPalette.accent,
+          ),
+        ),
       );
     }
 
     if (widget.error != null) {
+      final theme = context.internTheme;
       return SizedBox(
         height: 180,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Colors.white54, size: 40),
+              Icon(
+                Icons.error_outline,
+                color: InternCarouselPalette.accent,
+                size: 40,
+              ),
               const SizedBox(height: 8),
               Text(widget.error!,
-                  style: const TextStyle(color: Colors.white70),
+                  style: TextStyle(color: theme.topbarMutedText),
                   textAlign: TextAlign.center),
               TextButton.icon(
                 onPressed: widget.onRetry,
-                icon: const Icon(Icons.refresh, color: Colors.white70),
-                label: const Text('Retry',
-                    style: TextStyle(color: Colors.white70)),
+                icon: const Icon(
+                  Icons.refresh,
+                  color: InternCarouselPalette.accent,
+                ),
+                label: const Text(
+                  'Retry',
+                  style: TextStyle(color: InternCarouselPalette.accent),
+                ),
               ),
             ],
           ),
@@ -200,11 +218,14 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
     }
 
     if (widget.interns.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 180,
         child: Center(
             child: Text('No interns found.',
-                style: TextStyle(color: Colors.white54, fontSize: 15))),
+                style: TextStyle(
+                  color: context.internTheme.topbarMutedText,
+                  fontSize: 15,
+                ))),
       );
     }
 
@@ -250,8 +271,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
               height: 6,
               decoration: BoxDecoration(
                 color: active
-                    ? const Color.fromARGB(255, 118, 115, 200)
-                    : Colors.white.withValues(alpha: 0.25),
+                    ? InternCarouselPalette.dotActive
+                    : InternCarouselPalette.dotActive.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.circular(3),
               ),
             );
@@ -275,19 +296,13 @@ class _InternCardFront extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1E1B4B), Color(0xFF4C1D95)],
+          colors: InternCarouselPalette.cardGradient(context),
         ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.4),
-            blurRadius: 32,
-            offset: const Offset(0, 16),
-          ),
-        ],
+        boxShadow: InternCarouselPalette.cardShadows(context),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -297,8 +312,11 @@ class _InternCardFront extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             intern.name,
-            style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: InternCarouselPalette.cardForeground(context),
+            ),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -309,7 +327,9 @@ class _InternCardFront extends StatelessWidget {
                 ? 'Intern #${intern.internNumber}'
                 : '',
             style: TextStyle(
-                fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+              fontSize: 12,
+              color: InternCarouselPalette.cardForegroundMuted(context),
+            ),
           ),
         ],
       ),
@@ -343,16 +363,25 @@ class _ArrowButtonState extends State<_ArrowButton> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: _isHovered ? 0.25 : 0.10),
+            color: InternCarouselPalette.arrowBackground(
+              context,
+              hovered: _isHovered,
+            ),
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.white.withValues(alpha: _isHovered ? 0.4 : 0.2),
+              color: InternCarouselPalette.arrowBorder(
+                context,
+                hovered: _isHovered,
+              ),
               width: 0.8,
             ),
           ),
           child: Icon(
             widget.icon,
-            color: Colors.white.withValues(alpha: _isHovered ? 1.0 : 0.8),
+            color: InternCarouselPalette.arrowIcon(
+              context,
+              hovered: _isHovered,
+            ),
             size: 22,
           ),
         ),

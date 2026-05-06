@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../app_theme.dart';
 import 'pagination_footer.dart';
 
 enum RecentDashboardTab { users, activity }
@@ -59,6 +59,8 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final safeCurrentPage = _currentPage.clamp(1, _totalPages);
 
     return Column(
@@ -77,14 +79,14 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                       : 'Recent Activity',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: theme.topbarText,
                       ),
                 ),
                 Text(
                   _subtitle,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: theme.topbarMutedText,
                   ),
                 ),
               ],
@@ -92,7 +94,7 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
             Text(
               'Page $safeCurrentPage of $_totalPages',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
+                color: theme.topbarMutedText.withValues(alpha: 0.8),
                 fontSize: 12,
               ),
             ),
@@ -102,8 +104,11 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
         Container(
           height: 500,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.95),
+            color: isDark
+                ? theme.listBackground.withValues(alpha: 0.98)
+                : theme.sidebarBackground,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.border),
           ),
           child: Column(
             children: [
@@ -161,12 +166,13 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
 
   Widget _buildUsersList({required Key key}) {
     final users = (widget.stats?['recent_users'] as List?) ?? [];
+    final theme = context.internTheme;
     if (users.isEmpty) {
       return Center(
         key: key,
-        child: const Text(
+        child: Text(
           'No users yet',
-          style: TextStyle(color: Colors.black87),
+          style: TextStyle(color: theme.listText),
         ),
       );
     }
@@ -176,9 +182,9 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: users.length,
-      separatorBuilder: (_, __) => const Divider(
+      separatorBuilder: (_, __) => Divider(
         height: 1,
-        color: Colors.black12,
+        color: theme.border,
         indent: 70,
       ),
       itemBuilder: (context, i) {
@@ -273,17 +279,17 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
           ),
           title: Text(
             titleText,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: theme.listText,
             ),
           ),
           subtitle: Text(
             email,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: Colors.black54),
+            style: TextStyle(fontSize: 11, color: theme.listMutedText),
           ),
           trailing: _buildRoleBadge(u['role']?.toString()),
         );
@@ -292,18 +298,19 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
   }
 
   Widget _buildRoleBadge(String? role) {
+    final theme = context.internTheme;
     final roleStr = role?.trim().toLowerCase() ?? '';
     final isAdmin = roleStr == 'admin';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isAdmin ? const Color(0xFFDBE9F4) : Colors.green.shade50,
+        color: isAdmin ? theme.adminBadgeBackground : theme.userBadgeBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isAdmin
-              ? Colors.blue.withValues(alpha: 0.1)
-              : Colors.green.withValues(alpha: 0.1),
+              ? Colors.red.withValues(alpha: 0.15)
+              : Colors.green.withValues(alpha: 0.15),
         ),
       ),
       child: Text(
@@ -322,12 +329,13 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
     required Key key,
     required List<dynamic> logs,
   }) {
+    final theme = context.internTheme;
     if (logs.isEmpty) {
       return Center(
         key: key,
-        child: const Text(
+        child: Text(
           'No activity this week',
-          style: TextStyle(color: Colors.black87),
+          style: TextStyle(color: theme.listText),
         ),
       );
     }
@@ -362,7 +370,7 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                       Positioned(
                         top: 36,
                         bottom: -16,
-                        child: Container(width: 2, color: Colors.black12),
+                        child: Container(width: 2, color: theme.border),
                       ),
                     Positioned(
                       top: 12,
@@ -384,18 +392,18 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                           Expanded(
                             child: Text(
                               displayText,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color: theme.listText,
                               ),
                             ),
                           ),
                           const SizedBox(width: 16),
                           Text(
                             _formatDate(log['created_at'] as String?),
-                            style: const TextStyle(
-                              color: Colors.black54,
+                            style: TextStyle(
+                              color: theme.listMutedText,
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
@@ -405,9 +413,9 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                       const SizedBox(height: 4),
                       Text(
                         userName.isEmpty ? 'System' : userName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Colors.black54,
+                          color: theme.listMutedText,
                         ),
                       ),
                     ],
@@ -595,12 +603,30 @@ class _SegmentedToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F8),
+        color: isDark
+            ? const Color(0xFF6366F1).withValues(alpha: 0.15)
+            : theme.sidebarHoverBackground.withValues(alpha: 1),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF6366F1).withValues(alpha: 0.3)
+              : theme.border,
+        ),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -634,17 +660,32 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        color: selected ? const Color(0xFF7673C8) : Colors.transparent,
+        gradient: selected
+            ? const LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Color(0xFF6366F1),
+                  Color(0xFF6366F1),
+                ],
+              )
+            : null,
+        color: selected ? null : Colors.transparent,
         borderRadius: BorderRadius.circular(999),
         boxShadow: selected
             ? [
                 BoxShadow(
-                  color: const Color(0xFF7673C8).withValues(alpha: 0.25),
-                  blurRadius: 12,
+                  color: const Color(0xFF6366F1).withValues(
+                    alpha: isDark ? 0.28 : 0.2,
+                  ),
+                  blurRadius: isDark ? 14 : 12,
                   offset: const Offset(0, 4),
                 ),
               ]
@@ -660,7 +701,11 @@ class _SegmentButton extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : Colors.black54,
+                color: selected
+                    ? Colors.white
+                    : isDark
+                        ? const Color(0xFF6366F1)
+                        : theme.listMutedText,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -685,8 +730,8 @@ class _InitialsLabel extends StatelessWidget {
       child: Center(
         child: Text(
           initials,
-          style: const TextStyle(
-            color: Color(0xFF6C63FF),
+          style: TextStyle(
+            color: const Color(0xFF6C63FF),
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
@@ -695,3 +740,4 @@ class _InitialsLabel extends StatelessWidget {
     );
   }
 }
+

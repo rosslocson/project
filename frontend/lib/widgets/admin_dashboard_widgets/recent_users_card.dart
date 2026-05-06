@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../app_theme.dart';
 import 'pagination_footer.dart';
 
 class RecentUsersCard extends StatelessWidget {
@@ -18,6 +18,9 @@ class RecentUsersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -32,14 +35,14 @@ class RecentUsersCard extends StatelessWidget {
                   'Recent Users',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: theme.topbarText,
                       ),
                 ),
                 Text(
                   'Platform members',
                   style: TextStyle(
                     fontSize: 12, 
-                    color: Colors.white.withOpacity(0.7),
+                    color: theme.topbarMutedText,
                   ),
                 ),
               ],
@@ -47,7 +50,7 @@ class RecentUsersCard extends StatelessWidget {
             Text(
               'Page $usersPage of $totalPages',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.6), 
+                color: theme.topbarMutedText.withValues(alpha: 0.8), 
                 fontSize: 12,
               ),
             ),
@@ -57,15 +60,21 @@ class RecentUsersCard extends StatelessWidget {
         Container(
           height: 500,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
+            color: isDark
+                ? theme.listBackground.withValues(alpha: 0.98)
+                : theme.sidebarBackground,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.border),
           ),
           child: Column(
             children: [
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  child: _buildUsersList(key: ValueKey<int>(usersPage)),
+                  child: _buildUsersList(
+                    context,
+                    key: ValueKey<int>(usersPage),
+                  ),
                 ),
               ),
               PaginationFooter(
@@ -81,12 +90,13 @@ class RecentUsersCard extends StatelessWidget {
     );
   }
 
-  Widget _buildUsersList({required Key key}) {
+  Widget _buildUsersList(BuildContext context, {required Key key}) {
     final users = (stats?['recent_users'] as List?) ?? [];
+    final theme = context.internTheme;
     if (users.isEmpty) {
       return Center(
         key: key, 
-        child: const Text('No users yet', style: TextStyle(color: Colors.black87)),
+        child: Text('No users yet', style: TextStyle(color: theme.listText)),
       );
     }
 
@@ -95,7 +105,7 @@ class RecentUsersCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(), 
       itemCount: users.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, color: Colors.black12, indent: 70),
+      separatorBuilder: (_, __) => Divider(height: 1, color: theme.border, indent: 70),
       itemBuilder: (context, i) {
         if (i >= users.length) return const SizedBox.shrink();
         
@@ -215,25 +225,26 @@ class RecentUsersCard extends StatelessWidget {
           ),
           title: Text(
             titleText, 
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.listText),
           ),
-          subtitle: Text(email, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-          trailing: _buildRoleBadge(u['role']?.toString()),
+          subtitle: Text(email, style: TextStyle(fontSize: 11, color: theme.listMutedText)),
+          trailing: _buildRoleBadge(context, u['role']?.toString()),
         );
       },
     );
   }
 
-  Widget _buildRoleBadge(String? role) {
+  Widget _buildRoleBadge(BuildContext context, String? role) {
+    final theme = context.internTheme;
     final roleStr = role?.trim().toLowerCase() ?? '';
     final isAdmin = roleStr == 'admin';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isAdmin ? const Color(0xFFDBE9F4) : Colors.green.shade50,
+        color: isAdmin ? theme.adminBadgeBackground : theme.userBadgeBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isAdmin ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+          color: isAdmin ? Colors.red.withValues(alpha: 0.15) : Colors.green.withValues(alpha: 0.15),
         ),
       ),
       child: Text(

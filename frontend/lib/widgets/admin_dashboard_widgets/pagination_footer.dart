@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 
 class PaginationFooter extends StatelessWidget {
   final int currentPage;
@@ -16,6 +17,8 @@ class PaginationFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     // Calculate visible page range for sliding window effect
     int startPage = 1;
     int endPage = totalPages;
@@ -43,8 +46,8 @@ class PaginationFooter extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.black12)),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: theme.border)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -54,8 +57,8 @@ class PaginationFooter extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_ios, size: 12),
             label: const Text('Prev'),
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF7673C8),
-              disabledForegroundColor: Colors.black26,
+              foregroundColor: const Color(0xFF6366F1),
+              disabledForegroundColor: theme.mutedText.withValues(alpha: 0.5),
             ),
           ),
           Row(
@@ -67,7 +70,7 @@ class PaginationFooter extends StatelessWidget {
                 width: isActive ? 20 : 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFF7673C8) : Colors.black12,
+                  color: isActive ? const Color(0xFF6366F1) : theme.border,
                   borderRadius: BorderRadius.circular(4),
                 ),
               );
@@ -76,8 +79,8 @@ class PaginationFooter extends StatelessWidget {
           TextButton(
             onPressed: currentPage < totalPages ? onNext : null,
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF7673C8),
-              disabledForegroundColor: Colors.black26,
+              foregroundColor: const Color(0xFF6366F1),
+              disabledForegroundColor: theme.mutedText.withValues(alpha: 0.5),
             ),
             child: const Row(
               children: [
@@ -92,3 +95,4 @@ class PaginationFooter extends StatelessWidget {
     );
   }
 }
+

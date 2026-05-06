@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'app_theme.dart';
 import 'logout_confirmation_dialog.dart';
 
 class AdminSidebar extends StatelessWidget {
@@ -9,21 +10,19 @@ class AdminSidebar extends StatelessWidget {
   final VoidCallback? onClose;
   const AdminSidebar({super.key, required this.currentRoute, this.onClose});
 
-  static const Color _bgColor = Color(0xFF0B0F2F); // Dark blue bg
-  static const Color _activeItemBg = Color(0xFF6366F1); // Blue active
-  static const Color _sectionLabelColor = Color(0xFFA78BFA); // Light blue label
-  static const Color _textLight = Colors.white;
-  static const Color _textDark = Color(0xFF050816); // Dark blue text
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final isAdmin = auth.isAdmin;
+    final theme = context.internTheme;
 
     return Container(
       width: 250,
-      decoration: const BoxDecoration(
-        color: _bgColor,
+      decoration: BoxDecoration(
+        color: theme.sidebarBackground,
+        border: Border(
+          right: BorderSide(color: theme.border),
+        ),
       ),
       child: Column(
         children: [
@@ -44,20 +43,20 @@ class AdminSidebar extends StatelessWidget {
                     width: 48,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.public,
-                          color: _textLight, size: 24);
+                      return Icon(Icons.public,
+                          color: theme.sidebarText, size: 24);
                     },
                   ),
                 ),
                 // ──────────────────────────────────────────────────────────────
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'InternSpace',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: _textLight,
+                      color: theme.sidebarText,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -119,7 +118,7 @@ class AdminSidebar extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Divider(color: Colors.white.withOpacity(0.15), height: 1),
+              Divider(color: theme.border, height: 1),
               const _SignOutButton(),
             ],
           ),
@@ -152,6 +151,7 @@ class _NavItemState extends State<_NavItem> {
   @override
   Widget build(BuildContext context) {
     final active = widget.current == widget.route;
+    final theme = context.internTheme;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -162,9 +162,9 @@ class _NavItemState extends State<_NavItem> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: active
-              ? AdminSidebar._activeItemBg
+              ? theme.sidebarActiveBackground
               : _isHovering
-                  ? Colors.white.withOpacity(0.08) // Hover color
+                  ? theme.sidebarHoverBackground
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -176,14 +176,16 @@ class _NavItemState extends State<_NavItem> {
           leading: Icon(
             widget.icon,
             size: 20,
-            color: active ? AdminSidebar._textDark : AdminSidebar._textLight,
+            color:
+                active ? theme.sidebarActiveForeground : theme.sidebarText,
           ),
           title: Text(
             widget.label,
             style: TextStyle(
               fontSize: 14,
               fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-              color: active ? AdminSidebar._textDark : AdminSidebar._textLight,
+              color:
+                  active ? theme.sidebarActiveForeground : theme.sidebarText,
             ),
           ),
           shape:
@@ -200,18 +202,22 @@ class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
+    return Padding(
         padding: const EdgeInsets.only(left: 20, top: 16, bottom: 12),
         child: Text(
           text.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: AdminSidebar._sectionLabelColor,
+            color: theme.sidebarMutedText,
             letterSpacing: 1.0,
           ),
         ),
       );
+  }
 }
 
 class _SignOutButton extends StatefulWidget {
@@ -226,6 +232,8 @@ class _SignOutButtonState extends State<_SignOutButton> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
       onExit: (_) => setState(() => _isHovering = false),
@@ -233,7 +241,7 @@ class _SignOutButtonState extends State<_SignOutButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         color: _isHovering
-            ? Colors.white.withOpacity(0.08) // Hover color
+            ? theme.sidebarHoverBackground
             : Colors.transparent,
         child: Material(
           color: Colors.transparent,
@@ -250,17 +258,17 @@ class _SignOutButtonState extends State<_SignOutButton> {
                 context.go('/login');
               }
             },
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Row(
                 children: [
                   Icon(Icons.logout_rounded,
-                      color: AdminSidebar._textLight, size: 22),
+                      color: theme.sidebarText, size: 22),
                   SizedBox(width: 16),
                   Text(
                     'Log Out',
                     style: TextStyle(
-                      color: AdminSidebar._textLight,
+                      color: theme.sidebarText,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -288,6 +296,8 @@ class _CloseButtonState extends State<_CloseButton> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
       onExit: (_) => setState(() => _isHovering = false),
@@ -296,8 +306,8 @@ class _CloseButtonState extends State<_CloseButton> {
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
           color: _isHovering
-              ? Colors.white.withOpacity(0.2) // Lighter on hover
-              : Colors.white.withOpacity(0.1), // Default color
+              ? theme.sidebarHoverBackground
+              : theme.sidebarHoverBackground.withValues(alpha: 0.55),
           shape: BoxShape.circle,
         ),
         child: Material(
@@ -307,11 +317,11 @@ class _CloseButtonState extends State<_CloseButton> {
           child: InkWell(
             hoverColor: Colors.transparent,
             onTap: widget.onClose,
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.all(8.0),
               child: Icon(
                 Icons.close_rounded,
-                color: AdminSidebar._textLight,
+                color: theme.sidebarText,
                 size: 20,
               ),
             ),

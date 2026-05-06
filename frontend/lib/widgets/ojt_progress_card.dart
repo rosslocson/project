@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
+import 'app_theme.dart';
 
 class OjtProgressCard extends StatelessWidget {
   final AttendanceSummary summary;
@@ -12,17 +13,18 @@ class OjtProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
     final pct = summary.progressPercent;
     final color = _progressColor(pct);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: theme.shadowColor,
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -47,12 +49,12 @@ class OjtProgressCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 'OJT Hours Progress',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  color: theme.surfaceText,
                 ),
               ),
               const Spacer(),
@@ -115,7 +117,7 @@ class OjtProgressCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: pct,
               minHeight: 10,
-              backgroundColor: Colors.grey.shade100,
+              backgroundColor: theme.formFill,
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
@@ -130,7 +132,7 @@ class OjtProgressCard extends StatelessWidget {
                 '${(pct * 100).toStringAsFixed(1)}% completed',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade500,
+                  color: theme.mutedText,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -138,7 +140,7 @@ class OjtProgressCard extends StatelessWidget {
                 '${_fmtHours(summary.totalHoursRendered)} / ${_fmtHours(summary.requiredHours)} hrs',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade500,
+                  color: theme.mutedText,
                 ),
               ),
             ],
@@ -176,6 +178,8 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +194,7 @@ class _StatChip extends StatelessWidget {
           ),
           Text(
             label,
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 10, color: theme.mutedText),
           ),
         ],
       ),
