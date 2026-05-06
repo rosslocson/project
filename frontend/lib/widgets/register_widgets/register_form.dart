@@ -330,8 +330,9 @@ class RegisterForm {
                   ),
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty)
+                  if (v == null || v.isEmpty) {
                     return 'Please confirm your password';
+                  }
                   if (v != passCtrl.text) return 'Passwords do not match';
                   return null;
                 },
