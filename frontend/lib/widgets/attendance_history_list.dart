@@ -237,8 +237,8 @@ class _AttendanceRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                record.hoursRendered != null
-                    ? _fmtHours(record.hoursRendered!)
+                (record.hoursWorked ?? record.hoursRendered) != null
+                    ? _fmtHours(record.hoursWorked ?? record.hoursRendered!)
                     : '--',
                 style: const TextStyle(
                   fontSize: 14,

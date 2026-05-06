@@ -64,10 +64,19 @@ func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
 		}
 		return "Missed Clock Out"
 	}
-	t, err := time.Parse("03:04 PM", *timeIn)
-	if err != nil {
+
+	// Try both padded and unpadded formats
+	var t time.Time
+	for _, layout := range []string{"03:04 PM", "3:04 PM"} {
+		if parsed, err := time.Parse(layout, *timeIn); err == nil {
+			t = parsed
+			break
+		}
+	}
+	if t.IsZero() {
 		return "Present"
 	}
+
 	if t.Hour() > lateThresholdHour ||
 		(t.Hour() == lateThresholdHour && t.Minute() > lateThresholdMin) {
 		return "Late"
@@ -78,50 +87,98 @@ func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
 // ── Hours computation ─────────────────────────────────────────────────────────
 
 func computeHours(timeIn *string, timeOut *string, recordDate string) *float64 {
+	// If either time is missing, we can't compute anything.
 	if timeIn == nil || timeOut == nil {
 		return nil
 	}
 
 	loc := manilaLoc()
-	const layout = "2006-01-02 03:04 PM"
 
-	tIn, err1 := time.ParseInLocation(layout, recordDate+" "+*timeIn, loc)
-	tOut, err2 := time.ParseInLocation(layout, recordDate+" "+*timeOut, loc)
+	// Postgres TO_CHAR with HH12 can produce "8:30 AM" (no leading zero) or
+	// lowercase "am"/"pm" depending on locale. Normalize before parsing.
+	normalize := func(t string) string {
+		return strings.ToUpper(strings.TrimSpace(t))
+	}
+
+	// Try padded (03) then unpadded (3) 12-hour format.
+	tryParse := func(dateStr, timeStr string) (time.Time, error) {
+		timeStr = normalize(timeStr)
+		for _, layout := range []string{
+			"2006-01-02 03:04 PM", // e.g. "2025-05-06 08:30 AM"
+			"2006-01-02 3:04 PM",  // e.g. "2025-05-06 8:30 AM"
+		} {
+			if t, err := time.ParseInLocation(layout, dateStr+" "+timeStr, loc); err == nil {
+				return t, nil
+			}
+		}
+		return time.Time{}, fmt.Errorf("[computeHours] unparseable time: %q (date: %s)", timeStr, dateStr)
+	}
+
+	tIn, err1 := tryParse(recordDate, *timeIn)
+	tOut, err2 := tryParse(recordDate, *timeOut)
 	if err1 != nil || err2 != nil {
+		// Log so you can see the exact raw string coming from Postgres.
+		fmt.Printf("[computeHours] parse error — timeIn=%q err=%v | timeOut=%q err=%v\n",
+			*timeIn, err1, *timeOut, err2)
 		return nil
 	}
 
+	// ── Step 1: Cap clock-out at 5:00 PM ─────────────────────────────────────
+	// We don't count any time worked past 5 PM.
 	cutoff := time.Date(tIn.Year(), tIn.Month(), tIn.Day(), 17, 0, 0, 0, loc)
 	if tOut.After(cutoff) {
 		tOut = cutoff
 	}
 
+	// ── Step 2: Guard — clock-out must be after clock-in ─────────────────────
 	if !tOut.After(tIn) {
 		zero := 0.0
 		return &zero
 	}
 
+	// ── Step 3: Raw elapsed hours (before lunch deduction) ───────────────────
+	// Example: 8:00 AM → 5:00 PM = 9.0 hours raw
 	elapsed := tOut.Sub(tIn).Hours()
 
+	// ── Step 4: Deduct lunch break (12:00 PM – 1:00 PM) ─────────────────────
+	// We only deduct the portion of the lunch window the intern was actually
+	// clocked in for. This handles edge cases like:
+	//   - Clocked in after lunch (1:30 PM) → no deduction
+	//   - Clocked out before lunch (11:00 AM) → no deduction
+	//   - Clocked in during lunch (12:30 PM) → deduct only 30 min
 	lunchStart := time.Date(tIn.Year(), tIn.Month(), tIn.Day(), 12, 0, 0, 0, loc)
 	lunchEnd := time.Date(tIn.Year(), tIn.Month(), tIn.Day(), 13, 0, 0, 0, loc)
 
+	// Overlap start = latest of (clock-in, lunch start)
 	overlapStart := tIn
 	if lunchStart.After(overlapStart) {
 		overlapStart = lunchStart
 	}
+
+	// Overlap end = earliest of (effective clock-out, lunch end)
 	overlapEnd := tOut
 	if lunchEnd.Before(overlapEnd) {
 		overlapEnd = lunchEnd
 	}
 
+	// Only deduct if there's a real overlap (overlap end is after overlap start).
+	// Example: 8 AM–5 PM → overlap is 12:00–13:00 → deduct 1.0 hour
+	// Example: 8 AM–11 AM → overlapEnd (11AM) is NOT after overlapStart (12PM) → no deduction
 	if overlapEnd.After(overlapStart) {
 		elapsed -= overlapEnd.Sub(overlapStart).Hours()
 	}
 
+	// ── Step 5: Clamp to zero (should never go negative, but just in case) ───
 	if elapsed < 0 {
 		elapsed = 0
 	}
+
+	// ── Examples ──────────────────────────────────────────────────────────────
+	// 8:00 AM → 5:00 PM  = 9h raw − 1h lunch = 8.0h
+	// 8:00 AM → 12:00 PM = 4h raw − 0h lunch = 4.0h  (left before lunch)
+	// 1:00 PM → 5:00 PM  = 4h raw − 0h lunch = 4.0h  (arrived after lunch)
+	// 8:00 AM → 6:00 PM  = 9h raw − 1h lunch = 8.0h  (capped at 5 PM first)
+	// 12:30 PM → 5:00 PM = 4.5h raw − 0.5h lunch overlap = 4.0h
 
 	return &elapsed
 }
