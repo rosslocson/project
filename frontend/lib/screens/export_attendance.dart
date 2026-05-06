@@ -326,7 +326,7 @@ class AttendanceExporter {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'Attendance Monitoring System',
+            'Attendance Monitoring',
             style: pw.TextStyle(fontSize: 8, color: _pdfTextLight),
           ),
           pw.Text(
