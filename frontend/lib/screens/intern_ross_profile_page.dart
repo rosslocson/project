@@ -316,7 +316,7 @@ class _LeftPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  intern.internNumber != null && intern.internNumber != 'N/A'
+                  intern.internNumber != 'N/A'
                       ? '#${intern.internNumber}'
                       : 'INTERN',
                   style: const TextStyle(
@@ -349,7 +349,7 @@ class _LeftPanel extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (intern.email != null && intern.email!.isNotEmpty) ...[
+              if (intern.email.isNotEmpty) ...[
                 _SocialIcon(
                   icon: Icons.email_outlined,
                   onTap: onEmail,
