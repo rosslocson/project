@@ -141,6 +141,7 @@ class _UsersScreenState extends State<UsersScreen> {
       backgroundColor: Colors.green.shade700,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      duration: const Duration(seconds: 1),
     ));
   }
 
