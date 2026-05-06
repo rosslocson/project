@@ -12,14 +12,13 @@ class UserInternCard extends StatelessWidget {
     return GestureDetector(
       // ← MOVED HERE (wraps everything)
       onTap: () {
-        if (intern.id == 28) {
+        if (intern.name == 'Rosalyn Locson') {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => Intern28ProfilePage(intern: intern),
+              builder: (_) => RosalynProfilePage(intern: intern),
             ),
           );
         } else {
-          // ← ADD THIS
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => InternDetailPage(intern: intern),
