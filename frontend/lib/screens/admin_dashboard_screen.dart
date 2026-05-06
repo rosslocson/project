@@ -17,8 +17,7 @@ import '../widgets/app_background.dart';
 // Dashboard Widgets (Your new separated files)
 import '../widgets/admin_dashboard_widgets/intern_carousel_section.dart';
 import '../widgets/admin_dashboard_widgets/dashboard_stats_grid.dart';
-import '../widgets/admin_dashboard_widgets/recent_users_card.dart';
-import '../widgets/admin_dashboard_widgets/recent_activity_card.dart';
+import '../widgets/admin_dashboard_widgets/recent_dashboard_tabs_card.dart';
 import '../widgets/admin_dashboard_widgets/bouncing_arrow.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -326,29 +325,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                           Container(
                             key: _cardsKey,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 3. Extracted Recent Users
-                                Expanded(
-                                  child: RecentUsersCard(
-                                    stats: _stats,
-                                    usersPage: _usersPage,
-                                    totalPages: _totalUsersPages,
-                                    onPageChanged: _updateUsersPage,
-                                  ),
-                                ),
-                                const SizedBox(width: 32),
-                                // 4. Extracted Recent Activity
-                                Expanded(
-                                  child: RecentActivityCard(
-                                    activityLogs: _activityLogs,
-                                    activityPage: _activityPage,
-                                    totalPages: _totalActivityPages,
-                                    onPageChanged: _updateActivityPage,
-                                  ),
-                                ),
-                              ],
+                            child: RecentDashboardTabsCard(
+                              stats: _stats,
+                              activityLogs: _activityLogs,
+                              usersPage: _usersPage,
+                              activityPage: _activityPage,
+                              totalUsersPages: _totalUsersPages,
+                              totalActivityPages: _totalActivityPages,
+                              onUsersPageChanged: _updateUsersPage,
+                              onActivityPageChanged: _updateActivityPage,
                             ),
                           ),
                           const SizedBox(height: 40),
