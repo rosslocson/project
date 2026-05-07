@@ -9,6 +9,7 @@ class AttendanceRecord {
   final DateTime? timeIn;
   final DateTime? timeOut;
   final double? hoursRendered;
+   final bool isReported; 
 
   const AttendanceRecord({
     required this.id,
@@ -17,6 +18,7 @@ class AttendanceRecord {
     this.timeIn,
     this.timeOut,
     this.hoursRendered,
+    this.isReported = false,
   });
 
   bool get hasTimedIn => timeIn != null;
@@ -63,12 +65,13 @@ debugPrint('⏱ duration: timeIn=$timeIn  timeOut=$timeOut');
   }
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
-    debugPrint('📋 AttendanceRecord.fromJson: time_in=${json['time_in']}  time_out=${json['time_out']}  hours_rendered=${json['hours_rendered']}  date=${json['date']}');
+    //debugPrint('📋 AttendanceRecord.fromJson: time_in=${json['time_in']}  time_out=${json['time_out']}  hours_rendered=${json['hours_rendered']}  date=${json['date']}');
 
     return AttendanceRecord(
       id: _toInt(json['id']),
       userId: _toInt(json['user_id']),
       date: DateTime.parse(json['date'] as String),
+      isReported:    json['is_reported'] == true, 
 
       // Backend returns formatted strings like "08:30 AM" or full ISO strings.
       // _parseTime handles both gracefully.
@@ -80,6 +83,8 @@ debugPrint('⏱ duration: timeIn=$timeIn  timeOut=$timeOut');
       hoursRendered: json['hours_rendered'] != null
           ? double.tryParse(json['hours_rendered'].toString())
           : null,
+
+  
     );
   }
 

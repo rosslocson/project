@@ -15,6 +15,8 @@ class AdminAttendanceRecord {
   final String? timeOut;
   final double? hoursRendered;
   final String status;
+  final bool      isMissedClockOut; 
+  final bool      isReported;       
 
   const AdminAttendanceRecord({
     required this.id,
@@ -26,6 +28,8 @@ class AdminAttendanceRecord {
     this.timeOut,
     this.hoursRendered,
     required this.status,
+    this.isMissedClockOut = false,
+    this.isReported = false,  
   });
 
   // ── Deserialization ──────────────────────────────────────────────────────
@@ -55,6 +59,8 @@ class AdminAttendanceRecord {
       timeOut:       j['time_out'] as String?,
       hoursRendered: (j['hours_rendered'] as num?)?.toDouble(),
       status:        j['status'] as String? ?? 'Absent',
+      isMissedClockOut: j['is_missed_clock_out'] == true, 
+      isReported:       j['is_reported']         == true,
     );
   }
 

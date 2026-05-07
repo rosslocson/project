@@ -93,4 +93,19 @@ class AttendanceService {
       return [];
     }
   }
+
+  /// Reports a missed clock-out for the given attendance record [id].
+  /// Returns { 'ok': true } on success or { 'ok': false, 'error': '...' }.
+  static Future<Map<String, dynamic>> reportMissedClockOut(String id) async {
+    try {
+      final res = await http.post(
+        Uri.parse(
+            '${ApiService.baseUrl}/attendance/$id/report-missed-clockout'),
+        headers: await ApiService.authHeaders(),
+      );
+      return ApiService.parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
 }

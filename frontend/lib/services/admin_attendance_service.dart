@@ -44,8 +44,7 @@ class AdminAttendanceService {
       final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance')
           .replace(queryParameters: params);
 
-      final res =
-          await http.get(uri, headers: await ApiService.authHeaders());
+      final res = await http.get(uri, headers: await ApiService.authHeaders());
       final body = jsonDecode(res.body) as Map<String, dynamic>;
 
       if (body['ok'] == true) {
@@ -94,5 +93,24 @@ class AdminAttendanceService {
     return Uri.parse('${ApiService.baseUrl}/admin/attendance/export')
         .replace(queryParameters: params)
         .toString();
+  }
+
+  /// Sets the time-out for a missed-clock-out record.
+  /// [timeOut] should be a local DateTime; it will be sent as ISO-8601.
+  static Future<Map<String, dynamic>> setTimeOut(
+    String recordId,
+    DateTime timeOut,
+  ) async {
+    try {
+      final res = await http.patch(
+        Uri.parse(
+            '${ApiService.baseUrl}/admin/attendance/$recordId/set-timeout'),
+        headers: await ApiService.authHeaders(),
+        body: jsonEncode({'time_out': timeOut.toIso8601String()}),
+      );
+      return ApiService.parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
   }
 }
