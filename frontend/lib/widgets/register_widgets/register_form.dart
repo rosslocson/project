@@ -85,7 +85,8 @@ class RegisterForm {
       alignment: Alignment.center,
       color: Colors.transparent,
       padding: EdgeInsets.symmetric(
-          horizontal: isMobile ? 24 : 64, vertical: isMobile ? 24 : 40),
+          horizontal: isMobile ? 24 : 64,
+          vertical: isMobile ? 16 : 24), // reduced vertical padding
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
         child: Form(
@@ -103,14 +104,14 @@ class RegisterForm {
                     color: kCosmicBlue,
                     letterSpacing: 1.2),
               ),
-              const SizedBox(height: 24), // unchanged
+              const SizedBox(height: 24), // reduced from 24
 
               if (auth.error != null) ...[
                 RegisterErrorBanner(
                   error: auth.error!,
                   onClear: () => context.read<AuthProvider>().clearError(),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6), // reduced from 8
               ],
 
               // ── First Name / Last Name ──────────────────────────────────
@@ -147,7 +148,7 @@ class RegisterForm {
                   ),
                 ),
               ]),
-              const SizedBox(height: 10), // reduced from 16
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Email ───────────────────────────────────────────────────
               fieldLabel('Email Address'),
@@ -166,7 +167,7 @@ class RegisterForm {
                   return null;
                 },
               ),
-              const SizedBox(height: 10), // reduced from 16
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Department / Position ───────────────────────────────────
               IntrinsicHeight(
@@ -186,10 +187,13 @@ class RegisterForm {
                                   initialValue: selectedDept,
                                   decoration: dec,
                                   hint: Text(
-                                      departments.isEmpty
-                                          ? 'None available'
-                                          : 'Select Department',
-                                      style: const TextStyle(fontSize: 13)),
+                                    !deptsFetched
+                                        ? 'Select Department' // ← still fetching, show neutral hint
+                                        : departments.isEmpty
+                                            ? 'None available'
+                                            : 'Select Department',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
                                   icon: Icon(Icons.keyboard_arrow_down,
                                       color: Colors.grey.shade500),
                                   items: departments
@@ -202,11 +206,9 @@ class RegisterForm {
                                       .toList(),
                                   onChanged: onDeptChanged,
                                 ),
-                          if (departments.isEmpty &&
-                              !loadingDepts &&
-                              deptsFetched)
+                          if (departments.isEmpty && !loadingDepts && deptsFetched)
                             const Padding(
-                              padding: EdgeInsets.only(left: 19, top: 4),
+                              padding: EdgeInsets.only(left: 22, top: 4),
                               child: Text(
                                 'No department listed. Please contact the administrator.',
                                 style: TextStyle(
@@ -248,7 +250,7 @@ class RegisterForm {
                   ],
                 ),
               ),
-              const SizedBox(height: 10), // reduced from 16
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Required OJT Hours ──────────────────────────────────────
               fieldLabel('Required OJT Hours'),
@@ -274,7 +276,7 @@ class RegisterForm {
                   return null;
                 },
               ),
-              const SizedBox(height: 10), // reduced from 16
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Password ────────────────────────────────────────────────
               fieldLabel('Password'),
@@ -318,7 +320,7 @@ class RegisterForm {
                     passColor: passColor,
                     passStrength: passStrength),
               ],
-              const SizedBox(height: 10), // reduced from 16
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Confirm Password ────────────────────────────────────────
               fieldLabel('Confirm Password'),
@@ -360,7 +362,7 @@ class RegisterForm {
                 ),
               ],
 
-              const SizedBox(height: 24), // pushes button to bottom
+              const SizedBox(height: 20), // reduced from 24
 
               // ── Submit ──────────────────────────────────────────────────
               BlueButton(
@@ -369,7 +371,7 @@ class RegisterForm {
                 loading: auth.isLoading,
               ),
 
-              const SizedBox(height: 25), // unchanged
+              const SizedBox(height: 15), // reduced from 25
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
