@@ -15,8 +15,14 @@ class AdminAttendanceRecord {
   final String? timeOut;
   final double? hoursRendered;
   final String status;
-  final bool      isMissedClockOut; 
-  final bool      isReported;       
+  final bool isMissedClockOut;
+  final bool isReported;
+
+  // ── New fields ────────────────────────────────────────────────────────────
+  final String? remark;          // Admin-written note visible in table
+  final String? reportReason;    // Free-text reason submitted by intern/admin
+  final String? reportStatus;    // 'pending' | 'reviewed' | 'resolved'
+  final String? reportedAt;      // ISO-8601 timestamp of when report was filed
 
   const AdminAttendanceRecord({
     required this.id,
@@ -29,15 +35,17 @@ class AdminAttendanceRecord {
     this.hoursRendered,
     required this.status,
     this.isMissedClockOut = false,
-    this.isReported = false,  
+    this.isReported = false,
+    this.remark,
+    this.reportReason,
+    this.reportStatus,
+    this.reportedAt,
   });
 
-  // ── Deserialization ──────────────────────────────────────────────────────
-
+  // ── Deserialization ───────────────────────────────────────────────────────
   factory AdminAttendanceRecord.fromJson(Map<String, dynamic> j) {
     final rawAvatar = j['avatar_url'] as String? ?? '';
     String resolvedAvatar = rawAvatar;
-
     if (rawAvatar.isNotEmpty &&
         !rawAvatar.startsWith('http://') &&
         !rawAvatar.startsWith('https://')) {
@@ -50,21 +58,25 @@ class AdminAttendanceRecord {
     }
 
     return AdminAttendanceRecord(
-      id:            j['id'] as int? ?? 0,
-      userId:        j['user_id'] as int? ?? 0,
-      internName:    j['intern_name'] as String? ?? 'Unknown',
-      avatarUrl:     resolvedAvatar,
-      date:          j['date'] as String? ?? '',
-      timeIn:        j['time_in'] as String?,
-      timeOut:       j['time_out'] as String?,
-      hoursRendered: (j['hours_rendered'] as num?)?.toDouble(),
-      status:        j['status'] as String? ?? 'Absent',
-      isMissedClockOut: j['is_missed_clock_out'] == true, 
-      isReported:       j['is_reported']         == true,
+      id:               j['id'] as int? ?? 0,
+      userId:           j['user_id'] as int? ?? 0,
+      internName:       j['intern_name'] as String? ?? 'Unknown',
+      avatarUrl:        resolvedAvatar,
+      date:             j['date'] as String? ?? '',
+      timeIn:           j['time_in'] as String?,
+      timeOut:          j['time_out'] as String?,
+      hoursRendered:    (j['hours_rendered'] as num?)?.toDouble(),
+      status:           j['status'] as String? ?? 'Absent',
+      isMissedClockOut: j['is_missed_clock_out'] == true,
+      isReported:       j['is_reported'] == true,
+      remark:           j['remark'] as String?,
+      reportReason:     j['report_reason'] as String?,
+      reportStatus:     j['report_status'] as String?,
+      reportedAt:       j['reported_at'] as String?,
     );
   }
 
-  // ── Computed properties ──────────────────────────────────────────────────
+  // ── Computed properties ───────────────────────────────────────────────────
 
   /// True if intern clocked in at or before 8:00 AM.
   bool get isOnTime {
@@ -89,8 +101,17 @@ class AdminAttendanceRecord {
     }
   }
 
-  // ── Private helpers ──────────────────────────────────────────────────────
+  /// True when this record has a report that hasn't been resolved yet.
+  bool get hasOpenReport =>
+      isReported && reportStatus != 'resolved';
 
+  /// True when interns can flag this record (only actionable statuses).
+  bool get isReportable =>
+      status == 'Late' ||
+      status == 'Missed Clock Out' ||
+      status == 'Absent';
+
+  // ── Private helpers ───────────────────────────────────────────────────────
   static int? _toMinutes(String? time) {
     if (time == null) return null;
     try {

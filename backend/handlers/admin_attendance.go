@@ -34,6 +34,7 @@ type AdminAttendanceRow struct {
 	TimeOut       *string  `json:"time_out"`       // nullable "HH:MI AM"
 	HoursRendered *float64 `json:"hours_rendered"` // nullable
 	Status        string   `json:"status"`         // Present | Late | Absent | On Shift | Missed Clock Out
+	IsReported    bool     `json:"is_reported"`
 }
 
 // ── Timezone helper ───────────────────────────────────────────────────────────
@@ -194,6 +195,7 @@ type attendanceRaw struct {
 	TimeIn        *string  `gorm:"column:time_in"`
 	TimeOut       *string  `gorm:"column:time_out"`
 	HoursRendered *float64 `gorm:"column:hours_rendered"`
+	IsReported    bool     `gorm:"column:is_reported"`
 }
 
 func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
@@ -209,6 +211,7 @@ func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
 			TimeOut:       r.TimeOut,
 			HoursRendered: computeHours(r.TimeIn, r.TimeOut, r.Date),
 			Status:        deriveStatus(r.TimeIn, r.TimeOut, r.Date),
+			IsReported:    r.IsReported,
 		})
 	}
 	return out
@@ -224,7 +227,8 @@ const internSelectSingleDate = `
 	CAST(? AS TEXT)                                                                              AS date,
 	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
 	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
-	` + adminAttendanceHoursExpr + `                                                             AS hours_rendered
+	` + adminAttendanceHoursExpr + `                                                             AS hours_rendered,
+	COALESCE(a.is_reported, false)                                                               AS is_reported
 `
 
 const internSelectAllDates = `
@@ -235,7 +239,8 @@ const internSelectAllDates = `
 	TO_CHAR(a.date::date, 'YYYY-MM-DD')                                                         AS date,
 	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
 	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
-	` + adminAttendanceHoursExpr + `                                                             AS hours_rendered
+	` + adminAttendanceHoursExpr + `                                                             AS hours_rendered,
+	COALESCE(a.is_reported, false)                                                               AS is_reported
 `
 
 // ── date range helper ─────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -437,3 +438,140 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 
 // ── Suppress unused import warning for clause ─────────────────────────────────
 var _ = clause.OnConflict{}
+
+// ── POST /api/attendance/:id/report-missed-clockout ───────────────────────────
+//
+// Intern reports that they forgot to clock out on a past day.
+// Guards:
+//   - Record must belong to the requesting user.
+//   - Record must have a time_in but no time_out.
+//   - Record date must be before today (not an ongoing shift).
+//   - Record must not have already been reported.
+
+func (h *Handler) ReportMissedClockOut(c *gin.Context) {
+	userID, ok := getUserIDFromCtx(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"ok": false, "error": "Unauthorized"})
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid record ID"})
+		return
+	}
+
+	var rec models.Attendance
+	if err := h.DB.First(&rec, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "Record not found"})
+		return
+	}
+
+	// Must belong to the requesting user.
+	if rec.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"ok": false, "error": "Access denied"})
+		return
+	}
+
+	// Must be a genuine missed clock-out: timed in, never timed out, not today.
+	today := todayDate()
+	recordDay := time.Date(rec.Date.Year(), rec.Date.Month(), rec.Date.Day(), 0, 0, 0, 0, time.UTC)
+	if rec.TimeIn == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "No time-in on this record"})
+		return
+	}
+	if rec.TimeOut != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "This record already has a time-out"})
+		return
+	}
+	if !recordDay.Before(today) {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Cannot report an ongoing shift"})
+		return
+	}
+
+	// Prevent duplicate reports.
+	if rec.IsReported {
+		c.JSON(http.StatusConflict, gin.H{"ok": false, "error": "Already reported"})
+		return
+	}
+
+	now := time.Now().UTC()
+	if err := h.DB.Model(&rec).Updates(map[string]interface{}{
+		"is_reported": true,
+		"reported_at": now,
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to save report"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ── PATCH /api/admin/attendance/:id/set-timeout ───────────────────────────────
+//
+// Admin sets the time-out for a reported missed clock-out record.
+// Expects JSON body: { "time_out": "<RFC3339 or YYYY-MM-DDTHH:MM:SS>" }
+// Clears is_reported once resolved.
+
+func (h *Handler) AdminSetTimeOut(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid record ID"})
+		return
+	}
+
+	var body struct {
+		TimeOut string `json:"time_out" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "time_out is required"})
+		return
+	}
+
+	// Accept RFC3339 with timezone or a bare local timestamp.
+	var timeOut time.Time
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05"} {
+		if t, err := time.Parse(layout, body.TimeOut); err == nil {
+			timeOut = t.UTC()
+			break
+		}
+	}
+	if timeOut.IsZero() {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid time_out format — use RFC3339 or YYYY-MM-DDTHH:MM:SS"})
+		return
+	}
+
+	var rec models.Attendance
+	if err := h.DB.First(&rec, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "Record not found"})
+		return
+	}
+
+	// time_out must be after time_in.
+	if rec.TimeIn != nil && !timeOut.After(*rec.TimeIn) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"ok":    false,
+			"error": "time_out must be after time_in",
+		})
+		return
+	}
+
+	adminID, _ := getUserIDFromCtx(c)
+	if err := h.DB.Model(&rec).Updates(map[string]interface{}{
+		"time_out":    timeOut,
+		"is_reported": false, // resolved — clears the reported flag
+		"reported_at": nil,
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to update record"})
+		return
+	}
+
+	h.logActivity(
+		adminID,
+		"SET_TIMEOUT",
+		fmt.Sprintf("Admin set time-out for attendance record %d to %s", id, timeOut.Format(time.RFC3339)),
+		c.ClientIP(),
+	)
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}

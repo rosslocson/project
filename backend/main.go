@@ -26,17 +26,14 @@ func seedAdminAccount(db *gorm.DB) {
 	adminEmail := "admin@example.com"
 	adminPassword := "admin123"
 
-	// Hash the admin password using bcrypt
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("❌ Failed to hash admin password: %v", err)
 		return
 	}
 
-	// Check if admin already exists
 	var existingAdmin models.User
 	if err := db.Where("email = ?", adminEmail).First(&existingAdmin).Error; err == nil {
-		// Admin exists - check if password is properly hashed
 		if !strings.HasPrefix(existingAdmin.Password, "$2a$") && !strings.HasPrefix(existingAdmin.Password, "$2b$") {
 			log.Printf("⚠️ Admin account found but password is NOT bcrypt hashed. Updating with proper hash...")
 			if err := db.Model(&existingAdmin).Update("password", string(hashedPassword)).Error; err != nil {
@@ -50,7 +47,6 @@ func seedAdminAccount(db *gorm.DB) {
 		return
 	}
 
-	// Create admin user
 	adminUser := models.User{
 		FirstName: "Admin",
 		LastName:  "User",
@@ -85,12 +81,9 @@ func fixPlaintextPasswords(db *gorm.DB) {
 
 	fixed := 0
 	for _, user := range users {
-		// Skip if already bcrypt hashed
 		if strings.HasPrefix(user.Password, "$2a$") || strings.HasPrefix(user.Password, "$2b$") {
 			continue
 		}
-
-		// Skip if password is empty
 		if strings.TrimSpace(user.Password) == "" {
 			log.Printf("⚠️ User %s (%s) has empty password", user.FirstName, user.Email)
 			continue
@@ -98,14 +91,12 @@ func fixPlaintextPasswords(db *gorm.DB) {
 
 		log.Printf("🔧 Hashing plaintext password for user %s (%s)...", user.FirstName, user.Email)
 
-		// Hash the plaintext password
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if err != nil {
 			log.Printf("❌ Failed to hash password for user %s: %v", user.Email, err)
 			continue
 		}
 
-		// Update the user with the hashed password
 		if err := db.Model(&user).Update("password", string(hashedPassword)).Error; err != nil {
 			log.Printf("❌ Failed to update password for user %s: %v", user.Email, err)
 			continue
@@ -123,7 +114,6 @@ func fixPlaintextPasswords(db *gorm.DB) {
 }
 
 func main() {
-	// Load environment variables
 	godotenv.Load()
 
 	dsn := os.Getenv("DATABASE_URL")
@@ -137,27 +127,25 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Auto migrate models
-	DB.AutoMigrate(&models.User{}, &models.ActivityLog{}, &models.Department{}, &models.Position{}, &models.Attendance{})
+	// Auto migrate models — Attendance is included so is_reported + reported_at
+	// columns are added automatically if your Attendance model has them.
+	DB.AutoMigrate(
+		&models.User{},
+		&models.ActivityLog{},
+		&models.Department{},
+		&models.Position{},
+		&models.Attendance{},
+	)
 	log.Println("Database migrated successfully")
 
-	// Seed database with admin account
 	seedAdminAccount(DB)
-
-	// Fix any users with plaintext passwords
 	fixPlaintextPasswords(DB)
 
-	// Init handlers with DB
 	h := handlers.NewHandler(DB)
 
 	r := gin.Default()
-
-	// Set max multipart memory (32MB)
 	r.MaxMultipartMemory = 32 << 20
 
-	// CORS config - allows Flutter web app to call the API
-	// CORS: AllowAllOrigins must be used instead of AllowOrigins["*"]
-	// when AllowCredentials is true — otherwise browsers block DELETE/PUT with Auth headers
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -167,25 +155,21 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Serve uploaded files statically
 	r.Static("/uploads", "./uploads")
 
-	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "time": time.Now()})
 	})
 
-	// Simple data endpoint
 	r.GET("/api/data", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Connected to Go Backend!"})
 	})
 
-	// Public routes
+	// ── Public routes ─────────────────────────────────────────────────────────
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/register", h.Register)
 		auth.POST("/login", h.Login)
-
 		auth.POST("/forgot-password", h.ForgotPassword)
 		auth.POST("/verify-reset-otp", h.VerifyResetOTP)
 		auth.POST("/reset-password", h.ResetPassword)
@@ -195,34 +179,35 @@ func main() {
 		r.GET("/api/positions", h.ListPositions)
 	}
 
-	// Admin-only routes (JWT + AdminOnly middleware)
+	// ── Admin-only routes (JWT + AdminOnly) ───────────────────────────────────
 	admin := r.Group("/api/admin")
 	admin.Use(middleware.JWTAuth(), middleware.AdminOnly())
 	{
 		admin.GET("/dashboard", h.AdminDashboard)
 
-		// ── Attendance Monitoring ──────────────────────────────────────────
-		// GET  /api/admin/attendance         → paginated list of all interns' records
-		// GET  /api/admin/attendance/export  → CSV download
+		// Attendance monitoring
 		admin.GET("/attendance", h.AdminGetAttendance)
 		admin.GET("/attendance/export", h.AdminExportAttendance)
+
+		// ── NEW: admin sets time-out for a reported missed clock-out ──────
+		admin.PATCH("/attendance/:id/set-timeout", h.AdminSetTimeOut)
 	}
 
-	// Protected routes (JWT only)
+	// ── Protected routes (JWT only) ───────────────────────────────────────────
 	api := r.Group("/api")
 	api.Use(middleware.JWTAuth())
 	{
-		// User profile
+		// Profile
 		api.GET("/profile", h.GetProfile)
 		api.PUT("/profile", h.UpdateProfile)
 		api.PUT("/profile/password", h.ChangePassword)
 		api.POST("/profile/avatar", h.UploadAvatar)
 		api.DELETE("/profile/avatar", h.RemoveAvatar)
 
-		// Dashboard stats
+		// Dashboard
 		api.GET("/dashboard/stats", h.GetDashboardStats)
 
-		// Departments — public read, admin write/edit/delete
+		// Departments (admin write)
 		depts := api.Group("/departments")
 		depts.Use(middleware.AdminOnly())
 		{
@@ -231,7 +216,7 @@ func main() {
 			depts.DELETE("/:id", h.DeleteDepartment)
 		}
 
-		// Positions — public read, admin write/edit/delete
+		// Positions (admin write)
 		positions := api.Group("/positions")
 		positions.Use(middleware.AdminOnly())
 		{
@@ -251,17 +236,20 @@ func main() {
 			users.DELETE("/:id", h.DeleteUser)
 		}
 
-		// Activity logs
+		// Activity + interns
 		api.GET("/activity", h.GetActivityLogs)
 		api.GET("/interns", h.ListInterns)
 
-		// Attendance (intern time-in/out + OJT hours tracking)
+		// Attendance (intern-facing)
 		attendance := api.Group("/attendance")
 		{
 			attendance.POST("/time-in", h.TimeIn)
 			attendance.PATCH("/time-out", h.TimeOut)
 			attendance.GET("/summary", h.GetAttendanceSummary)
 			attendance.GET("/history", h.GetAttendanceHistory)
+
+			// ── NEW: intern reports a missed clock-out ────────────────────
+			attendance.POST("/:id/report-missed-clockout", h.ReportMissedClockOut)
 		}
 	}
 

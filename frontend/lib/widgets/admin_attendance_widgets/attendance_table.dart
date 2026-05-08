@@ -1,14 +1,18 @@
 // lib/widgets/admin_attendance_widgets/attendance_table.dart
-// Table widget that renders attendance records, including the status badge
-// and intern avatar with auth-gated image fetching.
+// Table widget that renders attendance records, including the status badge,
+// intern avatar with auth-gated image fetching, remark column, and
+// report / review actions.
 
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../../services/api_service.dart';
+import '../../services/admin_attendance_service.dart';
 import '../../models/attendance_constants.dart';
 import '../../models/attendance_record.dart';
+import 'report_issue_dialog.dart';
+import 'review_report_sheet.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Attendance table
@@ -16,22 +20,40 @@ import '../../models/attendance_record.dart';
 
 class AttendanceTable extends StatelessWidget {
   final List<AdminAttendanceRecord> records;
+  final VoidCallback? onRefresh;
 
-  const AttendanceTable({super.key, required this.records});
+  /// Pass true when the viewer is an admin (enables inline remark editing
+  /// and the review-report sheet instead of the report-issue dialog).
+  final bool isAdmin;
 
+  const AttendanceTable({
+    super.key,
+    required this.records,
+    this.onRefresh,
+    this.isAdmin = false,
+  });
+
+  // Headers match the 7 data columns (columns 1–7 in _colWidths).
   static const _headers = [
-    'Intern', 'Date', 'Time In', 'Time Out', 'Hours Worked', 'Status',
+    'Intern',
+    'Date',
+    'Time In',
+    'Time Out',
+    'Hours',
+    'Status',
+    'Remark',
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(28),
-    1: FlexColumnWidth(3),
-    2: FlexColumnWidth(2),
-    3: FlexColumnWidth(1.5),
-    4: FlexColumnWidth(1.5),
-    5: FlexColumnWidth(1.5),
-    6: FlexColumnWidth(2),
-    7: FixedColumnWidth(28),
+    0: FixedColumnWidth(28),   // left gutter
+    1: FlexColumnWidth(3),     // Intern
+    2: FlexColumnWidth(2),     // Date
+    3: FlexColumnWidth(1.5),   // Time In
+    4: FlexColumnWidth(1.5),   // Time Out
+    5: FlexColumnWidth(1.5),   // Hours
+    6: FlexColumnWidth(2),     // Status
+    7: FlexColumnWidth(2.5),   // Remark ← new
+    8: FixedColumnWidth(36),   // Action (report / review)
   };
 
   @override
@@ -44,7 +66,8 @@ class AttendanceTable extends StatelessWidget {
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
         _buildHeader(),
-        ...records.asMap().entries.map((e) => _buildRow(e.value, e.key)),
+        ...records.asMap().entries.map(
+            (e) => _buildRow(context, e.value, e.key)),
       ],
     );
   }
@@ -58,12 +81,13 @@ class AttendanceTable extends StatelessWidget {
       children: [
         const SizedBox.shrink(),
         ..._headers.map((h) {
-          final isCentered = h == 'Date' || h == 'Status';
+          final centered = h == 'Date' || h == 'Status';
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+            padding:
+                const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
             child: Text(
               h.toUpperCase(),
-              textAlign: isCentered ? TextAlign.center : TextAlign.left,
+              textAlign: centered ? TextAlign.center : TextAlign.left,
               style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 11,
@@ -73,12 +97,13 @@ class AttendanceTable extends StatelessWidget {
             ),
           );
         }),
-        const SizedBox.shrink(),
+        const SizedBox.shrink(), // action column header
       ],
     );
   }
 
-  TableRow _buildRow(AdminAttendanceRecord r, int index) {
+  TableRow _buildRow(
+      BuildContext context, AdminAttendanceRecord r, int index) {
     return TableRow(
       decoration: BoxDecoration(
         color: index.isEven ? kSurface : const Color(0xFFFAFAFC),
@@ -86,9 +111,10 @@ class AttendanceTable extends StatelessWidget {
       children: [
         const SizedBox.shrink(),
 
-        // Intern name + avatar
+        // ── Intern name + avatar ─────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+          padding:
+              const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: Row(
             children: [
               InternAvatar(url: r.avatarUrl, name: r.internName),
@@ -110,9 +136,10 @@ class AttendanceTable extends StatelessWidget {
 
         _cell(r.formattedDate, centered: true),
 
-        // Time In with punctuality dot
+        // ── Time In with punctuality dot ─────────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+          padding:
+              const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: r.timeIn != null
               ? Row(
                   mainAxisSize: MainAxisSize.min,
@@ -147,24 +174,277 @@ class AttendanceTable extends StatelessWidget {
         _cell(r.timeOut ?? '--'),
         _cell(r.formattedHours),
 
+        // ── Status badge ─────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+          padding:
+              const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: Center(child: StatusBadge(status: r.status)),
         ),
 
-        const SizedBox.shrink(),
+        // ── Remark column ────────────────────────────────────────────────
+        _RemarkCell(record: r, isAdmin: isAdmin, onChanged: onRefresh),
+
+        // ── Action cell ──────────────────────────────────────────────────
+        _ActionCell(record: r, isAdmin: isAdmin, onRefresh: onRefresh),
       ],
     );
   }
 
   Widget _cell(String text, {bool centered = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+        padding:
+            const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
         child: Text(
           text,
           textAlign: centered ? TextAlign.center : TextAlign.left,
           style: const TextStyle(fontSize: 13, color: kTextMid),
         ),
       );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Remark cell — inline editable for admin, read-only for intern
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RemarkCell extends StatefulWidget {
+  final AdminAttendanceRecord record;
+  final bool isAdmin;
+  final VoidCallback? onChanged;
+
+  const _RemarkCell({
+    required this.record,
+    required this.isAdmin,
+    this.onChanged,
+  });
+
+  @override
+  State<_RemarkCell> createState() => _RemarkCellState();
+}
+
+class _RemarkCellState extends State<_RemarkCell> {
+  bool _editing = false;
+  late final TextEditingController _ctrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.record.remark ?? '');
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await AdminAttendanceService.updateRemark(
+        widget.record.id, _ctrl.text.trim());
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      _editing = false;
+    });
+    widget.onChanged?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remark = widget.record.remark;
+    final hasRemark = remark != null && remark.isNotEmpty;
+
+    // ── Intern: read-only ────────────────────────────────────────────────
+    if (!widget.isAdmin) {
+      return Padding(
+        padding:
+            const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+        child: Text(
+          hasRemark ? remark! : '--',
+          style: TextStyle(
+            fontSize: 12,
+            fontStyle:
+                hasRemark ? FontStyle.normal : FontStyle.italic,
+            color: hasRemark ? const Color(0xFF4F46E5) : kTextMid,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+
+    // ── Admin: editing state ─────────────────────────────────────────────
+    if (_editing) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _ctrl,
+                autofocus: true,
+                maxLines: 2,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.all(8),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: kAccent),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : GestureDetector(
+                        onTap: _save,
+                        child: const Icon(Icons.check_circle,
+                            color: Color(0xFF22C55E), size: 22),
+                      ),
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: () => setState(() => _editing = false),
+                  child: const Icon(Icons.cancel,
+                      color: Color(0xFFEF4444), size: 22),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Admin: display state (tap to edit) ───────────────────────────────
+    return GestureDetector(
+      onTap: () => setState(() => _editing = true),
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Flexible(
+              child: Text(
+                hasRemark ? remark! : 'Add remark…',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle:
+                      hasRemark ? FontStyle.normal : FontStyle.italic,
+                  color:
+                      hasRemark ? const Color(0xFF4F46E5) : kTextMid,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.edit, size: 12, color: kTextMid),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Action cell
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ActionCell extends StatelessWidget {
+  final AdminAttendanceRecord record;
+  final bool isAdmin;
+  final VoidCallback? onRefresh;
+
+  const _ActionCell({
+    required this.record,
+    required this.isAdmin,
+    this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final r = record;
+
+    if (isAdmin) {
+      // Admin: show review icon with orange dot only when report is pending
+      if (!r.hasOpenReport) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Tooltip(
+          message: 'Review pending report',
+          child: GestureDetector(
+            onTap: () => ReviewReportSheet.show(
+              context,
+              r,
+              onResolved: onRefresh,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.rate_review_outlined,
+                    size: 20, color: kAccent),
+                Positioned(
+                  top: -3,
+                  right: -3,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF59E0B),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Intern: flag icon on reportable statuses
+    if (!r.isReportable) return const SizedBox.shrink();
+
+    final alreadyReported = r.isReported;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: Tooltip(
+        message: alreadyReported
+            ? 'Report submitted'
+            : 'Report an issue',
+        child: GestureDetector(
+          onTap: alreadyReported
+              ? null
+              : () => ReportIssueDialog.show(
+                    context,
+                    r,
+                    onReported: onRefresh,
+                  ),
+          child: Icon(
+            alreadyReported ? Icons.flag : Icons.flag_outlined,
+            size: 20,
+            color: alreadyReported
+                ? const Color(0xFFF59E0B)
+                : kTextMid,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -226,7 +506,7 @@ class StatusBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Intern avatar
+// Intern avatar (auth-gated image fetch)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class InternAvatar extends StatefulWidget {
@@ -319,6 +599,262 @@ class _InternAvatarState extends State<InternAvatar> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PendingReportsBell — drop into your admin AppBar actions
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Usage inside your admin screen:
+//
+//   AppBar(
+//     actions: [
+//       PendingReportsBell(onRefresh: _reloadTable),
+//       const SizedBox(width: 8),
+//     ],
+//   )
+
+class PendingReportsBell extends StatefulWidget {
+  final VoidCallback? onRefresh;
+  const PendingReportsBell({super.key, this.onRefresh});
+
+  @override
+  State<PendingReportsBell> createState() => _PendingReportsBellState();
+}
+
+class _PendingReportsBellState extends State<PendingReportsBell> {
+  List<AdminAttendanceRecord> _pending = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final res = await AdminAttendanceService.fetchPendingReports();
+    if (!mounted) return;
+    setState(() {
+      _pending = res['ok'] == true
+          ? (res['records'] as List<AdminAttendanceRecord>)
+          : [];
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    final count = _pending.length;
+    return GestureDetector(
+      onTap: count == 0 ? null : () => _showPanel(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              Icons.notifications_outlined,
+              color: count > 0 ? kAccent : kTextMid,
+            ),
+            if (count > 0)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPanel(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PendingPanel(
+        records: _pending,
+        onResolved: () {
+          _load();
+          widget.onRefresh?.call();
+        },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pending reports panel (inside bell)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PendingPanel extends StatelessWidget {
+  final List<AdminAttendanceRecord> records;
+  final VoidCallback? onResolved;
+
+  const _PendingPanel({required this.records, this.onResolved});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  const Icon(Icons.pending_actions,
+                      color: Color(0xFFF59E0B), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pending Reports (${records.length})',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: kTextDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.separated(
+                controller: ctrl,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                itemCount: records.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (ctx, i) => _PendingTile(
+                  record: records[i],
+                  onResolved: () {
+                    Navigator.pop(context);
+                    onResolved?.call();
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingTile extends StatelessWidget {
+  final AdminAttendanceRecord record;
+  final VoidCallback? onResolved;
+
+  const _PendingTile({required this.record, this.onResolved});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => ReviewReportSheet.show(context, record,
+          onResolved: onResolved),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFCD34D)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InternAvatar(
+                url: record.avatarUrl, name: record.internName),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          record.internName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: kTextDark,
+                          ),
+                        ),
+                      ),
+                      StatusBadge(status: record.status),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(record.formattedDate,
+                      style: const TextStyle(
+                          fontSize: 12, color: kTextMid)),
+                  if (record.reportReason != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      record.reportReason!,
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF92400E)),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: kTextMid),
+          ],
+        ),
+      ),
     );
   }
 }

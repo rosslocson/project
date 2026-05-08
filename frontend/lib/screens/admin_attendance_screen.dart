@@ -29,9 +29,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
   // ── Period / date ─────────────────────────────────────────────────────────
   AttendancePeriod _period = AttendancePeriod.today;
-  DateTime _customDate       = DateTime.now();
+  DateTime _customDate = DateTime.now();
   DateTime _customRangeStart = DateTime.now();
-  DateTime _customRangeEnd   = DateTime.now();
+  DateTime _customRangeEnd = DateTime.now();
   bool _isRangeMode = false;
 
   // ── Filters ───────────────────────────────────────────────────────────────
@@ -77,23 +77,24 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   Future<void> _load({int page = 1}) async {
     setState(() {
       _loading = true;
-      _error   = null;
-      _page    = page;
+      _error = null;
+      _page = page;
     });
 
     final isAllDates = _period == AttendancePeriod.allDates;
-    final isCustom   = _period == AttendancePeriod.custom;
+    final isCustom = _period == AttendancePeriod.custom;
 
     final result = await AdminAttendanceService.fetchAttendance(
       allDates: isAllDates,
-      period:   (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-      dateFrom: (isCustom && _isRangeMode) ? toApiDate(_customRangeStart) : null,
-      dateTo:   (isCustom && _isRangeMode) ? toApiDate(_customRangeEnd)   : null,
-      date:     (isCustom && !_isRangeMode) ? toApiDate(_customDate)      : null,
-      search:   _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
-      status:   _selectedStatus == 'All' ? null : _selectedStatus,
-      page:     page,
-      limit:    _limit,
+      period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+      dateFrom:
+          (isCustom && _isRangeMode) ? toApiDate(_customRangeStart) : null,
+      dateTo: (isCustom && _isRangeMode) ? toApiDate(_customRangeEnd) : null,
+      date: (isCustom && !_isRangeMode) ? toApiDate(_customDate) : null,
+      search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+      status: _selectedStatus == 'All' ? null : _selectedStatus,
+      page: page,
+      limit: _limit,
     );
 
     if (!mounted) return;
@@ -101,12 +102,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     if (result['ok'] == true) {
       setState(() {
         _records = result['records'] as List<AdminAttendanceRecord>;
-        _total   = result['total'] as int;
+        _total = result['total'] as int;
         _loading = false;
       });
     } else {
       setState(() {
-        _error   = result['error'] as String?;
+        _error = result['error'] as String?;
         _loading = false;
       });
     }
@@ -120,8 +121,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       builder: (_) => CustomDatePickerDialog(
         initialSingleDate: _customDate,
         initialRangeStart: _customRangeStart,
-        initialRangeEnd:   _customRangeEnd,
-        initialIsRange:    _isRangeMode,
+        initialRangeEnd: _customRangeEnd,
+        initialIsRange: _isRangeMode,
         onConfirm: ({
           required bool isRange,
           DateTime? singleDate,
@@ -130,10 +131,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         }) {
           setState(() {
             _isRangeMode = isRange;
-            _period      = AttendancePeriod.custom;
+            _period = AttendancePeriod.custom;
             if (isRange) {
               _customRangeStart = rangeStart!;
-              _customRangeEnd   = rangeEnd!;
+              _customRangeEnd = rangeEnd!;
             } else {
               _customDate = singleDate!;
             }
@@ -150,7 +151,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final now = DateTime.now();
     return switch (_period) {
       AttendancePeriod.allDates => 'All Dates',
-      AttendancePeriod.custom   => _isRangeMode
+      AttendancePeriod.custom => _isRangeMode
           ? formatDateRange(_customRangeStart, _customRangeEnd)
           : toDisplayDate(_customDate),
       _ => () {
@@ -163,6 +164,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   int get _activeFilterCount =>
       (_searchCtrl.text.isNotEmpty ? 1 : 0) +
       (_selectedStatus != 'All' ? 1 : 0);
+
+  /// Number of reported-but-unresolved records in the current page.
+  int get _reportedCount =>
+      _records.where((r) => r.isReported && r.timeOut == null).length;
 
   void _clearAllFilters() {
     _searchCtrl.clear();
@@ -253,8 +258,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: IconButton(
                   padding: const EdgeInsets.all(12),
@@ -296,6 +301,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               _buildCardHeader(),
               _buildToolbar(),
               _buildPeriodRow(),
+              // ── Reported banner — only visible when unresolved reports exist
+              if (!_loading && _reportedCount > 0) _buildReportedBanner(),
+              if (!_loading && _reportedCount > 0) const SizedBox(height: 12),
               const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(child: _buildBody()),
               if (_total > _limit) _buildPagination(),
@@ -348,11 +356,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       _loading
                           ? 'Loading…'
                           : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                      style:
-                          const TextStyle(fontSize: 12, color: kTextMid),
+                      style: const TextStyle(fontSize: 12, color: kTextMid),
                     ),
-                    if (!_loading &&
-                        _period != AttendancePeriod.allDates) ...[
+                    if (!_loading && _period != AttendancePeriod.allDates) ...[
                       const SizedBox(width: 8),
                       Container(
                         width: 1,
@@ -381,23 +387,19 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           ExportButton(
             onTap: () async {
               final isAllDates = _period == AttendancePeriod.allDates;
-              final isCustom   = _period == AttendancePeriod.custom;
+              final isCustom = _period == AttendancePeriod.custom;
               await AttendanceExporter.export(
                 context,
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
-                  period: (!isAllDates && !isCustom)
-                      ? _period.apiPeriod
-                      : null,
+                  period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
                   date: (isCustom && !_isRangeMode)
                       ? toApiDate(_customDate)
                       : null,
                   search: _searchCtrl.text.trim().isEmpty
                       ? null
                       : _searchCtrl.text.trim(),
-                  status: _selectedStatus == 'All'
-                      ? null
-                      : _selectedStatus,
+                  status: _selectedStatus == 'All' ? null : _selectedStatus,
                 ),
               );
             },
@@ -492,6 +494,96 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
+  // ── Reported banner ───────────────────────────────────────────────────────
+
+  Widget _buildReportedBanner() {
+    final count = _reportedCount;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(28, 0, 28, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.purple.shade200, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          // Icon pill
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.purple.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.flag_rounded,
+                color: Colors.purple.shade700, size: 16),
+          ),
+          const SizedBox(width: 12),
+
+          // Text
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$count missed clock-out '
+                  '${count == 1 ? 'report requires' : 'reports require'} '
+                  'your attention',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.purple.shade800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Click "Set Time-Out" on the highlighted '
+                  '${count == 1 ? 'row' : 'rows'} below to resolve.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.purple.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // "Show Only" quick-filter button
+          GestureDetector(
+            onTap: () {
+              setState(() => _selectedStatus = 'Missed Clock Out');
+              _load();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade700,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.filter_list_rounded,
+                      size: 13, color: Colors.purple.shade50),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Show Only',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.purple.shade50,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Body ──────────────────────────────────────────────────────────────────
 
   Widget _buildBody() {
@@ -511,8 +603,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             ),
             const SizedBox(height: 12),
             Text(_error!,
-                style:
-                    TextStyle(color: Colors.red.shade600, fontSize: 13)),
+                style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () => _load(page: _page),
@@ -543,9 +634,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             const Text(
               'No attendance records found',
               style: TextStyle(
-                  color: kTextMid,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500),
+                  color: kTextMid, fontSize: 14, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 4),
             const Text(
@@ -559,7 +648,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.only(top: 8, bottom: 12),
-      child: AttendanceTable(records: _records),
+      child: AttendanceTable(
+        records: _records,
+        onRefresh: () => _load(page: _page),
+      ),
     );
   }
 
@@ -579,9 +671,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           Text(
             'Page $_page of $totalPages',
             style: const TextStyle(
-                color: kTextMid,
-                fontSize: 12,
-                fontWeight: FontWeight.w500),
+                color: kTextMid, fontSize: 12, fontWeight: FontWeight.w500),
           ),
           const SizedBox(width: 4),
           Text(
