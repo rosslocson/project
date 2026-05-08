@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../models/attendance_record.dart';
 import '../../models/attendance_constants.dart';
 import '../../services/admin_attendance_service.dart';
+import '../../services/attendance_service.dart';
 
 class ReportIssueDialog extends StatefulWidget {
   final AdminAttendanceRecord record;
@@ -28,8 +29,7 @@ class ReportIssueDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          ReportIssueDialog(record: record, onReported: onReported),
+      builder: (_) => ReportIssueDialog(record: record, onReported: onReported),
     );
   }
 
@@ -71,9 +71,11 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
       _error = null;
     });
 
-    final result = await AdminAttendanceService.reportIssue(
-      widget.record.id,
-      reason,
+    // ✅ Uses the intern-facing endpoint, not the admin service
+    final result = await AttendanceService.reportMissedClockOut(
+      widget.record.id.toString(),
+      reason: reason, // pass reason if your service supports it,
+      // otherwise just the id
     );
 
     if (!mounted) return;
@@ -89,8 +91,7 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
         ),
       );
     } else {
-      setState(
-          () => _error = result['error'] as String? ?? 'Failed to report');
+      setState(() => _error = result['error'] as String? ?? 'Failed to report');
     }
   }
 
@@ -167,8 +168,7 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
                 labelStyle: TextStyle(
                   fontSize: 12,
                   color: selected ? kAccent : kTextMid,
-                  fontWeight:
-                      selected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
@@ -221,8 +221,8 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
                     )
                   : const Text(
                       'Submit Report',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 14),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                     ),
             ),
           ),
@@ -252,8 +252,8 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(
-            fontSize: 11, color: color, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
       ),
     );
   }

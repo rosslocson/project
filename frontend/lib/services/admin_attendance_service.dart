@@ -1,11 +1,10 @@
 // lib/services/admin_attendance_service.dart
-// All backend communication for the admin attendance screen.
-// The existing attendance_service.dart handles intern-facing endpoints — keep it.
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_service.dart';
 import '../models/attendance_record.dart';
+import 'package:flutter/material.dart';
 
 class AdminAttendanceService {
   // ── Fetch records ──────────────────────────────────────────────────────────
@@ -89,43 +88,7 @@ class AdminAttendanceService {
         .toString();
   }
 
-  // ── Set time-out (missed clock-out) ───────────────────────────────────────
-  static Future<Map<String, dynamic>> setTimeOut(
-    int recordId,
-    DateTime timeOut,
-  ) async {
-    try {
-      final res = await http.patch(
-        Uri.parse(
-            '${ApiService.baseUrl}/admin/attendance/$recordId/set-timeout'),
-        headers: await ApiService.authHeaders(),
-        body: jsonEncode({'time_out': timeOut.toIso8601String()}),
-      );
-      return ApiService.parse(res);
-    } catch (e) {
-      return {'ok': false, 'error': 'Connection error'};
-    }
-  }
-
-  // ── Report an issue (intern or admin) ─────────────────────────────────────
-  static Future<Map<String, dynamic>> reportIssue(
-    int recordId,
-    String reason,
-  ) async {
-    try {
-      final res = await http.post(
-        Uri.parse(
-            '${ApiService.baseUrl}/admin/attendance/$recordId/report'),
-        headers: await ApiService.authHeaders(),
-        body: jsonEncode({'reason': reason}),
-      );
-      return ApiService.parse(res);
-    } catch (e) {
-      return {'ok': false, 'error': 'Connection error'};
-    }
-  }
-
-  // ── Fetch pending reports (admin inbox) ───────────────────────────────────
+  // ── Fetch pending reports ──────────────────────────────────────────────────
   static Future<Map<String, dynamic>> fetchPendingReports() async {
     try {
       final uri = Uri.parse(
@@ -146,43 +109,48 @@ class AdminAttendanceService {
     }
   }
 
-  // ── Resolve a report (admin action) ───────────────────────────────────────
-  static Future<Map<String, dynamic>> resolveReport(
-    int recordId, {
-    String? newStatus,
-    String? remark,
-    DateTime? correctedTimeOut,
+  // ── Resolve an attendance issue (the ONE resolve method) ──────────────────
+  // resolution: 'set_timeout' | 'excuse' | 'mark_present' | 'adjust_timein' | 'no_action'
+  // timeOut / adjustedTimeIn formatted as "HH:MM" (24-hour) — matches backend.
+  static Future<Map<String, dynamic>> resolveAttendanceIssue({
+    required int recordId,
+    required String resolution,
+    TimeOfDay? timeOut,
+    TimeOfDay? adjustedTimeIn,
+    String? note,
   }) async {
     try {
-      final payload = <String, dynamic>{
-        'report_status': 'resolved',
-        if (newStatus != null) 'status': newStatus,
-        if (remark != null && remark.isNotEmpty) 'remark': remark,
-        if (correctedTimeOut != null)
-          'time_out': correctedTimeOut.toIso8601String(),
+      final body = <String, dynamic>{
+        'resolution': resolution,
+        if (note != null && note.isNotEmpty) 'note': note,
+        if (timeOut != null)
+          'time_out':
+              '${timeOut.hour.toString().padLeft(2, '0')}:${timeOut.minute.toString().padLeft(2, '0')}',
+        if (adjustedTimeIn != null)
+          'adjusted_time_in':
+              '${adjustedTimeIn.hour.toString().padLeft(2, '0')}:${adjustedTimeIn.minute.toString().padLeft(2, '0')}',
       };
 
-      final res = await http.patch(
-        Uri.parse(
-            '${ApiService.baseUrl}/admin/attendance/$recordId/resolve'),
+      final res = await http.post(
+        // ← POST, not PATCH
+        Uri.parse('${ApiService.baseUrl}/admin/attendance/$recordId/resolve'),
         headers: await ApiService.authHeaders(),
-        body: jsonEncode(payload),
+        body: jsonEncode(body),
       );
       return ApiService.parse(res);
     } catch (e) {
-      return {'ok': false, 'error': 'Connection error'};
+      return {'ok': false, 'error': e.toString()};
     }
   }
 
-  // ── Add / edit remark only ─────────────────────────────────────────────────
+// Add this back to AdminAttendanceService
   static Future<Map<String, dynamic>> updateRemark(
     int recordId,
     String remark,
   ) async {
     try {
       final res = await http.patch(
-        Uri.parse(
-            '${ApiService.baseUrl}/admin/attendance/$recordId/remark'),
+        Uri.parse('${ApiService.baseUrl}/admin/attendance/$recordId/remark'),
         headers: await ApiService.authHeaders(),
         body: jsonEncode({'remark': remark}),
       );

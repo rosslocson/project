@@ -1,8 +1,4 @@
 // lib/widgets/attendance_history_list.dart
-//
-// Scrollable list of past attendance records.
-// - Weekends are excluded from the list.
-// - Past records where the user timed in but never timed out show "Missed Clock Out".
 
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
@@ -18,19 +14,17 @@ class AttendanceHistoryList extends StatelessWidget {
     required this.isLoading,
   });
 
-  /// Returns only weekday records (Mon–Fri), sorted newest first.
-  List<AttendanceRecord> get _weekdayRecords {
-    return records
-        .where((r) =>
-            r.date.weekday != DateTime.saturday &&
-            r.date.weekday != DateTime.sunday)
-        .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+  /// Backend already sends absent rows and excludes weekends + today.
+  /// Just sort newest first.
+  List<AttendanceRecord> get _sortedRecords {
+    final copy = [...records];
+    copy.sort((a, b) => b.date.compareTo(a.date));
+    return copy;
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _weekdayRecords;
+    final filtered = _sortedRecords;
 
     return Container(
       decoration: BoxDecoration(
@@ -66,10 +60,7 @@ class AttendanceHistoryList extends StatelessWidget {
                 const Spacer(),
                 Text(
                   '${filtered.length} record${filtered.length != 1 ? 's' : ''}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                 ),
               ],
             ),
@@ -103,8 +94,7 @@ class AttendanceHistoryList extends StatelessWidget {
           else
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(16),
-              ),
+                  bottom: Radius.circular(16)),
               child: ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -125,13 +115,8 @@ class AttendanceHistoryList extends StatelessWidget {
 
 class _AttendanceRow extends StatelessWidget {
   final AttendanceRecord record;
-
   const _AttendanceRow({required this.record});
 
-  /// A record is "missed clock out" when:
-  ///   - The user timed in (has a timeIn value)
-  ///   - The user never timed out (no timeOut value)
-  ///   - The date is in the past (not today)
   bool get _isMissedClockOut {
     final today = DateTime.now();
     final isToday = record.date.year == today.year &&
@@ -142,6 +127,7 @@ class _AttendanceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isAbsent = record.isAbsent;
     final isComplete = record.isComplete;
     final isOngoing =
         record.hasTimedIn && !record.hasTimedOut && !_isMissedClockOut;
@@ -155,25 +141,31 @@ class _AttendanceRow extends StatelessWidget {
             width: 44,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF460A14).withValues(alpha: 0.07),
+              color: isAbsent
+                  ? Colors.grey.shade100
+                  : const Color(0xFF460A14).withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               children: [
                 Text(
                   _monthAbbr(record.date.month),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: Color(0xFF460A14),
+                    color: isAbsent
+                        ? Colors.grey.shade400
+                        : const Color(0xFF460A14),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
                   record.date.day.toString(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF460A14),
+                    color: isAbsent
+                        ? Colors.grey.shade400
+                        : const Color(0xFF460A14),
                     height: 1.1,
                   ),
                 ),
@@ -190,76 +182,90 @@ class _AttendanceRow extends StatelessWidget {
               children: [
                 Text(
                   _dayName(record.date.weekday),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
+                    color: isAbsent
+                        ? Colors.grey.shade400
+                        : const Color(0xFF1A1A2E),
                   ),
                 ),
                 const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(Icons.login_rounded,
-                        size: 12, color: Colors.grey.shade400),
-                    const SizedBox(width: 4),
-                    Text(
-                      record.timeIn != null
-                          ? _fmtTime(record.timeIn!)
-                          : '--',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(width: 10),
-                    Icon(
-                      Icons.logout_rounded,
-                      size: 12,
-                      color: _isMissedClockOut
-                          ? Colors.red.shade300
-                          : Colors.grey.shade400,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      record.timeOut != null
-                          ? _fmtTime(record.timeOut!)
-                          : (_isMissedClockOut ? 'Missing' : '--'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _isMissedClockOut
-                            ? Colors.red.shade400
-                            : Colors.grey.shade600,
-                        fontWeight: _isMissedClockOut
-                            ? FontWeight.w600
-                            : FontWeight.normal,
+                if (!isAbsent)
+                  Row(
+                    children: [
+                      Icon(Icons.login_rounded,
+                          size: 12, color: Colors.grey.shade400),
+                      const SizedBox(width: 4),
+                      Text(
+                        record.timeIn != null
+                            ? _fmtTime(record.timeIn!)
+                            : '--',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.logout_rounded,
+                        size: 12,
+                        color: _isMissedClockOut
+                            ? Colors.red.shade300
+                            : Colors.grey.shade400,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        record.timeOut != null
+                            ? _fmtTime(record.timeOut!)
+                            : (_isMissedClockOut ? 'Missing' : '--'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _isMissedClockOut
+                              ? Colors.red.shade400
+                              : Colors.grey.shade600,
+                          fontWeight: _isMissedClockOut
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text(
+                    'No clock-in recorded',
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                  ),
               ],
             ),
           ),
 
-          // ── Hours + status + report button ─────────────────────────────
+          // ── Hours + status ─────────────────────────────────────────────
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                (record.hoursWorked ?? record.hoursRendered) != null
-                    ? _fmtHours(record.hoursWorked ?? record.hoursRendered!)
-                    : '--',
-                style: const TextStyle(
+                isAbsent
+                    ? '0h 00m'
+                    : ((record.hoursWorked ?? record.hoursRendered) != null
+                        ? _fmtHours(
+                            record.hoursWorked ?? record.hoursRendered!)
+                        : '--'),
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  color: isAbsent
+                      ? Colors.grey.shade400
+                      : const Color(0xFF1A1A2E),
                 ),
               ),
               const SizedBox(height: 4),
               _StatusBadge(
+                isAbsent: isAbsent,
                 isComplete: isComplete,
                 isOngoing: isOngoing,
                 isMissedClockOut: _isMissedClockOut,
                 isReported: record.isReported,
               ),
-              // Only show for missed clock-out that hasn't been reported yet.
               if (_isMissedClockOut && !record.isReported) ...[
                 const SizedBox(height: 6),
                 _ReportButton(recordId: record.id),
@@ -271,13 +277,10 @@ class _AttendanceRow extends StatelessWidget {
     );
   }
 
-  // ── Formatters (DateTime-aware) ──────────────────────────────────────────
-
-  /// Formats a DateTime to "h:mm AM/PM".
   String _fmtTime(DateTime dt) {
     final local = dt.toLocal();
-    final h      = local.hour % 12 == 0 ? 12 : local.hour % 12;
-    final m      = local.minute.toString().padLeft(2, '0');
+    final h = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final m = local.minute.toString().padLeft(2, '0');
     final period = local.hour >= 12 ? 'PM' : 'AM';
     return '$h:$m $period';
   }
@@ -308,12 +311,14 @@ class _AttendanceRow extends StatelessWidget {
 // ── Status badge ───────────────────────────────────────────────────────────
 
 class _StatusBadge extends StatelessWidget {
+  final bool isAbsent;
   final bool isComplete;
   final bool isOngoing;
   final bool isMissedClockOut;
   final bool isReported;
 
   const _StatusBadge({
+    this.isAbsent = false,
     required this.isComplete,
     required this.isOngoing,
     this.isMissedClockOut = false,
@@ -327,7 +332,12 @@ class _StatusBadge extends StatelessWidget {
     final String label;
     final IconData icon;
 
-    if (isComplete) {
+    if (isAbsent) {
+      bg    = Colors.grey.shade100;
+      fg    = Colors.grey.shade500;
+      label = 'Absent';
+      icon  = Icons.person_off_rounded;
+    } else if (isComplete) {
       bg    = Colors.green.shade50;
       fg    = Colors.green.shade700;
       label = 'Complete';
@@ -338,8 +348,6 @@ class _StatusBadge extends StatelessWidget {
       label = 'Ongoing';
       icon  = Icons.timelapse_rounded;
     } else if (isReported) {
-      // Reported takes priority over "Missed Clock Out" so the badge
-      // reflects the latest state immediately after the user reports.
       bg    = Colors.purple.shade50;
       fg    = Colors.purple.shade700;
       label = 'Reported';
@@ -381,9 +389,7 @@ class _StatusBadge extends StatelessWidget {
 // ── Report button ──────────────────────────────────────────────────────────
 
 class _ReportButton extends StatefulWidget {
-  /// Uses int to match AttendanceRecord.id exactly.
   final int recordId;
-
   const _ReportButton({required this.recordId});
 
   @override
@@ -402,7 +408,6 @@ class _ReportButtonState extends State<_ReportButton> {
 
     setState(() => _submitting = true);
 
-    // Pass id as String — AttendanceService.reportMissedClockOut takes String.
     final res = await AttendanceService.reportMissedClockOut(
       widget.recordId.toString(),
     );
@@ -421,8 +426,8 @@ class _ReportButtonState extends State<_ReportButton> {
             ? Colors.green.shade700
             : Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -433,8 +438,7 @@ class _ReportButtonState extends State<_ReportButton> {
       onTap: _submitting ? null : _submit,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
           color: _submitting
               ? Colors.orange.shade50
@@ -487,8 +491,7 @@ class _ReportConfirmDialog extends StatelessWidget {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Row(
         children: [
-          Icon(Icons.alarm_off_rounded,
-              color: Color(0xFF460A14), size: 22),
+          Icon(Icons.alarm_off_rounded, color: Color(0xFF460A14), size: 22),
           SizedBox(width: 10),
           Text(
             'Report Missed Clock-Out',
@@ -500,8 +503,7 @@ class _ReportConfirmDialog extends StatelessWidget {
         'This will notify the admin that you forgot to clock out. '
         'They will review and set your time-out manually.\n\n'
         'Continue?',
-        style:
-            TextStyle(fontSize: 13, color: Colors.black54, height: 1.5),
+        style: TextStyle(fontSize: 13, color: Colors.black54, height: 1.5),
       ),
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       actions: [
@@ -517,8 +519,8 @@ class _ReportConfirmDialog extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF460A14),
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(
-                horizontal: 18, vertical: 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
           ),

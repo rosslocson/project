@@ -45,15 +45,15 @@ class AttendanceTable extends StatelessWidget {
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(28),   // left gutter
-    1: FlexColumnWidth(3),     // Intern
-    2: FlexColumnWidth(2),     // Date
-    3: FlexColumnWidth(1.5),   // Time In
-    4: FlexColumnWidth(1.5),   // Time Out
-    5: FlexColumnWidth(1.5),   // Hours
-    6: FlexColumnWidth(2),     // Status
-    7: FlexColumnWidth(2.5),   // Remark ← new
-    8: FixedColumnWidth(36),   // Action (report / review)
+    0: FixedColumnWidth(28), // left gutter
+    1: FlexColumnWidth(3), // Intern
+    2: FlexColumnWidth(2), // Date
+    3: FlexColumnWidth(1.5), // Time In
+    4: FlexColumnWidth(1.5), // Time Out
+    5: FlexColumnWidth(1.5), // Hours
+    6: FlexColumnWidth(2), // Status
+    7: FlexColumnWidth(2.5), // Remark ← new
+    8: FixedColumnWidth(36), // Action (report / review)
   };
 
   @override
@@ -66,8 +66,10 @@ class AttendanceTable extends StatelessWidget {
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
         _buildHeader(),
-        ...records.asMap().entries.map(
-            (e) => _buildRow(context, e.value, e.key)),
+        ...records
+            .asMap()
+            .entries
+            .map((e) => _buildRow(context, e.value, e.key)),
       ],
     );
   }
@@ -83,8 +85,7 @@ class AttendanceTable extends StatelessWidget {
         ..._headers.map((h) {
           final centered = h == 'Date' || h == 'Status';
           return Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
             child: Text(
               h.toUpperCase(),
               textAlign: centered ? TextAlign.center : TextAlign.left,
@@ -102,8 +103,7 @@ class AttendanceTable extends StatelessWidget {
     );
   }
 
-  TableRow _buildRow(
-      BuildContext context, AdminAttendanceRecord r, int index) {
+  TableRow _buildRow(BuildContext context, AdminAttendanceRecord r, int index) {
     return TableRow(
       decoration: BoxDecoration(
         color: index.isEven ? kSurface : const Color(0xFFFAFAFC),
@@ -113,8 +113,7 @@ class AttendanceTable extends StatelessWidget {
 
         // ── Intern name + avatar ─────────────────────────────────────────
         Padding(
-          padding:
-              const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: Row(
             children: [
               InternAvatar(url: r.avatarUrl, name: r.internName),
@@ -138,8 +137,7 @@ class AttendanceTable extends StatelessWidget {
 
         // ── Time In with punctuality dot ─────────────────────────────────
         Padding(
-          padding:
-              const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: r.timeIn != null
               ? Row(
                   mainAxisSize: MainAxisSize.min,
@@ -176,8 +174,7 @@ class AttendanceTable extends StatelessWidget {
 
         // ── Status badge ─────────────────────────────────────────────────
         Padding(
-          padding:
-              const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: Center(child: StatusBadge(status: r.status)),
         ),
 
@@ -191,8 +188,7 @@ class AttendanceTable extends StatelessWidget {
   }
 
   Widget _cell(String text, {bool centered = false}) => Padding(
-        padding:
-            const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
         child: Text(
           text,
           textAlign: centered ? TextAlign.center : TextAlign.left,
@@ -239,8 +235,11 @@ class _RemarkCellState extends State<_RemarkCell> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    await AdminAttendanceService.updateRemark(
-        widget.record.id, _ctrl.text.trim());
+    await AdminAttendanceService.resolveAttendanceIssue(
+      recordId: widget.record.id,
+      resolution: 'no_action',
+      note: _ctrl.text.trim(),
+    );
     if (!mounted) return;
     setState(() {
       _saving = false;
@@ -257,14 +256,12 @@ class _RemarkCellState extends State<_RemarkCell> {
     // ── Intern: read-only ────────────────────────────────────────────────
     if (!widget.isAdmin) {
       return Padding(
-        padding:
-            const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
         child: Text(
           hasRemark ? remark! : '--',
           style: TextStyle(
             fontSize: 12,
-            fontStyle:
-                hasRemark ? FontStyle.normal : FontStyle.italic,
+            fontStyle: hasRemark ? FontStyle.normal : FontStyle.italic,
             color: hasRemark ? const Color(0xFF4F46E5) : kTextMid,
           ),
           maxLines: 2,
@@ -332,8 +329,7 @@ class _RemarkCellState extends State<_RemarkCell> {
     return GestureDetector(
       onTap: () => setState(() => _editing = true),
       child: Padding(
-        padding:
-            const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -342,10 +338,8 @@ class _RemarkCellState extends State<_RemarkCell> {
                 hasRemark ? remark! : 'Add remark…',
                 style: TextStyle(
                   fontSize: 12,
-                  fontStyle:
-                      hasRemark ? FontStyle.normal : FontStyle.italic,
-                  color:
-                      hasRemark ? const Color(0xFF4F46E5) : kTextMid,
+                  fontStyle: hasRemark ? FontStyle.normal : FontStyle.italic,
+                  color: hasRemark ? const Color(0xFF4F46E5) : kTextMid,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -423,9 +417,7 @@ class _ActionCell extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       child: Tooltip(
-        message: alreadyReported
-            ? 'Report submitted'
-            : 'Report an issue',
+        message: alreadyReported ? 'Report submitted' : 'Report an issue',
         child: GestureDetector(
           onTap: alreadyReported
               ? null
@@ -437,9 +429,7 @@ class _ActionCell extends StatelessWidget {
           child: Icon(
             alreadyReported ? Icons.flag : Icons.flag_outlined,
             size: 20,
-            color: alreadyReported
-                ? const Color(0xFFF59E0B)
-                : kTextMid,
+            color: alreadyReported ? const Color(0xFFF59E0B) : kTextMid,
           ),
         ),
       ),
@@ -498,8 +488,8 @@ class StatusBadge extends StatelessWidget {
         textAlign: TextAlign.center,
         maxLines: 1,
         softWrap: false,
-        style: TextStyle(
-            color: text, fontWeight: FontWeight.w600, fontSize: 12),
+        style:
+            TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 12),
       ),
     );
   }
@@ -769,8 +759,8 @@ class _PendingPanel extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 controller: ctrl,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 itemCount: records.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (ctx, i) => _PendingTile(
@@ -798,8 +788,8 @@ class _PendingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => ReviewReportSheet.show(context, record,
-          onResolved: onResolved),
+      onTap: () =>
+          ReviewReportSheet.show(context, record, onResolved: onResolved),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -811,8 +801,7 @@ class _PendingTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            InternAvatar(
-                url: record.avatarUrl, name: record.internName),
+            InternAvatar(url: record.avatarUrl, name: record.internName),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -835,8 +824,7 @@ class _PendingTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(record.formattedDate,
-                      style: const TextStyle(
-                          fontSize: 12, color: kTextMid)),
+                      style: const TextStyle(fontSize: 12, color: kTextMid)),
                   if (record.reportReason != null) ...[
                     const SizedBox(height: 6),
                     Text(

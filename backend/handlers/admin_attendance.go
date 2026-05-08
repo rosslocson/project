@@ -14,6 +14,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"net/http"
+	"project/backend/models"
 	"strconv"
 	"strings"
 	"time"
@@ -563,4 +564,235 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 		})
 	}
 	w.Flush()
+
+}
+
+// ── PATCH /api/admin/attendance/:id/resolve ───────────────────────────────
+//
+// Admin manually resolves/dismisses a report without setting timeout.
+
+func (h *Handler) ResolveAttendanceReport(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"ok":    false,
+			"error": "Invalid record ID",
+		})
+		return
+	}
+
+	var rec models.Attendance
+
+	if err := h.DB.First(&rec, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"ok":    false,
+			"error": "Record not found",
+		})
+		return
+	}
+
+	if err := h.DB.Model(&rec).Updates(map[string]interface{}{
+		"is_reported": false,
+		"reported_at": nil,
+		"resolution":  "dismissed",
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"ok":    false,
+			"error": "Failed to resolve report",
+		})
+		return
+	}
+
+	adminID, _ := getUserIDFromCtx(c)
+
+	h.logActivity(
+		adminID,
+		"RESOLVE_REPORT",
+		fmt.Sprintf("Admin resolved attendance report %d", rec.ID),
+		c.ClientIP(),
+	)
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok": true,
+	})
+}
+
+// ── POST /api/admin/attendance/:id/resolve ────────────────────────────────────
+//
+// Body (JSON):
+//   resolution        string  – set_timeout | excuse | mark_present | adjust_timein | no_action
+//   time_out          string? – "HH:MM" (24-h) – required when resolution=set_timeout
+//   adjusted_time_in  string? – "HH:MM" (24-h) – required when resolution=adjust_timein
+//   note              string? – admin note / reason
+
+// ── POST /api/admin/attendance/:id/resolve ─────────────────────────────────
+//
+// Body (JSON):
+//   resolution        string  – set_timeout | excuse | mark_present | adjust_timein | no_action
+//   time_out          string? – "HH:MM" 24-h, required when resolution = set_timeout
+//   adjusted_time_in  string? – "HH:MM" 24-h, required when resolution = adjust_timein
+//   note              string? – admin note / reason
+
+func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid record ID"})
+		return
+	}
+
+	var body struct {
+		Resolution     string  `json:"resolution"`
+		TimeOut        *string `json:"time_out"`
+		AdjustedTimeIn *string `json:"adjusted_time_in"`
+		Note           *string `json:"note"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid request body"})
+		return
+	}
+
+	var rec models.Attendance
+	if err := h.DB.First(&rec, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "Record not found"})
+		return
+	}
+
+	loc := manilaLoc()
+
+	// Always clear the report and set resolution
+	baseUpdates := map[string]interface{}{
+		"is_reported": false,
+		"resolution":  body.Resolution,
+	}
+	if body.Note != nil && strings.TrimSpace(*body.Note) != "" {
+		baseUpdates["admin_note"] = strings.TrimSpace(*body.Note)
+	}
+
+	switch body.Resolution {
+	case "set_timeout":
+		if body.TimeOut == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "time_out is required"})
+			return
+		}
+		t, err := parseAdminTime(rec.Date, *body.TimeOut, loc)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid time_out, expected HH:MM"})
+			return
+		}
+		baseUpdates["time_out"] = &t // pointer so GORM doesn't skip
+
+	case "mark_present":
+		if rec.TimeIn == nil {
+			tIn, _ := parseAdminTime(rec.Date, "08:00", loc)
+			baseUpdates["time_in"] = &tIn
+		}
+		tOut, _ := parseAdminTime(rec.Date, "17:00", loc)
+		baseUpdates["time_out"] = &tOut // pointer
+
+	case "adjust_timein":
+		if body.AdjustedTimeIn == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "adjusted_time_in is required"})
+			return
+		}
+		t, err := parseAdminTime(rec.Date, *body.AdjustedTimeIn, loc)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid adjusted_time_in, expected HH:MM"})
+			return
+		}
+		baseUpdates["time_in"] = &t // pointer
+
+	case "excuse", "no_action":
+		// no extra fields needed
+
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Unknown resolution: " + body.Resolution})
+		return
+	}
+
+	// KEY FIX: Use Select to force GORM to write zero-value bool fields.
+	// Build the list of columns to update explicitly.
+	columns := make([]string, 0, len(baseUpdates))
+	for k := range baseUpdates {
+		columns = append(columns, k)
+	}
+
+	if err := h.DB.Model(&rec).Select(columns).Updates(baseUpdates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to save resolution"})
+		return
+	}
+
+	adminID, _ := getUserIDFromCtx(c)
+	h.logActivity(
+		adminID,
+		"RESOLVE_ATTENDANCE",
+		fmt.Sprintf("Admin resolved attendance record #%d via '%s'", rec.ID, body.Resolution),
+		c.ClientIP(),
+	)
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// parseAdminTime combines the record's date with an admin-supplied "HH:MM"
+// string into a time.Time stamped in Manila time, ready to store as timestamptz.
+func parseAdminTime(recordDate time.Time, hhmm string, loc *time.Location) (time.Time, error) {
+	parts := strings.Split(strings.TrimSpace(hhmm), ":")
+	if len(parts) != 2 {
+		return time.Time{}, fmt.Errorf("expected HH:MM, got %q", hhmm)
+	}
+	h, e1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	m, e2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if e1 != nil || e2 != nil || h < 0 || h > 23 || m < 0 || m > 59 {
+		return time.Time{}, fmt.Errorf("invalid time value %q", hhmm)
+	}
+	return time.Date(
+		recordDate.Year(), recordDate.Month(), recordDate.Day(),
+		h, m, 0, 0, loc,
+	), nil
+}
+
+// GET /api/admin/attendance/reports
+// Returns all attendance rows where is_reported = true and resolution IS NULL.
+func (h *Handler) GetPendingReports(c *gin.Context) {
+	var rows []attendanceRaw
+
+	h.DB.Table("attendance a").
+		Select(internSelectAllDates).
+		Joins("LEFT JOIN users u ON u.id = a.user_id").
+		Where("a.is_reported = true AND a.resolution IS NULL").
+		Order("a.date DESC").
+		Scan(&rows)
+
+	response := toResponseRows(rows)
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":      true,
+		"records": response,
+		"total":   len(response),
+	})
+}
+
+// PATCH /api/admin/attendance/:id/remark
+func (h *Handler) UpdateAttendanceRemark(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid ID"})
+		return
+	}
+
+	var body struct {
+		Remark string `json:"remark"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid body"})
+		return
+	}
+
+	if err := h.DB.Model(&models.Attendance{}).
+		Where("id = ?", id).
+		Update("admin_note", strings.TrimSpace(body.Remark)).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to save remark"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

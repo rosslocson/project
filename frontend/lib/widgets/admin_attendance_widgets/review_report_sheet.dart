@@ -1,11 +1,4 @@
 // lib/widgets/admin_attendance_widgets/review_report_sheet.dart
-//
-// Bottom-sheet for the admin to review a flagged attendance record.
-// Admin can override the status, set a corrected time-out, write a remark,
-// and mark the report resolved — all in one action.
-//
-// Usage:
-//   ReviewReportSheet.show(context, record, onResolved: () { … });
 
 import 'package:flutter/material.dart';
 import '../../models/attendance_record.dart';
@@ -40,46 +33,110 @@ class ReviewReportSheet extends StatefulWidget {
   State<ReviewReportSheet> createState() => _ReviewReportSheetState();
 }
 
+// Each resolution option shown in the UI
+class _ResolutionOption {
+  final String value;      // sent to backend
+  final String label;      // shown in chip
+  final String hint;       // subtitle under chip
+  final IconData icon;
+
+  const _ResolutionOption({
+    required this.value,
+    required this.label,
+    required this.hint,
+    required this.icon,
+  });
+}
+
 class _ReviewReportSheetState extends State<ReviewReportSheet> {
-  static const _statusOptions = [
-    'Present',
-    'Late',
-    'Absent',
-    'Missed Clock Out',
-    'On Shift',
+  static const _options = [
+    _ResolutionOption(
+      value: 'set_timeout',
+      label: 'Set Time Out',
+      hint: 'Manually enter the missing clock-out time',
+      icon: Icons.schedule_rounded,
+    ),
+    _ResolutionOption(
+      value: 'mark_present',
+      label: 'Mark Present',
+      hint: 'Treat as full day (8 AM – 5 PM)',
+      icon: Icons.check_circle_outline_rounded,
+    ),
+    _ResolutionOption(
+      value: 'adjust_timein',
+      label: 'Adjust Time In',
+      hint: 'Correct an erroneous clock-in time',
+      icon: Icons.login_rounded,
+    ),
+    _ResolutionOption(
+      value: 'excuse',
+      label: 'Excuse',
+      hint: 'Accept the report with a note, no time change',
+      icon: Icons.thumb_up_alt_outlined,
+    ),
+    _ResolutionOption(
+      value: 'no_action',
+      label: 'No Action',
+      hint: 'Dismiss the report without changes',
+      icon: Icons.block_rounded,
+    ),
   ];
 
-  late String _selectedStatus;
-  final _remarkCtrl = TextEditingController();
-  DateTime? _correctedTimeOut;
+  String _selectedResolution = 'set_timeout';
+  TimeOfDay? _timeOut;
+  TimeOfDay? _adjustedTimeIn;
+  final _noteCtrl = TextEditingController();
   bool _submitting = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _selectedStatus = widget.record.status;
-    _remarkCtrl.text = widget.record.remark ?? '';
+    // Default to set_timeout for missed clock-out, excuse for everything else
+    _selectedResolution =
+        widget.record.status == 'Missed Clock Out' ? 'set_timeout' : 'excuse';
   }
 
   @override
   void dispose() {
-    _remarkCtrl.dispose();
+    _noteCtrl.dispose();
     super.dispose();
   }
 
+  // ── Validation ─────────────────────────────────────────────────────────────
+
+  String? get _validationError {
+    if (_selectedResolution == 'set_timeout' && _timeOut == null) {
+      return 'Please pick a time-out before saving.';
+    }
+    if (_selectedResolution == 'adjust_timein' && _adjustedTimeIn == null) {
+      return 'Please pick the corrected time-in before saving.';
+    }
+    return null;
+  }
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
+
   Future<void> _resolve() async {
+    final validationErr = _validationError;
+    if (validationErr != null) {
+      setState(() => _error = validationErr);
+      return;
+    }
+
     setState(() {
       _submitting = true;
       _error = null;
     });
 
-    final result = await AdminAttendanceService.resolveReport(
-      widget.record.id,
-      newStatus:
-          _selectedStatus != widget.record.status ? _selectedStatus : null,
-      remark: _remarkCtrl.text.trim(),
-      correctedTimeOut: _correctedTimeOut,
+    // ✅ Calls POST /api/admin/attendance/:id/resolve
+    final result = await AdminAttendanceService.resolveAttendanceIssue(
+      recordId: widget.record.id,
+      resolution: _selectedResolution,
+      timeOut: _selectedResolution == 'set_timeout' ? _timeOut : null,
+      adjustedTimeIn:
+          _selectedResolution == 'adjust_timein' ? _adjustedTimeIn : null,
+      note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
     );
 
     if (!mounted) return;
@@ -92,6 +149,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
         const SnackBar(
           content: Text('Report resolved successfully.'),
           backgroundColor: Color(0xFF22C55E),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } else {
@@ -100,16 +158,25 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
     }
   }
 
-  Future<void> _pickCorrectedTime() async {
-    final picked =
-        await showTimePicker(context: context, initialTime: TimeOfDay.now());
-    if (picked == null || !mounted) return;
-    final now = DateTime.now();
-    setState(() {
-      _correctedTimeOut =
-          DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
-    });
+  // ── Time pickers ───────────────────────────────────────────────────────────
+
+  Future<void> _pickTimeOut() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _timeOut ?? const TimeOfDay(hour: 17, minute: 0),
+    );
+    if (picked != null && mounted) setState(() => _timeOut = picked);
   }
+
+  Future<void> _pickAdjustedTimeIn() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _adjustedTimeIn ?? const TimeOfDay(hour: 8, minute: 0),
+    );
+    if (picked != null && mounted) setState(() => _adjustedTimeIn = picked);
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +239,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
 
             // Reported reason card
             if (r.reportReason != null) ...[
-              _Label('Reported Issue'),
+              const _Label('Reported Issue'),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
@@ -204,90 +271,68 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             ],
 
             // Current status
-            _Label('Current Status'),
-            Text(
-              r.status,
-              style: const TextStyle(
-                  fontSize: 13,
-                  color: kTextDark,
-                  fontWeight: FontWeight.w600),
+            const _Label('Current Status'),
+            Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F4F8),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                r.status,
+                style: const TextStyle(
+                    fontSize: 13,
+                    color: kTextDark,
+                    fontWeight: FontWeight.w600),
+              ),
             ),
-            const SizedBox(height: 16),
 
-            // Override status
-            _Label('Override Status'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _statusOptions.map((s) {
-                final sel = _selectedStatus == s;
-                return ChoiceChip(
-                  label: Text(s),
-                  selected: sel,
-                  onSelected: (_) => setState(() => _selectedStatus = s),
-                  selectedColor: kAccent.withOpacity(0.15),
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: sel ? kAccent : kTextMid,
-                    fontWeight:
-                        sel ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(
-                        color: sel ? kAccent : Colors.grey.shade300),
-                  ),
-                );
-              }).toList(),
-            ),
+            // Resolution selector
+            _Label('Resolution Action'),
+            ...(_options.map((opt) => _ResolutionTile(
+                  option: opt,
+                  selected: _selectedResolution == opt.value,
+                  onTap: () => setState(() {
+                    _selectedResolution = opt.value;
+                    _error = null;
+                  }),
+                ))),
             const SizedBox(height: 20),
 
-            // Corrected time-out
-            if (_selectedStatus == 'Missed Clock Out' ||
-                r.status == 'Missed Clock Out') ...[
-              _Label('Set Corrected Time Out'),
-              InkWell(
-                onTap: _pickCorrectedTime,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.access_time,
-                          size: 18, color: kTextMid),
-                      const SizedBox(width: 10),
-                      Text(
-                        _correctedTimeOut != null
-                            ? TimeOfDay.fromDateTime(_correctedTimeOut!)
-                                .format(context)
-                            : 'Tap to pick time',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _correctedTimeOut != null
-                              ? kTextDark
-                              : kTextMid,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            // Time-out picker (only when set_timeout selected)
+            if (_selectedResolution == 'set_timeout') ...[
+              _Label('Corrected Time Out'),
+              _TimePicker(
+                time: _timeOut,
+                placeholder: 'Tap to set time out',
+                onTap: _pickTimeOut,
+                hasError: _error != null && _timeOut == null,
               ),
               const SizedBox(height: 20),
             ],
 
-            // Remark
-            _Label('Remark (visible in table)'),
+            // Adjusted time-in picker (only when adjust_timein selected)
+            if (_selectedResolution == 'adjust_timein') ...[
+              _Label('Corrected Time In'),
+              _TimePicker(
+                time: _adjustedTimeIn,
+                placeholder: 'Tap to set corrected time in',
+                onTap: _pickAdjustedTimeIn,
+                hasError: _error != null && _adjustedTimeIn == null,
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // Note
+            _Label('Admin Note (optional)'),
             TextField(
-              controller: _remarkCtrl,
+              controller: _noteCtrl,
               maxLines: 3,
               maxLength: 300,
               decoration: InputDecoration(
-                hintText: 'e.g. Excused – provided valid documentation',
+                hintText: 'e.g. Confirmed with supervisor — valid reason',
                 errorText: _error,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -302,12 +347,13 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Buttons
+            // Action buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed:
+                        _submitting ? null : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -349,6 +395,126 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
     );
   }
 }
+
+// ── Resolution tile ────────────────────────────────────────────────────────
+
+class _ResolutionTile extends StatelessWidget {
+  final _ResolutionOption option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ResolutionTile({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? kAccent.withOpacity(0.07)
+              : const Color(0xFFF9F9FB),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? kAccent : Colors.grey.shade200,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(option.icon,
+                size: 18, color: selected ? kAccent : kTextMid),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    option.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? kAccent : kTextDark,
+                    ),
+                  ),
+                  Text(
+                    option.hint,
+                    style: const TextStyle(fontSize: 11, color: kTextMid),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_circle_rounded,
+                  size: 18, color: kAccent),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Time picker display ────────────────────────────────────────────────────
+
+class _TimePicker extends StatelessWidget {
+  final TimeOfDay? time;
+  final String placeholder;
+  final VoidCallback onTap;
+  final bool hasError;
+
+  const _TimePicker({
+    required this.time,
+    required this.placeholder,
+    required this.onTap,
+    this.hasError = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: hasError ? Colors.red : Colors.grey.shade300,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.access_time_rounded,
+                size: 18,
+                color: hasError ? Colors.red : kTextMid),
+            const SizedBox(width: 10),
+            Text(
+              time != null
+                  ? time!.format(context)
+                  : placeholder,
+              style: TextStyle(
+                fontSize: 13,
+                color: time != null
+                    ? kTextDark
+                    : (hasError ? Colors.red : kTextMid),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Label ──────────────────────────────────────────────────────────────────
 
 class _Label extends StatelessWidget {
   final String text;

@@ -14,7 +14,12 @@ import '../widgets/admin_attendance_widgets/attendance_filters.dart';
 import '../widgets/admin_attendance_widgets/attendance_table.dart';
 import '../widgets/admin_attendance_widgets/attendance_ui_components.dart';
 import '../widgets/admin_attendance_widgets/custom_date_picker_dialog.dart';
+import '../widgets/admin_attendance_widgets/review_report_sheet.dart';
 import 'export_attendance.dart';
+
+// Re-export so attendance_screen.dart can keep using it from one place.
+export '../widgets/admin_attendance_widgets/attendance_table.dart'
+    show HamburgerIcon;
 
 class AdminAttendanceScreen extends StatefulWidget {
   const AdminAttendanceScreen({super.key});
@@ -48,6 +53,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   List<AdminAttendanceRecord> _records = [];
   bool _loading = true;
   String? _error;
+
+  // Key used to tell PendingReportsBell to reload itself after resolves.
+  final GlobalKey<_PendingBellState> _bellKey = GlobalKey();
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -113,6 +121,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     }
   }
 
+  /// Called after any report is resolved so both the table and the bell update.
+  void _onReportResolved() {
+    _load(page: _page);
+    _bellKey.currentState?.reload();
+  }
+
   // ── Date picker ───────────────────────────────────────────────────────────
 
   Future<void> _pickCustomDate() async {
@@ -165,9 +179,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       (_searchCtrl.text.isNotEmpty ? 1 : 0) +
       (_selectedStatus != 'All' ? 1 : 0);
 
-  /// Number of reported-but-unresolved records in the current page.
-  int get _reportedCount =>
-      _records.where((r) => r.isReported && r.timeOut == null).length;
+  /// Pending-report count in the current page.
+  int get _pendingReportCount =>
+      _records.where((r) => r.hasOpenReport).length;
 
   void _clearAllFilters() {
     _searchCtrl.clear();
@@ -200,18 +214,17 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           Expanded(
             child: Stack(
               children: [
-                // Background image
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
                       image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.jpg'),
+                        image:
+                            AssetImage('assets/images/space_background.jpg'),
                         fit: BoxFit.cover,
                       ),
                     ),
                   ),
                 ),
-
                 Positioned.fill(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -258,8 +271,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: IconButton(
                   padding: const EdgeInsets.all(12),
@@ -271,6 +284,16 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 ),
               ),
             ),
+
+          // ── Pending-reports bell (top-right) ──────────────────────────
+          Positioned(
+            right: 24,
+            top: 24,
+            child: _PendingBell(
+              key: _bellKey,
+              onResolved: _onReportResolved,
+            ),
+          ),
         ],
       ),
     );
@@ -301,9 +324,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               _buildCardHeader(),
               _buildToolbar(),
               _buildPeriodRow(),
-              // ── Reported banner — only visible when unresolved reports exist
-              if (!_loading && _reportedCount > 0) _buildReportedBanner(),
-              if (!_loading && _reportedCount > 0) const SizedBox(height: 12),
+              if (!_loading && _pendingReportCount > 0)
+                _buildPendingBanner(),
+              if (!_loading && _pendingReportCount > 0)
+                const SizedBox(height: 12),
               const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(child: _buildBody()),
               if (_total > _limit) _buildPagination(),
@@ -356,15 +380,18 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       _loading
                           ? 'Loading…'
                           : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                      style: const TextStyle(fontSize: 12, color: kTextMid),
+                      style:
+                          const TextStyle(fontSize: 12, color: kTextMid),
                     ),
-                    if (!_loading && _period != AttendancePeriod.allDates) ...[
+                    if (!_loading &&
+                        _period != AttendancePeriod.allDates) ...[
                       const SizedBox(width: 8),
                       Container(
                         width: 1,
                         height: 11,
                         color: kBorder,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        margin:
+                            const EdgeInsets.symmetric(horizontal: 2),
                       ),
                       const SizedBox(width: 6),
                       const Icon(Icons.calendar_today_rounded,
@@ -392,14 +419,18 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 context,
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
-                  period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+                  period: (!isAllDates && !isCustom)
+                      ? _period.apiPeriod
+                      : null,
                   date: (isCustom && !_isRangeMode)
                       ? toApiDate(_customDate)
                       : null,
                   search: _searchCtrl.text.trim().isEmpty
                       ? null
                       : _searchCtrl.text.trim(),
-                  status: _selectedStatus == 'All' ? null : _selectedStatus,
+                  status: _selectedStatus == 'All'
+                      ? null
+                      : _selectedStatus,
                 ),
               );
             },
@@ -494,85 +525,76 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── Reported banner ───────────────────────────────────────────────────────
+  // ── Pending-reports banner ────────────────────────────────────────────────
 
-  Widget _buildReportedBanner() {
-    final count = _reportedCount;
+  Widget _buildPendingBanner() {
+    final count = _pendingReportCount;
     return Container(
       margin: const EdgeInsets.fromLTRB(28, 0, 28, 0),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.purple.shade50,
+        color: const Color(0xFFFFFBEB),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.purple.shade200, width: 1.5),
+        border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
       ),
       child: Row(
         children: [
-          // Icon pill
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.purple.shade100,
+              color: const Color(0xFFFDE68A),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.flag_rounded,
-                color: Colors.purple.shade700, size: 16),
+            child: const Icon(Icons.pending_actions_rounded,
+                color: Color(0xFF92400E), size: 16),
           ),
           const SizedBox(width: 12),
-
-          // Text
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$count missed clock-out '
-                  '${count == 1 ? 'report requires' : 'reports require'} '
-                  'your attention',
-                  style: TextStyle(
+                  '$count attendance ${count == 1 ? 'report requires' : 'reports require'} your review',
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Colors.purple.shade800,
+                    color: Color(0xFF92400E),
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  'Click "Set Time-Out" on the highlighted '
-                  '${count == 1 ? 'row' : 'rows'} below to resolve.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.purple.shade600,
-                  ),
+                const Text(
+                  'Tap the review icon (📋) on flagged rows or use the bell above.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFFB45309)),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-
-          // "Show Only" quick-filter button
           GestureDetector(
             onTap: () {
-              setState(() => _selectedStatus = 'Missed Clock Out');
+              setState(() => _selectedStatus = 'All');
+              // Reload with no filter so flagged rows are visible
               _load();
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.purple.shade700,
+                color: const Color(0xFFB45309),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.filter_list_rounded,
-                      size: 13, color: Colors.purple.shade50),
-                  const SizedBox(width: 5),
+                      size: 13, color: Color(0xFFFEF3C7)),
+                  SizedBox(width: 5),
                   Text(
-                    'Show Only',
+                    'Show Flagged',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Colors.purple.shade50,
+                      color: Color(0xFFFEF3C7),
                     ),
                   ),
                 ],
@@ -603,7 +625,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             ),
             const SizedBox(height: 12),
             Text(_error!,
-                style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
+                style:
+                    TextStyle(color: Colors.red.shade600, fontSize: 13)),
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () => _load(page: _page),
@@ -634,7 +657,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             const Text(
               'No attendance records found',
               style: TextStyle(
-                  color: kTextMid, fontSize: 14, fontWeight: FontWeight.w500),
+                  color: kTextMid,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 4),
             const Text(
@@ -650,7 +675,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: AttendanceTable(
         records: _records,
-        onRefresh: () => _load(page: _page),
+        isAdmin: true,                    // ← admin view
+        onRefresh: _onReportResolved,     // ← also refreshes bell
       ),
     );
   }
@@ -671,7 +697,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           Text(
             'Page $_page of $totalPages',
             style: const TextStyle(
-                color: kTextMid, fontSize: 12, fontWeight: FontWeight.w500),
+                color: kTextMid,
+                fontSize: 12,
+                fontWeight: FontWeight.w500),
           ),
           const SizedBox(width: 4),
           Text(
@@ -691,6 +719,264 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             onTap: () => _load(page: _page + 1),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pending-reports bell widget (private to this file)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PendingBell extends StatefulWidget {
+  final VoidCallback? onResolved;
+  const _PendingBell({super.key, this.onResolved});
+
+  @override
+  State<_PendingBell> createState() => _PendingBellState();
+}
+
+class _PendingBellState extends State<_PendingBell> {
+  List<AdminAttendanceRecord> _pending = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    reload();
+  }
+
+  Future<void> reload() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+    final res = await AdminAttendanceService.fetchPendingReports();
+    if (!mounted) return;
+    setState(() {
+      _pending = res['ok'] == true
+          ? (res['records'] as List<AdminAttendanceRecord>)
+          : [];
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+            strokeWidth: 2, color: Colors.white70),
+      );
+    }
+
+    final count = _pending.length;
+    return GestureDetector(
+      onTap: count == 0 ? null : () => _showPanel(context),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            count > 0
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_outlined,
+            color: count > 0 ? Colors.amber.shade300 : Colors.white70,
+            size: 26,
+          ),
+          if (count > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEF4444),
+                  shape: BoxShape.circle,
+                ),
+                constraints:
+                    const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showPanel(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PendingPanel(
+        records: _pending,
+        onResolved: () {
+          reload();
+          widget.onResolved?.call();
+        },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pending-reports panel (inside the bell sheet)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PendingPanel extends StatelessWidget {
+  final List<AdminAttendanceRecord> records;
+  final VoidCallback? onResolved;
+
+  const _PendingPanel({required this.records, this.onResolved});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  const Icon(Icons.pending_actions,
+                      color: Color(0xFFF59E0B), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pending Reports (${records.length})',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: kTextDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            Expanded(
+              child: records.isEmpty
+                  ? const Center(
+                      child: Text('No pending reports',
+                          style:
+                              TextStyle(color: kTextMid, fontSize: 13)))
+                  : ListView.separated(
+                      controller: ctrl,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      itemCount: records.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (ctx, i) => _PendingTile(
+                        record: records[i],
+                        onResolved: () {
+                          Navigator.pop(context);
+                          onResolved?.call();
+                        },
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingTile extends StatelessWidget {
+  final AdminAttendanceRecord record;
+  final VoidCallback? onResolved;
+
+  const _PendingTile({required this.record, this.onResolved});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => ReviewReportSheet.show(context, record,
+          onResolved: onResolved),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFCD34D)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InternAvatar(
+                url: record.avatarUrl, name: record.internName),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          record.internName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: kTextDark,
+                          ),
+                        ),
+                      ),
+                      StatusBadge(status: record.status),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(record.formattedDate,
+                      style: const TextStyle(
+                          fontSize: 12, color: kTextMid)),
+                  if (record.reportReason != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      record.reportReason!,
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF92400E)),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: kTextMid),
+          ],
+        ),
       ),
     );
   }

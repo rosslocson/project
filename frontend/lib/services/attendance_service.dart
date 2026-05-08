@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'api_service.dart'; // your existing file
 import '../models/attendance_model.dart';
+import 'dart:convert';
 
 class AttendanceService {
   // ── Time In ────────────────────────────────────────────────────────────────
@@ -96,12 +97,21 @@ class AttendanceService {
 
   /// Reports a missed clock-out for the given attendance record [id].
   /// Returns { 'ok': true } on success or { 'ok': false, 'error': '...' }.
-  static Future<Map<String, dynamic>> reportMissedClockOut(String id) async {
+  /// Reports a missed clock-out for the given attendance record [id].
+  /// Optionally includes a [reason] string sent to the backend.
+  /// Returns { 'ok': true } on success or { 'ok': false, 'error': '...' }.
+  static Future<Map<String, dynamic>> reportMissedClockOut(
+    String id, {
+    String? reason,
+  }) async {
     try {
       final res = await http.post(
         Uri.parse(
             '${ApiService.baseUrl}/attendance/$id/report-missed-clockout'),
         headers: await ApiService.authHeaders(),
+        body: jsonEncode({
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        }),
       );
       return ApiService.parse(res);
     } catch (e) {

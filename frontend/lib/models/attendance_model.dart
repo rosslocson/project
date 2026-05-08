@@ -9,7 +9,8 @@ class AttendanceRecord {
   final DateTime? timeIn;
   final DateTime? timeOut;
   final double? hoursRendered;
-   final bool isReported; 
+  final bool isReported;
+  final bool isAbsent;
 
   const AttendanceRecord({
     required this.id,
@@ -19,6 +20,7 @@ class AttendanceRecord {
     this.timeOut,
     this.hoursRendered,
     this.isReported = false,
+    this.isAbsent = false,
   });
 
   bool get hasTimedIn => timeIn != null;
@@ -27,14 +29,14 @@ class AttendanceRecord {
 
   /// Capped + lunch-deducted duration (mirrors backend computeHours logic).
   Duration? get duration {
-debugPrint('⏱ duration: timeIn=$timeIn  timeOut=$timeOut');
+    debugPrint('⏱ duration: timeIn=$timeIn  timeOut=$timeOut');
 
     if (timeIn == null || timeOut == null) return null;
 
     // Ensure we work in local time for wall-clock comparisons.
     final tIn = timeIn!.toLocal();
     final tOut = timeOut!.toLocal();
-   
+
     final cap = DateTime(tIn.year, tIn.month, tIn.day, 17, 0); // 5:00 PM local
 
     final effectiveOut = tOut.isAfter(cap) ? cap : tOut;
@@ -71,20 +73,13 @@ debugPrint('⏱ duration: timeIn=$timeIn  timeOut=$timeOut');
       id: _toInt(json['id']),
       userId: _toInt(json['user_id']),
       date: DateTime.parse(json['date'] as String),
-      isReported:    json['is_reported'] == true, 
-
-      // Backend returns formatted strings like "08:30 AM" or full ISO strings.
-      // _parseTime handles both gracefully.
+      isReported: json['is_reported'] == true,
+      isAbsent: json['is_absent'] == true, // ← new
       timeIn: _parseTime(json['time_in'], json['date'] as String?),
       timeOut: _parseTime(json['time_out'], json['date'] as String?),
-
-      // Backend now computes this in Go; keep reading it in case a future
-      // endpoint provides it, but fall back to null — duration getter covers UI.
       hoursRendered: json['hours_rendered'] != null
           ? double.tryParse(json['hours_rendered'].toString())
           : null,
-
-  
     );
   }
 

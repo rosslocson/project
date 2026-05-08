@@ -188,9 +188,16 @@ func main() {
 		// Attendance monitoring
 		admin.GET("/attendance", h.AdminGetAttendance)
 		admin.GET("/attendance/export", h.AdminExportAttendance)
+		admin.GET("/attendance/reports", h.GetPendingReports)
+
+		// Admin resolves missed clock-out report
+		admin.PATCH("/attendance/:id/resolve", h.ResolveAttendanceReport)
+		admin.POST("/attendance/:id/resolve", h.ResolveAttendanceIssue)
+		admin.PATCH("/api/admin/attendance/:id/remark", h.UpdateAttendanceRemark)
 
 		// ── NEW: admin sets time-out for a reported missed clock-out ──────
-		admin.PATCH("/attendance/:id/set-timeout", h.AdminSetTimeOut)
+		//admin.PATCH("/attendance/:id/set-timeout", h.AdminSetTimeOut)
+
 	}
 
 	// ── Protected routes (JWT only) ───────────────────────────────────────────
