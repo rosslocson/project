@@ -22,6 +22,7 @@ class RegisterForm {
   final bool obscureConfirm;
   final List<String> departments;
   final bool loadingDepts;
+  final bool deptsFetched;
   final String? selectedDept;
   final String defaultPosition;
 
@@ -50,6 +51,7 @@ class RegisterForm {
     required this.obscureConfirm,
     required this.departments,
     required this.loadingDepts,
+    required this.deptsFetched,
     required this.selectedDept,
     required this.defaultPosition,
     required this.ojtHoursCtrl,
@@ -83,13 +85,14 @@ class RegisterForm {
       alignment: Alignment.center,
       color: Colors.transparent,
       padding: EdgeInsets.symmetric(
-          horizontal: isMobile ? 24 : 64, vertical: isMobile ? 24 : 40),
+          horizontal: isMobile ? 24 : 64,
+          vertical: isMobile ? 16 : 24), // reduced vertical padding
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
         child: Form(
           key: formKey,
           child: Column(
-            mainAxisSize: MainAxisSize.max,
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
@@ -101,14 +104,14 @@ class RegisterForm {
                     color: kCosmicBlue,
                     letterSpacing: 1.2),
               ),
-              const Spacer(flex: 3),
+              const SizedBox(height: 24), // reduced from 24
 
               if (auth.error != null) ...[
                 RegisterErrorBanner(
                   error: auth.error!,
                   onClear: () => context.read<AuthProvider>().clearError(),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6), // reduced from 8
               ],
 
               // ── First Name / Last Name ──────────────────────────────────
@@ -145,7 +148,7 @@ class RegisterForm {
                   ),
                 ),
               ]),
-              const Spacer(flex: 1),
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Email ───────────────────────────────────────────────────
               fieldLabel('Email Address'),
@@ -164,71 +167,90 @@ class RegisterForm {
                   return null;
                 },
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Department / Position ───────────────────────────────────
-              Row(children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      fieldLabel('Department'),
-                      const SizedBox(height: 4),
-                      loadingDepts
-                          ? _shimmerDropdown(dec)
-                          : DropdownButtonFormField<String>(
-                              initialValue: selectedDept,
-                              decoration: dec,
-                              hint: Text(
-                                  departments.isEmpty
-                                      ? 'None available'
-                                      : 'Select Department',
-                                  style: const TextStyle(fontSize: 13)),
-                              icon: Icon(Icons.keyboard_arrow_down,
-                                  color: Colors.grey.shade500),
-                              items: departments
-                                  .map((s) => DropdownMenuItem(
-                                      value: s,
-                                      child: Text(s,
-                                          overflow: TextOverflow.ellipsis,
-                                          style:
-                                              const TextStyle(fontSize: 12))))
-                                  .toList(),
-                              onChanged: onDeptChanged,
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          fieldLabel('Department'),
+                          const SizedBox(height: 4),
+                          loadingDepts
+                              ? _shimmerDropdown(dec)
+                              : DropdownButtonFormField<String>(
+                                  initialValue: selectedDept,
+                                  decoration: dec,
+                                  hint: Text(
+                                    !deptsFetched
+                                        ? 'Select Department' // ← still fetching, show neutral hint
+                                        : departments.isEmpty
+                                            ? 'None available'
+                                            : 'Select Department',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  icon: Icon(Icons.keyboard_arrow_down,
+                                      color: Colors.grey.shade500),
+                                  items: departments
+                                      .map((s) => DropdownMenuItem(
+                                          value: s,
+                                          child: Text(s,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontSize: 12))))
+                                      .toList(),
+                                  onChanged: onDeptChanged,
+                                ),
+                          if (departments.isEmpty && !loadingDepts && deptsFetched)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 22, top: 4),
+                              child: Text(
+                                'No department listed. Please contact the administrator.',
+                                style: TextStyle(
+                                    fontSize: 8.5,
+                                    color: Color.fromARGB(255, 245, 37, 0)),
+                              ),
                             ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      fieldLabel('Position'),
-                      const SizedBox(height: 4),
-                      IgnorePointer(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: defaultPosition,
-                          decoration: dec.copyWith(
-                              filled: true, fillColor: Colors.grey.shade100),
-                          icon: Icon(Icons.keyboard_arrow_down,
-                              color: Colors.grey.shade300),
-                          items: [
-                            DropdownMenuItem(
-                                value: defaultPosition,
-                                child: Text(defaultPosition,
-                                    style: const TextStyle(fontSize: 12))),
-                          ],
-                          onChanged: null,
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          fieldLabel('Position'),
+                          const SizedBox(height: 4),
+                          IgnorePointer(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: defaultPosition,
+                              decoration: dec.copyWith(
+                                  filled: true,
+                                  fillColor: Colors.grey.shade100),
+                              icon: Icon(Icons.keyboard_arrow_down,
+                                  color: Colors.grey.shade300),
+                              items: [
+                                DropdownMenuItem(
+                                    value: defaultPosition,
+                                    child: Text(defaultPosition,
+                                        style: const TextStyle(fontSize: 12))),
+                              ],
+                              onChanged: null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ]),
-              const Spacer(flex: 1),
+              ),
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Required OJT Hours ──────────────────────────────────────
               fieldLabel('Required OJT Hours'),
@@ -239,13 +261,6 @@ class RegisterForm {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: dec.copyWith(
                   hintText: 'e.g. 400',
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Icon(Icons.timer_outlined,
-                        color: Color(0xFF9CA3AF), size: 20),
-                  ),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 0, minHeight: 0),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
@@ -261,7 +276,7 @@ class RegisterForm {
                   return null;
                 },
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Password ────────────────────────────────────────────────
               fieldLabel('Password'),
@@ -305,7 +320,7 @@ class RegisterForm {
                     passColor: passColor,
                     passStrength: passStrength),
               ],
-              const Spacer(flex: 1),
+              const SizedBox(height: 8), // reduced from 10
 
               // ── Confirm Password ────────────────────────────────────────
               fieldLabel('Confirm Password'),
@@ -346,15 +361,17 @@ class RegisterForm {
                       style: const TextStyle(fontSize: 11, color: Colors.red)),
                 ),
               ],
-              const Spacer(flex: 3),
+
+              const SizedBox(height: 20), // reduced from 24
 
               // ── Submit ──────────────────────────────────────────────────
               BlueButton(
-                label: 'Create Account',
+                label: 'CREATE ACCOUNT',
                 onPressed: auth.isLoading ? null : onRegister,
                 loading: auth.isLoading,
               ),
-              const Spacer(flex: 2),
+
+              const SizedBox(height: 15), // reduced from 25
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -363,7 +380,7 @@ class RegisterForm {
                       style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/login'),
-                    child: const Text('Log In',
+                    child: const Text('LOG IN',
                         style: TextStyle(
                             fontSize: 13,
                             color: kCosmicBlue,

@@ -291,6 +291,8 @@ class _UsersScreenState extends State<UsersScreen> {
         user['is_active'] = isActive(user);
       });
       _showError('Archive failed: ${res['error'] ?? 'Unknown error'}');
+      duration:
+      const Duration(seconds: 1);
     }
   }
 
@@ -312,6 +314,8 @@ class _UsersScreenState extends State<UsersScreen> {
     if (res['ok'] == true) {
       _showSuccess('$name has been restored.');
       _silentReload();
+      duration:
+      const Duration(seconds: 1);
     }
   }
 

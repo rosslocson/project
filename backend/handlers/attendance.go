@@ -3,8 +3,10 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +30,9 @@ const attendanceSelectWithHours = `
 	date,
 	time_in,
 	time_out,
+	is_reported,
+	reported_at,
+	report_reason,
 	` + attendanceHoursExpr + ` AS hours_rendered,
 	created_at,
 	updated_at
@@ -163,7 +168,7 @@ func (h *Handler) GetAttendanceSummary(c *gin.Context) {
 	}
 
 	var user models.User
-	h.DB.Select("required_ojt_hours").First(&user, userID)
+	h.DB.Select("start_date").First(&user, userID)
 	requiredHours := 400.0
 	if user.RequiredOjtHours > 0 {
 		requiredHours = float64(user.RequiredOjtHours)
@@ -206,6 +211,8 @@ func (h *Handler) GetAttendanceSummary(c *gin.Context) {
 
 // ── GET /api/attendance/history ───────────────────────────────────────────────
 
+// ── GET /api/attendance/history ───────────────────────────────────────────────
+
 func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 	userID, ok := getUserIDFromCtx(c)
 	if !ok {
@@ -213,35 +220,122 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	if page < 1 {
-		page = 1
+	// ── Fetch the intern's start_date from their profile ─────────────────────
+	var user models.User
+	if err := h.DB.Select("start_date, required_ojt_hours").First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Could not load user profile"})
+		return
 	}
-	if limit < 1 || limit > 100 {
-		limit = 20
-	}
-	offset := (page - 1) * limit
 
+	// ── Fetch all real attendance records for this user ───────────────────────
 	var records []models.Attendance
-	var total int64
-
-	h.DB.Model(&models.Attendance{}).Where("user_id = ?", userID).Count(&total)
-
 	h.DB.
 		Select(attendanceSelectWithHours).
 		Where("user_id = ?", userID).
 		Order("date DESC").
-		Limit(limit).
-		Offset(offset).
 		Find(&records)
+
+	// ── Build a date → record lookup map ─────────────────────────────────────
+	type dateKey = string // "YYYY-MM-DD"
+	byDate := make(map[dateKey]*models.Attendance, len(records))
+	for i := range records {
+		key := records[i].Date.UTC().Format("2006-01-02")
+		byDate[key] = &records[i]
+	}
+
+	// ── Determine the walk range ──────────────────────────────────────────────
+	// Start: intern's start_date (or fall back to earliest real record).
+	// End:   yesterday (today is handled separately by the summary endpoint).
+	loc := manilaLoc()
+	now := time.Now().In(loc)
+	yesterday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).
+		AddDate(0, 0, -1)
+
+	var walkStart time.Time
+	if user.StartDate != "" {
+		if parsed, err := time.ParseInLocation("2006-01-02", user.StartDate, loc); err == nil {
+			walkStart = parsed
+		}
+	}
+
+	if walkStart.IsZero() {
+		if len(records) > 0 {
+			earliest := records[len(records)-1].Date.In(loc)
+			walkStart = time.Date(earliest.Year(), earliest.Month(), earliest.Day(), 0, 0, 0, 0, loc)
+		} else {
+			c.JSON(http.StatusOK, gin.H{"ok": true, "records": []interface{}{}})
+			return
+		}
+	}
+
+	// ── Walk every weekday and emit real or absent rows ───────────────────────
+	type HistoryRow struct {
+		ID            uint     `json:"id"`
+		UserID        uint     `json:"user_id"`
+		Date          string   `json:"date"`    // "YYYY-MM-DD"
+		TimeIn        *string  `json:"time_in"` // nullable formatted string
+		TimeOut       *string  `json:"time_out"`
+		HoursRendered *float64 `json:"hours_rendered"`
+		Status        string   `json:"status"`
+		IsReported    bool     `json:"is_reported"`
+		IsAbsent      bool     `json:"is_absent"` // ← Flutter uses this
+	}
+
+	var result []HistoryRow
+
+	for cursor := walkStart; !cursor.After(yesterday); cursor = cursor.AddDate(0, 0, 1) {
+		wd := cursor.Weekday()
+		if wd == time.Saturday || wd == time.Sunday {
+			continue
+		}
+
+		key := cursor.Format("2006-01-02")
+
+		if rec, found := byDate[key]; found {
+			// Real record — format times the same way the admin handler does.
+			var timeInStr, timeOutStr *string
+			if rec.TimeIn != nil {
+				s := rec.TimeIn.In(loc).Format("3:04 PM")
+				timeInStr = &s
+			}
+			if rec.TimeOut != nil {
+				s := rec.TimeOut.In(loc).Format("3:04 PM")
+				timeOutStr = &s
+			}
+			hours := computeHours(timeInStr, timeOutStr, key)
+
+			result = append(result, HistoryRow{
+				ID:            rec.ID,
+				UserID:        rec.UserID,
+				Date:          key,
+				TimeIn:        timeInStr,
+				TimeOut:       timeOutStr,
+				HoursRendered: hours,
+				Status:        deriveStatus(timeInStr, timeOutStr, key),
+				IsReported:    rec.IsReported,
+				IsAbsent:      false,
+			})
+		} else {
+			// No record for this weekday → absent.
+			result = append(result, HistoryRow{
+				ID:       0,
+				UserID:   userID,
+				Date:     key,
+				Status:   "Absent",
+				IsAbsent: true,
+			})
+		}
+	}
+
+	// Result is built oldest-first from the walk; reverse to get newest-first.
+	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+		result[i], result[j] = result[j], result[i]
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"ok":      true,
-		"records": records,
-		"total":   total,
-		"page":    page,
-		"limit":   limit,
+		"records": result,
+		"total":   len(result),
 	})
 }
 
@@ -345,6 +439,8 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 		TimeOut       *string  `gorm:"column:time_out"       json:"time_out"`
 		HoursRendered *float64 `gorm:"column:hours_rendered" json:"hours_rendered"`
 		Status        string   `gorm:"column:status"         json:"status"`
+		IsReported    bool     `gorm:"column:is_reported" json:"is_reported"`
+		ReportedAt    *string  `gorm:"column:reported_at" json:"reported_at"`
 	}
 
 	baseSQL := `
@@ -437,3 +533,118 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 
 // ── Suppress unused import warning for clause ─────────────────────────────────
 var _ = clause.OnConflict{}
+
+// ── POST /api/attendance/:id/report-missed-clockout ───────────────────────────
+//
+// Intern reports that they forgot to clock out on a past day.
+// Guards:
+//   - Record must belong to the requesting user.
+//   - Record must have a time_in but no time_out.
+//   - Record date must be before today (not an ongoing shift).
+//   - Record must not have already been reported.
+
+func (h *Handler) ReportMissedClockOut(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid ID"})
+		return
+	}
+
+	// Parse optional reason from body
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&body) // ignore error — reason is optional
+
+	var rec models.Attendance
+	if err := h.DB.First(&rec, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "Record not found"})
+		return
+	}
+
+	updates := map[string]interface{}{
+		"is_reported": true,
+		"reported_at": time.Now().In(manilaLoc()),
+	}
+	if strings.TrimSpace(body.Reason) != "" {
+		updates["report_reason"] = strings.TrimSpace(body.Reason)
+	}
+
+	// Use Select to force-write is_reported=true (avoids GORM skipping non-zero...
+	// true is fine, but be consistent)
+	if err := h.DB.Model(&rec).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to report"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ── PATCH /api/admin/attendance/:id/set-timeout ───────────────────────────────
+//
+// Admin sets the time-out for a reported missed clock-out record.
+// Expects JSON body: { "time_out": "<RFC3339 or YYYY-MM-DDTHH:MM:SS>" }
+// Clears is_reported once resolved.
+
+func (h *Handler) AdminSetTimeOut(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid record ID"})
+		return
+	}
+
+	var body struct {
+		TimeOut string `json:"time_out" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "time_out is required"})
+		return
+	}
+
+	// Accept RFC3339 with timezone or a bare local timestamp.
+	var timeOut time.Time
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05"} {
+		if t, err := time.Parse(layout, body.TimeOut); err == nil {
+			timeOut = t.UTC()
+			break
+		}
+	}
+	if timeOut.IsZero() {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid time_out format — use RFC3339 or YYYY-MM-DDTHH:MM:SS"})
+		return
+	}
+
+	var rec models.Attendance
+	if err := h.DB.First(&rec, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "Record not found"})
+		return
+	}
+
+	// time_out must be after time_in.
+	if rec.TimeIn != nil && !timeOut.After(*rec.TimeIn) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"ok":    false,
+			"error": "time_out must be after time_in",
+		})
+		return
+	}
+
+	adminID, _ := getUserIDFromCtx(c)
+	if err := h.DB.Model(&rec).Updates(map[string]interface{}{
+		"time_out":    timeOut,
+		"is_reported": false, // resolved — clears the reported flag
+		"reported_at": nil,
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to update record"})
+		return
+	}
+
+	h.logActivity(
+		adminID,
+		"SET_TIMEOUT",
+		fmt.Sprintf("Admin set time-out for attendance record %d to %s", id, timeOut.Format(time.RFC3339)),
+		c.ClientIP(),
+	)
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}

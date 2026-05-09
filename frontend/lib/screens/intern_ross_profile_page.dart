@@ -1,48 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui' as ui;
 import 'intern_widgets.dart';
+import '../widgets/app_background.dart';
 
-// ── Intern #28 Special Profile Page ──────────────────────────────────────────
+// ── Rosalyn Locson Special Profile Page ──────────────────────────────────────
 //
-// HOW TO LINK THIS PAGE:
-//
-// Find the widget where you display the intern's name (e.g. a card, list tile,
-// or the InternDetailPage name Text). Wrap it in a GestureDetector like this:
-//
-//   GestureDetector(
-//     onTap: () {
-//       if (intern.id == 28) {
-//         Navigator.of(context).push(
-//           MaterialPageRoute(
-//             builder: (_) => Intern28ProfilePage(intern: intern),
-//           ),
-//         );
-//       }
-//     },
-//     child: Text(intern.name, ...),  // ← your existing name widget
-//   ),
-//
-// Or if you want EVERY intern name to be tappable but only #28 goes here:
-//
-//   GestureDetector(
-//     onTap: () {
-//       if (intern.id == 28) {
-//         Navigator.of(context).push(
-//           MaterialPageRoute(builder: (_) => Intern28ProfilePage(intern: intern)),
-//         );
-//       } else {
-//         Navigator.of(context).push(
-//           MaterialPageRoute(builder: (_) => InternDetailPage(intern: intern)),
-//         );
-//       }
-//     },
-//     child: Text(intern.name, ...),
-//   ),
+// All fields are read from the InternProfile object (fetched from DB).
+// Fields used:
+//   intern.name          → first_name + last_name
+//   intern.position      → position
+//   intern.internNumber  → intern_number
+//   intern.email         → email  (mailto: link)
+//   intern.githubUrl     → github (url link)
+//   intern.linkedInUrl   → linkedin (url link)
+//   intern.bio           → about me
+//   intern.program       → education title
+//   intern.specialization→ education subtitle
+//   intern.technicalSkills → technical skills list
+//   intern.softSkills      → soft skills list
 
-class Intern28ProfilePage extends StatelessWidget {
+class RosalynProfilePage extends StatelessWidget {
   final InternProfile intern;
 
-  const Intern28ProfilePage({super.key, required this.intern});
+  const RosalynProfilePage({super.key, required this.intern});
+
+  static const String _fallbackUrl =
+      'https://yourcompanysite.com'; // ← set your default site
+
+  Future<void> _launch(String? url) async {
+    final target = (url == null || url.isEmpty) ? _fallbackUrl : url;
+    final uri = Uri.parse(target);
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  Future<void> _launchEmail(String? email) async {
+    if (email == null || email.isEmpty) return;
+    final uri = Uri(scheme: 'mailto', path: email);
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,18 +48,10 @@ class Intern28ProfilePage extends StatelessWidget {
       body: GestureDetector(
         onTap: () => Navigator.of(context).pop(),
         behavior: HitTestBehavior.opaque,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Background
-            Image.asset(
-              'assets/images/space_background.jpg',
-              fit: BoxFit.cover,
-            ),
-            Container(color: Colors.black.withValues(alpha: 0.65)),
-
-            // Content
-            SafeArea(
+        child: AppBackground(
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.6),
+            child: SafeArea(
               child: Center(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(
@@ -93,8 +81,18 @@ class Intern28ProfilePage extends StatelessWidget {
                             ),
                           ),
                           child: isDesktop
-                              ? _DesktopLayout(intern: intern)
-                              : _MobileLayout(intern: intern),
+                              ? _DesktopLayout(
+                                  intern: intern,
+                                  onEmail: () => _launchEmail(intern.email),
+                                  onGitHub: () => _launch(intern.githubUrl),
+                                  onLinkedIn: () => _launch(intern.linkedInUrl),
+                                )
+                              : _MobileLayout(
+                                  intern: intern,
+                                  onEmail: () => _launchEmail(intern.email),
+                                  onGitHub: () => _launch(intern.githubUrl),
+                                  onLinkedIn: () => _launch(intern.linkedInUrl),
+                                ),
                         ),
                       ),
                     ),
@@ -102,7 +100,7 @@ class Intern28ProfilePage extends StatelessWidget {
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -113,7 +111,16 @@ class Intern28ProfilePage extends StatelessWidget {
 
 class _DesktopLayout extends StatelessWidget {
   final InternProfile intern;
-  const _DesktopLayout({required this.intern});
+  final VoidCallback onEmail;
+  final VoidCallback onGitHub;
+  final VoidCallback onLinkedIn;
+
+  const _DesktopLayout({
+    required this.intern,
+    required this.onEmail,
+    required this.onGitHub,
+    required this.onLinkedIn,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -121,17 +128,27 @@ class _DesktopLayout extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // LEFT DARK PANEL
+          // LEFT PANEL — white background
           Container(
             width: 300,
             decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(36),
+                bottomLeft: Radius.circular(36),
+              ),
               border: Border(
                 right: BorderSide(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.25),
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.20),
                 ),
               ),
             ),
-            child: _LeftPanel(intern: intern),
+            child: _LeftPanel(
+              intern: intern,
+              onEmail: onEmail,
+              onGitHub: onGitHub,
+              onLinkedIn: onLinkedIn,
+            ),
           ),
           // RIGHT PANEL
           Expanded(child: _RightPanel(intern: intern)),
@@ -145,21 +162,42 @@ class _DesktopLayout extends StatelessWidget {
 
 class _MobileLayout extends StatelessWidget {
   final InternProfile intern;
-  const _MobileLayout({required this.intern});
+  final VoidCallback onEmail;
+  final VoidCallback onGitHub;
+  final VoidCallback onLinkedIn;
+
+  const _MobileLayout({
+    required this.intern,
+    required this.onEmail,
+    required this.onGitHub,
+    required this.onLinkedIn,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // TOP PANEL — white background
         Container(
           decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(36),
+              topRight: Radius.circular(36),
+            ),
             border: Border(
               bottom: BorderSide(
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.25),
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.20),
               ),
             ),
           ),
-          child: _LeftPanel(intern: intern, isMobile: true),
+          child: _LeftPanel(
+            intern: intern,
+            isMobile: true,
+            onEmail: onEmail,
+            onGitHub: onGitHub,
+            onLinkedIn: onLinkedIn,
+          ),
         ),
         _RightPanel(intern: intern),
       ],
@@ -172,7 +210,17 @@ class _MobileLayout extends StatelessWidget {
 class _LeftPanel extends StatelessWidget {
   final InternProfile intern;
   final bool isMobile;
-  const _LeftPanel({required this.intern, this.isMobile = false});
+  final VoidCallback onEmail;
+  final VoidCallback onGitHub;
+  final VoidCallback onLinkedIn;
+
+  const _LeftPanel({
+    required this.intern,
+    this.isMobile = false,
+    required this.onEmail,
+    required this.onGitHub,
+    required this.onLinkedIn,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -210,47 +258,42 @@ class _LeftPanel extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // Name
+          // Full name (from DB: first_name + last_name)
           Text(
             intern.name,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
-              color: Colors.white,
+              color: Color(0xFF0F172A),
               letterSpacing: -0.3,
               height: 1.2,
             ),
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
 
-          // Pronouns (static for #28, or pull from intern if you add a field)
-          Text(
-            '(He/him)',
-            style: TextStyle(
-              fontSize: 13,
-              fontStyle: FontStyle.italic,
-              color: Colors.white.withValues(alpha: 0.45),
+          // Position + Department (from DB)
+          if ((intern.position != null && intern.position!.isNotEmpty) ||
+              (intern.department != null && intern.department!.isNotEmpty))
+            Text(
+              [
+                if (intern.position != null && intern.position!.isNotEmpty)
+                  intern.position!,
+                if (intern.department != null && intern.department!.isNotEmpty)
+                  intern.department!,
+              ].join(' • '),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: Color(0xFF64748B),
+              ),
             ),
-          ),
 
-          const SizedBox(height: 2),
+          const SizedBox(height: 16),
 
-          // Role / position
-          Text(
-            intern.position ?? intern.program,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              fontStyle: FontStyle.italic,
-              color: Colors.white.withValues(alpha: 0.4),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Intern badge
+          // Intern number badge (from DB: intern_number)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
@@ -273,7 +316,9 @@ class _LeftPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'INTERN #${intern.internNumber}',
+                  intern.internNumber != null && intern.internNumber != 'N/A'
+                      ? '#${intern.internNumber}'
+                      : 'INTERN',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
@@ -288,49 +333,38 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 28),
 
           // Connect with me
-          Text(
+          const Text(
             'CONNECT WITH ME',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 2.5,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: Color(0xFF94A3B8),
             ),
           ),
 
           const SizedBox(height: 14),
 
-          // Social icons row
+          // Social icons — email hidden if empty; GitHub & LinkedIn always shown (fallback to site)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _SocialIcon(
-                icon: Icons.email_outlined,
-                onTap: () {},
-              ),
-              const SizedBox(width: 12),
-              _SocialIcon(
-                icon: Icons.camera_alt_outlined,
-                onTap: () {},
-              ),
-              const SizedBox(width: 12),
-              _SocialIcon(
-                // Twitter/X — using alternate_email as closest Material icon
-                icon: Icons.alternate_email,
-                onTap: () {},
-              ),
-              const SizedBox(width: 12),
-              _SocialIcon(
-                icon: Icons.share_outlined,
-                onTap: () {},
-              ),
-              if (intern.linkedInUrl != null) ...[
-                const SizedBox(width: 12),
+              if (intern.email != null && intern.email!.isNotEmpty) ...[
                 _SocialIcon(
-                  icon: Icons.business_center_outlined,
-                  onTap: () {},
+                  icon: Icons.email_outlined,
+                  onTap: onEmail,
                 ),
+                const SizedBox(width: 12),
               ],
+              _SocialIcon(
+                icon: Icons.code_rounded,
+                onTap: onGitHub, // falls back to site if githubUrl is empty
+              ),
+              const SizedBox(width: 12),
+              _SocialIcon(
+                icon: Icons.business_center_outlined,
+                onTap: onLinkedIn, // falls back to site if linkedInUrl is empty
+              ),
             ],
           ),
         ],
@@ -353,14 +387,14 @@ class _SocialIcon extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
         ),
         child: Icon(
           icon,
           size: 16,
-          color: Colors.white.withValues(alpha: 0.55),
+          color: const Color(0xFF475569),
         ),
       ),
     );
@@ -380,33 +414,11 @@ class _RightPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // About Me
-          const Text(
-            'ABOUT ME',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2.5,
-              color: Color(0xFF8B5CF6),
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'More Than Just An Intern',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              height: 1.15,
-              letterSpacing: -0.3,
-            ),
-          ),
+          // ── ABOUT ME (from DB: bio) ─────────────────────────────────────
+          const _SectionLabel('ABOUT ME'),
           const SizedBox(height: 12),
           Text(
-            intern.bio ??
-                'I make an impact, not just contributions. Experienced in building, '
-                    'designing, and shipping real software used by people. Passionate about '
-                    'clean code, great UX, and collaborative teamwork.',
+            intern.bio?.isNotEmpty == true ? intern.bio! : 'No bio available.',
             style: TextStyle(
               fontSize: 14,
               color: Colors.white.withValues(alpha: 0.6),
@@ -416,32 +428,18 @@ class _RightPanel extends StatelessWidget {
 
           _Divider(),
 
-          // Education
+          // ── EDUCATION (from DB: program + specialization + school) ────────
           const _SectionLabel('EDUCATION'),
           const SizedBox(height: 14),
           _TimelineEntry(
-            year: intern.startDate?.substring(0, 4) ?? '2024',
-            title: intern.program,
-            subtitle: intern.school,
-            note: intern.specialization,
+            title: intern.program.isNotEmpty ? intern.program : 'Program N/A',
+            subtitle: intern.specialization?.isNotEmpty == true
+                ? intern.specialization!
+                : '',
+            school: intern.school.isNotEmpty ? intern.school : null,
           ),
 
-          _Divider(),
-
-          // Experience / Deployment
-          const _SectionLabel('EXPERIENCE'),
-          const SizedBox(height: 14),
-          if (intern.position != null)
-            _TimelineEntry(
-              year: intern.startDate?.substring(0, 4) ?? '2025',
-              title: intern.position!,
-              subtitle: intern.department ?? 'Department N/A',
-              note: intern.endDate != null
-                  ? 'Until ${intern.endDate}'
-                  : null,
-            ),
-
-          // Skills chips if any
+          // ── TECHNICAL SKILLS (from DB) ──────────────────────────────────
           if (intern.technicalSkills.isNotEmpty) ...[
             _Divider(),
             const _SectionLabel('TECHNICAL SKILLS'),
@@ -450,11 +448,15 @@ class _RightPanel extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: intern.technicalSkills
-                  .map((s) => _SkillPill(label: s, isTech: true))
+                  .asMap()
+                  .entries
+                  .map((e) =>
+                      _SkillPill(label: e.value, isTech: true, index: e.key))
                   .toList(),
             ),
           ],
 
+          // ── SOFT SKILLS (from DB) ───────────────────────────────────────
           if (intern.softSkills.isNotEmpty) ...[
             const SizedBox(height: 20),
             const _SectionLabel('SOFT SKILLS'),
@@ -463,49 +465,13 @@ class _RightPanel extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: intern.softSkills
-                  .map((s) => _SkillPill(label: s, isTech: false))
+                  .asMap()
+                  .entries
+                  .map((e) =>
+                      _SkillPill(label: e.value, isTech: false, index: e.key))
                   .toList(),
             ),
           ],
-
-          const SizedBox(height: 32),
-
-          // Resume button
-          SizedBox(
-            width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E40AF), Color(0xFF8B5CF6)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  // TODO: open resume URL or download
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text(
-                  'RESUME',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2.5,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -544,67 +510,55 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _TimelineEntry extends StatelessWidget {
-  final String year;
   final String title;
   final String subtitle;
-  final String? note;
+  final String? school;
 
-  const _TimelineEntry({
-    required this.year,
-    required this.title,
-    required this.subtitle,
-    this.note,
-  });
+  const _TimelineEntry(
+      {required this.title, required this.subtitle, this.school});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          year,
+          title,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF8B5CF6),
-            letterSpacing: 0.5,
+            color: Colors.white,
           ),
         ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 3),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.45),
+              height: 1.4,
+            ),
+          ),
+        ],
+        if (school != null && school!.isNotEmpty) ...[
+          const SizedBox(height: 3),
+          Row(
             children: [
+              Icon(Icons.account_balance_outlined,
+                  size: 12, color: Colors.white.withValues(alpha: 0.35)),
+              const SizedBox(width: 5),
               Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
+                school!,
                 style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.45),
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.35),
                   height: 1.4,
                 ),
               ),
-              if (note != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  note!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.35),
-                  ),
-                ),
-              ],
             ],
           ),
-        ),
+        ],
       ],
     );
   }
@@ -613,29 +567,87 @@ class _TimelineEntry extends StatelessWidget {
 class _SkillPill extends StatelessWidget {
   final String label;
   final bool isTech;
-  const _SkillPill({required this.label, required this.isTech});
+  final int index;
+
+  const _SkillPill(
+      {required this.label, required this.isTech, required this.index});
+
+  // Tech skills: blues / teals / cyans
+  static const _techColors = [
+    (
+      bg: Color(0xFF1E3A5F),
+      border: Color(0xFF3B82F6),
+      text: Color(0xFF93C5FD)
+    ), // blue
+    (
+      bg: Color(0xFF134E4A),
+      border: Color(0xFF14B8A6),
+      text: Color(0xFF5EEAD4)
+    ), // teal
+    (
+      bg: Color(0xFF1E3A5F),
+      border: Color(0xFF6366F1),
+      text: Color(0xFFA5B4FC)
+    ), // indigo
+    (
+      bg: Color(0xFF0C4A6E),
+      border: Color(0xFF0EA5E9),
+      text: Color(0xFF7DD3FC)
+    ), // sky
+    (
+      bg: Color(0xFF1E3A4A),
+      border: Color(0xFF06B6D4),
+      text: Color(0xFF67E8F9)
+    ), // cyan
+  ];
+
+  // Soft skills: purples / pinks / ambers
+  static const _softColors = [
+    (
+      bg: Color(0xFF3B1F5E),
+      border: Color(0xFF8B5CF6),
+      text: Color(0xFFC4B5FD)
+    ), // violet
+    (
+      bg: Color(0xFF4A1942),
+      border: Color(0xFFEC4899),
+      text: Color(0xFFF9A8D4)
+    ), // pink
+    (
+      bg: Color(0xFF451A03),
+      border: Color(0xFFF97316),
+      text: Color(0xFFFDBA74)
+    ), // orange
+    (
+      bg: Color(0xFF422006),
+      border: Color(0xFFEAB308),
+      text: Color(0xFFFDE047)
+    ), // amber
+    (
+      bg: Color(0xFF2D1B4E),
+      border: Color(0xFFD946EF),
+      text: Color(0xFFF0ABFC)
+    ), // fuchsia
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final palette = isTech ? _techColors : _softColors;
+    final c = palette[index % palette.length];
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: isTech
-            ? const Color(0xFF1E2A44).withValues(alpha: 0.6)
-            : const Color(0xFF334155).withValues(alpha: 0.5),
+        color: c.bg,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isTech
-              ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
-              : Colors.white.withValues(alpha: 0.1),
-        ),
+        border: Border.all(color: c.border.withValues(alpha: 0.5)),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: isTech ? const Color(0xFF3B82F6) : Colors.white,
+          color: c.text,
         ),
       ),
     );

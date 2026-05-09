@@ -6,6 +6,7 @@ class AttendanceClockCard extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onTimeIn;
   final VoidCallback onTimeOut;
+  final bool isOjtComplete; // ← NEW: true when required OJT hours are fulfilled
 
   const AttendanceClockCard({
     super.key,
@@ -13,6 +14,7 @@ class AttendanceClockCard extends StatelessWidget {
     required this.isLoading,
     required this.onTimeIn,
     required this.onTimeOut,
+    this.isOjtComplete = false, // ← defaults to false
   });
 
   @override
@@ -54,6 +56,46 @@ class AttendanceClockCard extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              // Weekend indicator pill
+              if (_isWeekend) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  ),
+                  child: const Text(
+                    'Weekend – No Attendance',
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+              // ── OJT Complete pill ──────────────────────────────────────
+              if (isOjtComplete) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.4)),
+                  ),
+                  child: const Text(
+                    'OJT Complete',
+                    style: TextStyle(
+                      color: Colors.greenAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
 
@@ -77,9 +119,13 @@ class AttendanceClockCard extends StatelessWidget {
               _TimeChip(
                 label: "Today's Hours",
                 time: null,
-                customText: today?.hoursRendered != null
-                    ? _fmtHours(today!.hoursRendered!)
-                    : (timedIn && !timedOut ? 'Ongoing' : '--'),
+                // ── Use lunch-adjusted hours ───────────────────────────
+                customText: today?.timeIn != null
+                    ? (today?.timeOut != null
+                        ? _fmtHours(
+                            _adjustedHours(today!.timeIn!, today.timeOut!))
+                        : 'Ongoing')
+                    : '--',
                 icon: Icons.access_time_rounded,
               ),
             ],
@@ -101,14 +147,62 @@ class AttendanceClockCard extends StatelessWidget {
     );
   }
 
+  bool get _isWeekend {
+    final weekday = DateTime.now().weekday;
+    return weekday == DateTime.saturday || weekday == DateTime.sunday;
+  }
+
+  /// Computes worked hours between [timeIn] and [timeOut],
+  /// deducting the 1-hour lunch break if the window overlaps 12:00–13:00.
+  double _adjustedHours(DateTime timeIn, DateTime timeOut) {
+    final totalMinutes = timeOut.difference(timeIn).inMinutes.toDouble();
+
+    // Build today's lunch window: 12:00 PM – 1:00 PM
+    final lunchStart = DateTime(
+        timeIn.year, timeIn.month, timeIn.day, 12, 0);
+    final lunchEnd = DateTime(
+        timeIn.year, timeIn.month, timeIn.day, 13, 0);
+
+    // Overlap = max(0, min(timeOut, lunchEnd) - max(timeIn, lunchStart))
+    final overlapStart =
+        timeIn.isAfter(lunchStart) ? timeIn : lunchStart;
+    final overlapEnd =
+        timeOut.isBefore(lunchEnd) ? timeOut : lunchEnd;
+
+    double deductMinutes = 0;
+    if (overlapEnd.isAfter(overlapStart)) {
+      deductMinutes = overlapEnd.difference(overlapStart).inMinutes.toDouble();
+    }
+
+    final workedMinutes = totalMinutes - deductMinutes;
+    return workedMinutes / 60.0;
+  }
+
   Widget _buildButton(
     BuildContext context, {
     required bool timedIn,
     required bool timedOut,
   }) {
-    // ── Weekend guard — no attendance on Sat/Sun ───────────────────────
-    final weekday = DateTime.now().weekday;
-    if (weekday == DateTime.saturday || weekday == DateTime.sunday) {
+    // ── OJT Complete guard — block all clocking ────────────────────────
+    if (isOjtComplete) {
+      return ElevatedButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.verified_rounded),
+        label: const Text('OJT Hours Completed'),
+        style: ElevatedButton.styleFrom(
+          disabledBackgroundColor: Colors.greenAccent.withValues(alpha: 0.12),
+          disabledForegroundColor: Colors.greenAccent.withValues(alpha: 0.7),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.greenAccent.withValues(alpha: 0.3)),
+          ),
+        ),
+      );
+    }
+
+    // ── Weekend guard ──────────────────────────────────────────────────
+    if (_isWeekend) {
       return ElevatedButton.icon(
         onPressed: null,
         icon: const Icon(Icons.weekend_rounded),
@@ -132,8 +226,6 @@ class AttendanceClockCard extends StatelessWidget {
         icon: const Icon(Icons.check_circle_rounded),
         label: const Text('Completed for Today'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white.withValues(alpha: 0.15),
-          foregroundColor: Colors.white70,
           disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
           disabledForegroundColor: Colors.white60,
           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -145,7 +237,7 @@ class AttendanceClockCard extends StatelessWidget {
       );
     }
 
-    // Time Out button (already timed in, not yet timed out)
+    // Time Out button
     if (timedIn && !timedOut) {
       return ElevatedButton.icon(
         onPressed: isLoading ? null : onTimeOut,
@@ -154,9 +246,7 @@ class AttendanceClockCard extends StatelessWidget {
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF00022E),
-                ),
+                    strokeWidth: 2, color: Color(0xFF00022E)),
               )
             : const Icon(Icons.logout_rounded),
         label: Text(isLoading ? 'Processing...' : 'Time Out'),
@@ -164,14 +254,13 @@ class AttendanceClockCard extends StatelessWidget {
           backgroundColor: Colors.white,
           foregroundColor: const Color(0xFF00022E),
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 0,
         ),
       );
     }
 
-    // Time In button (default — no record today yet)
+    // Time In button
     return ElevatedButton.icon(
       onPressed: isLoading ? null : onTimeIn,
       icon: isLoading
@@ -179,9 +268,7 @@ class AttendanceClockCard extends StatelessWidget {
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFF00022E),
-              ),
+                  strokeWidth: 2, color: Color(0xFF00022E)),
             )
           : const Icon(Icons.login_rounded),
       label: Text(isLoading ? 'Processing...' : 'Time In'),
@@ -198,10 +285,10 @@ class AttendanceClockCard extends StatelessWidget {
   String _todayLabel() {
     final now = DateTime.now();
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}, ${now.year}';
   }
 

@@ -51,7 +51,7 @@ class LoginForm extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Log In',
+                'LOG IN',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 26,
@@ -129,7 +129,7 @@ class LoginForm extends StatelessWidget {
               ),
               const SizedBox(height: 36),
               BlueButton(
-                label: isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'Log In',
+                label: isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'LOG IN',
                 onPressed: (auth.isLoading || isLocked) ? null : onLogin,
                 loading: auth.isLoading,
               ),
@@ -141,7 +141,7 @@ class LoginForm extends StatelessWidget {
                       style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
                   GestureDetector(
                     onTap: () => context.go('/register'),
-                    child: const Text('Create Account',
+                    child: const Text('CREATE ACCOUNT',
                         style: TextStyle(
                             fontSize: 13,
                             color: kCrimsonDeep,

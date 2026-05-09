@@ -37,6 +37,9 @@ dependencies:
   pdf:      ^3.11.1   # builds the PDF document in memory
   printing: ^5.13.1   # save / share / print cross-platform (web + mobile + desktop)
 
+  # Links
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

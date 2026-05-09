@@ -25,14 +25,16 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  final _ojtHoursCtrl = TextEditingController(text: '400');
+  final _ojtHoursCtrl = TextEditingController();
 
   bool _obscurePass = true;
   bool _obscureConfirm = true;
 
-  // Departments
+  // Departments — no loading shimmer; show "no departments" notice immediately
   List<String> _departments = [];
-  bool _loadingDepts = true;
+  bool _loadingDepts = true; // ← never show shimmer
+  bool _deptsFetched =
+      false; // ← treat as already fetched so notice shows instantly
   String? _selectedDept;
 
   // Position is always fixed to "Intern" on registration
@@ -52,7 +54,6 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   void dispose() {
-    // ✅ All controllers disposed BEFORE super.dispose()
     _firstCtrl.dispose();
     _lastCtrl.dispose();
     _emailCtrl.dispose();
@@ -76,15 +77,16 @@ class _RegisterScreenState extends State<RegisterScreen>
           setState(() {
             _departments =
                 items.map<String>((d) => d['name'] as String).toList();
-            _loadingDepts = false;
+            _deptsFetched = true; // ← set here on success
+            _loadingDepts = false; // ← done loading
           });
         }
       } else {
-        if (mounted) setState(() => _loadingDepts = false);
+        if (mounted) setState(() => _deptsFetched = true); // ← and on non-200
       }
     } catch (e) {
       debugPrint('Failed to fetch departments: $e');
-      if (mounted) setState(() => _loadingDepts = false);
+      if (mounted) setState(() => _deptsFetched = true); // ← and on error
     }
   }
 
@@ -153,7 +155,6 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    // Extracted Form Widget
     final formWidget = RegisterForm(
       formKey: _formKey,
       firstCtrl: _firstCtrl,
@@ -161,11 +162,12 @@ class _RegisterScreenState extends State<RegisterScreen>
       emailCtrl: _emailCtrl,
       passCtrl: _passCtrl,
       confirmCtrl: _confirmCtrl,
-      ojtHoursCtrl: _ojtHoursCtrl, // ← NEW
+      ojtHoursCtrl: _ojtHoursCtrl,
       obscurePass: _obscurePass,
       obscureConfirm: _obscureConfirm,
       departments: _departments,
       loadingDepts: _loadingDepts,
+      deptsFetched: _deptsFetched,
       selectedDept: _selectedDept,
       defaultPosition: _defaultPosition,
       passStrength: _passStrength,
@@ -243,8 +245,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                 Expanded(
                   child: Container(
                     color: Colors.white,
-                    child:
-                        formWidget.buildForm(isMobile: false, context: context),
+                    child: SingleChildScrollView(
+                      child: formWidget.buildForm(
+                          isMobile: true, context: context),
+                    ),
                   ),
                 ),
               ],
@@ -269,7 +273,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: formWidget.buildForm(isMobile: true, context: context),
+                  child: SingleChildScrollView(
+                    child:
+                        formWidget.buildForm(isMobile: true, context: context),
+                  ),
                 ),
               ),
             );

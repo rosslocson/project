@@ -1,292 +1,26 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+// lib/screens/admin_attendance_screen.dart
+// Admin attendance monitoring screen.
+// Layout + state only — all widgets are in admin_attendance_widgets/.
 
-import '../services/api_service.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import '../models/attendance_constants.dart';
+import '../models/attendance_record.dart' show AdminAttendanceRecord;
+import '../services/admin_attendance_service.dart';
+import '../services/date_helpers.dart';
 import '../widgets/admin_sidebar.dart';
+import '../widgets/admin_attendance_widgets/attendance_filters.dart';
+import '../widgets/admin_attendance_widgets/attendance_table.dart';
+import '../widgets/admin_attendance_widgets/attendance_ui_components.dart';
+import '../widgets/admin_attendance_widgets/custom_date_picker_dialog.dart';
+import '../widgets/admin_attendance_widgets/review_report_sheet.dart';
 import 'export_attendance.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Date helpers
-// ─────────────────────────────────────────────────────────────────────────────
+// Re-export HamburgerIcon so other attendance files can reuse it from one place.
+export '../widgets/admin_attendance_widgets/attendance_table.dart' show HamburgerIcon;
 
-String _pad(int n) => n.toString().padLeft(2, '0');
-
-String _formatDate(String iso) {
-  try {
-    final dt = DateTime.parse(iso);
-    return '${_pad(dt.month)}/${_pad(dt.day)}/${dt.year}';
-  } catch (_) {
-    return iso;
-  }
-}
-
-String _toApiDate(DateTime dt) =>
-    '${dt.year}-${_pad(dt.month)}-${_pad(dt.day)}';
-
-String _toDisplayDate(DateTime dt) {
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return '${months[dt.month - 1]} ${_pad(dt.day)}, ${dt.year}';
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Period enum
-// ─────────────────────────────────────────────────────────────────────────────
-
-enum AttendancePeriod { custom, today, week, month, year, allDates }
-
-extension AttendancePeriodExt on AttendancePeriod {
-  String get label => switch (this) {
-        AttendancePeriod.custom => 'Custom',
-        AttendancePeriod.today => 'Today',
-        AttendancePeriod.week => 'This Week',
-        AttendancePeriod.month => 'This Month',
-        AttendancePeriod.year => 'This Year',
-        AttendancePeriod.allDates => 'All Dates',
-      };
-
-  String? get apiPeriod => switch (this) {
-        AttendancePeriod.today => 'today',
-        AttendancePeriod.week => 'week',
-        AttendancePeriod.month => 'month',
-        AttendancePeriod.year => 'year',
-        _ => null,
-      };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Status options
-// ─────────────────────────────────────────────────────────────────────────────
-
-const _kStatuses = [
-  'All',
-  'Present',
-  'Late',
-  'On Shift',
-  'Missed Clock Out',
-  'Absent',
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Design tokens
-// ─────────────────────────────────────────────────────────────────────────────
-
-const _kPrimary = Color(0xFF0A0A14);
-const _kAccent = Color(0xFF6C63FF);
-const _kCardBg = Color(0xFFFAFAFC);
-const _kSurface = Color(0xFFFFFFFF);
-const _kBorder = Color(0xFFEEEFF4);
-const _kTextDark = Color(0xFF1A1F3A);
-const _kTextMid = Color(0xFF64748B);
-const _kTextLight = Color(0xFF94A3B8);
-const _kBlue = Color(0xFF00022E);
-const _kButtonDark = Color(0xFF0D0D2B);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Model
-// ─────────────────────────────────────────────────────────────────────────────
-
-class AdminAttendanceRecord {
-  final int id;
-  final int userId;
-  final String internName;
-  final String avatarUrl;
-  final String date;
-  final String? timeIn;
-  final String? timeOut;
-  final double? hoursRendered;
-  final String status;
-
-  const AdminAttendanceRecord({
-    required this.id,
-    required this.userId,
-    required this.internName,
-    required this.avatarUrl,
-    required this.date,
-    this.timeIn,
-    this.timeOut,
-    this.hoursRendered,
-    required this.status,
-  });
-
-  factory AdminAttendanceRecord.fromJson(Map<String, dynamic> j) {
-    final rawAvatar = j['avatar_url'] as String? ?? '';
-    String avatarUrl = rawAvatar;
-
-    if (rawAvatar.isNotEmpty &&
-        !rawAvatar.startsWith('http://') &&
-        !rawAvatar.startsWith('https://')) {
-      final staticBase = ApiService.baseUrl
-          .replaceAll(RegExp(r'/api/?$'), '')
-          .replaceAll(RegExp(r'/$'), '');
-      final cleanPath = rawAvatar.startsWith('/') ? rawAvatar : '/$rawAvatar';
-      avatarUrl = '$staticBase$cleanPath';
-    }
-
-    return AdminAttendanceRecord(
-      id: j['id'] as int? ?? 0,
-      userId: j['user_id'] as int? ?? 0,
-      internName: j['intern_name'] as String? ?? 'Unknown',
-      avatarUrl: avatarUrl,
-      date: j['date'] as String? ?? '',
-      timeIn: j['time_in'] as String?,
-      timeOut: j['time_out'] as String?,
-      hoursRendered: (j['hours_rendered'] as num?)?.toDouble(),
-      status: j['status'] as String? ?? 'Absent',
-    );
-  }
-
-  // ── Time-in punctuality ───────────────────────────────────────────────────
-
-  /// Parses a "HH:mm" or "HH:mm:ss" string into total minutes from midnight.
-  /// Returns null if unparseable.
-  static int? _toMinutes(String? time) {
-    if (time == null) return null;
-    try {
-      final parts = time.split(':');
-      return int.parse(parts[0]) * 60 + int.parse(parts[1]);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// True when the intern clocked in at or before 08:00.
-  bool get isOnTime {
-    final minutes = _toMinutes(timeIn);
-    if (minutes == null) return false;
-    return minutes <= 8 * 60; // 480 min = 08:00
-  }
-
-  // ── Hours worked (lunch-excluded, capped at 17:00) ────────────────────────
-
-  /// Computes actual worked minutes:
-  ///   • Caps clock-out at 17:00 (5 PM) — overtime is ignored.
-  ///   • Deducts the 12:00–13:00 lunch break if the worked window overlaps it.
-  String get formattedHours {
-    final startMin = _toMinutes(timeIn);
-    if (startMin == null) return '--';
-
-    var endMin = _toMinutes(timeOut);
-    if (endMin == null) return '--';
-
-    // Cap at 17:00
-    const cap = 17 * 60; // 1020
-    if (endMin > cap) endMin = cap;
-
-    if (endMin <= startMin) return '--';
-
-    // Deduct lunch overlap with [12:00, 13:00)
-    const lunchStart = 12 * 60; // 720
-    const lunchEnd = 13 * 60;   // 780
-    int lunchDeducted = 0;
-    if (startMin < lunchEnd && endMin > lunchStart) {
-      final overlapStart = startMin < lunchStart ? lunchStart : startMin;
-      final overlapEnd = endMin > lunchEnd ? lunchEnd : endMin;
-      lunchDeducted = overlapEnd - overlapStart;
-    }
-
-    final workedMin = (endMin - startMin) - lunchDeducted;
-    if (workedMin <= 0) return '0h 0m';
-
-    final h = workedMin ~/ 60;
-    final m = workedMin % 60;
-    return '${h}h ${m}m';
-  }
-
-  String get formattedDate => _formatDate(date);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Service
-// ─────────────────────────────────────────────────────────────────────────────
-
-class AdminAttendanceService {
-  static Future<Map<String, dynamic>> fetchAttendance({
-    String? date,
-    String? period,
-    bool allDates = false,
-    String? search,
-    String? status,
-    int page = 1,
-    int limit = 20,
-    int? userId,
-  }) async {
-    try {
-      final params = <String, String>{
-        'page': '$page',
-        'limit': '$limit',
-        if (allDates)
-          'all_dates': 'true'
-        else if (period != null)
-          'period': period
-        else if (date != null)
-          'date': date,
-        if (search != null && search.isNotEmpty) 'search': search,
-        if (status != null && status != 'All') 'status': status,
-        if (userId != null) 'user_id': '$userId',
-      };
-      final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance')
-          .replace(queryParameters: params);
-      final res = await http.get(uri, headers: await ApiService.authHeaders());
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      if (body['ok'] == true) {
-        final records = (body['records'] as List? ?? [])
-            .map((e) =>
-                AdminAttendanceRecord.fromJson(e as Map<String, dynamic>))
-            .toList();
-        return {
-          'ok': true,
-          'records': records,
-          'total': body['total'] as int? ?? 0
-        };
-      }
-      return {'ok': false, 'error': body['error'] ?? 'Unknown error'};
-    } catch (e) {
-      return {'ok': false, 'error': 'Connection error: $e'};
-    }
-  }
-
-  static String exportUrl({
-    String? date,
-    String? period,
-    bool allDates = false,
-    String? search,
-    String? status,
-  }) {
-    final params = <String, String>{
-      if (allDates)
-        'all_dates': 'true'
-      else if (period != null)
-        'period': period
-      else if (date != null)
-        'date': date,
-      if (search != null && search.isNotEmpty) 'search': search,
-      if (status != null && status != 'All') 'status': status,
-    };
-    return Uri.parse('${ApiService.baseUrl}/admin/attendance/export')
-        .replace(queryParameters: params)
-        .toString();
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Screen
-// ─────────────────────────────────────────────────────────────────────────────
 
 class AdminAttendanceScreen extends StatefulWidget {
   const AdminAttendanceScreen({super.key});
@@ -296,23 +30,33 @@ class AdminAttendanceScreen extends StatefulWidget {
 }
 
 class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
+  // ── Sidebar ───────────────────────────────────────────────────────────────
   bool _isSidebarOpen = true;
 
+  // ── Period / date ─────────────────────────────────────────────────────────
   AttendancePeriod _period = AttendancePeriod.today;
   DateTime _customDate = DateTime.now();
-  String _selectedStatus = 'All';
+  DateTime _customRangeStart = DateTime.now();
+  DateTime _customRangeEnd = DateTime.now();
+  bool _isRangeMode = false;
 
+  // ── Filters ───────────────────────────────────────────────────────────────
+  String _selectedStatus = 'All';
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _debounce;
 
+  // ── Pagination ────────────────────────────────────────────────────────────
   int _page = 1;
-  final int _limit = 20;
+  static const int _limit = 20;
   int _total = 0;
 
+  // ── Data ──────────────────────────────────────────────────────────────────
   List<AdminAttendanceRecord> _records = [];
   bool _loading = true;
-  bool _isFirstLoad = true;
   String? _error;
+
+  // ── Pending reports bell (reload after resolve) ───────────────────────────
+  final GlobalKey<_PendingBellState> _bellKey = GlobalKey();
 
   @override
   void initState() {
@@ -323,15 +67,18 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
   @override
   void dispose() {
-    _searchCtrl.removeListener(_onSearchChanged);
-    _searchCtrl.dispose();
+    _searchCtrl
+      ..removeListener(_onSearchChanged)
+      ..dispose();
     _debounce?.cancel();
     super.dispose();
   }
 
   void _onSearchChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () => _load());
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      _load();
+    });
   }
 
   Future<void> _load({int page = 1}) async {
@@ -339,7 +86,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       _loading = true;
       _error = null;
       _page = page;
-      _isFirstLoad = _records.isEmpty;
     });
 
     final isAllDates = _period == AttendancePeriod.allDates;
@@ -348,7 +94,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final result = await AdminAttendanceService.fetchAttendance(
       allDates: isAllDates,
       period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-      date: isCustom ? _toApiDate(_customDate) : null,
+      dateFrom: (isCustom && _isRangeMode) ? toApiDate(_customRangeStart) : null,
+      dateTo: (isCustom && _isRangeMode) ? toApiDate(_customRangeEnd) : null,
+      date: (isCustom && !_isRangeMode) ? toApiDate(_customDate) : null,
       search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
       status: _selectedStatus == 'All' ? null : _selectedStatus,
       page: page,
@@ -356,59 +104,80 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
 
     if (!mounted) return;
+
     if (result['ok'] == true) {
       setState(() {
         _records = result['records'] as List<AdminAttendanceRecord>;
         _total = result['total'] as int;
         _loading = false;
-        _isFirstLoad = false;
       });
     } else {
       setState(() {
         _error = result['error'] as String?;
         _loading = false;
-        _isFirstLoad = false;
       });
     }
+  }
+
+  void _onReportResolved() {
+    _load(page: _page);
+    _bellKey.currentState?.reload();
   }
 
   Future<void> _pickCustomDate() async {
-    final picked = await showDatePicker(
+    await showDialog(
       context: context,
-      initialDate: _customDate,
-      firstDate: DateTime(2024),
-      lastDate: DateTime.now(),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: _kAccent,
-            onPrimary: Colors.white,
-            surface: Color(0xFF1A1F3A),
-          ),
-        ),
-        child: child!,
+      builder: (_) => CustomDatePickerDialog(
+        initialSingleDate: _customDate,
+        initialRangeStart: _customRangeStart,
+        initialRangeEnd: _customRangeEnd,
+        initialIsRange: _isRangeMode,
+        onConfirm: ({
+          required bool isRange,
+          DateTime? singleDate,
+          DateTime? rangeStart,
+          DateTime? rangeEnd,
+        }) {
+          setState(() {
+            _isRangeMode = isRange;
+            _period = AttendancePeriod.custom;
+            if (isRange) {
+              _customRangeStart = rangeStart!;
+              _customRangeEnd = rangeEnd!;
+            } else {
+              _customDate = singleDate!;
+            }
+          });
+          _load();
+        },
       ),
     );
-    if (picked != null) {
-      setState(() {
-        _customDate = picked;
-        _period = AttendancePeriod.custom;
-      });
-      _load();
-    }
   }
 
-  void _snack(String msg, {bool isError = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+  String get _activeDateRangeLabel {
+    final now = DateTime.now();
+    return switch (_period) {
+      AttendancePeriod.allDates => 'All Dates',
+      AttendancePeriod.custom => _isRangeMode
+          ? formatDateRange(_customRangeStart, _customRangeEnd)
+          : toDisplayDate(_customDate),
+      _ => () {
+          final (start, end) = periodRange(_period, now);
+          return formatDateRange(start, end);
+        }(),
+    };
   }
 
-  // ── build ─────────────────────────────────────────────────────────────────
+  int get _activeFilterCount =>
+      (_searchCtrl.text.isNotEmpty ? 1 : 0) + (_selectedStatus != 'All' ? 1 : 0);
+
+  int get _pendingReportCount => _records.where((r) => r.hasOpenReport).length;
+
+  void _clearAllFilters() {
+    _searchCtrl.clear();
+    setState(() => _selectedStatus = 'All');
+    _load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -430,7 +199,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           Expanded(
             child: Stack(
               children: [
-                // ── background ──
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -441,48 +209,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                     ),
                   ),
                 ),
-
-                // ── content ──
                 Positioned.fill(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildTopBar(context),
+                      _buildTopBar(),
                       const SizedBox(height: 15),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                              left: 100, right: 100, bottom: 28),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: _kSurface,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _kBlue.withValues(alpha: 0.08),
-                                  blurRadius: 32,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _buildCardHeader(),
-                                  _buildToolbar(),
-                                  _buildPeriodRow(),
-                                  const Divider(
-                                      height: 1, thickness: 1, color: _kBorder),
-                                  Expanded(child: _buildBody()),
-                                  if (_total > _limit) _buildPagination(),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                      Expanded(child: _buildCard()),
                     ],
                   ),
                 ),
@@ -494,9 +227,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── top bar ───────────────────────────────────────────────────────────────
-
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar() {
     return SizedBox(
       height: 72,
       child: Stack(
@@ -522,49 +253,86 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: IconButton(
                   padding: const EdgeInsets.all(12),
                   onPressed: () => setState(() => _isSidebarOpen = true),
-                  icon: const _HamburgerIcon(),
+                  icon: const HamburgerIcon(),
                   tooltip: 'Open Sidebar',
                   splashColor: Colors.white.withValues(alpha: 0.1),
                   highlightColor: Colors.transparent,
                 ),
               ),
             ),
+          Positioned(
+            right: 24,
+            top: 24,
+            child: _PendingBell(
+              key: _bellKey,
+              onResolved: _onReportResolved,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // ── card header (title + count) ───────────────────────────────────────────
+  Widget _buildCard() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: kBlue.withValues(alpha: 0.08),
+              blurRadius: 32,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildCardHeader(),
+              _buildToolbar(),
+              _buildPeriodRow(),
+              if (!_loading && _pendingReportCount > 0) _buildPendingBanner(),
+              if (!_loading && _pendingReportCount > 0) const SizedBox(height: 12),
+              const Divider(height: 1, thickness: 1, color: kBorder),
+              Expanded(child: _buildBody()),
+              if (_total > _limit) _buildPagination(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildCardHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(28, 22, 28, 18),
       decoration: const BoxDecoration(
-        color: _kCardBg,
-        border: Border(bottom: BorderSide(color: _kBorder, width: 1)),
+        color: kCardBg,
+        border: Border(bottom: BorderSide(color: kBorder, width: 1)),
       ),
       child: Row(
         children: [
-          // icon
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _kButtonDark,
+              color: kButtonDark,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.fact_check_outlined,
                 color: Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
-
-          // title + subtitle
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -574,26 +342,46 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: _kTextDark,
+                    color: kTextDark,
                     letterSpacing: 0.1,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  _loading
-                      ? 'Loading…'
-                      : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: _kTextMid,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      _loading
+                          ? 'Loading…'
+                          : '$_total ${_total == 1 ? 'record' : 'records'} found',
+                      style: const TextStyle(fontSize: 12, color: kTextMid),
+                    ),
+                    if (!_loading && _period != AttendancePeriod.allDates) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 1,
+                        height: 11,
+                        color: kBorder,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.calendar_today_rounded,
+                          size: 11, color: kTextLight),
+                      const SizedBox(width: 4),
+                      Text(
+                        _activeDateRangeLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: kTextMid,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
-
-          // Export button
-          _ExportButton(
+          ExportButton(
             onTap: () async {
               final isAllDates = _period == AttendancePeriod.allDates;
               final isCustom = _period == AttendancePeriod.custom;
@@ -602,10 +390,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
                   period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-                  date: isCustom ? _toApiDate(_customDate) : null,
-                  search: _searchCtrl.text.trim().isEmpty
-                      ? null
-                      : _searchCtrl.text.trim(),
+                  date: (isCustom && !_isRangeMode) ? toApiDate(_customDate) : null,
+                  search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
                   status: _selectedStatus == 'All' ? null : _selectedStatus,
                 ),
               );
@@ -616,16 +402,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── toolbar (search + status + refresh) ──────────────────────────────────
-
   Widget _buildToolbar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 18, 28, 10),
       child: Row(
         children: [
-          // Search field
           Expanded(
-            child: _SearchField(
+            child: AttendanceSearchField(
               controller: _searchCtrl,
               onClear: () {
                 _searchCtrl.clear();
@@ -634,9 +417,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Status dropdown
-          _StatusDropdown(
+          AttendanceStatusDropdown(
             value: _selectedStatus,
             onChanged: (v) {
               setState(() => _selectedStatus = v ?? 'All');
@@ -644,25 +425,16 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             },
           ),
           const SizedBox(width: 10),
-
-          // Refresh
-          _IconActionButton(
+          IconActionButton(
             icon: Icons.refresh_rounded,
             tooltip: 'Refresh',
             onTap: () => _load(page: _page),
           ),
-
-          // Active filter badge
-          if (_searchCtrl.text.isNotEmpty || _selectedStatus != 'All') ...[
+          if (_activeFilterCount > 0) ...[
             const SizedBox(width: 10),
-            _ActiveFiltersBadge(
-              count: (_searchCtrl.text.isNotEmpty ? 1 : 0) +
-                  (_selectedStatus != 'All' ? 1 : 0),
-              onClear: () {
-                _searchCtrl.clear();
-                setState(() => _selectedStatus = 'All');
-                _load();
-              },
+            ActiveFiltersBadge(
+              count: _activeFilterCount,
+              onClear: _clearAllFilters,
             ),
           ],
         ],
@@ -670,10 +442,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── period row ────────────────────────────────────────────────────────────
-
   Widget _buildPeriodRow() {
-    const periods = [
+    const fixedPeriods = [
       AttendancePeriod.today,
       AttendancePeriod.week,
       AttendancePeriod.month,
@@ -681,13 +451,19 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       AttendancePeriod.allDates,
     ];
 
+    final customLabel = _period == AttendancePeriod.custom
+        ? (_isRangeMode
+            ? formatDateRange(_customRangeStart, _customRangeEnd)
+            : toDisplayDate(_customDate))
+        : 'Custom Date';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 4, 28, 16),
       child: Row(
         children: [
-          ...periods.map((p) => Padding(
+          ...fixedPeriods.map((p) => Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: _PeriodChip(
+                child: PeriodChip(
                   label: p.label,
                   selected: _period == p,
                   onTap: () {
@@ -696,10 +472,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   },
                 ),
               )),
-          _PeriodChip(
-            label: _period == AttendancePeriod.custom
-                ? _toDisplayDate(_customDate)
-                : 'Custom Date',
+          PeriodChip(
+            label: customLabel,
             selected: _period == AttendancePeriod.custom,
             icon: Icons.calendar_today_rounded,
             onTap: _pickCustomDate,
@@ -709,7 +483,82 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── body ──────────────────────────────────────────────────────────────────
+  Widget _buildPendingBanner() {
+    final count = _pendingReportCount;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(28, 0, 28, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDE68A),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.pending_actions_rounded,
+                color: Color(0xFF92400E), size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$count attendance ${count == 1 ? 'report requires' : 'reports require'} your review',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Tap the review icon (📋) on flagged rows or use the bell above.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: () {
+              setState(() => _selectedStatus = 'All');
+              _load();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFFB45309),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.filter_list_rounded,
+                      size: 13, color: Color(0xFFFEF3C7)),
+                  SizedBox(width: 5),
+                  Text(
+                    'Show Flagged',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFFEF3C7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildBody() {
     if (_error != null) {
@@ -727,19 +576,19 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   color: Colors.red.shade400, size: 36),
             ),
             const SizedBox(height: 12),
-            Text(_error!,
-                style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
+            Text(_error!, style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () => _load(page: _page),
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Retry'),
-              style: TextButton.styleFrom(foregroundColor: _kAccent),
+              style: TextButton.styleFrom(foregroundColor: kAccent),
             ),
           ],
         ),
       );
     }
+
     if (_records.isEmpty && !_loading) {
       return Center(
         child: Column(
@@ -752,13 +601,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Icon(Icons.event_busy_rounded,
-                  size: 40, color: _kTextLight),
+                  size: 40, color: kTextLight),
             ),
             const SizedBox(height: 14),
             const Text(
               'No attendance records found',
               style: TextStyle(
-                color: _kTextMid,
+                color: kTextMid,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -766,7 +615,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             const SizedBox(height: 4),
             const Text(
               'Try adjusting your filters or date range',
-              style: TextStyle(color: _kTextLight, fontSize: 12),
+              style: TextStyle(color: kTextLight, fontSize: 12),
             ),
           ],
         ),
@@ -775,19 +624,21 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.only(top: 8, bottom: 12),
-      child: _AttendanceTable(records: _records),
+      child: AttendanceTable(
+        records: _records,
+        isAdmin: true,
+        onRefresh: _onReportResolved,
+      ),
     );
   }
-
-  // ── pagination ────────────────────────────────────────────────────────────
 
   Widget _buildPagination() {
     final totalPages = (_total / _limit).ceil();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
       decoration: const BoxDecoration(
-        color: _kCardBg,
-        border: Border(top: BorderSide(color: _kBorder)),
+        color: kCardBg,
+        border: Border(top: BorderSide(color: kBorder)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -795,21 +646,24 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           Text(
             'Page $_page of $totalPages',
             style: const TextStyle(
-                color: _kTextMid, fontSize: 12, fontWeight: FontWeight.w500),
+              color: kTextMid,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(width: 4),
           Text(
             '· $_total records total',
-            style: const TextStyle(color: _kTextLight, fontSize: 12),
+            style: const TextStyle(color: kTextLight, fontSize: 12),
           ),
           const SizedBox(width: 16),
-          _PageButton(
+          PageButton(
             icon: Icons.chevron_left_rounded,
             enabled: _page > 1,
             onTap: () => _load(page: _page - 1),
           ),
           const SizedBox(width: 6),
-          _PageButton(
+          PageButton(
             icon: Icons.chevron_right_rounded,
             enabled: _page < totalPages,
             onTap: () => _load(page: _page + 1),
@@ -821,340 +675,190 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Table
+// Pending-reports bell widget (private to this file)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _AttendanceTable extends StatelessWidget {
-  final List<AdminAttendanceRecord> records;
-  const _AttendanceTable({required this.records});
+class _PendingBell extends StatefulWidget {
+  final VoidCallback? onResolved;
 
-  static const _headers = [
-    'Intern',
-    'Date',
-    'Time In',
-    'Time Out',
-    'Hours Worked',
-    'Status',
-  ];
+  const _PendingBell({super.key, this.onResolved});
 
-  static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(28), // left spacer
-    1: FlexColumnWidth(3),   // Intern
-    2: FlexColumnWidth(2),   // Date
-    3: FlexColumnWidth(1.5), // Time In
-    4: FlexColumnWidth(1.5), // Time Out
-    5: FlexColumnWidth(1.5), // Hours Worked
-    6: FlexColumnWidth(2),   // Status
-    7: FixedColumnWidth(28), // right spacer
-  };
+  @override
+  State<_PendingBell> createState() => _PendingBellState();
+}
+
+class _PendingBellState extends State<_PendingBell> {
+  List<AdminAttendanceRecord> _pending = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    reload();
+  }
+
+  Future<void> reload() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+
+    final res = await AdminAttendanceService.fetchPendingReports();
+
+    if (!mounted) return;
+
+    setState(() {
+      _pending = res['ok'] == true
+          ? (res['records'] as List<AdminAttendanceRecord>)
+          : [];
+      _loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Table(
-      columnWidths: _colWidths,
-      border: TableBorder(
-        horizontalInside: BorderSide(color: Colors.grey.shade100),
-      ),
-      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children: [
-        _buildHeader(),
-        ...records.asMap().entries.map((e) => _buildRow(e.value, e.key)),
-      ],
-    );
-  }
-
-  TableRow _buildHeader() {
-    return TableRow(
-      decoration: const BoxDecoration(
-        color: _kCardBg,
-        border: Border(bottom: BorderSide(color: _kBorder, width: 1.5)),
-      ),
-      children: [
-        const SizedBox.shrink(),
-        ..._headers.map((h) {
-          final isCentered = h == 'Date' || h == 'Status';
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-            child: Text(
-              h.toUpperCase(),
-              textAlign: isCentered ? TextAlign.center : TextAlign.left,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-                color: _kTextMid,
-                letterSpacing: 0.6,
-              ),
-            ),
-          );
-        }),
-        const SizedBox.shrink(),
-      ],
-    );
-  }
-
-  TableRow _buildRow(AdminAttendanceRecord r, int index) {
-    return TableRow(
-      decoration: BoxDecoration(
-        color: index.isEven ? _kSurface : const Color(0xFFFAFAFC),
-      ),
-      children: [
-        const SizedBox.shrink(),
-
-        // Intern
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-          child: Row(
-            children: [
-              _InternAvatar(url: r.avatarUrl, name: r.internName),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  r.internName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: _kTextDark,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Date
-        _cell(r.formattedDate, centered: true),
-
-        // Time In — green if on time, red if late, grey if missing
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-          child: r.timeIn != null
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      margin: const EdgeInsets.only(right: 6),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: r.isOnTime
-                            ? const Color(0xFF22C55E)
-                            : const Color(0xFFEF4444),
-                      ),
-                    ),
-                    Text(
-                      r.timeIn!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: r.isOnTime
-                            ? const Color(0xFF16A34A)
-                            : const Color(0xFFDC2626),
-                      ),
-                    ),
-                  ],
-                )
-              : const Text(
-                  '--',
-                  style: TextStyle(fontSize: 13, color: _kTextMid),
-                ),
-        ),
-
-        // Time Out
-        _cell(r.timeOut ?? '--'),
-
-        // Hours Worked
-        _cell(r.formattedHours),
-
-        // Status
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-          child: Center(child: _StatusBadge(status: r.status)),
-        ),
-
-        const SizedBox.shrink(),
-      ],
-    );
-  }
-
-  Widget _cell(String text, {bool centered = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-        child: Text(
-          text,
-          textAlign: centered ? TextAlign.center : TextAlign.left,
-          style: const TextStyle(fontSize: 13, color: _kTextMid),
+    if (_loading) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: Colors.white70,
         ),
       );
-}
+    }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Search field
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SearchField extends StatelessWidget {
-  final TextEditingController controller;
-  final VoidCallback onClear;
-
-  const _SearchField({required this.controller, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 42,
-      child: TextField(
-        controller: controller,
-        style: const TextStyle(fontSize: 13, color: _kTextDark),
-        decoration: InputDecoration(
-          hintText: 'Search intern by name…',
-          hintStyle: const TextStyle(fontSize: 13, color: _kTextLight),
-          prefixIcon:
-              const Icon(Icons.search_rounded, size: 18, color: _kTextLight),
-          suffixIcon: controller.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.close_rounded,
-                      size: 16, color: _kTextLight),
-                  padding: EdgeInsets.zero,
-                  onPressed: onClear,
-                )
-              : null,
-          filled: true,
-          fillColor: const Color(0xFFF4F5F8),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+    final count = _pending.length;
+    return GestureDetector(
+      onTap: count == 0 ? null : () => _showPanel(context),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            count > 0
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_outlined,
+            color: count > 0 ? Colors.amber.shade300 : Colors.white70,
+            size: 26,
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _kAccent, width: 1.5),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Icon action button
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _IconActionButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  const _IconActionButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: const Color(0xFFF4F5F8),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: const Padding(
-            padding: EdgeInsets.all(10),
-            child: Icon(Icons.refresh_rounded, color: _kTextMid, size: 18),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Export button
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ExportButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _ExportButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: _kButtonDark,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.download_rounded, size: 16, color: Colors.white),
-              SizedBox(width: 8),
-              Text(
-                'Export PDF',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+          if (count > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEF4444),
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showPanel(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PendingPanel(
+        records: _pending,
+        onResolved: () {
+          reload();
+          widget.onResolved?.call();
+        },
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Period chip
+// Pending-reports panel (inside the bell sheet)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _PeriodChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final IconData? icon;
-  final VoidCallback onTap;
+class _PendingPanel extends StatelessWidget {
+  final List<AdminAttendanceRecord> records;
+  final VoidCallback? onResolved;
 
-  const _PeriodChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.icon,
-  });
+  const _PendingPanel({required this.records, this.onResolved});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected ? _kButtonDark : const Color(0xFFF4F5F8),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? _kButtonDark : Colors.transparent,
-            width: 1.5,
-          ),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      builder: (_, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
           children: [
-            if (icon != null) ...[
-              Icon(icon, size: 13, color: selected ? Colors.white : _kTextMid),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : _kTextMid,
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  const Icon(Icons.pending_actions,
+                      color: Color(0xFFF59E0B), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pending Reports (${records.length})',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: kTextDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            Expanded(
+              child: records.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No pending reports',
+                        style: TextStyle(color: kTextMid, fontSize: 13),
+                      ),
+                    )
+                  : ListView.separated(
+                      controller: ctrl,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      itemCount: records.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (ctx, i) => _PendingTile(
+                        record: records[i],
+                        onResolved: () {
+                          Navigator.pop(context);
+                          onResolved?.call();
+                        },
+                      ),
+                    ),
             ),
           ],
         ),
@@ -1163,308 +867,75 @@ class _PeriodChip extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Status dropdown
-// ─────────────────────────────────────────────────────────────────────────────
+class _PendingTile extends StatelessWidget {
+  final AdminAttendanceRecord record;
+  final VoidCallback? onResolved;
 
-class _StatusDropdown extends StatelessWidget {
-  final String value;
-  final ValueChanged<String?> onChanged;
-
-  const _StatusDropdown({required this.value, required this.onChanged});
+  const _PendingTile({required this.record, this.onResolved});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F5F8),
-        borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      onTap: () => ReviewReportSheet.show(
+        context,
+        record,
+        onResolved: onResolved,
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          onChanged: onChanged,
-          isDense: true,
-          style: const TextStyle(fontSize: 13, color: _kTextDark),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded,
-              size: 18, color: _kTextMid),
-          items: _kStatuses.map((s) {
-            return DropdownMenuItem<String>(
-              value: s,
-              child: Text(s, style: const TextStyle(fontSize: 13)),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Active filters badge
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ActiveFiltersBadge extends StatelessWidget {
-  final int count;
-  final VoidCallback onClear;
-
-  const _ActiveFiltersBadge({required this.count, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF2FF),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _kAccent, width: 1.2),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$count filter${count > 1 ? 's' : ''} active',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF4F46E5),
-            ),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: onClear,
-            child: const Icon(Icons.close_rounded,
-                size: 14, color: Color(0xFF4F46E5)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Status badge
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StatusBadge extends StatelessWidget {
-  final String status;
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final Color border;
-    final Color text;
-    final Color bg;
-
-    switch (status) {
-      case 'Present':
-        border = const Color(0xFF22C55E);
-        text = const Color(0xFF16A34A);
-        bg = const Color(0xFFF0FDF4);
-      case 'Late':
-        border = const Color(0xFFF59E0B);
-        text = const Color(0xFFB45309);
-        bg = const Color(0xFFFFFBEB);
-      case 'On Shift':
-        border = _kAccent;
-        text = const Color(0xFF4F46E5);
-        bg = const Color(0xFFEEF2FF);
-      case 'Missed Clock Out':
-        border = const Color(0xFFEA580C);
-        text = const Color(0xFFC2410C);
-        bg = const Color(0xFFFFF7ED);
-      case 'Absent':
-      default:
-        border = const Color(0xFFEF4444);
-        text = const Color(0xFFDC2626);
-        bg = const Color(0xFFFEF2F2);
-    }
-
-    return Container(
-      constraints: const BoxConstraints(minWidth: 140, maxWidth: 140),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: border, width: 1.5),
-      ),
-      child: Text(
-        status,
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        softWrap: false,
-        style:
-            TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 12),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Page button
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _PageButton extends StatelessWidget {
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  const _PageButton({
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: enabled ? _kButtonDark : const Color(0xFFF4F5F8),
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(7),
-          child: Icon(
-            icon,
-            size: 18,
-            color: enabled ? Colors.white : _kTextLight,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Intern avatar
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _InternAvatar extends StatefulWidget {
-  final String url;
-  final String name;
-  const _InternAvatar({required this.url, required this.name});
-
-  @override
-  State<_InternAvatar> createState() => _InternAvatarState();
-}
-
-class _InternAvatarState extends State<_InternAvatar> {
-  Uint8List? _imageBytes;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchImage();
-  }
-
-  @override
-  void didUpdateWidget(_InternAvatar old) {
-    super.didUpdateWidget(old);
-    if (old.url != widget.url) {
-      setState(() {
-        _loading = true;
-        _imageBytes = null;
-      });
-      _fetchImage();
-    }
-  }
-
-  Future<void> _fetchImage() async {
-    if (widget.url.isEmpty) {
-      if (mounted) setState(() => _loading = false);
-      return;
-    }
-    try {
-      final res = await http.get(
-        Uri.parse(widget.url),
-        headers: await ApiService.authHeaders(),
-      );
-      if (!mounted) return;
-      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
-        setState(() {
-          _imageBytes = res.bodyBytes;
-          _loading = false;
-        });
-      } else {
-        setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  String get _initials {
-    final trimmed = widget.name.trim();
-    if (trimmed.isEmpty) return '?';
-    return trimmed
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .map((w) => w[0])
-        .take(2)
-        .join()
-        .toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: 18,
-      backgroundColor: const Color(0xFFDCEEFD),
-      child: _imageBytes != null
-          ? ClipOval(
-              child: Image.memory(
-                _imageBytes!,
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
-              ),
-            )
-          : Text(
-              _initials,
-              style: const TextStyle(
-                color: Color(0xFF5B9BD5),
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Hamburger icon
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _HamburgerIcon extends StatelessWidget {
-  const _HamburgerIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _bar(22),
-          _bar(14, opacity: 0.8),
-          _bar(22),
-        ],
-      ),
-    );
-  }
-
-  Widget _bar(double w, {double opacity = 1.0}) => Container(
-        width: w,
-        height: 2.5,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: opacity),
-          borderRadius: BorderRadius.circular(2),
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFCD34D)),
         ),
-      );
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InternAvatar(url: record.avatarUrl, name: record.internName),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          record.internName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: kTextDark,
+                          ),
+                        ),
+                      ),
+                      StatusBadge(status: record.status),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    record.formattedDate,
+                    style: const TextStyle(fontSize: 12, color: kTextMid),
+                  ),
+                  if (record.reportReason != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      record.reportReason!,
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: kTextMid),
+          ],
+        ),
+      ),
+    );
+  }
 }
+

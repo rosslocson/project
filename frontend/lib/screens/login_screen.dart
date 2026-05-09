@@ -16,7 +16,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
@@ -64,10 +65,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
-    final result = await auth.loginWithDetails(_emailCtrl.text.trim(), _passCtrl.text.trim());
-    
+    final result = await auth.loginWithDetails(
+        _emailCtrl.text.trim(), _passCtrl.text.trim());
+
     if (!mounted) return;
-    
+
     if (result['ok'] == true) {
       if (auth.isAdmin) {
         context.go('/dashboard');
@@ -77,7 +79,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     } else if (result['locked'] == true) {
       _startLockCountdown(result['retry_after_secs'] as int? ?? 60);
     } else {
-      setState(() => _attemptsLeft = result['attempts_left'] as int? ?? _attemptsLeft - 1);
+      setState(() =>
+          _attemptsLeft = result['attempts_left'] as int? ?? _attemptsLeft - 1);
     }
   }
 
@@ -131,7 +134,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             return Row(
               children: [
                 Expanded(
-                  child: AppBackground(backgroundAsset: 'assets/images/star_background.png', 
+                  child: AppBackground(
+                    backgroundAsset: 'assets/images/star_background.png',
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -142,22 +146,32 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 'assets/images/logo_login.png',
                                 height: 280,
                                 fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.public, size: 120, color: Colors.white),
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.public,
+                                        size: 120, color: Colors.white),
                               ),
                               const SizedBox(height: 24),
                               const Text(
                                 "BACK IN THE COSMOS.",
-                                style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.5),
                               ),
                               const SizedBox(height: 16),
-                              Container(width: 40, height: 2, color: Colors.white54),
+                              Container(
+                                  width: 40, height: 2, color: Colors.white54),
                               const SizedBox(height: 16),
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 64.0),
                                 child: Text(
                                   'Securely access your dashboard and monitor your workspace\nwithin the InternSpace galaxy.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+                                  style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                      height: 1.5),
                                 ),
                               ),
                               const SizedBox(height: 80),
@@ -178,18 +192,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             );
           } else {
             // Mobile layout
-            return AppBackground(backgroundAsset: 'assets/images/star_background.png', 
+            return AppBackground(
+              backgroundAsset: 'assets/images/star_background.png',
               child: Center(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(32),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 30, spreadRadius: 5),
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 30,
+                          spreadRadius: 5),
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: formWidget,
                 ),
               ),
