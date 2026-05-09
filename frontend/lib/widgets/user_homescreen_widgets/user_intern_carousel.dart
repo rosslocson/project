@@ -48,15 +48,33 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
   @override
   void didUpdateWidget(covariant UserInternCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Re-initialize controller when data arrives so infinite scroll works
-    if (widget.interns != oldWidget.interns && widget.interns.isNotEmpty) {
+
+    // If we switch between loading/loaded or the intern list changes,
+    // re-sync controller position so the carousel doesn't break.
+    final listChanged = widget.interns != oldWidget.interns;
+    final canScroll = widget.interns.isNotEmpty;
+
+    if (listChanged && canScroll) {
+      _autoScrollTimer?.cancel();
+
       _currentPage = widget.interns.length * 1000;
+
+      // Dispose the old controller and create a new one.
       _pageController.dispose();
       _pageController = PageController(
         viewportFraction: _viewportFraction,
         initialPage: _currentPage,
       );
-      _startAutoScroll();
+
+      if (!widget.loading) {
+        _startAutoScroll();
+      }
+    }
+
+    // Stop auto-scroll when going back to an empty or loading state.
+    if ((!canScroll || widget.loading) && _autoScrollTimer != null) {
+      _autoScrollTimer?.cancel();
+      _autoScrollTimer = null;
     }
   }
 
@@ -116,7 +134,7 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
 
     // Loading state
     if (widget.loading) {
-      return SizedBox(
+      return const SizedBox(
         height: 320,
         child: Center(
           child: CircularProgressIndicator(
