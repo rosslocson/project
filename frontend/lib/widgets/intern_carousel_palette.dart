@@ -44,10 +44,10 @@ class InternCarouselPalette {
     }
 
     return [
-      BoxShadow(
+      const BoxShadow(
         color: shadow,
         blurRadius: 32,
-        offset: const Offset(0, 16),
+        offset: Offset(0, 16),
       ),
     ];
   }

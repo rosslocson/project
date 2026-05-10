@@ -258,7 +258,7 @@ class _RemarkCellState extends State<_RemarkCell> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
         child: Text(
-          hasRemark ? remark! : '--',
+          hasRemark ? remark : '--',
           style: TextStyle(
             fontSize: 12,
             fontStyle: hasRemark ? FontStyle.normal : FontStyle.italic,
@@ -335,7 +335,7 @@ class _RemarkCellState extends State<_RemarkCell> {
           children: [
             Flexible(
               child: Text(
-                hasRemark ? remark! : 'Add remark…',
+                hasRemark ? remark : 'Add remark…',
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: hasRemark ? FontStyle.normal : FontStyle.italic,

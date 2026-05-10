@@ -730,8 +730,8 @@ class _InitialsLabel extends StatelessWidget {
       child: Center(
         child: Text(
           initials,
-          style: TextStyle(
-            color: const Color(0xFF6C63FF),
+          style: const TextStyle(
+            color: Color(0xFF6C63FF),
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),

@@ -33,10 +33,14 @@ class LoginForm extends StatelessWidget {
     required this.onForgotPassword,
   });
 
+  // The accent color matching the "Save Changes" button
+  static const Color kAccentPurple = Color(0xFF7367F0);
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final dec =
-        pillInputDecoration(); // Assuming this comes from app_theme.dart
+        pillInputDecoration(); // Assuming this comes from app_theme.dart and handles dark borders
 
     return Container(
       alignment: Alignment.center,
@@ -56,7 +60,7 @@ class LoginForm extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w900,
-                    color: kCrimsonDeep,
+                    color: Colors.white, // Changed to white for dark mode
                     letterSpacing: 1.2),
               ),
               const SizedBox(height: 40),
@@ -72,13 +76,34 @@ class LoginForm extends StatelessWidget {
                     onForgotPassword: onForgotPassword),
                 const SizedBox(height: 20),
               ],
-              fieldLabel('Email Address'),
+              
+              // If fieldLabel is hardcoded to black in app_theme, you may need to 
+              // update it there to return white text, or replace it with a Text widget here.
+              const Text(
+                'Email Address',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: emailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 enabled: !isLocked,
-                decoration: dec.copyWith(hintText: 'Enter your email'),
+                style: const TextStyle(color: Colors.white), // Added white text for input
+                decoration: dec.copyWith(
+                  hintText: 'Enter your email',
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: Color(0xFF2A2A38), width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
+                  ),
+                ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Email is required';
                   if (!v.contains('@')) return 'Enter a valid email';
@@ -86,14 +111,30 @@ class LoginForm extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 20),
-              fieldLabel('Password'),
+              const Text(
+                'Password',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: passCtrl,
                 obscureText: obscure,
                 enabled: !isLocked,
+                style: const TextStyle(color: Colors.white), // Added white text for input
                 decoration: dec.copyWith(
                   hintText: 'Enter your password',
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: Color(0xFF2A2A38), width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
+                  ),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: IconButton(
@@ -121,30 +162,61 @@ class LoginForm extends StatelessWidget {
                       'Forgot Password?',
                       style: TextStyle(
                           fontSize: 13,
-                          color: kCrimsonDeep,
+                          color: kAccentPurple, // Changed to match Save Changes button
                           fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 36),
-              BlueButton(
-                label: isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'LOG IN',
-                onPressed: (auth.isLoading || isLocked) ? null : onLogin,
-                loading: auth.isLoading,
+              
+              // Replaced BlueButton with a custom styled ElevatedButton to match the screenshot
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: (auth.isLoading || isLocked) ? null : onLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kAccentPurple,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: kAccentPurple.withOpacity(0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: auth.isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'LOG IN',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                ),
               ),
               const SizedBox(height: 28),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text("Don't have an account? ",
-                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+                      style: TextStyle(
+                          fontSize: 13, 
+                          color: Colors.white70)), // Lightened for dark mode
                   GestureDetector(
                     onTap: () => context.go('/register'),
                     child: const Text('CREATE ACCOUNT',
                         style: TextStyle(
                             fontSize: 13,
-                            color: kCrimsonDeep,
+                            color: kAccentPurple, // Changed to match Save Changes button
                             fontWeight: FontWeight.bold)),
                   ),
                 ],

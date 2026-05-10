@@ -124,8 +124,10 @@ class _LoginScreenState extends State<LoginScreen>
       onForgotPassword: _showForgotPassword,
     );
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF050510) : Colors.white,
       resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -184,7 +186,20 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 Expanded(
                   child: Container(
-                    color: Colors.white,
+                    // Updated gradient to match the exact blues/blacks from the galaxy image
+                    decoration: BoxDecoration(
+                      color: isDark ? null : Colors.white,
+                      gradient: isDark
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF010205), // Deepest space black
+                                Color(0xFF080E26), // Cosmic deep blue
+                              ],
+                            )
+                          : null,
+                    ),
                     child: formWidget,
                   ),
                 ),
@@ -199,11 +214,13 @@ class _LoginScreenState extends State<LoginScreen>
                   margin:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF0B0B13) : Colors.white,
                     borderRadius: BorderRadius.circular(32),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
+                          color: isDark
+                              ? Colors.black.withValues(alpha: 0.35)
+                              : Colors.black.withValues(alpha: 0.2),
                           blurRadius: 30,
                           spreadRadius: 5),
                     ],

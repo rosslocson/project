@@ -335,7 +335,7 @@ class _ThemeToggleMenuItem extends StatelessWidget {
               ),
               Switch(
                 value: darkMode,
-                activeColor: const Color(0xFF6B4EFF),
+                activeThumbColor: const Color(0xFF6B4EFF),
                 onChanged: (_) => _toggleTheme(context),
               ),
             ],

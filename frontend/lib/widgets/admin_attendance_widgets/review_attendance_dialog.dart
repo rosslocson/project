@@ -543,7 +543,7 @@ class _ReviewAttendanceDialogState extends State<ReviewAttendanceDialog>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: _kAccent, width: 1.5),
+              borderSide: const BorderSide(color: _kAccent, width: 1.5),
             ),
             counterStyle:
                 const TextStyle(color: _kTextLight, fontSize: 11),
@@ -900,7 +900,7 @@ class _TimePicker extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Icon(Icons.chevron_right_rounded,
+                const Icon(Icons.chevron_right_rounded,
                     size: 16, color: _kTextLight),
               ],
             ),

@@ -259,12 +259,12 @@ class _SignOutButtonState extends State<_SignOutButton> {
               }
             },
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Row(
                 children: [
                   Icon(Icons.logout_rounded,
                       color: theme.sidebarText, size: 22),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Text(
                     'Log Out',
                     style: TextStyle(
@@ -318,7 +318,7 @@ class _CloseButtonState extends State<_CloseButton> {
             hoverColor: Colors.transparent,
             onTap: widget.onClose,
             child: Padding(
-              padding: EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(8.0),
               child: Icon(
                 Icons.close_rounded,
                 color: theme.sidebarText,

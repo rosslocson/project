@@ -173,7 +173,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
 
   Widget _buildCarouselBody() {
     if (widget.loading) {
-      return SizedBox(
+      return const SizedBox(
         height: 180,
         child: Center(
           child: CircularProgressIndicator(
@@ -191,7 +191,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.error_outline,
                 color: InternCarouselPalette.accent,
                 size: 40,
