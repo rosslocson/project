@@ -33,8 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   // Departments — no loading shimmer; show "no departments" notice immediately
   List<String> _departments = [];
   bool _loadingDepts = true; // ← never show shimmer
-  bool _deptsFetched =
-      false; // ← treat as already fetched so notice shows instantly
+  bool _deptsFetched = false; // ← treat as already fetched so notice shows instantly
   String? _selectedDept;
 
   // Position is always fixed to "Intern" on registration
@@ -154,6 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final formWidget = RegisterForm(
       formKey: _formKey,
@@ -185,7 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF050510) : Colors.white,
       resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -244,10 +244,26 @@ class _RegisterScreenState extends State<RegisterScreen>
                 ),
                 Expanded(
                   child: Container(
-                    color: Colors.white,
-                    child: SingleChildScrollView(
-                      child: formWidget.buildForm(
-                          isMobile: true, context: context),
+                    decoration: BoxDecoration(
+                      color: isDark ? null : Colors.white,
+                      gradient: isDark
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF010205), // Deepest space black
+                                Color(0xFF080E26), // Cosmic deep blue
+                              ],
+                            )
+                          : null,
+                    ),
+                    // Wrap the ScrollView in a Center to vertically align it and remove empty bottom space
+                    child: Center(
+                      child: SingleChildScrollView(
+                        // Set isMobile to false to perfectly match the Login Form's 64/40 padding
+                        child: formWidget.buildForm(
+                            isMobile: false, context: context),
+                      ),
                     ),
                   ),
                 ),
@@ -262,11 +278,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                   margin:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF0B0B13) : Colors.white,
                     borderRadius: BorderRadius.circular(32),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
+                          color: isDark
+                              ? Colors.black.withValues(alpha: 0.35)
+                              : Colors.black.withValues(alpha: 0.2),
                           blurRadius: 30,
                           spreadRadius: 5),
                     ],
