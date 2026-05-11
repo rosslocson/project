@@ -6,12 +6,15 @@ import '../providers/theme_provider.dart';
 import '../widgets/app_theme.dart';
 import '../widgets/logout_confirmation_dialog.dart';
 
-const _lightTopbarStart = Color(0xFFF1F6FF);
-const _lightTopbarEnd = Color(0xFFDCE8FF);
-const _lightTopbarPanel = Color(0xFFF5F9FF);
-const _lightTopbarBorder = Color(0xFFD0DCF7);
-const _lightAvatarStart = Color(0xFF6366F1);
-const _lightAvatarEnd = Color(0xFFA78BFA);
+// InternSpace Palette
+const _kCosmicBlue = Color(0xFF00022E);
+const _kAccentIndigo = Color(0xFF7367F0);
+
+// Revised Highly Pigmented Colors for Light Mode
+const _kLightBlueHighlyPigmented = Color(0xFF99C7FF); // Richer, more saturated blue
+const _kLightBlueGlassMid = Color(0xFFC0DAFF);      // Vibrant mid-transition
+const _kLightGlassBorder = Color(0xFFB8C9F1);       // Slightly deeper border to match pigment
+const _kLightAvatarEnd = Color(0xFFA78BFA);
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});
@@ -78,19 +81,15 @@ class GlassTopBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
-    final String fullName =
-        lastName.isEmpty ? firstName : '$firstName $lastName';
-    final String initials =
-        firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
+    final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
+    final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
-      if (!rawAvatarUrl.startsWith('http')) {
-        finalAvatarUrl = 'http://127.0.0.1:8080$rawAvatarUrl';
-      } else {
-        finalAvatarUrl = rawAvatarUrl;
-      }
+      finalAvatarUrl = rawAvatarUrl.startsWith('http') 
+          ? rawAvatarUrl 
+          : 'http://127.0.0.1:8080$rawAvatarUrl';
     }
 
     final bool sidebarClosed = isSidebarOpen == false;
@@ -118,28 +117,36 @@ class GlassTopBar extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  _lightTopbarStart.withValues(alpha: 0.98),
-                  _lightTopbarEnd.withValues(alpha: 0.8),
-                  _lightAvatarStart.withValues(alpha: 0.18),
-                  _lightTopbarEnd.withValues(alpha: 0.0),
+                  _kLightBlueHighlyPigmented,            // Deep Pigment Top
+                  _kLightBlueGlassMid.withOpacity(0.9),  // Strong transition
+                  Colors.white.withOpacity(0.5),         // Rapid fade
+                  Colors.white,                          // Pure White Bottom Line
                 ],
-                stops: const [0.0, 0.32, 0.62, 1.0],
+                stops: const [0.0, 0.55, 0.94, 1.0],     // Pushed color further down
               ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── Hamburger — only when sidebar is closed ───────────────────
           if (sidebarClosed) ...[
             Container(
               decoration: BoxDecoration(
                 color: isDark
                     ? theme.sidebarHoverBackground.withValues(alpha: 0.8)
-                    : _lightTopbarPanel,
+                    : Colors.white.withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isDark ? theme.border : _lightTopbarBorder,
+                  color: isDark ? theme.border : _kLightGlassBorder,
                 ),
+                boxShadow: isDark 
+                  ? null 
+                  : [
+                      BoxShadow(
+                        color: _kCosmicBlue.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
               ),
               child: IconButton(
                 padding: const EdgeInsets.all(12),
@@ -152,7 +159,6 @@ class GlassTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 24),
           ],
-          // ── Title ─────────────────────────────────────────────────────
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -162,22 +168,22 @@ class GlassTopBar extends StatelessWidget {
                 isAdmin ? 'Admin Dashboard' : 'Home',
                 style: TextStyle(
                   fontSize: 28,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                   color: theme.topbarText,
-                  letterSpacing: 0.5,
+                  letterSpacing: -0.5,
                 ),
               ),
               Text(
                 'Welcome, $firstName',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                   color: theme.topbarMutedText,
                 ),
               ),
             ],
           ),
           const Spacer(),
-          // ── User menu ─────────────────────────────────────────────────
           PopupMenuButton<String>(
             onSelected: (String choice) async {
               if (choice == 'profile') {
@@ -198,14 +204,16 @@ class GlassTopBar extends StatelessWidget {
                 }
               }
             },
+            offset: const Offset(0, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             itemBuilder: (BuildContext context) => [
               const PopupMenuItem<String>(
                 value: 'profile',
                 child: Row(
                   children: [
-                    Icon(Icons.person_outline, size: 18),
+                    Icon(Icons.person_outline, size: 20),
                     SizedBox(width: 12),
-                    Text('View Profile'),
+                    Text('View Profile', style: TextStyle(fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -218,9 +226,9 @@ class GlassTopBar extends StatelessWidget {
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, size: 18, color: Colors.red),
+                    Icon(Icons.logout, size: 20, color: Colors.redAccent),
                     SizedBox(width: 12),
-                    Text('Log Out', style: TextStyle(color: Colors.red)),
+                    Text('Log Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -232,68 +240,54 @@ class GlassTopBar extends StatelessWidget {
                   Text(
                     fullName,
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                       color: theme.topbarText.withValues(alpha: 0.9),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: (isDark
-                            ? const Color.fromARGB(255, 205, 210, 251)
-                            : _lightAvatarStart)
-                        .withValues(alpha: isDark ? 0.18 : 0.14),
-                    backgroundImage: finalAvatarUrl.isNotEmpty
-                        ? NetworkImage(finalAvatarUrl)
-                        : null,
-                    child: finalAvatarUrl.isEmpty
-                        ? Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: isDark
-                                    ? const [
-                                        Color.fromARGB(255, 116, 116, 212),
-                                        Color.fromARGB(255, 16, 19, 74),
-                                      ]
-                                    : const [
-                                        _lightAvatarStart,
-                                        _lightAvatarEnd,
-                                      ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              border: Border.all(
-                                color: theme.topbarText.withValues(alpha: 0.35),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (isDark
-                                          ? const Color.fromARGB(
-                                              255, 122, 116, 212)
-                                          : _lightAvatarStart)
-                                      .withValues(alpha: 0.4),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(
-                                initials,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                  Container(
+                    padding: const EdgeInsets.all(2.5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark ? theme.border : _kLightGlassBorder,
+                        width: 1,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 19,
+                      backgroundColor: isDark 
+                          ? const Color(0xFFCDD2FB).withValues(alpha: 0.1)
+                          : _kAccentIndigo.withValues(alpha: 0.1),
+                      backgroundImage: finalAvatarUrl.isNotEmpty
+                          ? NetworkImage(finalAvatarUrl)
+                          : null,
+                      child: finalAvatarUrl.isEmpty
+                          ? Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: isDark
+                                      ? const [Color(0xFF7474D4), Color(0xFF10134A)]
+                                      : const [_kAccentIndigo, _kLightAvatarEnd],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
                               ),
-                            ),
-                          )
-                        : null,
+                              child: Center(
+                                child: Text(
+                                  initials,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
                   ),
                 ],
               ),
@@ -308,10 +302,6 @@ class GlassTopBar extends StatelessWidget {
 class _ThemeToggleMenuItem extends StatelessWidget {
   const _ThemeToggleMenuItem();
 
-  Future<void> _toggleTheme(BuildContext context) async {
-    await context.read<ThemeProvider>().toggleTheme();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
@@ -320,23 +310,25 @@ class _ThemeToggleMenuItem extends StatelessWidget {
 
         return InkWell(
           borderRadius: BorderRadius.circular(10),
-          onTap: () => _toggleTheme(context),
+          onTap: () => themeProvider.toggleTheme(),
           child: Row(
             children: [
               Icon(
-                darkMode
-                    ? Icons.dark_mode_outlined
-                    : Icons.light_mode_outlined,
-                size: 18,
+                darkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                size: 20,
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(darkMode ? 'Dark Mode' : 'Light Mode'),
+                child: Text(darkMode ? 'Dark Mode' : 'Light Mode', 
+                style: const TextStyle(fontWeight: FontWeight.w500)),
               ),
-              Switch(
-                value: darkMode,
-                activeThumbColor: const Color(0xFF6B4EFF),
-                onChanged: (_) => _toggleTheme(context),
+              Transform.scale(
+                scale: 0.8,
+                child: Switch(
+                  value: darkMode,
+                  activeColor: _kAccentIndigo,
+                  onChanged: (_) => themeProvider.toggleTheme(),
+                ),
               ),
             ],
           ),

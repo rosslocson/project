@@ -194,6 +194,8 @@ class _UsersScreenState extends State<UsersScreen> {
     final name = '${user['first_name']} ${user['last_name']}'.trim();
 
     final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -207,11 +209,11 @@ class _UsersScreenState extends State<UsersScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF4A5E9A).withValues(alpha: 0.1),
+                color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.archive_outlined,
-                  color: Color(0xFF4A5E9A), size: 22),
+              child: Icon(Icons.archive_outlined,
+                  color: primaryColor, size: 22),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -260,7 +262,7 @@ class _UsersScreenState extends State<UsersScreen> {
             icon: const Icon(Icons.archive_outlined, size: 16),
             label: const Text('Archive'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A5E9A),
+              backgroundColor: primaryColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -291,8 +293,6 @@ class _UsersScreenState extends State<UsersScreen> {
         user['is_active'] = isActive(user);
       });
       _showError('Archive failed: ${res['error'] ?? 'Unknown error'}');
-      duration:
-      const Duration(seconds: 1);
     }
   }
 
@@ -314,8 +314,6 @@ class _UsersScreenState extends State<UsersScreen> {
     if (res['ok'] == true) {
       _showSuccess('$name has been restored.');
       _silentReload();
-      duration:
-      const Duration(seconds: 1);
     }
   }
 
@@ -565,4 +563,3 @@ class _UsersScreenState extends State<UsersScreen> {
     );
   }
 }
-

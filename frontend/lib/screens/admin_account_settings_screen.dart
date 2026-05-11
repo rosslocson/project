@@ -20,8 +20,6 @@ import '../widgets/admin_account_settings_widgets/hamburger_icon.dart';
 import '../widgets/admin_account_settings_widgets/profile_form_tab.dart';
 import '../widgets/admin_account_settings_widgets/password_form_tab.dart';
 
-const _kBlue = Color(0xFF00022E);
-
 class AdminAccountSettingsScreen extends StatefulWidget {
   const AdminAccountSettingsScreen({super.key});
 
@@ -361,6 +359,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
     final user = context.watch<AuthProvider>().user;
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
@@ -491,7 +491,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             child: CircleAvatar(
                                               radius: 40,
                                               backgroundColor:
-                                                  _kBlue.withOpacity(0.1),
+                                                  primaryColor.withOpacity(0.1),
                                               backgroundImage: _avatarFile != null
                                                   ? FileImage(_avatarFile!)
                                                   : (_localAvatarBytes != null
@@ -502,8 +502,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                               finalAvatarUrl)
                                                           : null)) as ImageProvider?,
                                               child: _isUploadingAvatar
-                                                  ? const CircularProgressIndicator(
-                                                      color: _kBlue,
+                                                  ? CircularProgressIndicator(
+                                                      color: primaryColor,
                                                       strokeWidth: 3)
                                                   : (_avatarFile == null &&
                                                           _localAvatarBytes ==
@@ -511,11 +511,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                           finalAvatarUrl.isEmpty)
                                                       ? Text(
                                                           '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                          style: const TextStyle(
+                                                          style: TextStyle(
                                                               fontSize: 28,
                                                               fontWeight:
                                                                   FontWeight.bold,
-                                                              color: _kBlue),
+                                                              color: primaryColor),
                                                         )
                                                       : null,
                                             ),
@@ -536,7 +536,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                 padding:
                                                     const EdgeInsets.all(6),
                                                 decoration: BoxDecoration(
-                                                  color: _kBlue,
+                                                  color: primaryColor,
                                                   shape: BoxShape.circle,
                                                   border: Border.all(
                                                       color: Colors.white,
@@ -587,7 +587,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 12, vertical: 4),
                                             decoration: BoxDecoration(
-                                              color: _kBlue.withOpacity(0.08),
+                                              color: primaryColor.withOpacity(0.08),
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                             ),
@@ -595,7 +595,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                 (user?['role'] ?? 'user')
                                                     .toUpperCase(),
                                                 style: TextStyle(
-                                                    color: _kBlue
+                                                    color: primaryColor
                                                         .withOpacity(0.9),
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w800,
@@ -617,7 +617,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                 child: TabBar(
                                   controller: _tabs,
                                   labelColor: theme.surfaceText,
-                                  indicatorColor: _kBlue,
+                                  indicatorColor: primaryColor,
                                   indicatorWeight: 3,
                                   unselectedLabelColor: theme.mutedText,
                                   labelStyle: const TextStyle(
@@ -696,6 +696,6 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           ),
         ],
       ),
-    ); // <-- The missing semicolon was added right here
+    ); 
   }
 }

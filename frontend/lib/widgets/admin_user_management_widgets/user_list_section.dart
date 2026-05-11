@@ -60,8 +60,6 @@ class UserListSection extends StatelessWidget {
               separatorBuilder: (_, __) => Divider(height: 1, indent: 20, color: theme.border),
               itemBuilder: (context, i) {
                 final u = users[i];
-                print(
-                    'Building tile for user: ${u['id']}, is_active: ${u['is_active']}');
                 return UserTile(
                   key: ValueKey(toInt(u['id'])),
                   user: u,

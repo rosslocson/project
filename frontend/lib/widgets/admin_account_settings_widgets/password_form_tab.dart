@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import 'status_message_banner.dart';
 
-const _kBlue = Color(0xFF00022E);
-
 class PasswordFormTab extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController curPassCtrl;
@@ -44,6 +42,9 @@ class PasswordFormTab extends StatelessWidget {
     IconData? prefixIcon,
   }) {
     final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final errorColor = isDark ? const Color(0xFF7367F0).withOpacity(0.6) : const Color(0xFF00022E).withOpacity(0.6);
 
     return InputDecoration(
       labelText: label,
@@ -54,8 +55,8 @@ class PasswordFormTab extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.border, width: 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kBlue, width: 1.5)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: const Color(0xFF00022E).withOpacity(0.6), width: 1)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 1.5)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: errorColor, width: 1)),
     );
   }
 
@@ -75,6 +76,9 @@ class PasswordFormTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -139,7 +143,7 @@ class PasswordFormTab extends StatelessWidget {
             child: ElevatedButton(
               onPressed: savingPass ? null : onSave,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kBlue,
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,

@@ -5,6 +5,7 @@ const kCosmicBlue = Color(0xFF00022E);
 const kCrimsonDeep = Color(0xFF00022E);
 const kNavyDeep = Color(0xFF1A1F5A);
 const kGlowBlue = Color(0xFF4C6FFF);
+const kAccentPurple = Color(0xFF7367F0);
 const kBgLight = Color(0xFFF5F7FF);
 const kBgGradientEnd = Color(0xFFEDEFFF);
 const kTextSecondary = Color(0xFFA0A3BD);
@@ -78,19 +79,22 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
   static const light = InternSpaceThemeColors(
     appBackground: Color(0xFFFFFFFF),
     useSpaceBackground: false,
+    // Sidebar untouched
     sidebarBackground: Color(0xFFF2F7FF),
     sidebarText: Color(0xFF050816),
     sidebarMutedText: Color(0xFF66738F),
     sidebarActiveBackground: Color(0xFFDCE6FF),
     sidebarActiveForeground: Color(0xFF4F5DE6),
     sidebarHoverBackground: Color(0xFFE8F0FF),
-    topbarText: Color(0xFF050816),
-    topbarMutedText: Color(0xFF4B5563),
+    // Brand Colors Applied
+    topbarText: Color(0xFF00022E), 
+    topbarMutedText: Color(0xFF6B7280),
     topbarScrim: Color(0xFFFFFFFF),
     surface: Color(0xFFFFFFFF),
-    surfaceText: Color(0xFF050816),
-    mutedText: Color(0xFF6B7280),
+    surfaceText: Color(0xFF000000), 
+    mutedText: Color(0xFF6B7280), 
     border: Color(0xFFD9E3F7),
+    // Cards untouched
     dashboardCardStart: Color(0xFFFFFFFF),
     dashboardCardEnd: Color(0xFFFFFFFF),
     dashboardCardText: Color(0xFF050816),
@@ -98,8 +102,8 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
     metricCardText: Color(0xFF0A1425),
     metricCardMutedText: Color(0xFF6B7280),
     listBackground: Color(0xFFFFFFFF),
-    listText: Color(0xFF050816),
-    listMutedText: Color(0xFF6B7280),
+    listText: Color(0xFF000000), 
+    listMutedText: Color(0xFF6B7280), 
     userBadgeBackground: Color(0xFFEAFBF1),
     adminBadgeBackground: Color(0xFFFDECEC),
     formFill: Color(0xFFF9FAFB),
@@ -110,19 +114,22 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
   static const dark = InternSpaceThemeColors(
     appBackground: Color(0xFF050510),
     useSpaceBackground: true,
+    // Sidebar untouched
     sidebarBackground: Color(0xFF0B0F2F),
     sidebarText: Colors.white,
     sidebarMutedText: Color(0xFFA78BFA),
     sidebarActiveBackground: Color(0xFF6366F1),
     sidebarActiveForeground: Color(0xFFFFFFFF),
     sidebarHoverBackground: Color(0x1AFFFFFF),
+    // Brand Colors Applied
     topbarText: Color(0xFFFFFFFF),
-    topbarMutedText: Color(0xCCFFFFFF),
+    topbarMutedText: Color(0xB3FFFFFF), 
     topbarScrim: Color(0xFF050505),
     surface: Color(0xFF0B0B13),
-    surfaceText: Color(0xFFF5F7FB),
-    mutedText: Color(0xFFAEB4C4),
+    surfaceText: Color(0xFFFFFFFF), 
+    mutedText: Color(0xB3FFFFFF), 
     border: Color(0xFF2A2A38),
+    // Cards untouched
     dashboardCardStart: Color(0xFF0B0B13),
     dashboardCardEnd: Color(0xFF000000),
     dashboardCardText: Color(0xFFFFFFFF),
@@ -130,8 +137,8 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
     metricCardText: Color(0xFFFFFFFF),
     metricCardMutedText: Color(0xFFAEB4C4),
     listBackground: Color(0xFF0B0B13),
-    listText: Color(0xFFF5F7FB),
-    listMutedText: Color(0xFFAEB4C4),
+    listText: Color(0xFFFFFFFF), 
+    listMutedText: Color(0xB3FFFFFF), 
     userBadgeBackground: Color(0x3316A34A),
     adminBadgeBackground: Color(0x33DC2626),
     formFill: Color(0xFF14141D),
@@ -236,7 +243,7 @@ ThemeData internSpaceTheme({required Brightness brightness}) {
 
   final base = ThemeData(
     colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF6366F1),
+      seedColor: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
       brightness: brightness,
       surface: colors.surface,
     ),
@@ -274,17 +281,28 @@ ThemeData internSpaceTheme({required Brightness brightness}) {
       textStyle: TextStyle(color: colors.surfaceText, fontSize: 13),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
+      ),
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: colors.formFill,
-      hintStyle: TextStyle(color: colors.mutedText, fontSize: 13),
+      hintStyle: TextStyle(
+        color: isDark ? const Color(0xB3FFFFFF) : const Color(0x8A000000), 
+        fontSize: 13
+      ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colors.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E), 
+          width: 1.5
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -299,48 +317,61 @@ ThemeData internSpaceTheme({required Brightness brightness}) {
 }
 
 InputDecoration pillInputDecoration({
+  BuildContext? context,
   String? hint,
   Widget? suffix,
   Widget? prefix,
-}) =>
-    InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
-      filled: true,
-      fillColor: null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      suffixIcon: suffix,
-      prefixIcon: prefix,
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide:
-            BorderSide(color: kCosmicBlue.withValues(alpha: 0.5), width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide(
-          color: const Color(0xFF00022E).withValues(alpha: 0.6),
-          width: 1.5,
-        ),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: const BorderSide(color: Color(0xFF00022E), width: 2),
-      ),
-    );
+}) {
+  final isDark = context != null ? Theme.of(context).brightness == Brightness.dark : false;
+  final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+  final hintColor = isDark ? const Color(0xB3FFFFFF) : const Color(0x8A000000);
 
-Widget fieldLabel(String text) => Text(
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: TextStyle(color: hintColor, fontSize: 13),
+    filled: true,
+    fillColor: null,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+    suffixIcon: suffix,
+    prefixIcon: prefix,
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(
+        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200, 
+        width: 1.5
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5), width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(
+        color: primaryColor.withValues(alpha: 0.6),
+        width: 1.5,
+      ),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(color: primaryColor, width: 2),
+    ),
+  );
+}
+
+Widget fieldLabel(String text) => Builder(
+  builder: (context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF00022E),
+        color: isDark ? Colors.white : const Color(0xFF00022E),
       ),
     );
+  }
+);
 
 class BlueButton extends StatelessWidget {
   final String label;
@@ -356,13 +387,15 @@ class BlueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final btnColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: kCosmicBlue,
+        backgroundColor: btnColor,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         elevation: 0,
       ).copyWith(
         elevation: WidgetStateProperty.resolveWith(
@@ -408,16 +441,30 @@ class PillDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return DropdownButtonFormField<String>(
       initialValue: value,
       validator: validator,
-      decoration: pillInputDecoration(),
+      decoration: pillInputDecoration(
+        context: context,
+      ),
       hint: Text(
         hint,
-        style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+        style: TextStyle(
+          color: isDark ? const Color(0xB3FFFFFF) : const Color(0x8A000000), 
+          fontSize: 13
+        ),
       ),
-      icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade500),
-      style: const TextStyle(color: Colors.black87, fontSize: 13),
+      icon: Icon(
+        Icons.keyboard_arrow_down, 
+        color: isDark ? Colors.white70 : Colors.grey.shade500
+      ),
+      style: TextStyle(
+        color: isDark ? Colors.white : Colors.black87, 
+        fontSize: 13
+      ),
+      dropdownColor: isDark ? const Color(0xFF14141D) : Colors.white,
       items: items
           .map(
             (s) => DropdownMenuItem(
@@ -434,4 +481,3 @@ class PillDropdown extends StatelessWidget {
     );
   }
 }
-

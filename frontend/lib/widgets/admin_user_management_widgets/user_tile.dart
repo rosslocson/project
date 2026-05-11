@@ -24,6 +24,9 @@ class UserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    
     final isActiveUser = isActive(user);
     final isAdmin = user['role'] == 'admin';
 
@@ -51,7 +54,7 @@ class UserTile extends StatelessWidget {
             CircleAvatar(
               radius: 24,
               backgroundColor:
-                  isAdmin ? Colors.indigo.shade50 : Colors.blue.shade50,
+                  isAdmin ? primaryColor.withValues(alpha: 0.15) : primaryColor.withValues(alpha: 0.05),
               backgroundImage: finalAvatarUrl.isNotEmpty
                   ? NetworkImage(finalAvatarUrl)
                   : null,
@@ -59,9 +62,7 @@ class UserTile extends StatelessWidget {
                   ? Text(
                       initials.isEmpty ? 'U' : initials,
                       style: TextStyle(
-                        color: isAdmin
-                            ? Colors.indigo.shade700
-                            : Colors.blue.shade700,
+                        color: primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
                     )
@@ -75,7 +76,7 @@ class UserTile extends StatelessWidget {
                   width: 14,
                   height: 14,
                   decoration: BoxDecoration(
-                        color: Colors.green,
+                    color: Colors.green,
                     shape: BoxShape.circle,
                     border: Border.all(color: theme.listBackground, width: 2),
                   ),
@@ -91,8 +92,8 @@ class UserTile extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: isArchivedView
-                    ? Colors.grey.shade700
-                    : (isActiveUser ? theme.listText : Colors.grey),
+                    ? theme.listMutedText
+                    : (isActiveUser ? theme.listText : theme.listMutedText),
                 decoration: (!isActiveUser && !isArchivedView)
                     ? TextDecoration.lineThrough
                     : null,
@@ -121,20 +122,20 @@ class UserTile extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 11,
                     color: isArchivedView
-                        ? Colors.grey.shade500
+                        ? theme.listMutedText.withValues(alpha: 0.6)
                         : (isActiveUser
                             ? theme.listMutedText
-                            : Colors.grey.shade400))),
+                            : theme.listMutedText.withValues(alpha: 0.8)))),
             if ((user['department'] as String? ?? '').isNotEmpty)
               Text(
                 '${user['department']} · ${user['position'] ?? ''}',
                 style: TextStyle(
                     fontSize: 10,
                     color: isArchivedView
-                        ? Colors.grey.shade400
+                        ? theme.listMutedText.withValues(alpha: 0.6)
                         : (isActiveUser
                             ? theme.listMutedText.withValues(alpha: 0.8)
-                            : Colors.grey.shade400)),
+                            : theme.listMutedText.withValues(alpha: 0.8))),
               ),
           ],
         ),
@@ -144,7 +145,7 @@ class UserTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: isAdmin ? Colors.indigo.shade50 : Colors.blue.shade50,
+                color: isAdmin ? primaryColor.withValues(alpha: 0.15) : primaryColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -152,8 +153,7 @@ class UserTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color:
-                      isAdmin ? Colors.indigo.shade700 : Colors.blue.shade700,
+                  color: isAdmin ? primaryColor : primaryColor.withValues(alpha: 0.8),
                 ),
               ),
             ),
@@ -162,12 +162,12 @@ class UserTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
+                    color: Colors.orange.withValues(alpha: isDark ? 0.2 : 0.1),
                     borderRadius: BorderRadius.circular(20)),
                 child: Text('Archived',
                     style: TextStyle(
                         fontSize: 11,
-                        color: Colors.orange.shade800,
+                        color: isDark ? Colors.orange.shade300 : Colors.orange.shade800,
                         fontWeight: FontWeight.bold)),
               )
             else
@@ -175,8 +175,8 @@ class UserTile extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isActiveUser
-                      ? Colors.green.shade50
-                      : Colors.yellow.shade100,
+                      ? Colors.green.withValues(alpha: isDark ? 0.2 : 0.1)
+                      : Colors.yellow.withValues(alpha: isDark ? 0.2 : 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -185,8 +185,8 @@ class UserTile extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: isActiveUser
-                        ? Colors.green.shade800
-                        : Colors.yellow.shade900,
+                        ? (isDark ? Colors.green.shade300 : Colors.green.shade800)
+                        : (isDark ? Colors.yellow.shade400 : Colors.yellow.shade900),
                   ),
                 ),
               ),
@@ -201,9 +201,12 @@ class UserTile extends StatelessWidget {
                   child: CupertinoSwitch(
                     value: isActiveUser,
                     activeTrackColor: isCurrentUser
-                        ? Colors.grey.shade400
-                        : const Color(0xFF00022E),
-                    inactiveTrackColor: Colors.grey.shade300,
+                        ? theme.listMutedText.withValues(alpha: 0.5)
+                        : primaryColor,
+                    // Revised: Added explicit trackColor for off state visibility
+                    trackColor: isDark 
+                        ? Colors.white.withValues(alpha: 0.2) // Lighter in Dark Mode
+                        : Colors.grey.shade400,              // Darker in Light Mode
                     onChanged: isCurrentUser ? null : (_) => onToggle(),
                   ),
                 ),
@@ -216,14 +219,13 @@ class UserTile extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4A5E9A).withValues(alpha: 0.1),
+                    color: primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: IconButton(
                     iconSize: 18,
                     padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.unarchive_rounded,
-                        color: Color(0xFF4A5E9A)),
+                    icon: Icon(Icons.unarchive_rounded, color: primaryColor),
                     onPressed: onRestore,
                   ),
                 ),
@@ -238,12 +240,12 @@ class UserTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isCurrentUser
                         ? Colors.transparent
-                        : Colors.grey.shade100,
+                        : (isDark ? theme.formFill : Colors.grey.shade100),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isCurrentUser
                           ? Colors.transparent
-                          : Colors.grey.shade200,
+                          : theme.border,
                       width: 1,
                     ),
                   ),
@@ -252,8 +254,8 @@ class UserTile extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     icon: Icon(Icons.archive_outlined,
                         color: isCurrentUser
-                            ? Colors.grey.shade300
-                            : Colors.blueGrey.shade400),
+                            ? theme.listMutedText.withValues(alpha: 0.3)
+                            : theme.listMutedText),
                     onPressed: isCurrentUser ? null : onArchive,
                   ),
                 ),
