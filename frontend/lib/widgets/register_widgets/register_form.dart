@@ -68,10 +68,26 @@ class RegisterForm {
     required this.onRegister,
   });
 
-  Widget _shimmerDropdown(InputDecoration dec) {
+  Widget _shimmerDropdown(InputDecoration dec, bool isDark) {
     return DropdownButtonFormField<String>(
-      decoration: dec.copyWith(filled: true, fillColor: Colors.grey.shade100),
-      hint: const Text('Loading...', style: TextStyle(fontSize: 13)),
+      isExpanded: true, // <-- Fix applied here
+      decoration: dec.copyWith(
+        filled: true,
+        fillColor: isDark ? const Color(0xFF14141D) : Colors.grey.shade100,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF2A2A38) : Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+      ),
+      hint: Text(
+        'Loading...',
+        style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54),
+        overflow: TextOverflow.ellipsis,
+      ),
       icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade300),
       items: const [],
       onChanged: null,
@@ -80,13 +96,44 @@ class RegisterForm {
 
   Widget buildForm({required bool isMobile, required BuildContext context}) {
     final dec = pillInputDecoration();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const kAccentPurple = Color(0xFF7367F0);
+
+    // Reusable styles
+    final labelStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: isDark ? Colors.white : const Color(0xFF00022E),
+    );
+
+    final inputTextStyle = TextStyle(
+      fontSize: 14,
+      color: isDark ? Colors.white : Colors.black,
+    );
+
+    // Reusable borders
+    final defaultBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFF2A2A38) : Colors.grey.shade300,
+        width: 1.5,
+      ),
+    );
+
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(
+        color: Color(0xFF6366F1), // The purple color when clicked
+        width: 2,
+      ),
+    );
 
     return Container(
       alignment: Alignment.center,
       color: Colors.transparent,
       padding: EdgeInsets.symmetric(
           horizontal: isMobile ? 24 : 64,
-          vertical: isMobile ? 16 : 24), // reduced vertical padding
+          vertical: isMobile ? 24 : 40),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
         child: Form(
@@ -95,23 +142,24 @@ class RegisterForm {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'CREATE ACCOUNT',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: kCosmicBlue,
-                    letterSpacing: 1.2),
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : kCosmicBlue,
+                  letterSpacing: 1.2,
+                ),
               ),
-              const SizedBox(height: 24), // reduced from 24
+              const SizedBox(height: 40), 
 
               if (auth.error != null) ...[
                 RegisterErrorBanner(
                   error: auth.error!,
                   onClear: () => context.read<AuthProvider>().clearError(),
                 ),
-                const SizedBox(height: 6), // reduced from 8
+                const SizedBox(height: 12),
               ],
 
               // ── First Name / Last Name ──────────────────────────────────
@@ -121,11 +169,20 @@ class RegisterForm {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      fieldLabel('First Name'),
+                      Text('First Name', style: labelStyle),
                       const SizedBox(height: 4),
                       TextFormField(
                         controller: firstCtrl,
-                        decoration: dec.copyWith(hintText: 'First Name'),
+                        style: inputTextStyle,
+                        cursorColor: kAccentPurple,
+                        decoration: dec.copyWith(
+                          hintText: 'First Name',
+                          hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54),
+                          fillColor: isDark ? const Color(0xFF14141D) : null,
+                          enabledBorder: defaultBorder,
+                          focusedBorder: focusedBorder,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        ),
                         validator: (v) => v!.isEmpty ? 'Required' : null,
                       ),
                     ],
@@ -137,39 +194,57 @@ class RegisterForm {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      fieldLabel('Last Name'),
+                      Text('Last Name', style: labelStyle),
                       const SizedBox(height: 4),
                       TextFormField(
                         controller: lastCtrl,
-                        decoration: dec.copyWith(hintText: 'Last Name'),
+                        style: inputTextStyle,
+                        cursorColor: kAccentPurple,
+                        decoration: dec.copyWith(
+                          hintText: 'Last Name',
+                          hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54),
+                          fillColor: isDark ? const Color(0xFF14141D) : null,
+                          enabledBorder: defaultBorder,
+                          focusedBorder: focusedBorder,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        ),
                         validator: (v) => v!.isEmpty ? 'Required' : null,
                       ),
                     ],
                   ),
                 ),
               ]),
-              const SizedBox(height: 8), // reduced from 10
+              const SizedBox(height: 12),
 
               // ── Email ───────────────────────────────────────────────────
-              fieldLabel('Email Address'),
+              Text('Email Address', style: labelStyle),
               const SizedBox(height: 4),
               TextFormField(
                 controller: emailCtrl,
                 keyboardType: TextInputType.emailAddress,
-                decoration: dec.copyWith(hintText: 'Enter Email Address'),
+                style: inputTextStyle,
+                cursorColor: kAccentPurple,
+                decoration: dec.copyWith(
+                  hintText: 'Enter Email Address',
+                  hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Email is required';
-                  final emailRegex = RegExp(
-                      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                  final emailRegex =
+                      RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
                   if (!emailRegex.hasMatch(v)) {
                     return 'Enter a valid email (e.g., name@example.com)';
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 8), // reduced from 10
+              const SizedBox(height: 12),
 
-              // ── Department / Position ───────────────────────────────────
+              // ── Department / Required OJT Hours ─────────────────────────
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,20 +254,31 @@ class RegisterForm {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          fieldLabel('Department'),
+                          Text('Department', style: labelStyle),
                           const SizedBox(height: 4),
                           loadingDepts
-                              ? _shimmerDropdown(dec)
+                              ? _shimmerDropdown(dec, isDark)
                               : DropdownButtonFormField<String>(
+                                  isExpanded: true, // <-- Fix applied here
                                   initialValue: selectedDept,
-                                  decoration: dec,
+                                  dropdownColor: isDark ? const Color(0xFF14141D) : null,
+                                  decoration: dec.copyWith(
+                                    fillColor: isDark ? const Color(0xFF14141D) : null,
+                                    enabledBorder: defaultBorder,
+                                    focusedBorder: focusedBorder,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                  ),
                                   hint: Text(
                                     !deptsFetched
-                                        ? 'Select Department' // ← still fetching, show neutral hint
+                                        ? 'Select Department'
                                         : departments.isEmpty
                                             ? 'None available'
                                             : 'Select Department',
-                                    style: const TextStyle(fontSize: 13),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: isDark ? Colors.white70 : Colors.black54,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   icon: Icon(Icons.keyboard_arrow_down,
                                       color: Colors.grey.shade500),
@@ -201,8 +287,7 @@ class RegisterForm {
                                           value: s,
                                           child: Text(s,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontSize: 12))))
+                                              style: inputTextStyle)))
                                       .toList(),
                                   onChanged: onDeptChanged,
                                 ),
@@ -225,24 +310,35 @@ class RegisterForm {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          fieldLabel('Position'),
+                          Text('Required OJT Hours', style: labelStyle),
                           const SizedBox(height: 4),
-                          IgnorePointer(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: defaultPosition,
-                              decoration: dec.copyWith(
-                                  filled: true,
-                                  fillColor: Colors.grey.shade100),
-                              icon: Icon(Icons.keyboard_arrow_down,
-                                  color: Colors.grey.shade300),
-                              items: [
-                                DropdownMenuItem(
-                                    value: defaultPosition,
-                                    child: Text(defaultPosition,
-                                        style: const TextStyle(fontSize: 12))),
-                              ],
-                              onChanged: null,
+                          TextFormField(
+                            controller: ojtHoursCtrl,
+                            keyboardType: TextInputType.number,
+                            style: inputTextStyle,
+                            cursorColor: kAccentPurple,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: dec.copyWith(
+                              hintText: 'e.g. 400',
+                              hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54),
+                              fillColor: isDark ? const Color(0xFF14141D) : null,
+                              enabledBorder: defaultBorder,
+                              focusedBorder: focusedBorder,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                             ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Please enter your required OJT hours';
+                              }
+                              final n = int.tryParse(v.trim());
+                              if (n == null || n <= 0) {
+                                return 'Enter a valid number greater than 0';
+                              }
+                              if (n > 2000) {
+                                return 'Value seems too high — please check';
+                              }
+                              return null;
+                            },
                           ),
                         ],
                       ),
@@ -250,43 +346,24 @@ class RegisterForm {
                   ],
                 ),
               ),
-              const SizedBox(height: 8), // reduced from 10
-
-              // ── Required OJT Hours ──────────────────────────────────────
-              fieldLabel('Required OJT Hours'),
-              const SizedBox(height: 4),
-              TextFormField(
-                controller: ojtHoursCtrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: dec.copyWith(
-                  hintText: 'e.g. 400',
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'Please enter your required OJT hours';
-                  }
-                  final n = int.tryParse(v.trim());
-                  if (n == null || n <= 0) {
-                    return 'Enter a valid number greater than 0';
-                  }
-                  if (n > 2000) {
-                    return 'Value seems too high — please check';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 8), // reduced from 10
+              const SizedBox(height: 12),
 
               // ── Password ────────────────────────────────────────────────
-              fieldLabel('Password'),
+              Text('Password', style: labelStyle),
               const SizedBox(height: 4),
               TextFormField(
                 controller: passCtrl,
                 obscureText: obscurePass,
                 onChanged: onPassChanged,
+                style: inputTextStyle,
+                cursorColor: kAccentPurple,
                 decoration: dec.copyWith(
                   hintText: 'Create a password',
+                  hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: IconButton(
@@ -295,7 +372,7 @@ class RegisterForm {
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                           color: const Color(0xFF9CA3AF),
-                          size: 20),
+                          size: 22),
                       onPressed: onToggleObscurePass,
                     ),
                   ),
@@ -312,25 +389,31 @@ class RegisterForm {
                   return null;
                 },
               ),
-
               if (passCtrl.text.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 PasswordStrengthIndicator(
                     passValue: passValue,
                     passColor: passColor,
                     passStrength: passStrength),
               ],
-              const SizedBox(height: 8), // reduced from 10
+              const SizedBox(height: 12),
 
               // ── Confirm Password ────────────────────────────────────────
-              fieldLabel('Confirm Password'),
+              Text('Confirm Password', style: labelStyle),
               const SizedBox(height: 4),
               TextFormField(
                 controller: confirmCtrl,
                 obscureText: obscureConfirm,
                 onChanged: onConfirmChanged,
+                style: inputTextStyle,
+                cursorColor: kAccentPurple,
                 decoration: dec.copyWith(
-                  hintText: 'Confirm your password',
+                  hintText: 'Confirm password',
+                  hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: IconButton(
@@ -339,7 +422,7 @@ class RegisterForm {
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                           color: const Color(0xFF9CA3AF),
-                          size: 20),
+                          size: 22),
                       onPressed: onToggleObscureConfirm,
                     ),
                   ),
@@ -352,7 +435,6 @@ class RegisterForm {
                   return null;
                 },
               ),
-
               if (confirmError != null) ...[
                 const SizedBox(height: 4),
                 Padding(
@@ -361,30 +443,70 @@ class RegisterForm {
                       style: const TextStyle(fontSize: 11, color: Colors.red)),
                 ),
               ],
-
-              const SizedBox(height: 20), // reduced from 24
+              const SizedBox(height: 24),
 
               // ── Submit ──────────────────────────────────────────────────
-              BlueButton(
-                label: 'CREATE ACCOUNT',
-                onPressed: auth.isLoading ? null : onRegister,
-                loading: auth.isLoading,
-              ),
-
-              const SizedBox(height: 15), // reduced from 25
+              isDark
+                  ? SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: auth.isLoading ? null : onRegister,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kAccentPurple,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              kAccentPurple.withOpacity(0.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: auth.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'CREATE ACCOUNT',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                      ),
+                    )
+                  : BlueButton(
+                      label: 'CREATE ACCOUNT',
+                      onPressed: auth.isLoading ? null : onRegister,
+                      loading: auth.isLoading,
+                    ),
+              const SizedBox(height: 16),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Already have an account? ',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+                  Text(
+                    'Already have an account? ',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white70 : const Color(0xFF6B7280),
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () => context.go('/login'),
-                    child: const Text('LOG IN',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: kCosmicBlue,
-                            fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'LOG IN',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? kAccentPurple : kCosmicBlue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),

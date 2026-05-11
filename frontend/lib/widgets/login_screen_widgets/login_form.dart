@@ -5,6 +5,8 @@ import '../app_theme.dart'; // Adjust path if needed
 import 'locked_banner.dart';
 import 'error_banner.dart';
 
+const kCosmicBlue = Color(0xFF00022E);
+
 class LoginForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController emailCtrl;
@@ -39,8 +41,36 @@ class LoginForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dec =
-        pillInputDecoration(); // Assuming this comes from app_theme.dart and handles dark borders
+    final dec = pillInputDecoration(); 
+
+    // Reusable styles matching RegisterForm
+    final labelStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: isDark ? Colors.white : const Color(0xFF00022E),
+    );
+
+    final inputTextStyle = TextStyle(
+      fontSize: 14,
+      color: isDark ? Colors.white : Colors.black,
+    );
+
+    // Reusable borders matching RegisterForm
+    final defaultBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFF2A2A38) : Colors.grey.shade300,
+        width: 1.5,
+      ),
+    );
+
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(
+        color: Color(0xFF6366F1), // The purple color when clicked
+        width: 2,
+      ),
+    );
 
     return Container(
       alignment: Alignment.center,
@@ -54,14 +84,15 @@ class LoginForm extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'LOG IN',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white, // Changed to white for dark mode
-                    letterSpacing: 1.2),
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : kCosmicBlue,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(height: 40),
               if (isLocked) ...[
@@ -77,32 +108,24 @@ class LoginForm extends StatelessWidget {
                 const SizedBox(height: 20),
               ],
               
-              // If fieldLabel is hardcoded to black in app_theme, you may need to 
-              // update it there to return white text, or replace it with a Text widget here.
-              const Text(
-                'Email Address',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+              Text('Email Address', style: labelStyle),
               const SizedBox(height: 6),
               TextFormField(
                 controller: emailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 enabled: !isLocked,
-                style: const TextStyle(color: Colors.white), // Added white text for input
+                style: inputTextStyle,
+                cursorColor: kAccentPurple,
                 decoration: dec.copyWith(
                   hintText: 'Enter your email',
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: Color(0xFF2A2A38), width: 1.5),
+                  hintStyle: TextStyle(
+                    fontSize: 13, 
+                    color: isDark ? Colors.white70 : Colors.black54,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
-                  ),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Email is required';
@@ -111,30 +134,25 @@ class LoginForm extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Password',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+
+              Text('Password', style: labelStyle),
               const SizedBox(height: 6),
               TextFormField(
                 controller: passCtrl,
                 obscureText: obscure,
                 enabled: !isLocked,
-                style: const TextStyle(color: Colors.white), // Added white text for input
+                style: inputTextStyle,
+                cursorColor: kAccentPurple,
                 decoration: dec.copyWith(
                   hintText: 'Enter your password',
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: Color(0xFF2A2A38), width: 1.5),
+                  hintStyle: TextStyle(
+                    fontSize: 13, 
+                    color: isDark ? Colors.white70 : Colors.black54,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
-                  ),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: IconButton(
@@ -153,71 +171,87 @@ class LoginForm extends StatelessWidget {
                     (v == null || v.isEmpty) ? 'Password is required' : null,
               ),
               const SizedBox(height: 12),
+              
               Row(
                 children: [
                   const Spacer(),
                   GestureDetector(
                     onTap: onForgotPassword,
-                    child: const Text(
+                    child: Text(
                       'Forgot Password?',
                       style: TextStyle(
-                          fontSize: 13,
-                          color: kAccentPurple, // Changed to match Save Changes button
-                          fontWeight: FontWeight.bold),
+                        fontSize: 13,
+                        color: isDark ? kAccentPurple : kCosmicBlue,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 36),
               
-              // Replaced BlueButton with a custom styled ElevatedButton to match the screenshot
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: (auth.isLoading || isLocked) ? null : onLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kAccentPurple,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: kAccentPurple.withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: auth.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+              // Dynamic button logic matching RegisterForm
+              isDark
+                  ? SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: (auth.isLoading || isLocked) ? null : onLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kAccentPurple,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: kAccentPurple.withOpacity(0.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        )
-                      : Text(
-                          isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'LOG IN',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
+                          elevation: 0,
                         ),
-                ),
-              ),
+                        child: auth.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'LOG IN',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                      ),
+                    )
+                  : BlueButton( // Assumes this exists and handles light mode natively like in Register
+                      label: isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'LOG IN',
+                      onPressed: (auth.isLoading || isLocked) ? null : onLogin,
+                      loading: auth.isLoading,
+                    ),
+              
               const SizedBox(height: 28),
+              
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Don't have an account? ",
-                      style: TextStyle(
-                          fontSize: 13, 
-                          color: Colors.white70)), // Lightened for dark mode
+                  Text(
+                    "Don't have an account? ",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white70 : const Color(0xFF6B7280),
+                    ),
+                  ),
                   GestureDetector(
                     onTap: () => context.go('/register'),
-                    child: const Text('CREATE ACCOUNT',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: kAccentPurple, // Changed to match Save Changes button
-                            fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'CREATE ACCOUNT',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? kAccentPurple : kCosmicBlue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
