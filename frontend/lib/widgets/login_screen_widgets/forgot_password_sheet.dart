@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 import '../../services/api_service.dart';
 import '../app_theme.dart';
 
+const kCosmicBlue = Color(0xFF00022E);
+const kAccentPurple = Color(0xFF7367F0);
+
 class ForgotPasswordSheet extends StatefulWidget {
   final String initialEmail;
   final VoidCallback onResetSuccess;
@@ -148,8 +151,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
           content: const Text('Password reset! You can now log in.'),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     } else {
@@ -253,15 +255,19 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     });
   }
 
-  Widget _timerCard() {
+  Widget _timerCard(bool isDark) {
     final active = _otpSecondsLeft > 0;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: active ? Colors.green.shade50 : Colors.red.shade50,
+        color: active
+            ? (isDark ? Colors.green.withOpacity(0.1) : Colors.green.shade50)
+            : (isDark ? Colors.red.withOpacity(0.1) : Colors.red.shade50),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: active ? Colors.green.shade100 : Colors.red.shade100,
+          color: active
+              ? (isDark ? Colors.green.withOpacity(0.3) : Colors.green.shade100)
+              : (isDark ? Colors.red.withOpacity(0.3) : Colors.red.shade100),
         ),
       ),
       child: Row(
@@ -269,13 +275,17 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
           Icon(
             Icons.timer_outlined,
             size: 20,
-            color: active ? Colors.green.shade700 : Colors.red.shade700,
+            color: active
+                ? (isDark ? Colors.green.shade400 : Colors.green.shade700)
+                : (isDark ? Colors.red.shade400 : Colors.red.shade700),
           ),
           const SizedBox(width: 10),
           Text(
             active ? 'OTP expires in $_otpTimeText' : 'OTP expired',
             style: TextStyle(
-              color: active ? Colors.green.shade800 : Colors.red.shade800,
+              color: active
+                  ? (isDark ? Colors.green.shade300 : Colors.green.shade800)
+                  : (isDark ? Colors.red.shade300 : Colors.red.shade800),
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -285,7 +295,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     );
   }
 
-  Widget _otpBoxes() {
+  Widget _otpBoxes(bool isDark) {
     return Row(
       children: List.generate(6, (index) {
         return Expanded(
@@ -302,25 +312,30 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                   keyboardType: TextInputType.number,
                   textInputAction:
                       index == 5 ? TextInputAction.done : TextInputAction.next,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: kCosmicBlue,
+                    color: isDark ? Colors.white : kCosmicBlue,
                   ),
+                  cursorColor: kAccentPurple,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
                     counterText: '',
                     contentPadding: EdgeInsets.zero,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: isDark ? const Color(0xFF14141D) : Colors.white,
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(
+                        color: isDark ? const Color(0xFF2A2A38) : Colors.grey.shade300,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide:
-                          const BorderSide(color: kCosmicBlue, width: 2),
+                      borderSide: BorderSide(
+                        color: isDark ? const Color(0xFF6366F1) : kCosmicBlue,
+                        width: 2,
+                      ),
                     ),
                   ),
                   onChanged: (value) => _handleOtpChanged(value, index),
@@ -333,14 +348,92 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     );
   }
 
+  // Reusable button builder replacing BlueButton dynamically for dark mode
+  Widget _buildActionButton({
+    required String label,
+    required VoidCallback? onPressed,
+    required bool loading,
+    required bool isDark,
+  }) {
+    if (isDark) {
+      return SizedBox(
+        height: 50,
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kAccentPurple,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: kAccentPurple.withOpacity(0.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+          ),
+          child: loading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+        ),
+      );
+    }
+    // Assuming BlueButton exists and handles light mode as per original logic
+    return BlueButton(
+      label: label,
+      onPressed: onPressed,
+      loading: loading,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dec = pillInputDecoration();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Reusable text styles matching Register/Login logic
+    final labelStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: isDark ? Colors.white : const Color(0xFF00022E),
+    );
+
+    final inputTextStyle = TextStyle(
+      fontSize: 14,
+      color: isDark ? Colors.white : Colors.black,
+    );
+
+    final defaultBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFF2A2A38) : Colors.grey.shade300,
+        width: 1.5,
+      ),
+    );
+
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(
+        color: Color(0xFF6366F1), // The purple color when clicked
+        width: 2,
+      ),
+    );
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F0F16) : Colors.white, // Dark mode sheet bg
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(
         left: 32,
@@ -358,7 +451,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 width: 48,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2.5),
                 ),
               ),
@@ -369,25 +462,32 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: kCosmicBlue.withValues(alpha: 0.1),
+                    color: isDark
+                        ? kAccentPurple.withOpacity(0.15)
+                        : kCosmicBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.lock_reset,
-                      color: kCosmicBlue, size: 26),
+                  child: Icon(Icons.lock_reset,
+                      color: isDark ? kAccentPurple : kCosmicBlue, size: 26),
                 ),
                 const SizedBox(width: 14),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Reset Password',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : kCosmicBlue,
+                      ),
                     ),
                     Text(
                       _stepSubtitle,
-                      style:
-                          TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.grey.shade500,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -398,14 +498,20 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: isDark
+                      ? Colors.blue.withOpacity(0.1)
+                      : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade100),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.blue.withOpacity(0.3)
+                        : Colors.blue.shade100,
+                  ),
                 ),
                 child: Text(
                   stepMsg!,
                   style: TextStyle(
-                    color: Colors.blue.shade800,
+                    color: isDark ? Colors.blue.shade200 : Colors.blue.shade800,
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -414,51 +520,74 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
               const SizedBox(height: 14),
             ],
             if (step == 1) ...[
-              fieldLabel('Email Address'),
+              Text('Email Address', style: labelStyle),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _resetEmailCtrl,
                 keyboardType: TextInputType.emailAddress,
-                decoration:
-                    dec.copyWith(hintText: 'Enter your registered email'),
+                style: inputTextStyle,
+                cursorColor: kAccentPurple,
+                decoration: dec.copyWith(
+                  hintText: 'Enter your registered email',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                ),
               ),
               const SizedBox(height: 20),
-              BlueButton(
+              _buildActionButton(
                 label: 'SEND OTP',
                 onPressed: stepLoading ? null : requestReset,
                 loading: stepLoading,
+                isDark: isDark,
               ),
             ] else if (step == 2) ...[
-              _timerCard(),
+              _timerCard(isDark),
               const SizedBox(height: 14),
-              fieldLabel('6-Digit OTP'),
+              Text('6-Digit OTP', style: labelStyle),
               const SizedBox(height: 8),
-              _otpBoxes(),
+              _otpBoxes(isDark),
               const SizedBox(height: 20),
-              BlueButton(
+              _buildActionButton(
                 label: 'VERIFY OTP',
-                onPressed:
-                    stepLoading || _otpSecondsLeft <= 0 ? null : verifyOtpStep,
+                onPressed: stepLoading || _otpSecondsLeft <= 0 ? null : verifyOtpStep,
                 loading: stepLoading,
+                isDark: isDark,
               ),
               const SizedBox(height: 10),
               TextButton(
                 onPressed: _backToEmail,
                 child: Text(
                   'Back to Email',
-                  style: TextStyle(color: Colors.grey.shade600),
+                  style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.grey.shade600),
                 ),
               ),
             ] else ...[
-              _timerCard(),
+              _timerCard(isDark),
               const SizedBox(height: 14),
-              fieldLabel('New Password'),
+              Text('New Password', style: labelStyle),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _newPassCtrl,
                 obscureText: obscureNewPass,
+                style: inputTextStyle,
+                cursorColor: kAccentPurple,
                 decoration: dec.copyWith(
                   hintText: 'Enter new password',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: IconButton(
@@ -476,13 +605,23 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 ),
               ),
               const SizedBox(height: 14),
-              fieldLabel('Confirm New Password'),
+              Text('Confirm New Password', style: labelStyle),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _confPassCtrl,
                 obscureText: obscureConfPass,
+                style: inputTextStyle,
+                cursorColor: kAccentPurple,
                 decoration: dec.copyWith(
                   hintText: 'Confirm new password',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: IconButton(
@@ -500,10 +639,11 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              BlueButton(
+              _buildActionButton(
                 label: 'RESET PASSWORD',
                 onPressed: stepLoading || _otpSecondsLeft <= 0 ? null : doReset,
                 loading: stepLoading,
+                isDark: isDark,
               ),
               const SizedBox(height: 10),
               TextButton(
@@ -513,7 +653,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 }),
                 child: Text(
                   'Back to OTP',
-                  style: TextStyle(color: Colors.grey.shade600),
+                  style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.grey.shade600),
                 ),
               ),
             ],

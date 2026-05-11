@@ -184,9 +184,11 @@ class _RegisterScreenState extends State<RegisterScreen>
       onRegister: _register,
     );
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF050510) : Colors.white,
       resizeToAvoidBottomInset: false,
+
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth > 900) {
@@ -244,7 +246,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 ),
                 Expanded(
                   child: Container(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF0B0B13) : Colors.white,
                     child: SingleChildScrollView(
                       child: formWidget.buildForm(
                           isMobile: true, context: context),
@@ -262,8 +264,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                   margin:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF0B0B13) : Colors.white,
                     borderRadius: BorderRadius.circular(32),
+
                     boxShadow: [
                       BoxShadow(
                           color: Colors.black.withValues(alpha: 0.2),
