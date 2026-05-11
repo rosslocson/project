@@ -1,18 +1,19 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/app_background.dart';
-
-// ── Imported Extracted Widgets ──
 import '../widgets/register_widgets/register_form.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -30,16 +31,13 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscurePass = true;
   bool _obscureConfirm = true;
 
-  // Departments — no loading shimmer; show "no departments" notice immediately
   List<String> _departments = [];
-  bool _loadingDepts = true; // ← never show shimmer
-  bool _deptsFetched = false; // ← treat as already fetched so notice shows instantly
+  bool _loadingDepts = true;
+  bool _deptsFetched = false;
   String? _selectedDept;
 
-  // Position is always fixed to "Intern" on registration
   final String _defaultPosition = 'Intern';
 
-  // Password strength
   String _passStrength = '';
   Color _passColor = Colors.grey;
   double _passValue = 0;
@@ -74,18 +72,17 @@ class _RegisterScreenState extends State<RegisterScreen>
         final List items = data['items'] ?? [];
         if (mounted) {
           setState(() {
-            _departments =
-                items.map<String>((d) => d['name'] as String).toList();
-            _deptsFetched = true; // ← set here on success
-            _loadingDepts = false; // ← done loading
+            _departments = items.map<String>((d) => d['name'] as String).toList();
+            _deptsFetched = true;
+            _loadingDepts = false;
           });
         }
       } else {
-        if (mounted) setState(() => _deptsFetched = true); // ← and on non-200
+        if (mounted) setState(() => _deptsFetched = true);
       }
     } catch (e) {
       debugPrint('Failed to fetch departments: $e');
-      if (mounted) setState(() => _deptsFetched = true); // ← and on error
+      if (mounted) setState(() => _deptsFetched = true);
     }
   }
 
@@ -116,8 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         _passValue = 1.0;
       }
       if (_confirmCtrl.text.isNotEmpty) {
-        _confirmError =
-            _confirmCtrl.text != pass ? 'Passwords do not match' : null;
+        _confirmError = _confirmCtrl.text != pass ? 'Passwords do not match' : null;
       }
     });
   }
@@ -136,6 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
 
     final auth = context.read<AuthProvider>();
+
     final ok = await auth.register({
       'first_name': _firstCtrl.text.trim(),
       'last_name': _lastCtrl.text.trim(),
@@ -184,121 +181,179 @@ class _RegisterScreenState extends State<RegisterScreen>
       onRegister: _register,
     );
 
+    // Extracted left-side visual content
+    final leftSideContent = Stack(
+      children: [
+        Positioned.fill(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/logo_login.png',
+                height: 280,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.public, size: 120, color: Colors.white),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'READY FOR LIFTOFF?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(width: 40, height: 2, color: Colors.white54),
+              const SizedBox(height: 16),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 64.0),
+                child: Text(
+                  'Launch your intern journey today.\nBuild your profile and explore the stars of our current cohort.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 80),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF050510) : Colors.white,
       resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth > 900) {
+          final isDesktop = constraints.maxWidth > 900;
+          final iconColor = (isDesktop && !isDark) ? const Color(0xFF00022E) : Colors.white;
+
+          final themeToggle = Positioned(
+            top: 24,
+            right: 24,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+              splashRadius: 18,
+              icon: Icon(
+                isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round_outlined,
+                color: iconColor,
+                size: 20,
+              ),
+              onPressed: () => context.read<ThemeProvider>().toggleTheme(),
+            ),
+          );
+
+          if (isDesktop) {
             // Desktop Layout
-            return Row(
+            return Stack(
               children: [
-                Expanded(
-                  child: AppBackground(
-                    backgroundAsset: 'assets/images/star_background.png',
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/images/logo_login.png',
-                                height: 280,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.public,
-                                        size: 120, color: Colors.white),
-                              ),
-                              const SizedBox(height: 24),
-                              const Text(
-                                'READY FOR LIFTOFF?',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.5),
-                              ),
-                              const SizedBox(height: 16),
-                              Container(
-                                  width: 40, height: 2, color: Colors.white54),
-                              const SizedBox(height: 16),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 64.0),
-                                child: Text(
-                                  'Launch your intern journey today.\nBuild your profile and explore the stars of our current cohort.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                      height: 1.5),
+                Row(
+                  children: [
+                    Expanded(
+                      child: isDark
+                          // DARK MODE: Untouched
+                          ? AppBackground(
+                              backgroundAsset: 'assets/images/star_background.png',
+                              child: leftSideContent,
+                            )
+                          // LIGHT MODE: Bypasses AppBackground, forces image and dark backing
+                          : Container(
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF050510),
+                                image: DecorationImage(
+                                  image: AssetImage('assets/images/star_background.png'),
+                                  fit: BoxFit.cover,
                                 ),
                               ),
-                              const SizedBox(height: 80),
-                            ],
+                              child: leftSideContent,
+                            ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? null : Colors.white,
+                          gradient: isDark
+                              ? const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF010205),
+                                    Color(0xFF080E26),
+                                  ],
+                                )
+                              : null,
+                        ),
+                        child: Center(
+                          child: SingleChildScrollView(
+                            child: formWidget.buildForm(
+                              isMobile: false,
+                              context: context,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? null : Colors.white,
-                      gradient: isDark
-                          ? const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF010205), // Deepest space black
-                                Color(0xFF080E26), // Cosmic deep blue
-                              ],
-                            )
-                          : null,
-                    ),
-                    // Wrap the ScrollView in a Center to vertically align it and remove empty bottom space
-                    child: Center(
-                      child: SingleChildScrollView(
-                        // Set isMobile to false to perfectly match the Login Form's 64/40 padding
-                        child: formWidget.buildForm(
-                            isMobile: false, context: context),
                       ),
                     ),
-                  ),
+                  ],
                 ),
+                themeToggle,
               ],
             );
-          } else {
-            // Mobile Layout
-            return AppBackground(
-              backgroundAsset: 'assets/images/star_background.png',
-              child: Center(
-                child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0B0B13) : Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                          color: isDark
-                              ? Colors.black.withValues(alpha: 0.35)
-                              : Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 30,
-                          spreadRadius: 5),
-                    ],
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: SingleChildScrollView(
-                    child:
-                        formWidget.buildForm(isMobile: true, context: context),
-                  ),
-                ),
-              ),
-            );
           }
+
+          // Mobile Layout Content
+          final mobileContent = Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0B0B13) : Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.35)
+                        : Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SingleChildScrollView(
+                child: formWidget.buildForm(isMobile: true, context: context),
+              ),
+            ),
+          );
+
+          return Stack(
+            children: [
+              isDark
+                  // DARK MODE: Untouched
+                  ? AppBackground(
+                      backgroundAsset: 'assets/images/star_background.png',
+                      child: mobileContent,
+                    )
+                  // LIGHT MODE: Bypasses AppBackground
+                  : Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF050510),
+                        image: DecorationImage(
+                          image: AssetImage('assets/images/star_background.png'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      child: mobileContent,
+                    ),
+              themeToggle,
+            ],
+          );
         },
       ),
     );
