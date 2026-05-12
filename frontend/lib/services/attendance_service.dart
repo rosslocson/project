@@ -95,27 +95,60 @@ class AttendanceService {
     }
   }
 
-  /// Reports a missed clock-out for the given attendance record [id].
-  /// Returns { 'ok': true } on success or { 'ok': false, 'error': '...' }.
-  /// Reports a missed clock-out for the given attendance record [id].
-  /// Optionally includes a [reason] string sent to the backend.
-  /// Returns { 'ok': true } on success or { 'ok': false, 'error': '...' }.
-  static Future<Map<String, dynamic>> reportMissedClockOut(
-    String id, {
-    String? reason,
+  // ── NEW: unified report endpoint ──────────────────────────────────────────
+
+  /// Reports an attendance issue for any status:
+  ///   reportType: 'late' | 'absent' | 'missed_clock_out'
+  ///   date:       'YYYY-MM-DD'
+  ///   reason:     free-text (required, 5–500 chars)
+  ///
+  /// For 'absent' the backend upserts the attendance row automatically.
+  /// For 'late' and 'missed_clock_out' an existing row is required.
+  static Future<Map<String, dynamic>> reportAttendanceIssue({
+    required String date,
+    required String reportType,
+    required String reason,
   }) async {
     try {
       final res = await http.post(
-        Uri.parse(
-            '${ApiService.baseUrl}/attendance/$id/report-missed-clockout'),
-        headers: await ApiService.authHeaders(),
+        Uri.parse('${ApiService.baseUrl}/attendance/report'),
+        headers: {
+          ...await ApiService.authHeaders(),
+          'Content-Type': 'application/json',
+        },
         body: jsonEncode({
-          if (reason != null && reason.isNotEmpty) 'reason': reason,
+          'date': date,
+          'report_type': reportType,
+          'reason': reason,
         }),
       );
-      return ApiService.parse(res);
+
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return data;
     } catch (e) {
-      return {'ok': false, 'error': 'Connection error'};
+      return {'ok': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  /// Legacy shim — keeps existing callers working.
+  static Future<Map<String, dynamic>> reportMissedClockOut(
+    String recordId, {
+    String reason = 'Forgot to clock out',
+  }) async {
+    // The old endpoint is still available on the backend; we just call it.
+    try {
+      final res = await http.post(
+        Uri.parse(
+            '${ApiService.baseUrl}/attendance/$recordId/report-missed-clockout'),
+        headers: {
+          ...await ApiService.authHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'reason': reason}),
+      );
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (e) {
+      return {'ok': false, 'error': 'Network error: $e'};
     }
   }
 }

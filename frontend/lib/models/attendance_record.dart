@@ -113,7 +113,10 @@ class AdminAttendanceRecord {
 
   /// True when interns can flag this record (only actionable statuses).
   bool get isReportable =>
-      status == 'Late' || status == 'Missed Clock Out' || status == 'Absent';
+      status == 'Missed Clock Out' ||
+      status == 'On Shift' ||
+      status == 'Absent' ||
+      status == 'Late';
 
   // ── Private helpers ───────────────────────────────────────────────────
 
@@ -134,4 +137,3 @@ class AdminAttendanceRecord {
 
   static String _pad(int n) => n.toString().padLeft(2, '0');
 }
-
