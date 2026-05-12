@@ -648,3 +648,68 @@ func (h *Handler) AdminSetTimeOut(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+
+func (h *Handler) GetWeeklyAttendance(c *gin.Context) {
+	userID, ok := getUserIDFromCtx(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"ok":    false,
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	loc := manilaLoc()
+	now := time.Now().In(loc)
+
+	// Monday start of current week
+	weekday := int(now.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+
+	weekStart := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day()-(weekday-1),
+		0, 0, 0, 0,
+		loc,
+	)
+
+	weekEnd := weekStart.AddDate(0, 0, 7)
+
+	type WeeklyRow struct {
+		Date  string   `json:"date"`
+		Hours *float64 `json:"hours"`
+	}
+
+	var rows []WeeklyRow
+
+	err := h.DB.Raw(`
+		SELECT
+			TO_CHAR(date, 'YYYY-MM-DD') AS date,
+			CASE
+				WHEN time_in IS NOT NULL AND time_out IS NOT NULL
+					THEN EXTRACT(EPOCH FROM (time_out - time_in)) / 3600.0
+				ELSE 0
+			END AS hours
+		FROM attendance
+		WHERE user_id = ?
+		AND date >= ?
+		AND date < ?
+		ORDER BY date ASC
+	`, userID, weekStart, weekEnd).Scan(&rows).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":      true,
+		"records": rows,
+	})
+}

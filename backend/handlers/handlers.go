@@ -772,12 +772,47 @@ func (h *Handler) ListUsers(c *gin.Context) {
 }
 
 func (h *Handler) CreateUser(c *gin.Context) {
-	var user models.User
-	if h.DB.First(&user, c.Param("id")).Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+	var req CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, user)
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	role := req.Role
+	if role == "" {
+		role = models.RoleUser
+	}
+
+	user := models.User{
+		FirstName:  req.FirstName,
+		LastName:   req.LastName,
+		Email:      req.Email,
+		Password:   string(hashed),
+		Phone:      req.Phone,
+		Department: req.Department,
+		Position:   req.Position,
+		Role:       role,
+		IsActive:   true,
+	}
+
+	if err := h.DB.Create(&user).Error; err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+
+	adminID := c.GetUint("user_id")
+	h.logActivity(adminID, "CREATE_USER", fmt.Sprintf("Admin created user: %s", user.Email), c.ClientIP())
+	c.JSON(http.StatusCreated, gin.H{"message": "User created", "user": user})
 }
 
 func (h *Handler) UpdateUser(c *gin.Context) {
