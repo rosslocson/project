@@ -14,6 +14,14 @@ class UserSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    
+    // Determine if the current theme is dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Dynamically set logo based on theme
+    final logoPath = isDarkMode 
+        ? 'assets/images/logo_file.png' 
+        : 'assets/images/logo_file_lightmode.png';
 
     return Container(
       width: 250,
@@ -37,7 +45,7 @@ class UserSidebar extends StatelessWidget {
                 Transform.scale(
                   scale: 1.3, // Adjust this value to zoom more or less
                   child: Image.asset(
-                    'assets/images/logo_file.png',
+                    logoPath, // Updated to use the dynamic path
                     height: 40,
                     width: 48,
                     fit: BoxFit.contain,
@@ -49,7 +57,6 @@ class UserSidebar extends StatelessWidget {
                 ),
                 // ──────────────────────────────────────────────────────────────
                 const SizedBox(width: 12),
-
 
                 Expanded(
                   child: Text(

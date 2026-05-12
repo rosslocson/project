@@ -17,7 +17,6 @@ import '../widgets/app_theme.dart';
 import 'avatar_crop_screen.dart';
 
 // ── Imported Extracted Widgets ──
-import '../widgets/user_account_settings_widgets/user_account_hamburger.dart';
 import '../widgets/user_account_settings_widgets/user_profile_tab.dart';
 import '../widgets/user_account_settings_widgets/user_password_tab.dart';
 import 'user_glass_topbar.dart';

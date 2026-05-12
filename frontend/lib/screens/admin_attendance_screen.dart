@@ -9,8 +9,6 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 
-
-
 import '../models/attendance_constants.dart';
 import '../models/attendance_record.dart' show AdminAttendanceRecord;
 import '../services/admin_attendance_service.dart';
@@ -653,7 +651,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 class _PendingBell extends StatefulWidget {
   final VoidCallback? onResolved;
 
-  const _PendingBell({this.onResolved});
+  const _PendingBell({super.key, this.onResolved});
+
 
   @override
   State<_PendingBell> createState() => _PendingBellState();

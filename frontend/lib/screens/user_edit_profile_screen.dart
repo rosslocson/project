@@ -26,7 +26,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   late TabController _tabs;
   // Sidebar open state is controlled by SidebarProvider to match GlassTopBar hamburger behavior.
   // ignore: unused_field
-  bool _sidebarVisible = true;
+  final bool _sidebarVisible = true;
 
   final _academicKey = GlobalKey<FormState>();
   List<String> _departments = [];

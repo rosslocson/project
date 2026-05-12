@@ -28,7 +28,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
   // Sidebar open state is controlled by SidebarProvider to match GlassTopBar hamburger behavior.
   // (This page previously used local state which could diverge.)
   // ignore: unused_field
-  bool _isSidebarOpen = true;
+  final bool _isSidebarOpen = true;
   late TabController _tabs;
 
   int? _requiredHours;

@@ -15,6 +15,14 @@ class AdminSidebar extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final isAdmin = auth.isAdmin;
     final theme = context.internTheme;
+    
+    // Determine if the current theme is dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final logoPath = isDarkMode 
+        ? 'assets/images/logo_file.png' 
+        : 'assets/images/logo_file_lightmode.png'; // Fixed typo: 'ligtmode' -> 'lightmode'
+
 
     return Container(
       width: 250,
@@ -33,12 +41,11 @@ class AdminSidebar extends StatelessWidget {
                 const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
             child: Row(
               children: [
-                // ──────────────────────────────────────────────────────────────
                 // Added Transform.scale to zoom the logo without moving text
                 Transform.scale(
                   scale: 1.3,
                   child: Image.asset(
-                    'assets/images/logo_file.png',
+                    logoPath,
                     height: 40,
                     width: 48,
                     fit: BoxFit.contain,
@@ -48,7 +55,6 @@ class AdminSidebar extends StatelessWidget {
                     },
                   ),
                 ),
-                // ──────────────────────────────────────────────────────────────
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -206,17 +212,17 @@ class _SectionLabel extends StatelessWidget {
     final theme = context.internTheme;
 
     return Padding(
-        padding: const EdgeInsets.only(left: 20, top: 16, bottom: 12),
-        child: Text(
-          text.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: theme.sidebarMutedText,
-            letterSpacing: 1.0,
-          ),
+      padding: const EdgeInsets.only(left: 20, top: 16, bottom: 12),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: theme.sidebarMutedText,
+          letterSpacing: 1.0,
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -307,7 +313,7 @@ class _CloseButtonState extends State<_CloseButton> {
         decoration: BoxDecoration(
           color: _isHovering
               ? theme.sidebarHoverBackground
-              : theme.sidebarHoverBackground.withValues(alpha: 0.55),
+              : Colors.transparent, // Changed to transparent so the circle stays hidden until hovered, just like dark mode
           shape: BoxShape.circle,
         ),
         child: Material(
