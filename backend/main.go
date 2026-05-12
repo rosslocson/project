@@ -33,20 +33,41 @@ func seedAdminAccount(db *gorm.DB) {
 	}
 
 	var existingAdmin models.User
-	if err := db.Where("email = ?", adminEmail).First(&existingAdmin).Error; err == nil {
+	// Use Unscoped() to find even soft-deleted records
+	err = db.Unscoped().Where("email = ?", adminEmail).First(&existingAdmin).Error
+
+	if err == nil {
+		// Record exists (active or soft-deleted)
+		if existingAdmin.DeletedAt.Valid {
+			// Restore and update it
+			log.Println("⚠️ Admin account was soft-deleted. Restoring...")
+			if err := db.Unscoped().Model(&existingAdmin).Updates(map[string]interface{}{
+				"deleted_at": nil,
+				"password":   string(hashedPassword),
+				"is_active":  true,
+			}).Error; err != nil {
+				log.Printf("❌ Failed to restore admin account: %v", err)
+				return
+			}
+			log.Println("✅ Admin account restored and password updated")
+			return
+		}
+
+		// Active record — check password hashing
 		if !strings.HasPrefix(existingAdmin.Password, "$2a$") && !strings.HasPrefix(existingAdmin.Password, "$2b$") {
-			log.Printf("⚠️ Admin account found but password is NOT bcrypt hashed. Updating with proper hash...")
+			log.Printf("⚠️ Admin password is not bcrypt hashed. Updating...")
 			if err := db.Model(&existingAdmin).Update("password", string(hashedPassword)).Error; err != nil {
 				log.Printf("❌ Failed to update admin password: %v", err)
 				return
 			}
-			log.Println("✅ Admin account password updated to bcrypt hash")
+			log.Println("✅ Admin password updated to bcrypt hash")
 		} else {
 			log.Println("✅ Admin account already exists with proper bcrypt password")
 		}
 		return
 	}
 
+	// Truly doesn't exist — create it
 	adminUser := models.User{
 		FirstName: "Admin",
 		LastName:  "User",
@@ -254,6 +275,7 @@ func main() {
 			attendance.PATCH("/time-out", h.TimeOut)
 			attendance.GET("/summary", h.GetAttendanceSummary)
 			attendance.GET("/history", h.GetAttendanceHistory)
+			attendance.GET("/weekly", h.GetWeeklyAttendance)
 
 			// ── NEW: intern reports a missed clock-out ────────────────────
 			attendance.POST("/:id/report-missed-clockout", h.ReportMissedClockOut)
