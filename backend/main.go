@@ -21,7 +21,6 @@ import (
 
 var DB *gorm.DB
 
-// seedAdminAccount creates a default admin account if it doesn't exist, or updates password if it does
 func seedAdminAccount(db *gorm.DB) {
 	adminEmail := "admin@example.com"
 	adminPassword := "admin123"
@@ -33,13 +32,10 @@ func seedAdminAccount(db *gorm.DB) {
 	}
 
 	var existingAdmin models.User
-	// Use Unscoped() to find even soft-deleted records
 	err = db.Unscoped().Where("email = ?", adminEmail).First(&existingAdmin).Error
 
 	if err == nil {
-		// Record exists (active or soft-deleted)
 		if existingAdmin.DeletedAt.Valid {
-			// Restore and update it
 			log.Println("⚠️ Admin account was soft-deleted. Restoring...")
 			if err := db.Unscoped().Model(&existingAdmin).Updates(map[string]interface{}{
 				"deleted_at": nil,
@@ -53,7 +49,6 @@ func seedAdminAccount(db *gorm.DB) {
 			return
 		}
 
-		// Active record — check password hashing
 		if !strings.HasPrefix(existingAdmin.Password, "$2a$") && !strings.HasPrefix(existingAdmin.Password, "$2b$") {
 			log.Printf("⚠️ Admin password is not bcrypt hashed. Updating...")
 			if err := db.Model(&existingAdmin).Update("password", string(hashedPassword)).Error; err != nil {
@@ -67,7 +62,6 @@ func seedAdminAccount(db *gorm.DB) {
 		return
 	}
 
-	// Truly doesn't exist — create it
 	adminUser := models.User{
 		FirstName: "Admin",
 		LastName:  "User",
@@ -87,7 +81,6 @@ func seedAdminAccount(db *gorm.DB) {
 	log.Println("🔑 Password: admin123")
 }
 
-// fixPlaintextPasswords finds all users with plaintext passwords and hashes them
 func fixPlaintextPasswords(db *gorm.DB) {
 	var users []models.User
 	if err := db.Find(&users).Error; err != nil {
@@ -148,8 +141,6 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Auto migrate models — Attendance is included so is_reported + reported_at
-	// columns are added automatically if your Attendance model has them.
 	DB.AutoMigrate(
 		&models.User{},
 		&models.ActivityLog{},
@@ -211,14 +202,12 @@ func main() {
 		admin.GET("/attendance/export", h.AdminExportAttendance)
 		admin.GET("/attendance/reports", h.GetPendingReports)
 
-		// Admin resolves missed clock-out report
+		// Resolve a reported record (PATCH = quick dismiss, POST = full resolution)
 		admin.PATCH("/attendance/:id/resolve", h.ResolveAttendanceReport)
 		admin.POST("/attendance/:id/resolve", h.ResolveAttendanceIssue)
-		admin.PATCH("/api/admin/attendance/:id/remark", h.UpdateAttendanceRemark)
 
-		// ── NEW: admin sets time-out for a reported missed clock-out ──────
-		//admin.PATCH("/attendance/:id/set-timeout", h.AdminSetTimeOut)
-
+		// Inline remark editing from the attendance table
+		admin.PATCH("/attendance/:id/remark", h.UpdateAttendanceRemark)
 	}
 
 	// ── Protected routes (JWT only) ───────────────────────────────────────────
@@ -277,7 +266,10 @@ func main() {
 			attendance.GET("/history", h.GetAttendanceHistory)
 			attendance.GET("/weekly", h.GetWeeklyAttendance)
 
-			// ── NEW: intern reports a missed clock-out ────────────────────
+			// Intern reports an issue (Late, Absent, or Missed Clock-Out)
+			attendance.POST("/report", h.ReportAttendanceIssue)
+
+			// Legacy missed clock-out endpoint (kept for older clients)
 			attendance.POST("/:id/report-missed-clockout", h.ReportMissedClockOut)
 		}
 	}

@@ -12,8 +12,9 @@ type Attendance struct {
 	IsReported    bool       `gorm:"default:false"            json:"is_reported"`
 	ReportedAt    *time.Time `gorm:"type:timestamptz"         json:"reported_at"`
 	ReportReason  string     `json:"report_reason"`
-	Resolution    *string    `gorm:"type:text"                json:"resolution"` // ← ADD
-	AdminNote     *string    `gorm:"type:text"                json:"admin_note"` // ← ADD
+	ReportType    string     `gorm:"type:text;default:''"     json:"report_type"`
+	Resolution    *string    `gorm:"type:text"                json:"resolution"`
+	AdminNote     *string    `gorm:"type:text"                json:"admin_note"`
 	CreatedAt     time.Time  `                                json:"created_at"`
 	UpdatedAt     time.Time  `                                json:"updated_at"`
 

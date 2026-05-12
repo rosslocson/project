@@ -45,15 +45,15 @@ class AttendanceTable extends StatelessWidget {
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(28), // left gutter
-    1: FlexColumnWidth(3), // Intern
-    2: FlexColumnWidth(2), // Date
-    3: FlexColumnWidth(1.5), // Time In
-    4: FlexColumnWidth(1.5), // Time Out
-    5: FlexColumnWidth(1.5), // Hours
-    6: FlexColumnWidth(2), // Status
-    7: FlexColumnWidth(2.5), // Remark ← new
-    8: FixedColumnWidth(36), // Action (report / review)
+    0: FixedColumnWidth(28),   // left gutter
+    1: FlexColumnWidth(3),     // Intern
+    2: FlexColumnWidth(2),     // Date
+    3: FlexColumnWidth(1.5),   // Time In
+    4: FlexColumnWidth(1.5),   // Time Out
+    5: FlexColumnWidth(1.5),   // Hours
+    6: FlexColumnWidth(2),     // Status
+    7: FlexColumnWidth(2.5),   // Remark
+    8: FixedColumnWidth(36),   // Action (report / review)
   };
 
   @override
@@ -410,14 +410,30 @@ class _ActionCell extends StatelessWidget {
       );
     }
 
-    // Intern: flag icon on reportable statuses
+    // ── Intern: flag icon on reportable statuses ─────────────────────────
+    // Reportable: Absent, Late, Missed Clock Out, On Shift.
+    // Make sure your AdminAttendanceRecord.isReportable getter includes all four:
+    //   bool get isReportable =>
+    //       status == 'Absent'           ||
+    //       status == 'Late'             ||
+    //       status == 'Missed Clock Out' ||
+    //       status == 'On Shift';
     if (!r.isReportable) return const SizedBox.shrink();
 
     final alreadyReported = r.isReported;
+
+    // Status-specific tooltip shown before the dialog opens.
+    final String reportHint = switch (r.status) {
+      'Absent'           => 'Dispute absence',
+      'Late'             => 'Dispute late mark',
+      'Missed Clock Out' => 'Report missed clock-out',
+      _                  => 'Report an issue',
+    };
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       child: Tooltip(
-        message: alreadyReported ? 'Report submitted' : 'Report an issue',
+        message: alreadyReported ? 'Report submitted' : reportHint,
         child: GestureDetector(
           onTap: alreadyReported
               ? null
