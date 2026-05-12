@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -62,17 +63,22 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _fetchDepartments() async {
     try {
-      final res = await http.get(
-        Uri.parse('${ApiService.baseUrl}/departments'),
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      final res = await http
+          .get(
+            Uri.parse('${ApiService.baseUrl}/departments'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final List items = data['items'] ?? [];
+
         if (mounted) {
           setState(() {
-            _departments = items.map<String>((d) => d['name'] as String).toList();
+            _departments = items
+                .map<String>((d) => (d['name'] as String))
+                .toList(growable: false);
             _deptsFetched = true;
             _loadingDepts = false;
           });
@@ -112,6 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         _passColor = Colors.green;
         _passValue = 1.0;
       }
+
       if (_confirmCtrl.text.isNotEmpty) {
         _confirmError = _confirmCtrl.text != pass ? 'Passwords do not match' : null;
       }
@@ -126,6 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (_passCtrl.text != _confirmCtrl.text) {
       setState(() => _confirmError = 'Passwords do not match');
       return;
@@ -181,104 +189,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       onRegister: _register,
     );
 
-<<<<<<< HEAD
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF050510) : Colors.white,
-      resizeToAvoidBottomInset: false,
-
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 900) {
-            // Desktop Layout
-            return Row(
-              children: [
-                Expanded(
-                  child: AppBackground(
-                    backgroundAsset: 'assets/images/star_background.png',
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/images/logo_login.png',
-                                height: 280,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.public,
-                                        size: 120, color: Colors.white),
-                              ),
-                              const SizedBox(height: 24),
-                              const Text(
-                                'READY FOR LIFTOFF?',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.5),
-                              ),
-                              const SizedBox(height: 16),
-                              Container(
-                                  width: 40, height: 2, color: Colors.white54),
-                              const SizedBox(height: 16),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 64.0),
-                                child: Text(
-                                  'Launch your intern journey today.\nBuild your profile and explore the stars of our current cohort.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                      height: 1.5),
-                                ),
-                              ),
-                              const SizedBox(height: 80),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    color: isDark ? const Color(0xFF0B0B13) : Colors.white,
-                    child: SingleChildScrollView(
-                      child: formWidget.buildForm(
-                          isMobile: true, context: context),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          } else {
-            // Mobile Layout
-            return AppBackground(
-              backgroundAsset: 'assets/images/star_background.png',
-              child: Center(
-                child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0B0B13) : Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 30,
-                          spreadRadius: 5),
-                    ],
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: SingleChildScrollView(
-                    child:
-                        formWidget.buildForm(isMobile: true, context: context),
-=======
-    // Extracted left-side visual content
     final leftSideContent = Stack(
       children: [
         Positioned.fill(
@@ -314,7 +224,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                     color: Colors.white70,
                     fontSize: 14,
                     height: 1.5,
->>>>>>> lightmode
                   ),
                 ),
               ),
@@ -325,44 +234,42 @@ class _RegisterScreenState extends State<RegisterScreen>
       ],
     );
 
+    final themeToggle = Positioned(
+      top: 24,
+      right: 24,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+        splashRadius: 18,
+        icon: Icon(
+          isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round_outlined,
+          color: (Theme.of(context).brightness == Brightness.light)
+              ? const Color(0xFF00022E)
+              : Colors.white,
+          size: 20,
+        ),
+        onPressed: () => context.read<ThemeProvider>().toggleTheme(),
+      ),
+    );
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF050510) : Colors.white,
       resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isDesktop = constraints.maxWidth > 900;
-          final iconColor = (isDesktop && !isDark) ? const Color(0xFF00022E) : Colors.white;
-
-          final themeToggle = Positioned(
-            top: 24,
-            right: 24,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-              splashRadius: 18,
-              icon: Icon(
-                isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round_outlined,
-                color: iconColor,
-                size: 20,
-              ),
-              onPressed: () => context.read<ThemeProvider>().toggleTheme(),
-            ),
-          );
 
           if (isDesktop) {
-            // Desktop Layout
             return Stack(
               children: [
                 Row(
                   children: [
                     Expanded(
                       child: isDark
-                          // DARK MODE: Untouched
                           ? AppBackground(
                               backgroundAsset: 'assets/images/star_background.png',
                               child: leftSideContent,
                             )
-                          // LIGHT MODE: Bypasses AppBackground, forces image and dark backing
                           : Container(
                               decoration: const BoxDecoration(
                                 color: Color(0xFF050510),
@@ -406,7 +313,6 @@ class _RegisterScreenState extends State<RegisterScreen>
             );
           }
 
-          // Mobile Layout Content
           final mobileContent = Center(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -433,12 +339,10 @@ class _RegisterScreenState extends State<RegisterScreen>
           return Stack(
             children: [
               isDark
-                  // DARK MODE: Untouched
                   ? AppBackground(
                       backgroundAsset: 'assets/images/star_background.png',
                       child: mobileContent,
                     )
-                  // LIGHT MODE: Bypasses AppBackground
                   : Container(
                       decoration: const BoxDecoration(
                         color: Color(0xFF050510),
@@ -457,3 +361,4 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 }
+
