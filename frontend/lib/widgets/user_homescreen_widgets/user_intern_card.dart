@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../intern_carousel_palette.dart';
 import '../../screens/intern_widgets.dart';
 import '../../screens/intern_ross_profile_page.dart';
 
@@ -33,19 +34,13 @@ class UserInternCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF1E1B4B), Color(0xFF4C1D95)],
+                colors: InternCarouselPalette.cardGradient(context),
               ),
               borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.4),
-                  blurRadius: 32,
-                  offset: const Offset(0, 16),
-                ),
-              ],
+              boxShadow: InternCarouselPalette.cardShadows(context),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -55,10 +50,10 @@ class UserInternCard extends StatelessWidget {
                 Text(
                   // ← plain Text now, no GestureDetector
                   intern.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: InternCarouselPalette.cardForeground(context),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -67,9 +62,9 @@ class UserInternCard extends StatelessWidget {
                   intern.internNumber != 'N/A'
                       ? 'Intern #${intern.internNumber}'
                       : '',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white70,
+                    color: InternCarouselPalette.cardForegroundMuted(context),
                   ),
                 ),
               ],

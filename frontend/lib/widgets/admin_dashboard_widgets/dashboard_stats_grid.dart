@@ -10,13 +10,6 @@ class DashboardStatsGrid extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.12),
-            blurRadius: 12,
-            spreadRadius: 0.5,
-          ),
-        ],
       ),
       child: child,
     );

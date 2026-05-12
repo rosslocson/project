@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/user_sidebar.dart';
 import '../widgets/app_background.dart';
+import '../widgets/app_theme.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/user_my_profile_widgets/profile_hamburger_icon.dart';
@@ -77,6 +78,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
     final user = context.watch<AuthProvider>().user;
 
     final first = user?['first_name'] as String? ?? '';
@@ -94,6 +96,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
             : '${ApiService.baseUrl.replaceAll(RegExp(r'/api/?$'), '')}/${rawAvatarUrl.replaceFirst(RegExp(r'^/+'), '')}';
 
     return Scaffold(
+      backgroundColor: theme.appBackground,
       resizeToAvoidBottomInset: false,
       body: Row(
         children: [
@@ -127,7 +130,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                                       fontSize: 28,
                                       fontWeight: FontWeight.w800,
-                                      color: Colors.white,
+                                      color: theme.topbarText,
                                       letterSpacing: 0.5,
                                     ),
                               ),
@@ -141,16 +144,18 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                             top: 28,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: theme.sidebarHoverBackground.withValues(
+                                  alpha: context.isDarkInternTheme ? 0.8 : 1,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                                border: Border.all(color: theme.border),
                               ),
                               child: IconButton(
                                 padding: const EdgeInsets.all(12),
                                 onPressed: () => setState(() => _isSidebarOpen = true),
                                 icon: const ProfileHamburgerIcon(),
                                 tooltip: 'Open Sidebar',
-                                splashColor: Colors.white.withValues(alpha: 0.1),
+                                splashColor: theme.sidebarHoverBackground,
                                 highlightColor: Colors.transparent,
                               ),
                             ),
@@ -164,11 +169,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                       padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: theme.surface,
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.12),
+                              color: theme.shadowColor,
                               blurRadius: 40,
                               offset: const Offset(0, 8),
                             ),
@@ -177,7 +182,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: _loading
-                              ? Center(child: CircularProgressIndicator(color: _cardDarkBlue))
+                              ? Center(child: CircularProgressIndicator(color: theme.surfaceText))
                               : Row(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
@@ -201,14 +206,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                                             ),
                                           Container(
                                             decoration: BoxDecoration(
-                                              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                                              border: Border(bottom: BorderSide(color: theme.border)),
                                             ),
                                             padding: const EdgeInsets.only(top: 8),
                                             child: TabBar(
                                               controller: _tabs,
-                                              labelColor: _cardDarkBlue,
-                                              unselectedLabelColor: Colors.grey.shade500,
-                                              indicatorColor: _cardDarkBlue,
+                                              labelColor: theme.surfaceText,
+                                              unselectedLabelColor: theme.mutedText,
+                                              indicatorColor: const Color(0xFF6B4EFF),
                                               indicatorWeight: 3,
                                               dividerColor: Colors.transparent,
                                               labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
@@ -221,7 +226,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                                           ),
                                           Expanded(
                                             child: Container(
-                                              color: Colors.white,
+                                              color: theme.surface,
                                               child: TabBarView(
                                                 controller: _tabs,
                                                 children: [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 
 class UserAccountStatusBanner extends StatelessWidget {
   final String msg;
@@ -8,10 +9,14 @@ class UserAccountStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkInternTheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: success ? Colors.green.shade50 : Colors.red.shade50,
+        color: success
+            ? (isDark ? Colors.green.withValues(alpha: 0.16) : Colors.green.shade50)
+            : (isDark ? Colors.red.withValues(alpha: 0.16) : Colors.red.shade50),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: success ? Colors.green.shade200 : Colors.red.shade200),
       ),

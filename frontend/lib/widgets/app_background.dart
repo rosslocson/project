@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_theme.dart';
 
 class AppBackground extends StatelessWidget {
   final Widget child;
@@ -16,14 +17,19 @@ class AppBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return Container(
       constraints: const BoxConstraints.expand(),
       decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(backgroundAsset),
-          fit: fit,
-          alignment: alignment,
-        ),
+        color: theme.appBackground,
+        image: theme.useSpaceBackground
+            ? DecorationImage(
+                image: AssetImage(backgroundAsset),
+                fit: fit,
+                alignment: alignment,
+              )
+            : null,
       ),
       child: child,
     );

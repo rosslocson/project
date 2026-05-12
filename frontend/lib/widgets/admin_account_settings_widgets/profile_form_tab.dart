@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 import 'status_message_banner.dart';
-
-const _kBlue = Color(0xFF00022E);
 
 class ProfileFormTab extends StatelessWidget {
   final GlobalKey<FormState> formKey;
@@ -33,54 +32,66 @@ class ProfileFormTab extends StatelessWidget {
     required this.onSave,
   });
 
-  InputDecoration _getFormDecoration(String label, {IconData? prefixIcon}) {
+  InputDecoration _getFormDecoration(
+    BuildContext context,
+    String label, {
+    IconData? prefixIcon,
+  }) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final errorColor = isDark ? const Color(0xFF7367F0).withOpacity(0.6) : const Color(0xFF00022E).withOpacity(0.6);
+
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(
-          fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w500),
+      labelStyle: TextStyle(
+          fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
       prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, color: Colors.grey.shade500, size: 18)
+          ? Icon(prefixIcon, color: theme.mutedText, size: 18)
           : null,
       filled: true,
-      fillColor: const Color(0xFFF9FAFB),
+      fillColor: theme.formFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200, width: 1)),
+          borderSide: BorderSide(color: theme.border, width: 1)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBlue, width: 1.5)),
+          borderSide: BorderSide(color: primaryColor, width: 1.5)),
       errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-              color: const Color(0xFF00022E).withOpacity(0.6), width: 1)),
+          borderSide: BorderSide(color: errorColor, width: 1)),
     );
   }
 
   Widget _dropdownField(
-          {required String label,
-          required String? value,
-          required String hint,
-          required List<String> items,
-          required void Function(String?)? onChanged}) =>
-      Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Column(
+    BuildContext context, {
+    required String label,
+    required String? value,
+    required String hint,
+    required List<String> items,
+    required void Function(String?)? onChanged,
+  }) {
+    final theme = context.internTheme;
+
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        color: theme.formFill,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.border, width: 1),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(label,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 10,
-                    color: Colors.black54,
+                    color: theme.mutedText,
                     fontWeight: FontWeight.w600)),
             Expanded(
               child: DropdownButtonHideUnderline(
@@ -91,14 +102,14 @@ class ProfileFormTab extends StatelessWidget {
                   isDense: true,
                   hint: Text(hint,
                       style: TextStyle(
-                          color: Colors.grey[400],
+                          color: theme.mutedText,
                           fontSize: 13,
                           fontWeight: FontWeight.w500)),
                   isExpanded: true,
                   icon: Icon(Icons.keyboard_arrow_down,
-                      color: Colors.grey[500], size: 18),
-                  style: const TextStyle(
-                      color: Colors.black87,
+                      color: theme.mutedText, size: 18),
+                  style: TextStyle(
+                      color: theme.surfaceText,
                       fontSize: 14,
                       fontWeight: FontWeight.w500),
                   items: items
@@ -113,9 +124,14 @@ class ProfileFormTab extends StatelessWidget {
           ],
         ),
       );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -134,20 +150,20 @@ class ProfileFormTab extends StatelessWidget {
                   ],
                   Row(children: [
                     Expanded(
-                        child: TextFormField(
+                      child: TextFormField(
                       controller: firstCtrl,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500),
-                      decoration: _getFormDecoration('First Name'),
+                      style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
+                      decoration: _getFormDecoration(context, 'First Name'),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     )),
                     const SizedBox(width: 16),
                     Expanded(
-                        child: TextFormField(
+                      child: TextFormField(
                       controller: lastCtrl,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500),
-                      decoration: _getFormDecoration('Last Name'),
+                      style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
+                      decoration: _getFormDecoration(context, 'Last Name'),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     )),
                   ]),
@@ -158,12 +174,13 @@ class ProfileFormTab extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600),
-                    decoration: _getFormDecoration('Email (cannot change)',
+                        color: theme.mutedText),
+                    decoration: _getFormDecoration(context, 'Email (cannot change)',
                         prefixIcon: Icons.email_outlined),
                   ),
                   const SizedBox(height: 16),
                   _dropdownField(
+                    context,
                     label: 'Department',
                     value: selectedDept,
                     hint: isLoadingDepartments
@@ -185,7 +202,7 @@ class ProfileFormTab extends StatelessWidget {
             child: ElevatedButton(
               onPressed: savingProfile ? null : onSave,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kBlue,
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),

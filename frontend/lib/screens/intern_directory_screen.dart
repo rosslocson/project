@@ -129,7 +129,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
                   Text(
                     'SYSTEM DIRECTORY',
                     style: TextStyle(
-                      color: Color(0xFF8A84FF), // Purple accent
+                      color: Color(0xFF6366F1), // Purple accent
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 4.0,
@@ -172,7 +172,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
                       color: _isSearching ? const Color(0xFF141526).withOpacity(0.9) : Colors.transparent,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: _isSearching ? const Color(0xFF8A84FF) : Colors.transparent,
+                        color: _isSearching ? const Color(0xFF6366F1) : Colors.transparent,
                         width: 1,
                       ),
                     ),
@@ -226,7 +226,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     );
 
     if (_loading) {
-      children.add(const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF8A84FF)))));
+      children.add(const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)))));
     }
     if (_error != null) {
       children.add(Expanded(child: Center(child: Text(_error!, style: const TextStyle(color: Colors.redAccent)))));
@@ -245,12 +245,12 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
-                  side: const BorderSide(color: Color(0xFF8A84FF), width: 1),
+                  side: const BorderSide(color: Color(0xFF6366F1), width: 1),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               onPressed: _recenterMap,
-              icon: const Icon(Icons.adjust, size: 18, color: Color(0xFF8A84FF)),
+              icon: const Icon(Icons.adjust, size: 18, color: Color(0xFF6366F1)),
               label: const Text('Focus Core', style: TextStyle(letterSpacing: 1.0)),
             ),
           ),
@@ -451,7 +451,7 @@ class CentralBlueStar extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  const Color(0xFF8A84FF).withOpacity(0.15), // Purple
+                  const Color(0xFF6366F1).withOpacity(0.15), // Purple
                   const Color(0xFF5A54FF).withOpacity(0.05), // Deep Purple
                   Colors.transparent,
                 ],
@@ -466,7 +466,7 @@ class CentralBlueStar extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF8A84FF).withOpacity(0.6), // Purple
+                  color: const Color(0xFF6366F1).withOpacity(0.6), // Purple
                   blurRadius: 80,
                   spreadRadius: 20,
                 ),
@@ -498,7 +498,7 @@ class OrbitalPlanetNode extends StatelessWidget {
   Widget build(BuildContext context) {
     // Alternate accent colors based on their ring to give depth
     final List<Color> accents = [
-      const Color(0xFF8A84FF), // Purple
+      const Color(0xFF6366F1), // Purple
       const Color(0xFF5A54FF), // Deep Purple
       const Color(0xFF42A5F5), // Blue
       const Color(0xFFFFFFFF), // White

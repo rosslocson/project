@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../widgets/app_background.dart';
+import '../widgets/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
 import 'avatar_crop_screen.dart';
@@ -18,8 +19,6 @@ import '../widgets/avatar_action_dialog.dart';
 import '../widgets/admin_account_settings_widgets/hamburger_icon.dart';
 import '../widgets/admin_account_settings_widgets/profile_form_tab.dart';
 import '../widgets/admin_account_settings_widgets/password_form_tab.dart';
-
-const _kBlue = Color(0xFF00022E);
 
 class AdminAccountSettingsScreen extends StatefulWidget {
   const AdminAccountSettingsScreen({super.key});
@@ -359,6 +358,9 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
     final user = context.watch<AuthProvider>().user;
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
@@ -376,6 +378,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
     debugPrint('🖼️ Admin Avatar Debug: rawAvatarUrl="$rawAvatarUrl", finalAvatarUrl="$finalAvatarUrl"');
 
     return Scaffold(
+      backgroundColor: theme.appBackground,
       resizeToAvoidBottomInset: false,
       body: Row(
         children: [
@@ -411,7 +414,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                 ?.copyWith(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: theme.topbarText,
                                   letterSpacing: 0.5,
                                 ),
                           ),
@@ -422,10 +425,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                             top: 28,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: theme.sidebarHoverBackground.withValues(
+                                  alpha: context.isDarkInternTheme ? 0.8 : 1,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: Colors.white.withOpacity(0.15)),
+                                border: Border.all(color: theme.border),
                               ),
                               child: IconButton(
                                 padding: const EdgeInsets.all(12),
@@ -446,8 +450,17 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                           left: 100, right: 100, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
+                          color: context.isDarkInternTheme
+                              ? theme.surface
+                              : theme.sidebarBackground,
                           borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.shadowColor,
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
@@ -460,7 +473,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                 decoration: BoxDecoration(
                                   border: Border(
                                       bottom: BorderSide(
-                                          color: Colors.grey.shade200)),
+                                          color: theme.border)),
                                 ),
                                 child: Row(
                                   children: [
@@ -478,7 +491,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             child: CircleAvatar(
                                               radius: 40,
                                               backgroundColor:
-                                                  _kBlue.withOpacity(0.1),
+                                                  primaryColor.withOpacity(0.1),
                                               backgroundImage: _avatarFile != null
                                                   ? FileImage(_avatarFile!)
                                                   : (_localAvatarBytes != null
@@ -489,8 +502,8 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                               finalAvatarUrl)
                                                           : null)) as ImageProvider?,
                                               child: _isUploadingAvatar
-                                                  ? const CircularProgressIndicator(
-                                                      color: _kBlue,
+                                                  ? CircularProgressIndicator(
+                                                      color: primaryColor,
                                                       strokeWidth: 3)
                                                   : (_avatarFile == null &&
                                                           _localAvatarBytes ==
@@ -498,11 +511,11 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                           finalAvatarUrl.isEmpty)
                                                       ? Text(
                                                           '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
-                                                          style: const TextStyle(
+                                                          style: TextStyle(
                                                               fontSize: 28,
                                                               fontWeight:
                                                                   FontWeight.bold,
-                                                              color: _kBlue),
+                                                              color: primaryColor),
                                                         )
                                                       : null,
                                             ),
@@ -523,7 +536,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                 padding:
                                                     const EdgeInsets.all(6),
                                                 decoration: BoxDecoration(
-                                                  color: _kBlue,
+                                                  color: primaryColor,
                                                   shape: BoxShape.circle,
                                                   border: Border.all(
                                                       color: Colors.white,
@@ -548,13 +561,13 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                           Text(
                                               '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
                                               style: const TextStyle(
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: Colors.black87)),
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w800,
+                                              ).copyWith(color: theme.surfaceText)),
                                           const SizedBox(height: 2),
                                           Text(user?['email'] ?? '',
                                               style: TextStyle(
-                                                  color: Colors.grey.shade600,
+                                                  color: theme.mutedText,
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w500)),
                                           if ((user?['department']
@@ -564,7 +577,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             const SizedBox(height: 4),
                                             Text('${user?['department']}',
                                                 style: TextStyle(
-                                                    color: Colors.grey.shade500,
+                                                    color: theme.mutedText,
                                                     fontSize: 13,
                                                     fontWeight:
                                                         FontWeight.w500)),
@@ -574,7 +587,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 12, vertical: 4),
                                             decoration: BoxDecoration(
-                                              color: _kBlue.withOpacity(0.08),
+                                              color: primaryColor.withOpacity(0.08),
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                             ),
@@ -582,7 +595,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                 (user?['role'] ?? 'user')
                                                     .toUpperCase(),
                                                 style: TextStyle(
-                                                    color: _kBlue
+                                                    color: primaryColor
                                                         .withOpacity(0.9),
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w800,
@@ -600,13 +613,13 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                 decoration: BoxDecoration(
                                     border: Border(
                                         bottom: BorderSide(
-                                            color: Colors.grey.shade200))),
+                                            color: theme.border))),
                                 child: TabBar(
                                   controller: _tabs,
-                                  labelColor: _kBlue,
-                                  indicatorColor: _kBlue,
+                                  labelColor: theme.surfaceText,
+                                  indicatorColor: primaryColor,
                                   indicatorWeight: 3,
-                                  unselectedLabelColor: Colors.grey.shade500,
+                                  unselectedLabelColor: theme.mutedText,
                                   labelStyle: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700),
@@ -683,6 +696,6 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
           ),
         ],
       ),
-    ); // <-- The missing semicolon was added right here
+    ); 
   }
 }

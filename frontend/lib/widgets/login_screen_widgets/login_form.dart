@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../providers/auth_provider.dart';
-import '../app_theme.dart'; // Adjust path if needed
-import 'locked_banner.dart';
+import '../app_theme.dart';
 import 'error_banner.dart';
+import 'locked_banner.dart';
+
+const kCosmicBlue = Color(0xFF00022E);
+const kAccentPurple = Color(0xFF7367F0);
 
 class LoginForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
@@ -35,8 +39,35 @@ class LoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dec =
-        pillInputDecoration(); // Assuming this comes from app_theme.dart
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dec = pillInputDecoration();
+
+    final labelStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: isDark ? Colors.white : const Color(0xFF00022E),
+    );
+
+    final inputTextStyle = TextStyle(
+      fontSize: 14,
+      color: isDark ? Colors.white : Colors.black,
+    );
+
+    final defaultBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFF2A2A38) : Colors.grey.shade300,
+        width: 1.5,
+      ),
+    );
+
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFF6366F1) : kCosmicBlue,
+        width: 2,
+      ),
+    );
 
     return Container(
       alignment: Alignment.center,
@@ -50,50 +81,85 @@ class LoginForm extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'LOG IN',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: kCrimsonDeep,
-                    letterSpacing: 1.2),
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : kCosmicBlue,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(height: 40),
+
               if (isLocked) ...[
                 LockedBanner(
-                    lockSecsLeft: lockSecsLeft,
-                    onForgotPassword: onForgotPassword),
+                  lockSecsLeft: lockSecsLeft,
+                  onForgotPassword: onForgotPassword,
+                ),
                 const SizedBox(height: 20),
               ] else if (auth.error != null) ...[
                 ErrorBanner(
-                    auth: auth,
-                    attemptsLeft: attemptsLeft,
-                    onForgotPassword: onForgotPassword),
+                  auth: auth,
+                  attemptsLeft: attemptsLeft,
+                  onForgotPassword: onForgotPassword,
+                ),
                 const SizedBox(height: 20),
               ],
-              fieldLabel('Email Address'),
+
+              Text('Email Address', style: labelStyle),
               const SizedBox(height: 6),
               TextFormField(
                 controller: emailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 enabled: !isLocked,
-                decoration: dec.copyWith(hintText: 'Enter your email'),
+                style: inputTextStyle,
+                cursorColor: isDark ? kAccentPurple : kCosmicBlue,
+                decoration: dec.copyWith(
+                  hintText: 'Enter your email',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Email is required';
                   if (!v.contains('@')) return 'Enter a valid email';
                   return null;
                 },
               ),
+
               const SizedBox(height: 20),
-              fieldLabel('Password'),
+
+              Text('Password', style: labelStyle),
               const SizedBox(height: 6),
               TextFormField(
                 controller: passCtrl,
                 obscureText: obscure,
                 enabled: !isLocked,
+                style: inputTextStyle,
+                cursorColor: isDark ? kAccentPurple : kCosmicBlue,
                 decoration: dec.copyWith(
                   hintText: 'Enter your password',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                  fillColor: isDark ? const Color(0xFF14141D) : null,
+                  enabledBorder: defaultBorder,
+                  focusedBorder: focusedBorder,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: IconButton(
@@ -111,41 +177,111 @@ class LoginForm extends StatelessWidget {
                 validator: (v) =>
                     (v == null || v.isEmpty) ? 'Password is required' : null,
               ),
+
               const SizedBox(height: 12),
+
               Row(
                 children: [
                   const Spacer(),
-                  GestureDetector(
-                    onTap: onForgotPassword,
+                  TextButton(
+                    onPressed: onForgotPassword,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: isDark ? kAccentPurple : kCosmicBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
                     child: const Text(
                       'Forgot Password?',
                       style: TextStyle(
-                          fontSize: 13,
-                          color: kCrimsonDeep,
-                          fontWeight: FontWeight.bold),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
+
               const SizedBox(height: 36),
-              BlueButton(
-                label: isLocked ? 'LOCKED — WAIT ${lockSecsLeft}s' : 'LOG IN',
-                onPressed: (auth.isLoading || isLocked) ? null : onLogin,
-                loading: auth.isLoading,
+
+              // Force identical sizing constraint for both Dark Mode and Light Mode buttons
+              SizedBox(
+                height: 50,
+                child: isDark
+                    ? ElevatedButton(
+                        onPressed:
+                            (auth.isLoading || isLocked) ? null : onLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kAccentPurple,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: kAccentPurple.withOpacity(0.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: auth.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                isLocked
+                                    ? 'LOCKED — WAIT ${lockSecsLeft}s'
+                                    : 'LOG IN',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                      )
+                    : BlueButton(
+                        label: isLocked
+                            ? 'LOCKED — WAIT ${lockSecsLeft}s'
+                            : 'LOG IN',
+                        onPressed: (auth.isLoading || isLocked) ? null : onLogin,
+                        loading: auth.isLoading,
+                      ),
               ),
+
               const SizedBox(height: 28),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Don't have an account? ",
-                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
-                  GestureDetector(
-                    onTap: () => context.go('/register'),
-                    child: const Text('CREATE ACCOUNT',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: kCrimsonDeep,
-                            fontWeight: FontWeight.bold)),
+                  Text(
+                    "Don't have an account? ",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white70 : const Color(0xFF6B7280),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/register'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: isDark ? kAccentPurple : kCosmicBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    child: const Text(
+                      'CREATE ACCOUNT',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),

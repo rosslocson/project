@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/sidebar_provider.dart';
 import '../widgets/admin_sidebar.dart';
+import 'app_theme.dart';
 
 // HamburgerIcon widget
 class HamburgerIcon extends StatelessWidget {
@@ -63,8 +64,10 @@ class AdminLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final sidebar = context.watch<SidebarProvider>();
     final route = currentRoute ?? GoRouterState.of(context).matchedLocation;
+    final theme = context.internTheme;
 
     return Scaffold(
+      backgroundColor: theme.appBackground,
       body: Stack(
         children: [
           Row(

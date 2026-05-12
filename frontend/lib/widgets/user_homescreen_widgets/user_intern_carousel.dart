@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
+import '../intern_carousel_palette.dart';
 
 // Adjust this import path based on where InternProfile and InternDetailPage are located
 import '../../screens/intern_widgets.dart';
@@ -46,15 +48,33 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
   @override
   void didUpdateWidget(covariant UserInternCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Re-initialize controller when data arrives so infinite scroll works
-    if (widget.interns != oldWidget.interns && widget.interns.isNotEmpty) {
+
+    // If we switch between loading/loaded or the intern list changes,
+    // re-sync controller position so the carousel doesn't break.
+    final listChanged = widget.interns != oldWidget.interns;
+    final canScroll = widget.interns.isNotEmpty;
+
+    if (listChanged && canScroll) {
+      _autoScrollTimer?.cancel();
+
       _currentPage = widget.interns.length * 1000;
+
+      // Dispose the old controller and create a new one.
       _pageController.dispose();
       _pageController = PageController(
         viewportFraction: _viewportFraction,
         initialPage: _currentPage,
       );
-      _startAutoScroll();
+
+      if (!widget.loading) {
+        _startAutoScroll();
+      }
+    }
+
+    // Stop auto-scroll when going back to an empty or loading state.
+    if ((!canScroll || widget.loading) && _autoScrollTimer != null) {
+      _autoScrollTimer?.cancel();
+      _autoScrollTimer = null;
     }
   }
 
@@ -110,12 +130,16 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     // Loading state
     if (widget.loading) {
       return const SizedBox(
         height: 320,
         child: Center(
-          child: CircularProgressIndicator(color: Colors.white54),
+          child: CircularProgressIndicator(
+            color: InternCarouselPalette.accent,
+          ),
         ),
       );
     }
@@ -128,19 +152,28 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Colors.white54, size: 48),
+              const Icon(
+                Icons.error_outline,
+                color: InternCarouselPalette.accent,
+                size: 48,
+              ),
               const SizedBox(height: 12),
               Text(
                 widget.error!,
-                style: const TextStyle(color: Colors.white70),
+                style: TextStyle(color: theme.topbarMutedText),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               TextButton.icon(
                 onPressed: widget.onRetry,
-                icon: const Icon(Icons.refresh, color: Colors.white70),
-                label: const Text('Retry',
-                    style: TextStyle(color: Colors.white70)),
+                icon: const Icon(
+                  Icons.refresh,
+                  color: InternCarouselPalette.accent,
+                ),
+                label: const Text(
+                  'Retry',
+                  style: TextStyle(color: InternCarouselPalette.accent),
+                ),
               ),
             ],
           ),
@@ -150,12 +183,12 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
 
     // Empty state
     if (widget.interns.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 320,
         child: Center(
           child: Text(
             'No interns found.',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+            style: TextStyle(color: theme.topbarMutedText, fontSize: 16),
           ),
         ),
       );
@@ -175,7 +208,7 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
                 'Meet Our Interns',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: theme.topbarText,
                       fontSize: 24,
                     ),
               ),
@@ -192,7 +225,7 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
                       );
                     },
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF8A84FF),
+                      foregroundColor: InternCarouselPalette.accent,
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -243,11 +276,7 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            IconButton(
-              icon:
-                  const Icon(Icons.chevron_left, color: Colors.white, size: 32),
-              onPressed: _prev,
-            ),
+            _ArrowButton(icon: Icons.chevron_left, onTap: _prev),
             const SizedBox(width: 20),
             Row(
               children: List.generate(widget.interns.length, (i) {
@@ -258,21 +287,72 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
                   width: active ? 20 : 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: active ? const Color(0xFF4A5E9A) : Colors.white24,
+                    color: active
+                        ? InternCarouselPalette.dotActive
+                        : InternCarouselPalette.dotActive.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 );
               }),
             ),
             const SizedBox(width: 20),
-            IconButton(
-              icon: const Icon(Icons.chevron_right,
-                  color: Colors.white, size: 32),
-              onPressed: _next,
-            ),
+            _ArrowButton(icon: Icons.chevron_right, onTap: _next),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _ArrowButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ArrowButton({required this.icon, required this.onTap});
+
+  @override
+  State<_ArrowButton> createState() => _ArrowButtonState();
+}
+
+class _ArrowButtonState extends State<_ArrowButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: InternCarouselPalette.arrowBackground(
+              context,
+              hovered: _isHovered,
+            ),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: InternCarouselPalette.arrowBorder(
+                context,
+                hovered: _isHovered,
+              ),
+              width: 0.8,
+            ),
+          ),
+          child: Icon(
+            widget.icon,
+            color: InternCarouselPalette.arrowIcon(
+              context,
+              hovered: _isHovered,
+            ),
+            size: 22,
+          ),
+        ),
+      ),
     );
   }
 }

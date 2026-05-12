@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 
 class BouncingArrow extends StatefulWidget {
   final VoidCallback onTap;
@@ -35,6 +36,8 @@ class _BouncingArrowState extends State<BouncingArrow>
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
@@ -50,9 +53,9 @@ class _BouncingArrowState extends State<BouncingArrow>
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1B4B).withValues(alpha: 0.8),
+              color: theme.dashboardCardStart.withValues(alpha: 0.9),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF7673C8).withValues(alpha: 0.5)),
+              border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.5)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.2),
@@ -61,10 +64,15 @@ class _BouncingArrowState extends State<BouncingArrow>
                 ),
               ],
             ),
-            child: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 28),
+            child: Icon(
+              Icons.keyboard_arrow_down,
+              color: theme.dashboardCardText,
+              size: 28,
+            ),
           ),
         ),
       ),
     );
   }
 }
+

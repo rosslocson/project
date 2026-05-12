@@ -290,7 +290,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             ),
 
             // Resolution selector
-            _Label('Resolution Action'),
+            const _Label('Resolution Action'),
             ...(_options.map((opt) => _ResolutionTile(
                   option: opt,
                   selected: _selectedResolution == opt.value,
@@ -303,7 +303,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
 
             // Time-out picker (only when set_timeout selected)
             if (_selectedResolution == 'set_timeout') ...[
-              _Label('Corrected Time Out'),
+              const _Label('Corrected Time Out'),
               _TimePicker(
                 time: _timeOut,
                 placeholder: 'Tap to set time out',
@@ -315,7 +315,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
 
             // Adjusted time-in picker (only when adjust_timein selected)
             if (_selectedResolution == 'adjust_timein') ...[
-              _Label('Corrected Time In'),
+              const _Label('Corrected Time In'),
               _TimePicker(
                 time: _adjustedTimeIn,
                 placeholder: 'Tap to set corrected time in',
@@ -326,7 +326,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             ],
 
             // Note
-            _Label('Admin Note (optional)'),
+            const _Label('Admin Note (optional)'),
             TextField(
               controller: _noteCtrl,
               maxLines: 3,

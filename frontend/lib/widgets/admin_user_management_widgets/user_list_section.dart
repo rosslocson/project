@@ -1,6 +1,7 @@
 // lib/widgets/users/user_list_section.dart
 
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 import 'user_tile.dart';
 import 'user_utils.dart';
 
@@ -24,6 +25,10 @@ class UserListSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final sectionBackground = context.isDarkInternTheme
+        ? theme.listBackground.withValues(alpha: 0.98)
+        : theme.sidebarBackground;
     if (users.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -33,16 +38,17 @@ class UserListSection extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white70),
+                color: theme.topbarText.withValues(alpha: 0.85)),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.95),
+            color: sectionBackground,
             borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: theme.border),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
@@ -51,11 +57,9 @@ class UserListSection extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: users.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 20),
+              separatorBuilder: (_, __) => Divider(height: 1, indent: 20, color: theme.border),
               itemBuilder: (context, i) {
                 final u = users[i];
-                print(
-                    'Building tile for user: ${u['id']}, is_active: ${u['is_active']}');
                 return UserTile(
                   key: ValueKey(toInt(u['id'])),
                   user: u,
