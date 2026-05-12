@@ -1,10 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+
 import '../services/api_service.dart';
+
 import '../widgets/admin_sidebar.dart';
+import 'admin_glass_topbar.dart' as admin_topbar;
+
+
 
 // ── Imported Extracted Widgets ──
-import '../widgets/admin_departments_widgets/departments_hamburger_icon.dart';
 import '../widgets/admin_departments_widgets/department_list_content.dart';
 import '../widgets/admin_departments_widgets/edit_department_dialog.dart';
 import '../widgets/admin_departments_widgets/delete_department_dialog.dart';
@@ -138,52 +146,17 @@ class _ConfigScreenState extends State<ConfigScreen>
                     children: [
                       SizedBox(
                         height: 72,
-                        child: Stack(
-                          alignment: Alignment.centerLeft,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 100, right: 100, top: 28),
-                              child: Text(
-                                'Departments',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displaySmall
-                                    ?.copyWith(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
-                              ),
-                            ),
-                            if (!_isSidebarOpen)
-                              Positioned(
-                                left: 20,
-                                top: 28,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.15)),
-                                  ),
-                                  child: IconButton(
-                                    padding: const EdgeInsets.all(12),
-                                    onPressed: () =>
-                                        setState(() => _isSidebarOpen = true),
-                                    icon: const DepartmentsHamburgerIcon(),
-                                    tooltip: 'Open Sidebar',
-                                    splashColor:
-                                        Colors.white.withValues(alpha: 0.1),
-                                    highlightColor: Colors.transparent,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        child: admin_topbar.GlassTopBar(
+                          isSidebarOpen: _isSidebarOpen,
+                          onToggleSidebar: () =>
+                              setState(() => _isSidebarOpen = true),
+                          user: context.read<AuthProvider>().user,
+                          isAdmin: true,
+                          title: 'Departments',
+                          showWelcome: false,
                         ),
                       ),
+
                       const SizedBox(height: 15),
                       Expanded(
                         child: Padding(

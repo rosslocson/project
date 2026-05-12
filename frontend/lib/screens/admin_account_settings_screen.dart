@@ -14,9 +14,11 @@ import '../../services/api_service.dart';
 import '../../widgets/admin_sidebar.dart';
 import 'avatar_crop_screen.dart';
 import '../widgets/avatar_action_dialog.dart';
+import 'admin_glass_topbar.dart' as admin_topbar;
+
 
 // ── Imported Extracted Widgets ──
-import '../widgets/admin_account_settings_widgets/hamburger_icon.dart';
+
 import '../widgets/admin_account_settings_widgets/profile_form_tab.dart';
 import '../widgets/admin_account_settings_widgets/password_form_tab.dart';
 
@@ -400,49 +402,17 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                 children: [
                   SizedBox(
                     height: 72,
-                    child: Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(
-                              left: 100, right: 100, top: 28),
-                          child: Text(
-                            'Account Settings',
-                            style: Theme.of(context)
-                                .textTheme
-                                .displaySmall
-                                ?.copyWith(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: theme.topbarText,
-                                  letterSpacing: 0.5,
-                                ),
-                          ),
-                        ),
-                        if (!_isSidebarOpen)
-                          Positioned(
-                            left: 20,
-                            top: 28,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: theme.sidebarHoverBackground.withValues(
-                                  alpha: context.isDarkInternTheme ? 0.8 : 1,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: theme.border),
-                              ),
-                              child: IconButton(
-                                padding: const EdgeInsets.all(12),
-                                onPressed: () =>
-                                    setState(() => _isSidebarOpen = true),
-                                icon: const HamburgerIcon(),
-                                tooltip: 'Open Sidebar',
-                              ),
-                            ),
-                          ),
-                      ],
+                    child: admin_topbar.GlassTopBar(
+                      isSidebarOpen: _isSidebarOpen,
+                      onToggleSidebar: () =>
+                          setState(() => _isSidebarOpen = true),
+                      user: context.read<AuthProvider>().user,
+                      isAdmin: true,
+                      title: 'Account Settings',
+                      showWelcome: false,
                     ),
                   ),
+
                   const SizedBox(height: 15),
                   Expanded(
                     child: Padding(

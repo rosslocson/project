@@ -9,11 +9,12 @@ import '../services/api_service.dart';
 import '../widgets/admin_sidebar.dart';
 import '../widgets/app_background.dart';
 import '../widgets/app_theme.dart';
+import 'admin_glass_topbar.dart' as admin_topbar;
 
 import '../widgets/admin_user_management_widgets/filter_pill_group.dart';
+
 import '../widgets/admin_user_management_widgets/user_list_section.dart';
 import '../widgets/admin_user_management_widgets/user_utils.dart';
-import '../widgets/admin_user_management_widgets/users_hamburger_icon.dart';
 
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
@@ -386,50 +387,16 @@ class _UsersScreenState extends State<UsersScreen> {
                 children: [
                   SizedBox(
                     height: 72,
-                    child: Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
-                          child: Text(
-                            'User Management',
-                            style: Theme.of(context)
-                                .textTheme
-                                .displaySmall
-                                ?.copyWith(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: theme.topbarText,
-                                  letterSpacing: 0.5,
-                                ),
-                          ),
-                        ),
-                        if (!_isSidebarOpen)
-                          Positioned(
-                            left: 20,
-                            top: 28,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: theme.sidebarHoverBackground.withValues(
-                                  alpha: context.isDarkInternTheme ? 0.8 : 1,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: theme.border),
-                              ),
-                              child: IconButton(
-                                padding: const EdgeInsets.all(12),
-                                onPressed: () =>
-                                    setState(() => _isSidebarOpen = true),
-                                icon: const UsersHamburgerIcon(),
-                                tooltip: 'Open Sidebar',
-                                splashColor: theme.sidebarHoverBackground,
-                                highlightColor: Colors.transparent,
-                              ),
-                            ),
-                          ),
-                      ],
+                    child: admin_topbar.GlassTopBar(
+                      isSidebarOpen: _isSidebarOpen,
+                      onToggleSidebar: () => setState(() => _isSidebarOpen = true),
+                      user: context.read<AuthProvider>().user,
+                      isAdmin: true,
+                      title: 'User Management',
+                      showWelcome: false,
                     ),
                   ),
+
                   const SizedBox(height: 15),
                   Expanded(
                     child: Padding(

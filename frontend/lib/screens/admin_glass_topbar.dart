@@ -3,11 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
-import '../widgets/app_theme.dart';
 import '../widgets/logout_confirmation_dialog.dart';
+import '../widgets/app_theme.dart';
+
 
 // InternSpace Palette
-const _kCosmicBlue = Color(0xFF00022E);
 const _kAccentIndigo = Color(0xFF7367F0);
 const _kLightAvatarEnd = Color(0xFFA78BFA);
 
@@ -20,8 +20,8 @@ class HamburgerIcon extends StatelessWidget {
     final color = theme.topbarText;
 
     return SizedBox(
-      width: 24, // Increased slightly
-      height: 18, // Increased slightly
+      width: 24,
+      height: 18,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -61,6 +61,8 @@ class GlassTopBar extends StatelessWidget {
   final VoidCallback? onToggleSidebar;
   final Map<String, dynamic>? user;
   final bool isAdmin;
+  final String? title;
+  final bool showWelcome;
 
   const GlassTopBar({
     super.key,
@@ -68,22 +70,26 @@ class GlassTopBar extends StatelessWidget {
     this.onToggleSidebar,
     this.user,
     this.isAdmin = true,
+    this.title,
+    this.showWelcome = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
     final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
-    final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
+    final String initials =
+        firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     String finalAvatarUrl = '';
     if (rawAvatarUrl.isNotEmpty) {
-      finalAvatarUrl = rawAvatarUrl.startsWith('http') 
-          ? rawAvatarUrl 
+      finalAvatarUrl = rawAvatarUrl.startsWith('http')
+          ? rawAvatarUrl
           : 'http://127.0.0.1:8080$rawAvatarUrl';
     }
 
@@ -93,12 +99,11 @@ class GlassTopBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          // PADDING: Increased vertical padding slightly (from 12 to 14)
           padding: const EdgeInsets.symmetric(
             horizontal: 32,
-            vertical: 14, 
+            vertical: 14,
           ),
-          color: Colors.transparent, 
+          color: Colors.transparent,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -120,27 +125,29 @@ class GlassTopBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isAdmin ? 'Admin Dashboard' : 'Home',
+                    title ?? (isAdmin ? 'Admin Dashboard' : 'Home'),
                     style: TextStyle(
-                      fontSize: 24, // Bumped up slightly
+                      fontSize: 24,
                       fontWeight: FontWeight.w800,
                       color: theme.topbarText,
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 2), 
-                  Text(
-                    'Welcome, $firstName',
-                    style: TextStyle(
-                      fontSize: 14, // Bumped up slightly
-                      fontWeight: FontWeight.w500,
-                      color: theme.topbarMutedText,
+                  const SizedBox(height: 2),
+                  if (user != null && showWelcome)
+                    Text(
+                      'Welcome, $fullName',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: theme.topbarText.withValues(alpha: 0.7),
+                      ),
                     ),
-                  ),
                 ],
               ),
               const Spacer(),
-              PopupMenuButton<String>(
+              if (user != null)
+                PopupMenuButton<String>(
                 onSelected: (String choice) async {
                   if (choice == 'profile') {
                     if (isAdmin) {
@@ -161,7 +168,8 @@ class GlassTopBar extends StatelessWidget {
                   }
                 },
                 offset: const Offset(0, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape:
+                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 itemBuilder: (BuildContext context) => [
                   const PopupMenuItem<String>(
                     value: 'profile',
@@ -169,7 +177,8 @@ class GlassTopBar extends StatelessWidget {
                       children: [
                         Icon(Icons.person_outline, size: 20),
                         SizedBox(width: 12),
-                        Text('View Profile', style: TextStyle(fontWeight: FontWeight.w500)),
+                        Text('View Profile',
+                            style: TextStyle(fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ),
@@ -182,9 +191,13 @@ class GlassTopBar extends StatelessWidget {
                     value: 'logout',
                     child: Row(
                       children: [
-                        Icon(Icons.logout, size: 20, color: Colors.redAccent),
+                        Icon(Icons.logout,
+                            size: 20, color: Colors.redAccent),
                         SizedBox(width: 12),
-                        Text('Log Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                        Text('Log Out',
+                            style: TextStyle(
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -203,8 +216,8 @@ class GlassTopBar extends StatelessWidget {
                       ),
                       const SizedBox(width: 14),
                       CircleAvatar(
-                        radius: 20, // Increased radius back up slightly
-                        backgroundColor: isDark 
+                        radius: 20,
+                        backgroundColor: isDark
                             ? const Color(0xFFCDD2FB).withValues(alpha: 0.1)
                             : _kAccentIndigo.withValues(alpha: 0.1),
                         backgroundImage: finalAvatarUrl.isNotEmpty
@@ -216,7 +229,10 @@ class GlassTopBar extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   gradient: LinearGradient(
                                     colors: isDark
-                                        ? const [Color(0xFF7474D4), Color(0xFF10134A)]
+                                        ? const [
+                                            Color(0xFF7474D4),
+                                            Color(0xFF10134A)
+                                          ]
                                         : const [_kAccentIndigo, _kLightAvatarEnd],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
@@ -247,7 +263,7 @@ class GlassTopBar extends StatelessWidget {
           width: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: isDark 
+              colors: isDark
                   ? [
                       Colors.transparent,
                       Colors.white.withValues(alpha: 0.08),
@@ -288,8 +304,10 @@ class _ThemeToggleMenuItem extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(darkMode ? 'Dark Mode' : 'Light Mode', 
-                style: const TextStyle(fontWeight: FontWeight.w500)),
+                child: Text(
+                  darkMode ? 'Dark Mode' : 'Light Mode',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
               ),
               Transform.scale(
                 scale: 0.8,
@@ -306,3 +324,4 @@ class _ThemeToggleMenuItem extends StatelessWidget {
     );
   }
 }
+

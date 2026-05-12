@@ -5,6 +5,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
+
+
 
 import '../models/attendance_constants.dart';
 import '../models/attendance_record.dart' show AdminAttendanceRecord;
@@ -17,6 +22,8 @@ import '../widgets/admin_attendance_widgets/attendance_ui_components.dart';
 import '../widgets/admin_attendance_widgets/custom_date_picker_dialog.dart';
 import '../widgets/admin_attendance_widgets/review_report_sheet.dart';
 import 'export_attendance.dart';
+import 'admin_glass_topbar.dart' as admin_topbar;
+
 
 // Re-export HamburgerIcon so other attendance files can reuse it from one place.
 export '../widgets/admin_attendance_widgets/attendance_table.dart' show HamburgerIcon;
@@ -215,6 +222,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                     children: [
                       _buildTopBar(),
                       const SizedBox(height: 15),
+
                       Expanded(child: _buildCard()),
                     ],
                   ),
@@ -230,53 +238,17 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   Widget _buildTopBar() {
     return SizedBox(
       height: 72,
-      child: Stack(
-        alignment: Alignment.centerLeft,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
-            child: Text(
-              'Attendance Monitoring',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
-            ),
-          ),
-          if (!_isSidebarOpen)
-            Positioned(
-              left: 20,
-              top: 28,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                ),
-                child: IconButton(
-                  padding: const EdgeInsets.all(12),
-                  onPressed: () => setState(() => _isSidebarOpen = true),
-                  icon: const HamburgerIcon(),
-                  tooltip: 'Open Sidebar',
-                  splashColor: Colors.white.withValues(alpha: 0.1),
-                  highlightColor: Colors.transparent,
-                ),
-              ),
-            ),
-          Positioned(
-            right: 24,
-            top: 24,
-            child: _PendingBell(
-              key: _bellKey,
-              onResolved: _onReportResolved,
-            ),
-          ),
-        ],
+      child: admin_topbar.GlassTopBar(
+        isSidebarOpen: _isSidebarOpen,
+        onToggleSidebar: () => setState(() => _isSidebarOpen = true),
+        user: context.read<AuthProvider>().user,
+        isAdmin: true,
+        title: 'Attendance',
+        showWelcome: false,
       ),
     );
   }
+
 
   Widget _buildCard() {
     return Padding(
@@ -681,7 +653,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 class _PendingBell extends StatefulWidget {
   final VoidCallback? onResolved;
 
-  const _PendingBell({super.key, this.onResolved});
+  const _PendingBell({this.onResolved});
 
   @override
   State<_PendingBell> createState() => _PendingBellState();
