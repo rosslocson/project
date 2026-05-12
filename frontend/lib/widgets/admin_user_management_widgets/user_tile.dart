@@ -204,7 +204,7 @@ class UserTile extends StatelessWidget {
                         ? theme.listMutedText.withValues(alpha: 0.5)
                         : primaryColor,
                     // Revised: Added explicit trackColor for off state visibility
-                    trackColor: isDark 
+                    inactiveTrackColor: isDark 
                         ? Colors.white.withValues(alpha: 0.2) // Lighter in Dark Mode
                         : Colors.grey.shade400,              // Darker in Light Mode
                     onChanged: isCurrentUser ? null : (_) => onToggle(),

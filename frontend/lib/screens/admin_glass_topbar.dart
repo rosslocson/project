@@ -326,7 +326,7 @@ class _ThemeToggleMenuItem extends StatelessWidget {
                 scale: 0.8,
                 child: Switch(
                   value: darkMode,
-                  activeColor: _kAccentIndigo,
+                  activeThumbColor: _kAccentIndigo,
                   onChanged: (_) => themeProvider.toggleTheme(),
                 ),
               ),
