@@ -66,11 +66,16 @@ class GlassTopBar extends StatelessWidget {
   final VoidCallback? onToggleSidebar;
   final Map<String, dynamic>? user;
 
+  final String? pageTitle;
+  final bool showWelcome;
+
   const GlassTopBar({
     super.key,
     this.isSidebarOpen,
     this.onToggleSidebar,
     this.user,
+    this.pageTitle,
+    this.showWelcome = true,
   });
 
   @override
@@ -125,7 +130,7 @@ class GlassTopBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Home',
+                    pageTitle ?? 'Home',
                     style: TextStyle(
                       fontSize: 24, 
                       fontWeight: FontWeight.w800,
@@ -134,14 +139,15 @@ class GlassTopBar extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2), 
-                  Text(
-                    'Welcome, $firstName',
-                    style: TextStyle(
-                      fontSize: 14, 
-                      fontWeight: FontWeight.w500,
-                      color: theme.topbarMutedText,
+                  if (showWelcome)
+                    Text(
+                      'Welcome, $firstName',
+                      style: TextStyle(
+                        fontSize: 14, 
+                        fontWeight: FontWeight.w500,
+                        color: theme.topbarMutedText,
+                      ),
                     ),
-                  ),
                 ],
               ),
               const Spacer(),

@@ -6,6 +6,9 @@ import '../../services/api_service.dart';
 import '../../widgets/app_theme.dart';
 import '../../widgets/user_sidebar.dart';
 import '../widgets/app_background.dart';
+import 'user_glass_topbar.dart';
+import '../../providers/sidebar_provider.dart';
+
 
 import '../../widgets/user_edit_profile_widgets/edit_profile_hamburger_icon.dart';
 import '../../widgets/user_edit_profile_widgets/edit_profile_status_banner.dart';
@@ -21,6 +24,8 @@ class UserEditProfileScreen extends StatefulWidget {
 class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     with TickerProviderStateMixin {
   late TabController _tabs;
+  // Sidebar open state is controlled by SidebarProvider to match GlassTopBar hamburger behavior.
+  // ignore: unused_field
   bool _sidebarVisible = true;
 
   final _academicKey = GlobalKey<FormState>();
@@ -357,11 +362,11 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            width: _sidebarVisible ? 250 : 0,
-            child: _sidebarVisible
+            width: context.watch<SidebarProvider>().isUserSidebarOpen ? 250 : 0,
+            child: context.watch<SidebarProvider>().isUserSidebarOpen
                 ? UserSidebar(
                     currentRoute: '/edit-profile',
-                    onClose: () => setState(() => _sidebarVisible = false),
+                    onClose: () => context.read<SidebarProvider>().setUserSidebarOpen(false),
                   )
                 : null,
           ),
@@ -372,51 +377,12 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                 children: [
                   SizedBox(
                     height: 72,
-                    child: Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(
-                              left: 100, right: 100, top: 28),
-                          child: Text(
-                            'Edit Profile',
-                            style: Theme.of(context)
-                                .textTheme
-                                .displaySmall
-                                ?.copyWith(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                          ),
-                        ),
-                        if (!_sidebarVisible)
-                          Positioned(
-                            left: 20,
-                            top: 28,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color:
-                                    const Color.fromRGBO(255, 255, 255, 0.05),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: const Color.fromRGBO(
-                                        255, 255, 255, 0.15)),
-                              ),
-                              child: IconButton(
-                                padding: const EdgeInsets.all(12),
-                                onPressed: () =>
-                                    setState(() => _sidebarVisible = true),
-                                icon: const EditProfileHamburgerIcon(),
-                                tooltip: 'Open Sidebar',
-                                splashColor:
-                                    const Color.fromRGBO(255, 255, 255, 0.1),
-                                highlightColor: Colors.transparent,
-                              ),
-                            ),
-                          ),
-                      ],
+                    child: GlassTopBar(
+                      pageTitle: 'Edit Profile',
+                      showWelcome: false,
+                      user: context.watch<AuthProvider>().user,
+                      isSidebarOpen: context.watch<SidebarProvider>().isUserSidebarOpen,
+                      onToggleSidebar: () => context.read<SidebarProvider>().setUserSidebarOpen(!context.read<SidebarProvider>().isUserSidebarOpen),
                     ),
                   ),
                   const SizedBox(height: 15),

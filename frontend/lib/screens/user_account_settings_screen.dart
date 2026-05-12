@@ -20,6 +20,7 @@ import 'avatar_crop_screen.dart';
 import '../widgets/user_account_settings_widgets/user_account_hamburger.dart';
 import '../widgets/user_account_settings_widgets/user_profile_tab.dart';
 import '../widgets/user_account_settings_widgets/user_password_tab.dart';
+import 'user_glass_topbar.dart';
 
 const _kBlue = Color(0xFF00022E);
 
@@ -398,45 +399,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
           // ── Top bar ──
           SizedBox(
             height: 72,
-            child: Stack(
-              alignment: Alignment.centerLeft,
-              children: [
-                Padding(
-                  padding:
-                      const EdgeInsets.only(left: 100, right: 100, top: 28),
-                  child: Text(
-                    'Account Settings',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: theme.topbarText,
-                          letterSpacing: 0.5,
-                        ),
-                  ),
-                ),
-                if (!sidebar.isUserSidebarOpen)
-                  Positioned(
-                    left: 20,
-                    top: 28,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: theme.sidebarHoverBackground.withValues(
-                          alpha: context.isDarkInternTheme ? 0.8 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: theme.border),
-                      ),
-                      child: IconButton(
-                        padding: const EdgeInsets.all(12),
-                        onPressed: () => sidebar.setUserSidebarOpen(true),
-                        icon: const UserAccountHamburger(),
-                        tooltip: 'Open Sidebar',
-                        splashColor: theme.sidebarHoverBackground,
-                        highlightColor: Colors.transparent,
-                      ),
-                    ),
-                  ),
-              ],
+            child: GlassTopBar(
+              pageTitle: 'Account Settings',
+              showWelcome: false,
+              user: user,
+              isSidebarOpen: sidebar.isUserSidebarOpen,
+              onToggleSidebar: () => sidebar.setUserSidebarOpen(!sidebar.isUserSidebarOpen),
             ),
           ),
           const SizedBox(height: 15),

@@ -6,9 +6,10 @@ import '../services/api_service.dart';
 import '../widgets/user_sidebar.dart';
 import '../widgets/app_background.dart';
 import '../widgets/app_theme.dart';
+import 'user_glass_topbar.dart';
+import '../providers/sidebar_provider.dart';
 
 // ── Imported Extracted Widgets ──
-import '../widgets/user_my_profile_widgets/profile_hamburger_icon.dart';
 import '../widgets/user_my_profile_widgets/profile_left_panel.dart';
 import '../widgets/user_my_profile_widgets/profile_academic_tab.dart';
 import '../widgets/user_my_profile_widgets/profile_skills_tab.dart';
@@ -24,6 +25,9 @@ class MyProfileScreen extends StatefulWidget {
 class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderStateMixin {
   bool _loading = true;
   String? _fetchError;
+  // Sidebar open state is controlled by SidebarProvider to match GlassTopBar hamburger behavior.
+  // (This page previously used local state which could diverge.)
+  // ignore: unused_field
   bool _isSidebarOpen = true;
   late TabController _tabs;
 
@@ -103,11 +107,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            width: _isSidebarOpen ? 250 : 0,
-            child: _isSidebarOpen
+            width: context.watch<SidebarProvider>().isUserSidebarOpen ? 250 : 0,
+            child: context.watch<SidebarProvider>().isUserSidebarOpen
                 ? UserSidebar(
                     currentRoute: '/profile',
-                    onClose: () => setState(() => _isSidebarOpen = false),
+                    onClose: () => context
+                        .read<SidebarProvider>()
+                        .setUserSidebarOpen(false),
                   )
                 : null,
           ),
@@ -118,49 +124,16 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                 children: [
                   SizedBox(
                     height: 72,
-                    child: Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 100, right: 100, top: 28),
-                          child: Row(
-                            children: [
-                              Text(
-                                'My Profile',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      color: theme.topbarText,
-                                      letterSpacing: 0.5,
-                                    ),
-                              ),
-                              const Spacer(),
-                            ],
-                          ),
-                        ),
-                        if (!_isSidebarOpen)
-                          Positioned(
-                            left: 20,
-                            top: 28,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: theme.sidebarHoverBackground.withValues(
-                                  alpha: context.isDarkInternTheme ? 0.8 : 1,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: theme.border),
-                              ),
-                              child: IconButton(
-                                padding: const EdgeInsets.all(12),
-                                onPressed: () => setState(() => _isSidebarOpen = true),
-                                icon: const ProfileHamburgerIcon(),
-                                tooltip: 'Open Sidebar',
-                                splashColor: theme.sidebarHoverBackground,
-                                highlightColor: Colors.transparent,
-                              ),
-                            ),
-                          ),
-                      ],
+                    child: GlassTopBar(
+                      pageTitle: 'My Profile',
+                      showWelcome: false,
+                      user: user,
+                      isSidebarOpen: context.watch<SidebarProvider>().isUserSidebarOpen,
+                      onToggleSidebar: () => context
+                          .read<SidebarProvider>()
+                          .setUserSidebarOpen(!context
+                              .read<SidebarProvider>()
+                              .isUserSidebarOpen),
                     ),
                   ),
                   const SizedBox(height: 15),

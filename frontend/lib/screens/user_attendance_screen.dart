@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/attendance_model.dart';
 import '../providers/sidebar_provider.dart';
+import '../providers/auth_provider.dart';
+import 'user_glass_topbar.dart';
 import '../services/attendance_service.dart';
 import '../widgets/attendance_clock_card.dart';
 import '../widgets/attendance_history_list.dart';
@@ -9,47 +11,9 @@ import '../widgets/ojt_progress_card.dart';
 import '../widgets/user_layout.dart';
 import '../widgets/app_background.dart';
 
-class HamburgerIcon extends StatelessWidget {
-  const HamburgerIcon({super.key});
+import 'user_glass_topbar.dart';
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 14,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: const Color.fromRGBO(255, 255, 255, 0.8), // Fixed
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -149,48 +113,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           // ── Top bar ───────────────────────────────────────────
           SizedBox(
             height: 72,
-            child: Stack(
-              alignment: Alignment.centerLeft,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(
-                      left: 100, right: 100, top: 28),
-                  child: Text(
-                    'My Attendance',
-                    style: Theme.of(context)
-                            .textTheme
-                            .displaySmall
-                            ?.copyWith(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                  ),
-                ),
-                if (!sidebar.isUserSidebarOpen)
-                  Positioned(
-                    left: 20,
-                    top: 28,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(255, 255, 255, 0.05), // Fixed
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color.fromRGBO(255, 255, 255, 0.15), // Fixed
-                        ),
-                      ),
-                      child: IconButton(
-                        padding: const EdgeInsets.all(12),
-                        onPressed: () => sidebar.setUserSidebarOpen(true),
-                        icon: const HamburgerIcon(),
-                        tooltip: 'Open Sidebar',
-                        splashColor: const Color.fromRGBO(255, 255, 255, 0.1), // Fixed
-                        highlightColor: Colors.transparent,
-                      ),
-                    ),
-                  ),
-              ],
+            child: GlassTopBar(
+              pageTitle: 'My Attendance',
+              showWelcome: false,
+              user: context.watch<AuthProvider>().user,
+              isSidebarOpen: sidebar.isUserSidebarOpen,
+              onToggleSidebar: () => sidebar.setUserSidebarOpen(!sidebar.isUserSidebarOpen),
             ),
           ),
           const SizedBox(height: 15),

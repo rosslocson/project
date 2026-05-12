@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
 import '../providers/sidebar_provider.dart';
-import '../widgets/user_layout.dart';
 import '../widgets/app_background.dart';
+import '../widgets/user_layout.dart';
+import 'user_glass_topbar.dart';
+
 
 class UserAboutScreen extends StatelessWidget {
   const UserAboutScreen({super.key});
+
 
   @override
   Widget build(BuildContext context) {
@@ -22,55 +27,23 @@ class UserAboutScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Top bar ───────────────────────────────────────────
+          // ── Top bar (shared GlassTopBar) ─────────────────────
           SizedBox(
             height: 72,
-            child: Stack(
-              alignment: Alignment.centerLeft,
-              children: [
-                Padding(
-                      padding:
-                          const EdgeInsets.only(left: 100, right: 100, top: 28),
-                      child: Text(
-                        'About & Contact',
-                        style:
-                            Theme.of(context).textTheme.displaySmall?.copyWith(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                      ),
-                    ),
-                    if (!sidebar.isUserSidebarOpen)
-                      Positioned(
-                        left: 20,
-                        top: 28,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.15),
-                            ),
-                          ),
-                          child: IconButton(
-                            padding: const EdgeInsets.all(12),
-                            onPressed: () => sidebar.setUserSidebarOpen(true),
-                            icon: const _HamburgerIcon(),
-                            tooltip: 'Open Sidebar',
-                            splashColor: Colors.white.withValues(alpha: 0.1),
-                            highlightColor: Colors.transparent,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 15),
+            child: GlassTopBar(
+              pageTitle: 'About & Contact',
+              showWelcome: false,
+              user: context.watch<AuthProvider>().user,
+              isSidebarOpen: sidebar.isUserSidebarOpen,
+              onToggleSidebar: () => sidebar
+                  .setUserSidebarOpen(!sidebar.isUserSidebarOpen),
+            ),
+          ),
+          const SizedBox(height: 15),
 
-              // ── Main content container ────────────────────────────
-              Expanded(
+          // ── Main content container ────────────────────────────
+          Expanded(
+
                 child: Padding(
                   padding:
                       const EdgeInsets.only(left: 100, right: 100, bottom: 28),
@@ -268,49 +241,7 @@ class UserAboutScreen extends StatelessWidget {
   }
 }
 
-// ─── Hamburger Icon ───────────────────────────────────────────────────────────
 
-class _HamburgerIcon extends StatelessWidget {
-  const _HamburgerIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 14,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Container(
-            width: 22,
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ─── Reusable Section Card ───────────────────────────────────────────────────
 
