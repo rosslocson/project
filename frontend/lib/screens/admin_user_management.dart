@@ -12,7 +12,6 @@ import '../widgets/app_theme.dart';
 import 'admin_glass_topbar.dart' as admin_topbar;
 
 import '../widgets/admin_user_management_widgets/filter_pill_group.dart';
-
 import '../widgets/admin_user_management_widgets/user_list_section.dart';
 import '../widgets/admin_user_management_widgets/user_utils.dart';
 
@@ -28,10 +27,8 @@ class _UsersScreenState extends State<UsersScreen> {
   bool _loading = true;
 
   final _searchCtrl = TextEditingController();
-  Timer? _debounce;
 
   bool _isSidebarOpen = true;
-
   String _filterStatus = 'All';
 
   Map<String, int> _counts = {
@@ -50,16 +47,17 @@ class _UsersScreenState extends State<UsersScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
-    _debounce?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadUsers({String? search, String? status}) async {
+  // We removed the search parameter so the API just fetches the category list,
+  // allowing the frontend to handle the robust search logic.
+  Future<void> _loadUsers({String? status}) async {
     if (!mounted) return;
     setState(() => _loading = true);
 
     try {
-      final res = await ApiService.getUsers(search: search, status: status);
+      final res = await ApiService.getUsers(status: status);
       if (!mounted) return;
 
       setState(() {
@@ -80,7 +78,6 @@ class _UsersScreenState extends State<UsersScreen> {
             if (u['is_active'] == true) return 0;
             return 1;
           }
-
           return statusOrder(a).compareTo(statusOrder(b));
         });
 
@@ -94,10 +91,7 @@ class _UsersScreenState extends State<UsersScreen> {
 
   Future<void> _silentReload() async {
     try {
-      final res = await ApiService.getUsers(
-        search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
-        status: 'all',
-      );
+      final res = await ApiService.getUsers(status: 'all');
 
       if (!mounted) return;
 
@@ -134,7 +128,6 @@ class _UsersScreenState extends State<UsersScreen> {
             if (u['is_active'] == true) return 0;
             return 1;
           }
-
           return statusOrder(a).compareTo(statusOrder(b));
         });
       });
@@ -319,7 +312,10 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   void _onTabChanged(String status) {
-    setState(() => _filterStatus = status);
+    setState(() {
+      _filterStatus = status;
+      _searchCtrl.clear(); // Good practice: clear search when swapping tabs
+    });
 
     String? apiStatus;
     if (status == 'Active') {
@@ -347,13 +343,29 @@ class _UsersScreenState extends State<UsersScreen> {
       {'id': 'Archived', 'label': 'Archived', 'count': _counts['archived'] ?? 0},
     ];
 
-    final filteredUsers = _filterStatus == 'Inactive'
+    // 1. Initial Status Filter
+    final statusFilteredUsers = _filterStatus == 'Inactive'
         ? _users.where((u) => u['is_archived'] != true).toList()
         : _users;
 
-    final admins = filteredUsers.where((u) => u['role'] == 'admin').toList();
-    final internUsers =
-        filteredUsers.where((u) => u['role'] != 'admin').toList();
+    // 2. Client-Side Search Logic (Fixes the naming/spacing bugs)
+    final query = _searchCtrl.text.trim().toLowerCase();
+    
+    final searchedUsers = statusFilteredUsers.where((u) {
+      if (query.isEmpty) return true;
+      
+      final firstName = (u['first_name'] ?? '').toString().toLowerCase();
+      final lastName = (u['last_name'] ?? '').toString().toLowerCase();
+      final fullName = '$firstName $lastName'.trim();
+      final email = (u['email'] ?? '').toString().toLowerCase();
+
+      // This easily matches spaces correctly (e.g., "Lizard Boreas")
+      return fullName.contains(query) || email.contains(query);
+    }).toList();
+
+    // 3. Separation by Roles
+    final admins = searchedUsers.where((u) => u['role'] == 'admin').toList();
+    final internUsers = searchedUsers.where((u) => u['role'] != 'admin').toList();
 
     int sortSelfToTop(dynamic a, dynamic b) {
       if (toInt(a['id']) == currentUserId) return -1;
@@ -396,7 +408,6 @@ class _UsersScreenState extends State<UsersScreen> {
                       showWelcome: false,
                     ),
                   ),
-
                   const SizedBox(height: 15),
                   Expanded(
                     child: Padding(
@@ -413,22 +424,14 @@ class _UsersScreenState extends State<UsersScreen> {
                               decoration: InputDecoration(
                                 hintText: 'Search by name or email...',
                                 hintStyle: TextStyle(color: theme.mutedText, fontSize: 13),
-                                prefixIcon: IconButton(
-                                  icon: Icon(Icons.search, color: theme.mutedText),
-                                  onPressed: () {
-                                    if (_debounce?.isActive ?? false) {
-                                      _debounce!.cancel();
-                                    }
-                                    _loadUsers(search: _searchCtrl.text);
-                                  },
-                                ),
+                                prefixIcon: Icon(Icons.search, color: theme.mutedText),
                                 suffixIcon: _searchCtrl.text.isNotEmpty
                                     ? IconButton(
                                         icon: Icon(Icons.clear, color: theme.mutedText),
                                         onPressed: () {
                                           _searchCtrl.clear();
-                                          _loadUsers(status: 'all');
-                                          setState(() {});
+                                          // Triggers a UI rebuild to show all users
+                                          setState(() {}); 
                                         },
                                       )
                                     : null,
@@ -439,17 +442,10 @@ class _UsersScreenState extends State<UsersScreen> {
                                 filled: true,
                                 fillColor: theme.formFill,
                               ),
+                              // Live search as you type
                               onChanged: (v) {
                                 setState(() {});
-                                if (_debounce?.isActive ?? false) {
-                                  _debounce!.cancel();
-                                }
-                                _debounce = Timer(
-                                  const Duration(milliseconds: 300),
-                                  () => _loadUsers(search: v),
-                                );
                               },
-                              onSubmitted: (v) => _loadUsers(search: v),
                             ),
                             const SizedBox(height: 24),
                             FilterPillGroup(
