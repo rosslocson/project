@@ -651,7 +651,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 class _PendingBell extends StatefulWidget {
   final VoidCallback? onResolved;
 
-  const _PendingBell({super.key, this.onResolved});
+  const _PendingBell({this.onResolved});
 
 
   @override
