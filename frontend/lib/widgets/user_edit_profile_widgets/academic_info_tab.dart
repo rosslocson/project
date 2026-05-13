@@ -177,39 +177,42 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     return null;
   }
 
-  // A unified styling helper to guarantee all fields have the exact same box format
   InputDecoration _buildInputDecoration(BuildContext context,
       {required String hintText, Widget? suffixIcon}) {
+    final theme = context.internTheme;
     return InputDecoration(
       hintText: hintText,
-      hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+      hintStyle: TextStyle(color: theme.mutedText, fontSize: 14),
       filled: true,
-      fillColor: Colors.grey.shade100,
+      fillColor: theme.formFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: theme.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Theme.of(context).primaryColor),
+        borderSide:
+            BorderSide(color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
+        borderSide:
+            BorderSide(color: Colors.red.withValues(alpha: 0.6), width: 1.2),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
+        borderSide:
+            BorderSide(color: Colors.red.withValues(alpha: 0.9), width: 1.2),
       ),
       suffixIcon: suffixIcon,
-      // Provide a slight margin below the error text to prevent crowding
       errorStyle: const TextStyle(height: 1.2),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
     bool showProgramPrefix =
         _programFocus.hasFocus || _localProgramCtrl.text.isNotEmpty;
 
@@ -217,7 +220,6 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
       padding: const EdgeInsets.all(28),
       child: Form(
         key: widget.formKey,
-        // THIS IS THE MAGIC LINE: It instantly checks rules as the user types or clears data
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,15 +240,18 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                       key: ValueKey(_localDept),
                       initialValue: _localDept,
                       icon: Icon(Icons.keyboard_arrow_down,
-                          color: Colors.grey.shade600),
-                      style:
-                          const TextStyle(fontSize: 14, color: Colors.black87),
+                          color: theme.mutedText),
+                      style: TextStyle(fontSize: 14, color: theme.surfaceText),
                       decoration: _buildInputDecoration(context,
                           hintText: widget.departments.isEmpty
                               ? 'No departments yet'
                               : 'Select Department'),
+                      dropdownColor: theme.dialogBackground,
                       items: widget.departments.map((dept) {
-                        return DropdownMenuItem(value: dept, child: Text(dept));
+                        return DropdownMenuItem(
+                            value: dept,
+                            child: Text(dept,
+                                style: TextStyle(color: theme.surfaceText)));
                       }).toList(),
                       onChanged: (v) {
                         setState(() => _localDept = v);
@@ -268,16 +273,17 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                       child: DropdownButtonFormField<String>(
                         initialValue: widget.defaultPosition,
                         icon: Icon(Icons.keyboard_arrow_down,
-                            color: Colors.grey.shade300),
+                            color: theme.mutedText),
                         decoration:
                             _buildInputDecoration(context, hintText: ''),
+                        dropdownColor: theme.dialogBackground,
                         items: [
                           DropdownMenuItem(
                             value: widget.defaultPosition,
                             child: Text(
                               widget.defaultPosition,
-                              style: const TextStyle(
-                                  color: Colors.black54, fontSize: 14),
+                              style: TextStyle(
+                                  color: theme.mutedText, fontSize: 14),
                             ),
                           ),
                         ],
@@ -294,7 +300,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
             const FormLabel(text: 'School / University'),
             TextFormField(
               controller: widget.schoolCtrl,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              style: TextStyle(fontSize: 14, color: theme.surfaceText),
               decoration: _buildInputDecoration(context,
                   hintText: 'e.g. Laguna State Polytechnic University'),
               validator: _requiredValidator,
@@ -307,7 +313,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
             TextFormField(
               controller: _localProgramCtrl,
               focusNode: _programFocus,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              style: TextStyle(fontSize: 14, color: theme.surfaceText),
               decoration: _buildInputDecoration(context,
                       hintText: showProgramPrefix
                           ? 'Information Systems'
@@ -317,8 +323,8 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                     showProgramPrefix ? 'Bachelor of Science in ' : null,
                 prefixStyle: TextStyle(
                   color: _programFocus.hasFocus
-                      ? Colors.grey.shade500
-                      : Colors.black87,
+                      ? theme.mutedText
+                      : theme.surfaceText,
                   fontSize: 14,
                 ),
               ),
@@ -336,8 +342,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                     const FormLabel(text: 'Specialization'),
                     TextFormField(
                       controller: widget.specCtrl,
-                      style:
-                          const TextStyle(fontSize: 14, color: Colors.black87),
+                      style: TextStyle(fontSize: 14, color: theme.surfaceText),
                       decoration: _buildInputDecoration(context,
                           hintText: 'e.g. Web Development'),
                       validator: _requiredValidator,
@@ -355,13 +360,16 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                     DropdownButtonFormField<String>(
                       initialValue: _selectedYearDropdown,
                       icon: Icon(Icons.keyboard_arrow_down,
-                          color: Colors.grey.shade600),
-                      style:
-                          const TextStyle(fontSize: 14, color: Colors.black87),
+                          color: theme.mutedText),
+                      style: TextStyle(fontSize: 14, color: theme.surfaceText),
                       decoration: _buildInputDecoration(context,
                           hintText: 'Select Year'),
+                      dropdownColor: theme.dialogBackground,
                       items: _yearOptions.map((year) {
-                        return DropdownMenuItem(value: year, child: Text(year));
+                        return DropdownMenuItem(
+                            value: year,
+                            child: Text(year,
+                                style: TextStyle(color: theme.surfaceText)));
                       }).toList(),
                       onChanged: (v) {
                         setState(() {
@@ -384,7 +392,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
             const FormLabel(text: 'Intern Number'),
             TextFormField(
               controller: widget.internNumCtrl,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              style: TextStyle(fontSize: 14, color: theme.surfaceText),
               decoration: _buildInputDecoration(context, hintText: 'e.g. 12'),
               validator: _requiredValidator,
               onChanged: (_) => widget.onChanged?.call(),
@@ -403,14 +411,14 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                       const FormLabel(text: 'Internship Start'),
                       TextFormField(
                         controller: widget.startCtrl,
-                        style: const TextStyle(
-                            fontSize: 14, color: Colors.black87),
+                        style:
+                            TextStyle(fontSize: 14, color: theme.surfaceText),
                         decoration: _buildInputDecoration(
                           context,
                           hintText: 'YYYY-MM-DD',
                           suffixIcon: IconButton(
                             icon: Icon(Icons.calendar_today,
-                                size: 18, color: Colors.grey.shade600),
+                                size: 18, color: theme.mutedText),
                             onPressed: widget.onPickStart,
                           ),
                         ),
@@ -423,14 +431,14 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                         Row(
                           children: [
                             Icon(Icons.info_outline,
-                                size: 11, color: Colors.grey.shade500),
+                                size: 11, color: theme.mutedText),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 'End date auto-fills from ${widget.requiredHours} required OJT hrs',
                                 style: TextStyle(
                                   fontSize: 10.5,
-                                  color: Colors.grey.shade500,
+                                  color: theme.mutedText,
                                   fontStyle: FontStyle.italic,
                                 ),
                               ),
@@ -451,14 +459,14 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                       const FormLabel(text: 'Internship End'),
                       TextFormField(
                         controller: widget.endCtrl,
-                        style: const TextStyle(
-                            fontSize: 14, color: Colors.black87),
+                        style:
+                            TextStyle(fontSize: 14, color: theme.surfaceText),
                         decoration: _buildInputDecoration(
                           context,
                           hintText: 'YYYY-MM-DD',
                           suffixIcon: IconButton(
                             icon: Icon(Icons.calendar_today,
-                                size: 18, color: Colors.grey.shade600),
+                                size: 18, color: theme.mutedText),
                             onPressed: widget.onPickEnd,
                           ),
                         ),
@@ -472,10 +480,10 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: kCrimsonDeep.withValues(alpha: 0.07),
+                            color: kCrimsonDeep.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                                color: kCrimsonDeep.withValues(alpha: 0.22)),
+                                color: kCrimsonDeep.withValues(alpha: 0.35)),
                           ),
                           child: Row(
                             children: [

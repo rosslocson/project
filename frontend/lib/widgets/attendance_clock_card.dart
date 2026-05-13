@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
+import 'app_theme.dart';
 
 class AttendanceClockCard extends StatelessWidget {
   final AttendanceSummary? summary;
   final bool isLoading;
   final VoidCallback onTimeIn;
   final VoidCallback onTimeOut;
-  final bool isOjtComplete; // ← NEW: true when required OJT hours are fulfilled
+  final bool isOjtComplete;
 
   const AttendanceClockCard({
     super.key,
@@ -14,11 +15,14 @@ class AttendanceClockCard extends StatelessWidget {
     required this.isLoading,
     required this.onTimeIn,
     required this.onTimeOut,
-    this.isOjtComplete = false, // ← defaults to false
+    this.isOjtComplete = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final today = summary?.todayRecord;
     final timedIn = today?.hasTimedIn ?? false;
     final timedOut = today?.hasTimedOut ?? false;
@@ -26,74 +30,69 @@ class AttendanceClockCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF00022E), Color(0xFF1A1F5A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [Color(0xFF0D0F2B), Color(0xFF1A1F5A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isDark ? null : theme.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : theme.border,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00022E).withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.5)
+                : theme.shadowColor,
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Title ──────────────────────────────────────────────────────
+          // ── Title row ─────────────────────────────────────────────────────
           Row(
             children: [
-              const Icon(Icons.today_rounded, color: Colors.white70, size: 18),
+              Icon(
+                Icons.today_rounded,
+                color: isDark ? Colors.white70 : theme.mutedText,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 _todayLabel(),
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : theme.mutedText,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              // Weekend indicator pill
               if (_isWeekend) ...[
                 const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                  ),
-                  child: const Text(
-                    'Weekend – No Attendance',
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                _Pill(
+                  label: 'Weekend – No Attendance',
+                  bg: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : theme.border,
+                  fg: isDark ? Colors.white60 : theme.mutedText,
+                  border: isDark
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : theme.border,
                 ),
               ],
-              // ── OJT Complete pill ──────────────────────────────────────
               if (isOjtComplete) ...[
                 const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.greenAccent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.4)),
-                  ),
-                  child: const Text(
-                    'OJT Complete',
-                    style: TextStyle(
-                      color: Colors.greenAccent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                _Pill(
+                  label: 'OJT Complete',
+                  bg: Colors.greenAccent.withValues(alpha: 0.15),
+                  fg: Colors.greenAccent,
+                  border: Colors.greenAccent.withValues(alpha: 0.4),
                 ),
               ],
             ],
@@ -101,25 +100,26 @@ class AttendanceClockCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // ── Time In / Out info ─────────────────────────────────────────
+          // ── Time chips ────────────────────────────────────────────────────
           Row(
             children: [
               _TimeChip(
                 label: 'Time In',
                 time: today?.timeIn,
                 icon: Icons.login_rounded,
+                isDark: isDark,
               ),
               const SizedBox(width: 12),
               _TimeChip(
                 label: 'Time Out',
                 time: today?.timeOut,
                 icon: Icons.logout_rounded,
+                isDark: isDark,
               ),
               const SizedBox(width: 12),
               _TimeChip(
                 label: "Today's Hours",
                 time: null,
-                // ── Use lunch-adjusted hours ───────────────────────────
                 customText: today?.timeIn != null
                     ? (today?.timeOut != null
                         ? _fmtHours(
@@ -127,19 +127,21 @@ class AttendanceClockCard extends StatelessWidget {
                         : 'Ongoing')
                     : '--',
                 icon: Icons.access_time_rounded,
+                isDark: isDark,
               ),
             ],
           ),
 
           const SizedBox(height: 20),
 
-          // ── Action Button ──────────────────────────────────────────────
+          // ── Action button ─────────────────────────────────────────────────
           SizedBox(
             width: double.infinity,
             child: _buildButton(
-              context,
               timedIn: timedIn,
               timedOut: timedOut,
+              isDark: isDark,
+              theme: theme,
             ),
           ),
         ],
@@ -148,147 +150,125 @@ class AttendanceClockCard extends StatelessWidget {
   }
 
   bool get _isWeekend {
-    final weekday = DateTime.now().weekday;
-    return weekday == DateTime.saturday || weekday == DateTime.sunday;
+    final wd = DateTime.now().weekday;
+    return wd == DateTime.saturday || wd == DateTime.sunday;
   }
 
-  /// Computes worked hours between [timeIn] and [timeOut],
-  /// deducting the 1-hour lunch break if the window overlaps 12:00–13:00.
   double _adjustedHours(DateTime timeIn, DateTime timeOut) {
     final totalMinutes = timeOut.difference(timeIn).inMinutes.toDouble();
-
-    // Build today's lunch window: 12:00 PM – 1:00 PM
-    final lunchStart = DateTime(
-        timeIn.year, timeIn.month, timeIn.day, 12, 0);
-    final lunchEnd = DateTime(
-        timeIn.year, timeIn.month, timeIn.day, 13, 0);
-
-    // Overlap = max(0, min(timeOut, lunchEnd) - max(timeIn, lunchStart))
-    final overlapStart =
-        timeIn.isAfter(lunchStart) ? timeIn : lunchStart;
-    final overlapEnd =
-        timeOut.isBefore(lunchEnd) ? timeOut : lunchEnd;
-
-    double deductMinutes = 0;
+    final lunchStart = DateTime(timeIn.year, timeIn.month, timeIn.day, 12, 0);
+    final lunchEnd = DateTime(timeIn.year, timeIn.month, timeIn.day, 13, 0);
+    final overlapStart = timeIn.isAfter(lunchStart) ? timeIn : lunchStart;
+    final overlapEnd = timeOut.isBefore(lunchEnd) ? timeOut : lunchEnd;
+    double deduct = 0;
     if (overlapEnd.isAfter(overlapStart)) {
-      deductMinutes = overlapEnd.difference(overlapStart).inMinutes.toDouble();
+      deduct = overlapEnd.difference(overlapStart).inMinutes.toDouble();
     }
-
-    final workedMinutes = totalMinutes - deductMinutes;
-    return workedMinutes / 60.0;
+    return (totalMinutes - deduct) / 60.0;
   }
 
-  Widget _buildButton(
-    BuildContext context, {
+  Widget _buildButton({
     required bool timedIn,
     required bool timedOut,
+    required bool isDark,
+    required InternSpaceThemeColors theme,
   }) {
-    // ── OJT Complete guard — block all clocking ────────────────────────
+    final defaultBg =
+        isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFF00022E);
+    final defaultFg = Colors.white;
+    final defaultBorder =
+        isDark ? Colors.white.withValues(alpha: 0.3) : const Color(0xFF00022E);
+    final disabledBg =
+        isDark ? Colors.white.withValues(alpha: 0.1) : theme.border;
+    final disabledFg = isDark ? Colors.white60 : theme.mutedText;
+    final disabledBorder =
+        isDark ? Colors.white.withValues(alpha: 0.2) : theme.border;
+
     if (isOjtComplete) {
-      return ElevatedButton.icon(
+      return _ActionButton(
+        label: 'OJT Hours Completed',
+        icon: Icons.verified_rounded,
+        enabled: false,
+        bg: Colors.greenAccent.withValues(alpha: 0.12),
+        fg: Colors.greenAccent.withValues(alpha: 0.7),
+        borderColor: Colors.greenAccent.withValues(alpha: 0.3),
         onPressed: null,
-        icon: const Icon(Icons.verified_rounded),
-        label: const Text('OJT Hours Completed'),
-        style: ElevatedButton.styleFrom(
-          disabledBackgroundColor: Colors.greenAccent.withValues(alpha: 0.12),
-          disabledForegroundColor: Colors.greenAccent.withValues(alpha: 0.7),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.greenAccent.withValues(alpha: 0.3)),
-          ),
-        ),
+        isLoading: false,
       );
     }
-
-    // ── Weekend guard ──────────────────────────────────────────────────
     if (_isWeekend) {
-      return ElevatedButton.icon(
+      return _ActionButton(
+        label: 'No Attendance on Weekends',
+        icon: Icons.weekend_rounded,
+        enabled: false,
+        bg: disabledBg,
+        fg: disabledFg,
+        borderColor: disabledBorder,
         onPressed: null,
-        icon: const Icon(Icons.weekend_rounded),
-        label: const Text('No Attendance on Weekends'),
-        style: ElevatedButton.styleFrom(
-          disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
-          disabledForegroundColor: Colors.white60,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-          ),
-        ),
+        isLoading: false,
       );
     }
-
-    // Already timed out for today
     if (timedIn && timedOut) {
-      return ElevatedButton.icon(
+      return _ActionButton(
+        label: 'Completed for Today',
+        icon: Icons.check_circle_rounded,
+        enabled: false,
+        bg: disabledBg,
+        fg: disabledFg,
+        borderColor: disabledBorder,
         onPressed: null,
-        icon: const Icon(Icons.check_circle_rounded),
-        label: const Text('Completed for Today'),
-        style: ElevatedButton.styleFrom(
-          disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
-          disabledForegroundColor: Colors.white60,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-          ),
-        ),
+        isLoading: false,
       );
     }
-
-    // Time Out button
     if (timedIn && !timedOut) {
-      return ElevatedButton.icon(
-        onPressed: isLoading ? null : onTimeOut,
-        icon: isLoading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Color(0xFF00022E)),
-              )
-            : const Icon(Icons.logout_rounded),
-        label: Text(isLoading ? 'Processing...' : 'Time Out'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF00022E),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 0,
-        ),
+      return _ActionButton(
+        label: isLoading ? 'Processing...' : 'Time Out',
+        icon: Icons.logout_rounded,
+        enabled: !isLoading,
+        bg: defaultBg,
+        fg: defaultFg,
+        borderColor: defaultBorder,
+        onPressed: onTimeOut,
+        isLoading: isLoading,
       );
     }
-
-    // Time In button
-    return ElevatedButton.icon(
-      onPressed: isLoading ? null : onTimeIn,
-      icon: isLoading
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Color(0xFF00022E)),
-            )
-          : const Icon(Icons.login_rounded),
-      label: Text(isLoading ? 'Processing...' : 'Time In'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF00022E),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 0,
-      ),
+    return _ActionButton(
+      label: isLoading ? 'Processing...' : 'Time In',
+      icon: Icons.login_rounded,
+      enabled: !isLoading,
+      bg: defaultBg,
+      fg: defaultFg,
+      borderColor: defaultBorder,
+      onPressed: onTimeIn,
+      isLoading: isLoading,
     );
   }
 
   String _todayLabel() {
     final now = DateTime.now();
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
     return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}, ${now.year}';
   }
 
@@ -300,48 +280,150 @@ class AttendanceClockCard extends StatelessWidget {
   }
 }
 
-// ── Small chip showing a labelled time ──────────────────────────────────────
+// ── Action button ─────────────────────────────────────────────────────────────
+
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool enabled;
+  final Color bg;
+  final Color fg;
+  final Color borderColor;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.enabled,
+    required this.bg,
+    required this.fg,
+    required this.borderColor,
+    required this.onPressed,
+    required this.isLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: enabled ? onPressed : null,
+      icon: isLoading
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+            )
+          : Icon(icon),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: bg,
+        disabledBackgroundColor: bg,
+        foregroundColor: fg,
+        disabledForegroundColor: fg,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: borderColor),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Small pill label ──────────────────────────────────────────────────────────
+
+class _Pill extends StatelessWidget {
+  final String label;
+  final Color bg;
+  final Color fg;
+  final Color border;
+
+  const _Pill({
+    required this.label,
+    required this.bg,
+    required this.fg,
+    required this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: fg,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Time chip ─────────────────────────────────────────────────────────────────
+
 class _TimeChip extends StatelessWidget {
   final String label;
   final DateTime? time;
   final String? customText;
   final IconData icon;
+  final bool isDark;
 
   const _TimeChip({
     required this.label,
     required this.time,
     required this.icon,
+    required this.isDark,
     this.customText,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
     final display = customText ?? (time != null ? _fmt(time!) : '--:--');
 
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : theme.border.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.12) : theme.border,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.white70, size: 14),
+            Icon(
+              icon,
+              color: isDark ? Colors.white54 : theme.mutedText,
+              size: 14,
+            ),
             const SizedBox(height: 4),
             Text(
               display,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : theme.surfaceText,
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
             ),
             Text(
               label,
-              style: const TextStyle(color: Colors.white60, fontSize: 10),
+              style: TextStyle(
+                color: isDark ? Colors.white54 : theme.mutedText,
+                fontSize: 10,
+              ),
             ),
           ],
         ),

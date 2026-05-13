@@ -10,11 +10,11 @@ class UserProfileTab extends StatelessWidget {
   final TextEditingController lastCtrl;
   final TextEditingController emailCtrl;
   final TextEditingController ojtHoursCtrl;
-  
+
   final String? selectedDept;
   final List<String> departments;
   final bool loadingDepts;
-  
+
   final String? profileMsg;
   final bool profileSuccess;
   final bool savingProfile;
@@ -48,70 +48,108 @@ class UserProfileTab extends StatelessWidget {
 
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: theme.mutedText, size: 18) : null,
+      labelStyle: TextStyle(
+          fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: theme.mutedText, size: 18)
+          : null,
       filled: true,
       fillColor: theme.formFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.border, width: 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kBlue, width: 1.5)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.red.shade300, width: 1)),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.border, width: 1)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _kBlue, width: 1.5)),
+      errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade300, width: 1)),
     );
   }
 
   Widget _loadingDropdown(BuildContext context, String label) {
-        final theme = context.internTheme;
-        return Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: theme.formFill,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.border, width: 1),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Row(
-          children: [
-            Text(label, style: TextStyle(fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500)),
-            const Spacer(),
-            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _kBlue)),
-          ],
-        ),
-      );
+    final theme = context.internTheme;
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        color: theme.formFill,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.border, width: 1),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  color: theme.mutedText,
+                  fontWeight: FontWeight.w500)),
+          const Spacer(),
+          const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _kBlue)),
+        ],
+      ),
+    );
   }
 
-  Widget _dropdownField(BuildContext context, {required String label, required String? value, required String hint, required List<String> items, required void Function(String?)? onChanged}) {
-        final theme = context.internTheme;
-        return Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: theme.formFill,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.border, width: 1),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(label, style: TextStyle(fontSize: 10, color: theme.mutedText, fontWeight: FontWeight.w600)),
-            Expanded(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: value,
-                  isDense: true,
-                  hint: Text(hint, style: TextStyle(color: theme.mutedText, fontSize: 13, fontWeight: FontWeight.w500)),
-                  isExpanded: true,
-                  icon: Icon(Icons.keyboard_arrow_down, color: theme.mutedText, size: 18),
-                  style: TextStyle(color: theme.surfaceText, fontSize: 14, fontWeight: FontWeight.w500),
-                  items: items.map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
-                  onChanged: onChanged,
-                ),
+  Widget _dropdownField(BuildContext context,
+      {required String label,
+      required String? value,
+      required String hint,
+      required List<String> items,
+      required void Function(String?)? onChanged}) {
+    final theme = context.internTheme;
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        color: theme.formFill,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.border, width: 1),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10,
+                  color: theme.mutedText,
+                  fontWeight: FontWeight.w600)),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                isDense: true,
+                hint: Text(hint,
+                    style: TextStyle(
+                        color: theme.mutedText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                isExpanded: true,
+                icon: Icon(Icons.keyboard_arrow_down,
+                    color: theme.mutedText, size: 18),
+                style: TextStyle(
+                    color: theme.surfaceText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500),
+                items: items
+                    .map((s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s, overflow: TextOverflow.ellipsis)))
+                    .toList(),
+                onChanged: onChanged,
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -130,14 +168,18 @@ class UserProfileTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (profileMsg != null) ...[
-                    UserAccountStatusBanner(msg: profileMsg!, success: profileSuccess),
+                    UserAccountStatusBanner(
+                        msg: profileMsg!, success: profileSuccess),
                     const SizedBox(height: 16),
                   ],
                   Row(children: [
                     Expanded(
                       child: TextFormField(
                         controller: firstCtrl,
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: theme.surfaceText),
                         decoration: _getFormDecoration(context, 'First Name'),
                         validator: (v) => v!.isEmpty ? 'Required' : null,
                       ),
@@ -146,7 +188,10 @@ class UserProfileTab extends StatelessWidget {
                     Expanded(
                       child: TextFormField(
                         controller: lastCtrl,
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: theme.surfaceText),
                         decoration: _getFormDecoration(context, 'Last Name'),
                         validator: (v) => v!.isEmpty ? 'Required' : null,
                       ),
@@ -156,8 +201,13 @@ class UserProfileTab extends StatelessWidget {
                   TextFormField(
                     controller: emailCtrl,
                     enabled: false,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.mutedText),
-                    decoration: _getFormDecoration(context, 'Email (cannot change)', prefixIcon: Icons.email_outlined),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: theme.mutedText),
+                    decoration: _getFormDecoration(
+                        context, 'Email (cannot change)',
+                        prefixIcon: Icons.email_outlined),
                   ),
                   const SizedBox(height: 16),
                   loadingDepts
@@ -166,7 +216,9 @@ class UserProfileTab extends StatelessWidget {
                           context,
                           label: 'Department',
                           value: selectedDept,
-                          hint: departments.isEmpty ? 'None available' : 'Select Department',
+                          hint: departments.isEmpty
+                              ? 'None available'
+                              : 'Select Department',
                           items: departments,
                           onChanged: onDeptChanged,
                         ),
@@ -174,12 +226,18 @@ class UserProfileTab extends StatelessWidget {
                   TextFormField(
                     controller: ojtHoursCtrl,
                     keyboardType: TextInputType.number,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
-                    decoration: _getFormDecoration(context, 'Required OJT Hours', prefixIcon: Icons.access_time_outlined),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: theme.surfaceText),
+                    decoration: _getFormDecoration(
+                        context, 'Required OJT Hours',
+                        prefixIcon: Icons.access_time_outlined),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Required';
                       final parsed = int.tryParse(v.trim());
-                      if (parsed == null || parsed <= 0) return 'Enter a valid number of hours';
+                      if (parsed == null || parsed <= 0)
+                        return 'Enter a valid number of hours';
                       return null;
                     },
                   ),
@@ -198,12 +256,21 @@ class UserProfileTab extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kBlue,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
               child: savingProfile
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5)),
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text('SAVE CHANGES',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          letterSpacing: 0.5)),
             ),
           ),
         ),

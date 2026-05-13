@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart'; // ADD
 
 class DeleteDepartmentDialog extends StatelessWidget {
   final String name;
-
   const DeleteDepartmentDialog({super.key, required this.name});
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     return AlertDialog(
+      backgroundColor: theme.dialogBackground,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       title: Row(children: [
         Icon(Icons.delete_forever, color: Colors.red.shade700, size: 20),
         const SizedBox(width: 8),
-        const Text('Confirm Delete'),
+        Text('Confirm Delete', style: TextStyle(color: theme.surfaceText)),
       ]),
       content: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Colors.black87, fontSize: 14),
+          style: TextStyle(
+            color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.black87,
+            fontSize: 14,
+          ),
           children: [
             const TextSpan(text: 'Remove '),
             TextSpan(text: name, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -27,7 +35,7 @@ class DeleteDepartmentDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text('Cancel', style: TextStyle(color: theme.surfaceText)),
         ),
         ElevatedButton(
           onPressed: () => Navigator.pop(context, true),

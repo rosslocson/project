@@ -81,7 +81,8 @@ class GlassTopBar extends StatelessWidget {
 
     final String firstName = user?['first_name'] ?? 'User';
     final String lastName = user?['last_name'] ?? '';
-    final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
+    final String fullName =
+        lastName.isEmpty ? firstName : '$firstName $lastName';
     final String initials =
         firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
@@ -129,7 +130,7 @@ class GlassTopBar extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      color: theme.topbarText,
+                      color: isDark ? Colors.white : const Color(0xFF00022E),
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -140,7 +141,9 @@ class GlassTopBar extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: theme.topbarText.withValues(alpha: 0.7),
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.7)
+                            : const Color(0xFF00022E).withValues(alpha: 0.7),
                       ),
                     ),
                 ],
@@ -148,113 +151,117 @@ class GlassTopBar extends StatelessWidget {
               const Spacer(),
               if (user != null)
                 PopupMenuButton<String>(
-                onSelected: (String choice) async {
-                  if (choice == 'profile') {
-                    if (isAdmin) {
-                      context.push('/admin/account-settings');
-                    } else {
-                      context.go('/profile');
+                  onSelected: (String choice) async {
+                    if (choice == 'profile') {
+                      if (isAdmin) {
+                        context.push('/admin/account-settings');
+                      } else {
+                        context.go('/profile');
+                      }
+                    } else if (choice == 'logout') {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        barrierDismissible: true,
+                        builder: (context) => const LogoutConfirmationDialog(),
+                      );
+                      if (confirmed == true) {
+                        context.read<AuthProvider>().logout();
+                        context.go('/login');
+                      }
                     }
-                  } else if (choice == 'logout') {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      barrierDismissible: true,
-                      builder: (context) => const LogoutConfirmationDialog(),
-                    );
-                    if (confirmed == true) {
-                      context.read<AuthProvider>().logout();
-                      context.go('/login');
-                    }
-                  }
-                },
-                offset: const Offset(0, 50),
-                shape:
-                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                itemBuilder: (BuildContext context) => [
-                  const PopupMenuItem<String>(
-                    value: 'profile',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_outline, size: 20),
-                        SizedBox(width: 12),
-                        Text('View Profile',
-                            style: TextStyle(fontWeight: FontWeight.w500)),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    enabled: false,
-                    child: _ThemeToggleMenuItem(),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem<String>(
-                    value: 'logout',
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout,
-                            size: 20, color: Colors.redAccent),
-                        SizedBox(width: 12),
-                        Text('Log Out',
-                            style: TextStyle(
-                                color: Colors.redAccent,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ],
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Row(
-                    children: [
-                      Text(
-                        fullName,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: theme.topbarText.withValues(alpha: 0.9),
-                        ),
+                  },
+                  offset: const Offset(0, 50),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  itemBuilder: (BuildContext context) => [
+                    const PopupMenuItem<String>(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_outline, size: 20),
+                          SizedBox(width: 12),
+                          Text('View Profile',
+                              style: TextStyle(fontWeight: FontWeight.w500)),
+                        ],
                       ),
-                      const SizedBox(width: 14),
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: isDark
-                            ? const Color(0xFFCDD2FB).withValues(alpha: 0.1)
-                            : _kAccentIndigo.withValues(alpha: 0.1),
-                        backgroundImage: finalAvatarUrl.isNotEmpty
-                            ? NetworkImage(finalAvatarUrl)
-                            : null,
-                        child: finalAvatarUrl.isEmpty
-                            ? Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: isDark
-                                        ? const [
-                                            Color(0xFF7474D4),
-                                            Color(0xFF10134A)
-                                          ]
-                                        : const [_kAccentIndigo, _kLightAvatarEnd],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    initials,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                    ),
+                    const PopupMenuItem<String>(
+                      enabled: false,
+                      child: _ThemeToggleMenuItem(),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem<String>(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout, size: 20, color: Colors.redAccent),
+                          SizedBox(width: 12),
+                          Text('Log Out',
+                              style: TextStyle(
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Row(
+                      children: [
+                        Text(
+                          fullName,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.9)
+                                : const Color(0xFF00022E),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: isDark
+                              ? const Color(0xFFCDD2FB).withValues(alpha: 0.1)
+                              : _kAccentIndigo.withValues(alpha: 0.1),
+                          backgroundImage: finalAvatarUrl.isNotEmpty
+                              ? NetworkImage(finalAvatarUrl)
+                              : null,
+                          child: finalAvatarUrl.isEmpty
+                              ? Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: isDark
+                                          ? const [
+                                              Color(0xFF7474D4),
+                                              Color(0xFF10134A)
+                                            ]
+                                          : const [
+                                              _kAccentIndigo,
+                                              _kLightAvatarEnd
+                                            ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
                                   ),
-                                ),
-                              )
-                            : null,
-                      ),
-                    ],
+                                  child: Center(
+                                    child: Text(
+                                      initials,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -324,4 +331,3 @@ class _ThemeToggleMenuItem extends StatelessWidget {
     );
   }
 }
-

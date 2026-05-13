@@ -1,14 +1,10 @@
 // lib/screens/admin_attendance_screen.dart
-// Admin attendance monitoring screen.
-// Layout + state only — all widgets are in admin_attendance_widgets/.
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
-
 import '../models/attendance_constants.dart';
 import '../models/attendance_record.dart' show AdminAttendanceRecord;
 import '../services/admin_attendance_service.dart';
@@ -21,11 +17,8 @@ import '../widgets/admin_attendance_widgets/custom_date_picker_dialog.dart';
 import '../widgets/admin_attendance_widgets/review_report_sheet.dart';
 import 'export_attendance.dart';
 import 'admin_glass_topbar.dart' as admin_topbar;
-
-
-// Re-export HamburgerIcon so other attendance files can reuse it from one place.
-export '../widgets/admin_attendance_widgets/attendance_table.dart' show HamburgerIcon;
-
+import '../widgets/app_theme.dart';
+import '../widgets/app_background.dart';
 
 class AdminAttendanceScreen extends StatefulWidget {
   const AdminAttendanceScreen({super.key});
@@ -35,32 +28,26 @@ class AdminAttendanceScreen extends StatefulWidget {
 }
 
 class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
-  // ── Sidebar ───────────────────────────────────────────────────────────────
   bool _isSidebarOpen = true;
 
-  // ── Period / date ─────────────────────────────────────────────────────────
   AttendancePeriod _period = AttendancePeriod.today;
   DateTime _customDate = DateTime.now();
   DateTime _customRangeStart = DateTime.now();
   DateTime _customRangeEnd = DateTime.now();
   bool _isRangeMode = false;
 
-  // ── Filters ───────────────────────────────────────────────────────────────
   String _selectedStatus = 'All';
   final TextEditingController _searchCtrl = TextEditingController();
   Timer? _debounce;
 
-  // ── Pagination ────────────────────────────────────────────────────────────
   int _page = 1;
   static const int _limit = 20;
   int _total = 0;
 
-  // ── Data ──────────────────────────────────────────────────────────────────
   List<AdminAttendanceRecord> _records = [];
   bool _loading = true;
   String? _error;
 
-  // ── Pending reports bell (reload after resolve) ───────────────────────────
   final GlobalKey<_PendingBellState> _bellKey = GlobalKey();
 
   @override
@@ -99,7 +86,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final result = await AdminAttendanceService.fetchAttendance(
       allDates: isAllDates,
       period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-      dateFrom: (isCustom && _isRangeMode) ? toApiDate(_customRangeStart) : null,
+      dateFrom:
+          (isCustom && _isRangeMode) ? toApiDate(_customRangeStart) : null,
       dateTo: (isCustom && _isRangeMode) ? toApiDate(_customRangeEnd) : null,
       date: (isCustom && !_isRangeMode) ? toApiDate(_customDate) : null,
       search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
@@ -174,7 +162,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 
   int get _activeFilterCount =>
-      (_searchCtrl.text.isNotEmpty ? 1 : 0) + (_selectedStatus != 'All' ? 1 : 0);
+      (_searchCtrl.text.isNotEmpty ? 1 : 0) +
+      (_selectedStatus != 'All' ? 1 : 0);
 
   int get _pendingReportCount => _records.where((r) => r.hasOpenReport).length;
 
@@ -202,30 +191,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 : null,
           ),
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.jpg'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildTopBar(),
-                      const SizedBox(height: 15),
-
-                      Expanded(child: _buildCard()),
-                    ],
-                  ),
-                ),
-              ],
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildTopBar(),
+                  const SizedBox(height: 15),
+                  Expanded(child: _buildCard()),
+                ],
+              ),
             ),
           ),
         ],
@@ -249,17 +223,25 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-
   Widget _buildCard() {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
       child: Container(
         decoration: BoxDecoration(
-          color: kSurface,
+          color: isDark ? theme.surface : theme.sidebarBackground,
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.border,
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: kBlue.withValues(alpha: 0.08),
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.4)
+                  : theme.shadowColor,
               blurRadius: 32,
               offset: const Offset(0, 8),
             ),
@@ -274,8 +256,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               _buildToolbar(),
               _buildPeriodRow(),
               if (!_loading && _pendingReportCount > 0) _buildPendingBanner(),
-              if (!_loading && _pendingReportCount > 0) const SizedBox(height: 12),
-              const Divider(height: 1, thickness: 1, color: kBorder),
+              if (!_loading && _pendingReportCount > 0)
+                const SizedBox(height: 12),
+              Divider(height: 1, thickness: 1, color: theme.border),
               Expanded(child: _buildBody()),
               if (_total > _limit) _buildPagination(),
             ],
@@ -286,11 +269,16 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 
   Widget _buildCardHeader() {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(28, 22, 28, 18),
-      decoration: const BoxDecoration(
-        color: kCardBg,
-        border: Border(bottom: BorderSide(color: kBorder, width: 1)),
+      decoration: BoxDecoration(
+        color: isDark
+            ? theme.surface.withValues(alpha: 0.8)
+            : theme.sidebarBackground,
+        border: Border(bottom: BorderSide(color: theme.border, width: 1)),
       ),
       child: Row(
         children: [
@@ -309,12 +297,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Attendance Records',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: kTextDark,
+                    color: theme.surfaceText,
                     letterSpacing: 0.1,
                   ),
                 ),
@@ -325,25 +313,25 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       _loading
                           ? 'Loading…'
                           : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                      style: const TextStyle(fontSize: 12, color: kTextMid),
+                      style: TextStyle(fontSize: 12, color: theme.mutedText),
                     ),
                     if (!_loading && _period != AttendancePeriod.allDates) ...[
                       const SizedBox(width: 8),
                       Container(
                         width: 1,
                         height: 11,
-                        color: kBorder,
+                        color: theme.border,
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                       ),
                       const SizedBox(width: 6),
-                      const Icon(Icons.calendar_today_rounded,
-                          size: 11, color: kTextLight),
+                      Icon(Icons.calendar_today_rounded,
+                          size: 11, color: theme.mutedText),
                       const SizedBox(width: 4),
                       Text(
                         _activeDateRangeLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: kTextMid,
+                          color: theme.mutedText,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -362,8 +350,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
                   period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-                  date: (isCustom && !_isRangeMode) ? toApiDate(_customDate) : null,
-                  search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+                  date: (isCustom && !_isRangeMode)
+                      ? toApiDate(_customDate)
+                      : null,
+                  search: _searchCtrl.text.trim().isEmpty
+                      ? null
+                      : _searchCtrl.text.trim(),
                   status: _selectedStatus == 'All' ? null : _selectedStatus,
                 ),
               );
@@ -519,7 +511,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                     'Show Flagged',
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: Color(0xFFFEF3C7),
                     ),
                   ),
@@ -533,6 +525,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 
   Widget _buildBody() {
+    final theme = context.internTheme;
+
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: kAccent),
+      );
+    }
+
     if (_error != null) {
       return Center(
         child: Column(
@@ -548,7 +548,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   color: Colors.red.shade400, size: 36),
             ),
             const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
+            Text(_error!,
+                style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () => _load(page: _page),
@@ -561,7 +562,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       );
     }
 
-    if (_records.isEmpty && !_loading) {
+    if (_records.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -569,25 +570,25 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F4F8),
+                color: theme.surface,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.event_busy_rounded,
-                  size: 40, color: kTextLight),
+              child: Icon(Icons.event_busy_rounded,
+                  size: 40, color: theme.mutedText),
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'No attendance records found',
               style: TextStyle(
-                color: kTextMid,
+                color: theme.mutedText,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Try adjusting your filters or date range',
-              style: TextStyle(color: kTextLight, fontSize: 12),
+              style: TextStyle(color: theme.mutedText, fontSize: 12),
             ),
           ],
         ),
@@ -605,20 +606,23 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 
   Widget _buildPagination() {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final totalPages = (_total / _limit).ceil();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-      decoration: const BoxDecoration(
-        color: kCardBg,
-        border: Border(top: BorderSide(color: kBorder)),
+      decoration: BoxDecoration(
+        color: isDark ? theme.surface : theme.sidebarBackground,
+        border: Border(top: BorderSide(color: theme.border)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Text(
             'Page $_page of $totalPages',
-            style: const TextStyle(
-              color: kTextMid,
+            style: TextStyle(
+              color: theme.mutedText,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -626,7 +630,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           const SizedBox(width: 4),
           Text(
             '· $_total records total',
-            style: const TextStyle(color: kTextLight, fontSize: 12),
+            style: TextStyle(color: theme.mutedText, fontSize: 12),
           ),
           const SizedBox(width: 16),
           PageButton(
@@ -647,15 +651,11 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Pending-reports bell widget (private to this file)
+// Pending-reports bell widget
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PendingBell extends StatefulWidget {
-  final VoidCallback? onResolved;
-
-  // FIXED: Added this.onResolved to satisfy the final variable requirement
-  const _PendingBell({super.key, this.onResolved});
-
+  const _PendingBell();
 
   @override
   State<_PendingBell> createState() => _PendingBellState();
@@ -674,11 +674,8 @@ class _PendingBellState extends State<_PendingBell> {
   Future<void> reload() async {
     if (!mounted) return;
     setState(() => _loading = true);
-
     final res = await AdminAttendanceService.fetchPendingReports();
-
     if (!mounted) return;
-
     setState(() {
       _pending = res['ok'] == true
           ? (res['records'] as List<AdminAttendanceRecord>)
@@ -693,10 +690,7 @@ class _PendingBellState extends State<_PendingBell> {
       return const SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: Colors.white70,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
       );
     }
 
@@ -750,7 +744,6 @@ class _PendingBellState extends State<_PendingBell> {
         records: _pending,
         onResolved: () {
           reload();
-          widget.onResolved?.call();
         },
       ),
     );
@@ -758,7 +751,7 @@ class _PendingBellState extends State<_PendingBell> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Pending-reports panel (inside the bell sheet)
+// Pending-reports panel
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PendingPanel extends StatelessWidget {
@@ -769,14 +762,16 @@ class _PendingPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       maxChildSize: 0.95,
       minChildSize: 0.4,
       builder: (_, ctrl) => Container(
-        decoration: const BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -786,7 +781,7 @@ class _PendingPanel extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: theme.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -801,28 +796,29 @@ class _PendingPanel extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'Pending Reports (${records.length})',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: kTextDark,
+                      color: theme.surfaceText,
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            const Divider(height: 1),
+            Divider(height: 1, color: theme.border),
             Expanded(
               child: records.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'No pending reports',
-                        style: TextStyle(color: kTextMid, fontSize: 13),
+                        style: TextStyle(color: theme.mutedText, fontSize: 13),
                       ),
                     )
                   : ListView.separated(
                       controller: ctrl,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       itemCount: records.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (ctx, i) => _PendingTile(
@@ -880,7 +876,7 @@ class _PendingTile extends StatelessWidget {
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
-                            color: kTextDark,
+                            color: Color(0xFF92400E),
                           ),
                         ),
                       ),
@@ -890,13 +886,15 @@ class _PendingTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     record.formattedDate,
-                    style: const TextStyle(fontSize: 12, color: kTextMid),
+                    style:
+                        const TextStyle(fontSize: 12, color: Color(0xFFB45309)),
                   ),
                   if (record.reportReason != null) ...[
                     const SizedBox(height: 6),
                     Text(
                       record.reportReason!,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF92400E)),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -905,7 +903,7 @@ class _PendingTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: kTextMid),
+            const Icon(Icons.chevron_right, color: Color(0xFFB45309)),
           ],
         ),
       ),

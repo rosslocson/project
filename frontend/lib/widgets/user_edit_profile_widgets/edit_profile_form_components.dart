@@ -15,13 +15,21 @@ class FormSectionTitle extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black)),
+                  color: Theme.of(context)
+                          .extension<InternSpaceThemeColors>()
+                          ?.surfaceText ??
+                      Colors.black)),
           const SizedBox(height: 4),
           Text(sub,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context)
+                          .extension<InternSpaceThemeColors>()
+                          ?.mutedText ??
+                      Colors.grey)),
         ],
       ),
     );
@@ -39,8 +47,13 @@ class FormLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: const TextStyle(
-            fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+        style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context)
+                    .extension<InternSpaceThemeColors>()
+                    ?.surfaceText ??
+                Colors.black87),
       ),
     );
   }
@@ -74,18 +87,33 @@ class CustomTextField extends StatelessWidget {
       keyboardType: keyboardType,
       validator: validator,
       onChanged: onChanged,
-      style: const TextStyle(color: Colors.black, fontSize: 14),
+      style: TextStyle(
+          color: Theme.of(context)
+                  .extension<InternSpaceThemeColors>()
+                  ?.surfaceText ??
+              Colors.black,
+          fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+        hintStyle: TextStyle(
+            color: Theme.of(context)
+                    .extension<InternSpaceThemeColors>()
+                    ?.mutedText ??
+                Colors.grey,
+            fontSize: 13),
         suffixIcon: suffix,
         filled: true,
-        fillColor: const Color(0xFFF3F4F6),
+        fillColor:
+            Theme.of(context).extension<InternSpaceThemeColors>()?.formFill,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(
+              color: Theme.of(context)
+                      .extension<InternSpaceThemeColors>()
+                      ?.border ??
+                  Colors.grey.shade300),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -94,11 +122,13 @@ class CustomTextField extends StatelessWidget {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
+          borderSide:
+              BorderSide(color: Colors.red.withValues(alpha: 0.6), width: 1.2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
+          borderSide:
+              BorderSide(color: Colors.red.withValues(alpha: 0.9), width: 1.2),
         ),
       ),
     );
@@ -127,16 +157,28 @@ class CustomDropdown extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: safeValue,
       validator: validator,
-      style: const TextStyle(color: Colors.black, fontSize: 14),
-      dropdownColor: Colors.white,
+      style: TextStyle(
+          color: Theme.of(context)
+                  .extension<InternSpaceThemeColors>()
+                  ?.surfaceText ??
+              Colors.black,
+          fontSize: 14),
+      dropdownColor: Theme.of(context)
+          .extension<InternSpaceThemeColors>()
+          ?.dialogBackground,
       decoration: InputDecoration(
         filled: true,
-        fillColor: const Color(0xFFF3F4F6),
+        fillColor:
+            Theme.of(context).extension<InternSpaceThemeColors>()?.formFill,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(
+              color: Theme.of(context)
+                      .extension<InternSpaceThemeColors>()
+                      ?.border ??
+                  Colors.grey.shade300),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -145,14 +187,28 @@ class CustomDropdown extends StatelessWidget {
         ),
       ),
       hint: Text(hint,
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-      icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+          style: TextStyle(
+              color: Theme.of(context)
+                      .extension<InternSpaceThemeColors>()
+                      ?.mutedText ??
+                  Colors.grey,
+              fontSize: 13)),
+      icon: Icon(Icons.keyboard_arrow_down,
+          color: Theme.of(context)
+                  .extension<InternSpaceThemeColors>()
+                  ?.mutedText ??
+              Colors.grey),
       items: items
           .map((s) => DropdownMenuItem(
                 value: s,
                 child: Text(s,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.black, fontSize: 13)),
+                    style: TextStyle(
+                        color: Theme.of(context)
+                                .extension<InternSpaceThemeColors>()
+                                ?.surfaceText ??
+                            Colors.black,
+                        fontSize: 13)),
               ))
           .toList(),
       onChanged: items.isEmpty ? null : onChanged,

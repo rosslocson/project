@@ -9,7 +9,6 @@ import '../widgets/app_background.dart';
 import 'user_glass_topbar.dart';
 import '../../providers/sidebar_provider.dart';
 
-
 import '../../widgets/user_edit_profile_widgets/edit_profile_status_banner.dart';
 import '../../widgets/user_edit_profile_widgets/academic_info_tab.dart';
 import '../../widgets/user_edit_profile_widgets/skills_profile_tab.dart';
@@ -365,7 +364,9 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
             child: context.watch<SidebarProvider>().isUserSidebarOpen
                 ? UserSidebar(
                     currentRoute: '/edit-profile',
-                    onClose: () => context.read<SidebarProvider>().setUserSidebarOpen(false),
+                    onClose: () => context
+                        .read<SidebarProvider>()
+                        .setUserSidebarOpen(false),
                   )
                 : null,
           ),
@@ -380,8 +381,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                       pageTitle: 'Edit Profile',
                       showWelcome: false,
                       user: context.watch<AuthProvider>().user,
-                      isSidebarOpen: context.watch<SidebarProvider>().isUserSidebarOpen,
-                      onToggleSidebar: () => context.read<SidebarProvider>().setUserSidebarOpen(!context.read<SidebarProvider>().isUserSidebarOpen),
+                      isSidebarOpen:
+                          context.watch<SidebarProvider>().isUserSidebarOpen,
+                      onToggleSidebar: () => context
+                          .read<SidebarProvider>()
+                          .setUserSidebarOpen(!context
+                              .read<SidebarProvider>()
+                              .isUserSidebarOpen),
                     ),
                   ),
                   const SizedBox(height: 15),
@@ -391,8 +397,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                           left: 100, right: 100, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color.fromRGBO(255, 255, 255, 0.95),
+                          color: context.internTheme.metricCardBackground,
                           borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: context.internTheme.shadowColor,
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
@@ -422,13 +435,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                       decoration: BoxDecoration(
                                         border: Border(
                                             bottom: BorderSide(
-                                                color: Colors.grey.shade200)),
+                                                color: context
+                                                    .internTheme.border)),
                                       ),
                                       child: TabBar(
                                         controller: _tabs,
-                                        labelColor: Colors.black,
+                                        labelColor:
+                                            context.internTheme.surfaceText,
                                         unselectedLabelColor:
-                                            Colors.grey.shade500,
+                                            context.internTheme.mutedText,
                                         indicatorColor: kCrimsonDeep,
                                         indicatorWeight: 3,
                                         dividerColor: Colors.transparent,
@@ -448,7 +463,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                   Container(
                                                     width: 18,
                                                     height: 18,
-                                                    decoration: const BoxDecoration(
+                                                    decoration:
+                                                        const BoxDecoration(
                                                       color: Colors.redAccent,
                                                       shape: BoxShape.circle,
                                                     ),
@@ -482,7 +498,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                   Container(
                                                     width: 18,
                                                     height: 18,
-                                                    decoration: const BoxDecoration(
+                                                    decoration:
+                                                        const BoxDecoration(
                                                       color: Colors.redAccent,
                                                       shape: BoxShape.circle,
                                                     ),
@@ -523,8 +540,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                             startCtrl: _startCtrl,
                                             endCtrl: _endCtrl,
                                             onDeptChanged: (v) {
-                                              setState(
-                                                  () => _selectedDept = v);
+                                              setState(() => _selectedDept = v);
                                               _handleProfileFieldChanged();
                                             },
                                             onPickStart: () =>
@@ -565,10 +581,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                       : _cancelChanges,
                                                   style:
                                                       OutlinedButton.styleFrom(
-                                                    foregroundColor:
-                                                        kCrimsonDeep,
-                                                    side: const BorderSide(
-                                                        color: kCrimsonDeep),
+                                                    foregroundColor: context
+                                                        .internTheme
+                                                        .surfaceText,
+                                                    side: BorderSide(
+                                                        color: context
+                                                            .internTheme
+                                                            .border),
                                                     shape:
                                                         RoundedRectangleBorder(
                                                       borderRadius:
@@ -596,8 +615,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                 onPressed:
                                                     _saving ? null : _save,
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor:
-                                                      kCrimsonDeep,
+                                                  backgroundColor: kCrimsonDeep,
                                                   foregroundColor: Colors.white,
                                                   shape: RoundedRectangleBorder(
                                                       borderRadius:
@@ -613,8 +631,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                             CircularProgressIndicator(
                                                                 color: Colors
                                                                     .white,
-                                                                strokeWidth:
-                                                                    2),
+                                                                strokeWidth: 2),
                                                       )
                                                     : const Text(
                                                         'SAVE CHANGES',

@@ -1,17 +1,9 @@
 // lib/widgets/attendance_history_list.dart
-//
-// Changes vs original:
-//   • _AttendanceRow now shows a "Report to Admin" button for Late and
-//     Absent rows (not just Missed Clock-Out).
-//   • _ReportButton accepts reportType + date so the new unified endpoint
-//     is used for all three statuses.
-//   • _ReportIssueDialog replaces _ReportConfirmDialog — it collects a
-//     free-text reason and adapts its copy to the report type.
-//   • AdminAttendanceRecord.remark field rendering unchanged.
 
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
 import '../services/attendance_service.dart';
+import 'app_theme.dart';
 
 class AttendanceHistoryList extends StatelessWidget {
   final List<AttendanceRecord> records;
@@ -31,16 +23,24 @@ class AttendanceHistoryList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final filtered = _sortedRecords;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.04) : theme.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.border,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.3)
+                : theme.shadowColor,
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -48,38 +48,74 @@ class AttendanceHistoryList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+          // ── Header ────────────────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: theme.border, width: 1),
+              ),
+            ),
             child: Row(
               children: [
-                const Icon(Icons.history_rounded,
-                    color: Color(0xFF460A14), size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : const Color(0xFF00022E).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.history_rounded,
+                    color: isDark ? Colors.white60 : const Color(0xFF00022E),
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
                   'Attendance History',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
+                    color: theme.surfaceText,
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  '${filtered.length} record${filtered.length != 1 ? 's' : ''}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : theme.formFill,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: theme.border),
+                  ),
+                  child: Text(
+                    '${filtered.length} record${filtered.length != 1 ? 's' : ''}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: theme.mutedText,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
 
-          const Divider(height: 1, indent: 20, endIndent: 20),
-
-          // ── Body ────────────────────────────────────────────────────────
+          // ── Body ──────────────────────────────────────────────────────────
           if (isLoading)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: isDark
+                      ? const Color(0xFF7367F0)
+                      : const Color(0xFF00022E),
+                ),
+              ),
             )
           else if (filtered.isEmpty)
             Padding(
@@ -87,12 +123,28 @@ class AttendanceHistoryList extends StatelessWidget {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.event_busy_rounded,
-                        size: 48, color: Colors.grey.shade300),
-                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.04)
+                            : theme.formFill,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.event_busy_rounded,
+                        size: 36,
+                        color: theme.mutedText,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Text(
                       'No attendance records yet',
-                      style: TextStyle(color: Colors.grey.shade400),
+                      style: TextStyle(
+                        color: theme.mutedText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -107,7 +159,7 @@ class AttendanceHistoryList extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: filtered.length,
                 separatorBuilder: (_, __) =>
-                    const Divider(height: 1, indent: 20),
+                    Divider(height: 1, color: theme.border),
                 itemBuilder: (context, i) =>
                     _AttendanceRow(record: filtered[i]),
               ),
@@ -126,8 +178,6 @@ class _AttendanceRow extends StatelessWidget {
   final AttendanceRecord record;
   const _AttendanceRow({required this.record});
 
-  // ── Status helpers ────────────────────────────────────────────────────────
-
   bool get _isMissedClockOut {
     final today = DateTime.now();
     final isToday = record.date.year == today.year &&
@@ -139,16 +189,13 @@ class _AttendanceRow extends StatelessWidget {
   bool get _isLate {
     if (!record.isComplete) return false;
     final local = record.timeIn!.toLocal();
-    // After 08:15 Manila time is considered Late (mirrors backend logic).
     return local.hour > 8 || (local.hour == 8 && local.minute > 15);
   }
 
   bool get _isAbsent => record.isAbsent;
 
-  /// Returns the report_type string expected by the backend, or null if this
-  /// record is not reportable by the intern.
   String? get _reportType {
-    if (record.isReported) return null; // already reported
+    if (record.isReported) return null;
     if (_isMissedClockOut) return 'missed_clock_out';
     if (_isAbsent) return 'absent';
     if (_isLate) return 'late';
@@ -160,6 +207,8 @@ class _AttendanceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isComplete = record.isComplete;
     final isOngoing =
         record.hasTimedIn && !record.hasTimedOut && !_isMissedClockOut;
@@ -169,15 +218,27 @@ class _AttendanceRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          // ── Date badge ─────────────────────────────────────────────────
+          // ── Date badge ──────────────────────────────────────────────────
           Container(
             width: 44,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: _isAbsent
-                  ? Colors.grey.shade100
-                  : const Color(0xFF460A14).withValues(alpha: 0.07),
+                  ? (isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.grey.shade100)
+                  : (isDark
+                      ? const Color(0xFF7367F0).withValues(alpha: 0.12)
+                      : const Color(0xFF00022E).withValues(alpha: 0.07)),
               borderRadius: BorderRadius.circular(10),
+              border: isDark
+                  ? Border.all(
+                      color: _isAbsent
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : const Color(0xFF7367F0).withValues(alpha: 0.2),
+                      width: 1,
+                    )
+                  : null,
             ),
             child: Column(
               children: [
@@ -186,8 +247,10 @@ class _AttendanceRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     color: _isAbsent
-                        ? Colors.grey.shade400
-                        : const Color(0xFF460A14),
+                        ? theme.mutedText
+                        : (isDark
+                            ? const Color(0xFF9F8FFF)
+                            : const Color(0xFF00022E)),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -197,8 +260,8 @@ class _AttendanceRow extends StatelessWidget {
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: _isAbsent
-                        ? Colors.grey.shade400
-                        : const Color(0xFF460A14),
+                        ? theme.mutedText
+                        : (isDark ? Colors.white : const Color(0xFF00022E)),
                     height: 1.1,
                   ),
                 ),
@@ -208,7 +271,7 @@ class _AttendanceRow extends StatelessWidget {
 
           const SizedBox(width: 14),
 
-          // ── Time In / Out ──────────────────────────────────────────────
+          // ── Day / times ─────────────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,9 +281,7 @@ class _AttendanceRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: _isAbsent
-                        ? Colors.grey.shade400
-                        : const Color(0xFF1A1A2E),
+                    color: _isAbsent ? theme.mutedText : theme.surfaceText,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -228,20 +289,19 @@ class _AttendanceRow extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.login_rounded,
-                          size: 12, color: Colors.grey.shade400),
+                          size: 12, color: theme.mutedText),
                       const SizedBox(width: 4),
                       Text(
                         record.timeIn != null ? _fmtTime(record.timeIn!) : '--',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(fontSize: 12, color: theme.mutedText),
                       ),
                       const SizedBox(width: 10),
                       Icon(
                         Icons.logout_rounded,
                         size: 12,
                         color: _isMissedClockOut
-                            ? Colors.red.shade300
-                            : Colors.grey.shade400,
+                            ? Colors.red.shade400
+                            : theme.mutedText,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -252,7 +312,7 @@ class _AttendanceRow extends StatelessWidget {
                           fontSize: 12,
                           color: _isMissedClockOut
                               ? Colors.red.shade400
-                              : Colors.grey.shade600,
+                              : theme.mutedText,
                           fontWeight: _isMissedClockOut
                               ? FontWeight.w600
                               : FontWeight.normal,
@@ -263,14 +323,13 @@ class _AttendanceRow extends StatelessWidget {
                 else
                   Text(
                     'No clock-in recorded',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                    style: TextStyle(fontSize: 12, color: theme.mutedText),
                   ),
               ],
             ),
           ),
 
-          // ── Hours + status + report button ─────────────────────────────
+          // ── Hours + badge + report ───────────────────────────────────────
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -278,15 +337,12 @@ class _AttendanceRow extends StatelessWidget {
                 _isAbsent
                     ? '0h 00m'
                     : ((record.hoursWorked ?? record.hoursRendered) != null
-                        ? _fmtHours(
-                            record.hoursWorked ?? record.hoursRendered!)
+                        ? _fmtHours(record.hoursWorked ?? record.hoursRendered!)
                         : '--'),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: _isAbsent
-                      ? Colors.grey.shade400
-                      : const Color(0xFF1A1A2E),
+                  color: _isAbsent ? theme.mutedText : theme.surfaceText,
                 ),
               ),
               const SizedBox(height: 4),
@@ -297,8 +353,8 @@ class _AttendanceRow extends StatelessWidget {
                 isMissedClockOut: _isMissedClockOut,
                 isLate: _isLate,
                 isReported: record.isReported,
+                isDark: isDark,
               ),
-              // ── Report button (shown for Late, Absent, Missed Clock-Out) ──
               if (rt != null) ...[
                 const SizedBox(height: 6),
                 _ReportButton(
@@ -313,8 +369,6 @@ class _AttendanceRow extends StatelessWidget {
       ),
     );
   }
-
-  // ── Formatters ────────────────────────────────────────────────────────────
 
   String _fmtTime(DateTime dt) {
     final local = dt.toLocal();
@@ -332,23 +386,38 @@ class _AttendanceRow extends StatelessWidget {
 
   String _monthAbbr(int m) {
     const months = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
     ];
     return months[m - 1];
   }
 
   String _dayName(int wd) {
     const days = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-      'Friday', 'Saturday', 'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
     ];
     return days[wd - 1];
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Status badge
+// Status badge — glass-aware
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StatusBadge extends StatelessWidget {
@@ -358,6 +427,7 @@ class _StatusBadge extends StatelessWidget {
   final bool isMissedClockOut;
   final bool isLate;
   final bool isReported;
+  final bool isDark;
 
   const _StatusBadge({
     this.isAbsent = false,
@@ -366,6 +436,7 @@ class _StatusBadge extends StatelessWidget {
     this.isMissedClockOut = false,
     this.isLate = false,
     this.isReported = false,
+    required this.isDark,
   });
 
   @override
@@ -376,40 +447,46 @@ class _StatusBadge extends StatelessWidget {
     final IconData icon;
 
     if (isAbsent) {
-      bg    = Colors.grey.shade100;
-      fg    = Colors.grey.shade500;
+      bg = isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100;
+      fg = isDark ? Colors.white38 : Colors.grey.shade500;
       label = 'Absent';
-      icon  = Icons.person_off_rounded;
+      icon = Icons.person_off_rounded;
     } else if (isComplete && isLate) {
-      bg    = Colors.orange.shade50;
-      fg    = Colors.orange.shade700;
+      bg = isDark
+          ? Colors.orange.withValues(alpha: 0.15)
+          : Colors.orange.shade50;
+      fg = isDark ? Colors.orange.shade300 : Colors.orange.shade700;
       label = 'Late';
-      icon  = Icons.schedule_rounded;
+      icon = Icons.schedule_rounded;
     } else if (isComplete) {
-      bg    = Colors.green.shade50;
-      fg    = Colors.green.shade700;
+      bg = isDark ? Colors.green.withValues(alpha: 0.15) : Colors.green.shade50;
+      fg = isDark ? Colors.greenAccent : Colors.green.shade700;
       label = 'Complete';
-      icon  = Icons.check_circle_rounded;
+      icon = Icons.check_circle_rounded;
     } else if (isOngoing) {
-      bg    = Colors.blue.shade50;
-      fg    = Colors.blue.shade700;
+      bg = isDark ? Colors.blue.withValues(alpha: 0.15) : Colors.blue.shade50;
+      fg = isDark ? Colors.blueAccent.shade100 : Colors.blue.shade700;
       label = 'On Shift';
-      icon  = Icons.timelapse_rounded;
+      icon = Icons.timelapse_rounded;
     } else if (isReported) {
-      bg    = Colors.purple.shade50;
-      fg    = Colors.purple.shade700;
+      bg = isDark
+          ? Colors.purple.withValues(alpha: 0.15)
+          : Colors.purple.shade50;
+      fg = isDark ? Colors.purpleAccent.shade100 : Colors.purple.shade700;
       label = 'Reported';
-      icon  = Icons.flag_rounded;
+      icon = Icons.flag_rounded;
     } else if (isMissedClockOut) {
-      bg    = Colors.red.shade50;
-      fg    = Colors.red.shade700;
+      bg = isDark ? Colors.red.withValues(alpha: 0.15) : Colors.red.shade50;
+      fg = isDark ? Colors.red.shade300 : Colors.red.shade700;
       label = 'Missed Clock Out';
-      icon  = Icons.alarm_off_rounded;
+      icon = Icons.alarm_off_rounded;
     } else {
-      bg    = Colors.orange.shade50;
-      fg    = Colors.orange.shade700;
+      bg = isDark
+          ? Colors.orange.withValues(alpha: 0.12)
+          : Colors.orange.shade50;
+      fg = isDark ? Colors.orange.shade300 : Colors.orange.shade700;
       label = 'Incomplete';
-      icon  = Icons.warning_amber_rounded;
+      icon = Icons.warning_amber_rounded;
     }
 
     return Container(
@@ -417,6 +494,9 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
+        border: isDark
+            ? Border.all(color: fg.withValues(alpha: 0.25), width: 1)
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -425,8 +505,8 @@ class _StatusBadge extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             label,
-            style: TextStyle(
-                fontSize: 10, fontWeight: FontWeight.w700, color: fg),
+            style:
+                TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
           ),
         ],
       ),
@@ -435,13 +515,13 @@ class _StatusBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Report button — works for all three reportable statuses
+// Report button
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReportButton extends StatefulWidget {
   final int recordId;
-  final String date;       // "YYYY-MM-DD"
-  final String reportType; // 'late' | 'absent' | 'missed_clock_out'
+  final String date;
+  final String reportType;
 
   const _ReportButton({
     required this.recordId,
@@ -493,30 +573,32 @@ class _ReportButtonState extends State<_ReportButton> {
               ? 'Report submitted. Admin will review your record.'
               : res['error'] ?? 'Failed to submit report.',
         ),
-        backgroundColor: res['ok'] == true
-            ? Colors.green.shade700
-            : Colors.red.shade700,
+        backgroundColor:
+            res['ok'] == true ? Colors.green.shade700 : Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: _submitting ? null : _submit,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          color: _submitting
-              ? Colors.orange.shade50
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
               : const Color(0xFF460A14).withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFF460A14).withValues(alpha: 0.25),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.15)
+                : const Color(0xFF460A14).withValues(alpha: 0.25),
           ),
         ),
         child: Row(
@@ -528,19 +610,24 @@ class _ReportButtonState extends State<_ReportButton> {
                 height: 10,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
-                  color: const Color(0xFF460A14).withValues(alpha: 0.6),
+                  color: isDark
+                      ? Colors.white54
+                      : const Color(0xFF460A14).withValues(alpha: 0.6),
                 ),
               )
             else
-              const Icon(Icons.flag_rounded,
-                  size: 10, color: Color(0xFF460A14)),
+              Icon(
+                Icons.flag_rounded,
+                size: 10,
+                color: isDark ? Colors.white54 : const Color(0xFF460A14),
+              ),
             const SizedBox(width: 4),
             Text(
               _submitting ? 'Submitting…' : _buttonLabel,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF460A14),
+                color: isDark ? Colors.white54 : const Color(0xFF460A14),
               ),
             ),
           ],
@@ -551,12 +638,11 @@ class _ReportButtonState extends State<_ReportButton> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Report issue dialog — collects a reason, adapts copy per status
+// Report dialog — glass-aware
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReportIssueDialog extends StatefulWidget {
-  final String reportType; // 'late' | 'absent' | 'missed_clock_out'
-
+  final String reportType;
   const _ReportIssueDialog({required this.reportType});
 
   @override
@@ -573,15 +659,12 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
     super.dispose();
   }
 
-  // ── Copy helpers ──────────────────────────────────────────────────────────
-
   String get _title {
     switch (widget.reportType) {
       case 'late':
         return 'Dispute Late Mark';
       case 'absent':
         return 'Dispute Absence';
-      case 'missed_clock_out':
       default:
         return 'Report Missed Clock-Out';
     }
@@ -593,7 +676,6 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
         return Icons.schedule_rounded;
       case 'absent':
         return Icons.person_off_rounded;
-      case 'missed_clock_out':
       default:
         return Icons.alarm_off_rounded;
     }
@@ -602,10 +684,9 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
   String get _bodyText {
     switch (widget.reportType) {
       case 'late':
-        return 'If you believe your late mark is incorrect (e.g. you clocked in on time but the system recorded it late), explain below. The admin will review and may adjust your time-in.';
+        return 'If you believe your late mark is incorrect, explain below. The admin will review and may adjust your time-in.';
       case 'absent':
-        return 'If you were present but have no clock-in on record (e.g. forgot to clock in, biometric error), explain below. The admin can mark you present or excuse the absence.';
-      case 'missed_clock_out':
+        return 'If you were present but have no clock-in on record, explain below. The admin can mark you present or excuse the absence.';
       default:
         return 'This will notify the admin that you forgot to clock out. They will review and set your time-out manually.';
     }
@@ -617,7 +698,6 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
         return 'e.g. I was in the office at 8:00 AM but the system logged 8:45 AM…';
       case 'absent':
         return 'e.g. I reported to the office but forgot to clock in…';
-      case 'missed_clock_out':
       default:
         return 'e.g. I left at 5 PM but forgot to clock out…';
     }
@@ -625,20 +705,35 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accentColor =
+        isDark ? const Color(0xFF7367F0) : const Color(0xFF460A14);
+
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: theme.dialogBackground,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: isDark
+            ? BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1)
+            : BorderSide.none,
+      ),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       title: Row(
         children: [
-          Icon(_icon, color: const Color(0xFF460A14), size: 22),
+          Icon(_icon, color: accentColor, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               _title,
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: theme.surfaceText,
+              ),
             ),
           ),
         ],
@@ -649,21 +744,22 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Explainer ──────────────────────────────────────────────
             Text(
               _bodyText,
-              style: const TextStyle(
-                  fontSize: 13, color: Colors.black54, height: 1.5),
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.mutedText,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 14),
-
-            // ── Reason field ───────────────────────────────────────────
             Text(
               'Reason',
               style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: theme.surfaceText,
+              ),
             ),
             const SizedBox(height: 6),
             TextFormField(
@@ -671,30 +767,27 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
               maxLines: 3,
               maxLength: 300,
               autofocus: true,
+              style: TextStyle(fontSize: 13, color: theme.surfaceText),
               decoration: InputDecoration(
                 hintText: _hint,
-                hintStyle:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                hintStyle: TextStyle(fontSize: 12, color: theme.mutedText),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor: theme.formFill,
                 contentPadding: const EdgeInsets.all(12),
+                counterStyle: TextStyle(fontSize: 10, color: theme.mutedText),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: theme.border),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: theme.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(
-                      color: Color(0xFF460A14), width: 1.5),
+                  borderSide: BorderSide(color: accentColor, width: 1.5),
                 ),
-                counterStyle:
-                    TextStyle(fontSize: 10, color: Colors.grey.shade400),
               ),
-              style: const TextStyle(fontSize: 13),
               validator: (v) {
                 if (v == null || v.trim().length < 5) {
                   return 'Please enter at least 5 characters.';
@@ -708,8 +801,10 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel',
-              style: TextStyle(color: Colors.black45)),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: theme.mutedText),
+          ),
         ),
         ElevatedButton.icon(
           onPressed: () {
@@ -720,12 +815,11 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           icon: const Icon(Icons.send_rounded, size: 15),
           label: const Text('Submit Report'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF460A14),
+            backgroundColor: accentColor,
             foregroundColor: Colors.white,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ],
