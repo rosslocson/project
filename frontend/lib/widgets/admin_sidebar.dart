@@ -19,11 +19,6 @@ class AdminSidebar extends StatelessWidget {
     // Determine if the current theme is dark mode
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    final logoPath = isDarkMode 
-        ? 'assets/images/logo_file.png' 
-        : 'assets/images/logo_file_lightmode.png'; // Fixed typo: 'ligtmode' -> 'lightmode'
-
-
     return Container(
       width: 250,
       decoration: BoxDecoration(
@@ -44,15 +39,30 @@ class AdminSidebar extends StatelessWidget {
                 // Added Transform.scale to zoom the logo without moving text
                 Transform.scale(
                   scale: 1.3,
-                  child: Image.asset(
-                    logoPath,
-                    height: 40,
-                    width: 48,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.public,
-                          color: theme.sidebarText, size: 24);
-                    },
+                  // REVISED: Using IndexedStack to keep BOTH images fully loaded in memory at all times.
+                  // This guarantees absolutely zero delay when switching themes.
+                  child: IndexedStack(
+                    index: isDarkMode ? 0 : 1,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo_file.png', // Index 0: Dark mode logo
+                        height: 40,
+                        width: 48,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.public, color: theme.sidebarText, size: 24);
+                        },
+                      ),
+                      Image.asset(
+                        'assets/images/logo_file_lightmode.png', // Index 1: Light mode logo
+                        height: 40,
+                        width: 48,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.public, color: theme.sidebarText, size: 24);
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 12),

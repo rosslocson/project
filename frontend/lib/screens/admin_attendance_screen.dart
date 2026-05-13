@@ -243,6 +243,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         isAdmin: true,
         title: 'Attendance',
         showWelcome: false,
+        // Hint: If GlassTopBar accepts an action widget, you might want to place
+        // _PendingBell(key: _bellKey, onResolved: _onReportResolved) here.
       ),
     );
   }
@@ -651,7 +653,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 class _PendingBell extends StatefulWidget {
   final VoidCallback? onResolved;
 
-  const _PendingBell({this.onResolved});
+  // FIXED: Added this.onResolved to satisfy the final variable requirement
+  const _PendingBell({super.key, this.onResolved});
 
 
   @override
@@ -909,4 +912,3 @@ class _PendingTile extends StatelessWidget {
     );
   }
 }
-

@@ -18,11 +18,6 @@ class UserSidebar extends StatelessWidget {
     // Determine if the current theme is dark mode
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Dynamically set logo based on theme
-    final logoPath = isDarkMode 
-        ? 'assets/images/logo_file.png' 
-        : 'assets/images/logo_file_lightmode.png';
-
     return Container(
       width: 250,
       decoration: BoxDecoration(
@@ -44,15 +39,30 @@ class UserSidebar extends StatelessWidget {
                 // Added Transform.scale to zoom the logo without moving text
                 Transform.scale(
                   scale: 1.3, // Adjust this value to zoom more or less
-                  child: Image.asset(
-                    logoPath, // Updated to use the dynamic path
-                    height: 40,
-                    width: 48,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.public,
-                          color: theme.sidebarText, size: 24);
-                    },
+                  child: IndexedStack(
+                    index: isDarkMode ? 0 : 1,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo_file.png', // Index 0: Dark mode logo
+                        height: 40,
+                        width: 48,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.public,
+                              color: theme.sidebarText, size: 24);
+                        },
+                      ),
+                      Image.asset(
+                        'assets/images/logo_file_lightmode.png', // Index 1: Light mode logo
+                        height: 40,
+                        width: 48,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.public,
+                              color: theme.sidebarText, size: 24);
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 // ──────────────────────────────────────────────────────────────
