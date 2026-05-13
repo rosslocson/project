@@ -654,7 +654,7 @@ class _PendingBell extends StatefulWidget {
   final VoidCallback? onResolved;
 
   // FIXED: Added this.onResolved to satisfy the final variable requirement
-  const _PendingBell({super.key, this.onResolved});
+  const _PendingBell({this.onResolved});
 
 
   @override
