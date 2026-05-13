@@ -1,19 +1,47 @@
 // lib/widgets/attendance_history_list.dart
 //
-// Changes vs original:
-//   • _AttendanceRow now shows a "Report to Admin" button for Late and
-//     Absent rows (not just Missed Clock-Out).
-//   • _ReportButton accepts reportType + date so the new unified endpoint
-//     is used for all three statuses.
-//   • _ReportIssueDialog replaces _ReportConfirmDialog — it collects a
-//     free-text reason and adapts its copy to the report type.
-//   • AdminAttendanceRecord.remark field rendering unchanged.
+// Display: records grouped by Mon–Fri work week.
+// Most recent week shown first; user taps ← / → to move between weeks.
+// Within a week, days are sorted Mon → Fri (ascending).
 
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
 import '../services/attendance_service.dart';
 
-class AttendanceHistoryList extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Returns the Monday of the ISO week that [date] belongs to.
+DateTime _weekStart(DateTime date) {
+  final d = DateTime(date.year, date.month, date.day);
+  return d.subtract(Duration(days: d.weekday - 1)); // weekday: 1=Mon … 7=Sun
+}
+
+String _weekKey(DateTime monday) =>
+    '${monday.year}-${monday.month.toString().padLeft(2, '0')}-${monday.day.toString().padLeft(2, '0')}';
+
+String _monthAbbr(int m) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  return months[m - 1];
+}
+
+String _fmtWeekRange(DateTime monday) {
+  final friday = monday.add(const Duration(days: 4));
+  if (monday.month == friday.month) {
+    return '${_monthAbbr(monday.month)} ${monday.day} – ${friday.day}, ${friday.year}';
+  }
+  return '${_monthAbbr(monday.month)} ${monday.day} – ${_monthAbbr(friday.month)} ${friday.day}, ${friday.year}';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Widget
+// ─────────────────────────────────────────────────────────────────────────────
+
+class AttendanceHistoryList extends StatefulWidget {
   final List<AttendanceRecord> records;
   final bool isLoading;
 
@@ -23,15 +51,88 @@ class AttendanceHistoryList extends StatelessWidget {
     required this.isLoading,
   });
 
-  List<AttendanceRecord> get _sortedRecords {
-    final copy = [...records];
-    copy.sort((a, b) => b.date.compareTo(a.date));
-    return copy;
+  @override
+  State<AttendanceHistoryList> createState() => _AttendanceHistoryListState();
+}
+
+class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
+  /// Index into [_weeks]; 0 = most recent week.
+  int _weekIndex = 0;
+
+  /// Sorted list of week-start Mondays, descending (newest first).
+  List<DateTime> _weeks = [];
+
+  /// Map from weekKey → records for that week, sorted Mon→Fri.
+  Map<String, List<AttendanceRecord>> _grouped = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuild();
   }
 
   @override
+  void didUpdateWidget(AttendanceHistoryList old) {
+    super.didUpdateWidget(old);
+    if (old.records != widget.records) _rebuild();
+  }
+
+  void _rebuild() {
+    final grouped = <String, List<AttendanceRecord>>{};
+    for (final r in widget.records) {
+      final monday = _weekStart(r.date);
+      final key = _weekKey(monday);
+      grouped.putIfAbsent(key, () => []).add(r);
+    }
+    // Sort records within each week Mon→Fri
+    for (final list in grouped.values) {
+      list.sort((a, b) => a.date.compareTo(b.date));
+    }
+    // Sort weeks newest first
+    final weeks = grouped.keys
+        .map((k) => DateTime.parse(k))
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    setState(() {
+      _weeks = weeks;
+      _grouped = grouped;
+      if (_weekIndex >= weeks.length) _weekIndex = 0;
+    });
+  }
+
+  List<AttendanceRecord> get _currentRecords {
+    if (_weeks.isEmpty) return [];
+    return _grouped[_weekKey(_weeks[_weekIndex])] ?? [];
+  }
+
+  void _goTo(int index) {
+    final clamped = index.clamp(0, (_weeks.length - 1).clamp(0, 9999));
+    if (clamped != _weekIndex) setState(() => _weekIndex = clamped);
+  }
+
+  int get _presentCount =>
+      _currentRecords.where((r) => !r.isAbsent && r.hasTimedIn).length;
+
+  int get _absentCount => _currentRecords.where((r) => r.isAbsent).length;
+
+  int get _lateCount => _currentRecords.where((r) {
+        if (!r.isComplete) return false;
+        final local = r.timeIn!.toLocal();
+        return local.hour > 8 || (local.hour == 8 && local.minute > 15);
+      }).length;
+
+  @override
   Widget build(BuildContext context) {
-    final filtered = _sortedRecords;
+    final totalWeeks = _weeks.length;
+    final monday = _weeks.isNotEmpty ? _weeks[_weekIndex] : null;
+    final isNewestWeek = _weekIndex == 0;
+    final isOldestWeek = _weekIndex >= totalWeeks - 1;
+
+    final now = DateTime.now();
+    final thisWeekMonday = _weekStart(now);
+    final isCurrentWeek =
+        monday != null && _weekKey(monday) == _weekKey(thisWeekMonday);
 
     return Container(
       decoration: BoxDecoration(
@@ -48,7 +149,7 @@ class AttendanceHistoryList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──────────────────────────────────────────────────────
+          // ── Header ────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Row(
@@ -65,23 +166,58 @@ class AttendanceHistoryList extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  '${filtered.length} record${filtered.length != 1 ? 's' : ''}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                ),
+                if (isCurrentWeek)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade500,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'This Week',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Text(
+                    totalWeeks > 0
+                        ? 'Week ${_weekIndex + 1} of $totalWeeks'
+                        : '—',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade500),
+                  ),
               ],
             ),
           ),
 
           const Divider(height: 1, indent: 20, endIndent: 20),
 
-          // ── Body ────────────────────────────────────────────────────────
-          if (isLoading)
+          // ── Body ──────────────────────────────────────────────────────
+          if (widget.isLoading)
             const Padding(
               padding: EdgeInsets.all(32),
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (filtered.isEmpty)
+          else if (_weeks.isEmpty)
             Padding(
               padding: const EdgeInsets.all(32),
               child: Center(
@@ -98,21 +234,216 @@ class AttendanceHistoryList extends StatelessWidget {
                 ),
               ),
             )
-          else
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(bottom: Radius.circular(16)),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 1, indent: 20),
-                itemBuilder: (context, i) =>
-                    _AttendanceRow(record: filtered[i]),
+          else ...[
+            // ── Week navigator bar ─────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+              child: Row(
+                children: [
+                  _NavArrow(
+                    icon: Icons.chevron_left_rounded,
+                    enabled: !isOldestWeek,
+                    onTap: () => _goTo(_weekIndex + 1),
+                    tooltip: 'Previous week',
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text(
+                          monday != null ? _fmtWeekRange(monday) : '—',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _SummaryChip(
+                              label: '$_presentCount Present',
+                              color: Colors.green,
+                            ),
+                            if (_lateCount > 0) ...[
+                              const SizedBox(width: 6),
+                              _SummaryChip(
+                                label: '$_lateCount Late',
+                                color: Colors.orange,
+                              ),
+                            ],
+                            if (_absentCount > 0) ...[
+                              const SizedBox(width: 6),
+                              _SummaryChip(
+                                label: '$_absentCount Absent',
+                                color: Colors.grey,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  _NavArrow(
+                    icon: Icons.chevron_right_rounded,
+                    enabled: !isNewestWeek,
+                    onTap: () => _goTo(_weekIndex - 1),
+                    tooltip: 'Next week',
+                  ),
+                ],
               ),
             ),
+
+            const SizedBox(height: 8),
+            const Divider(height: 1, indent: 20, endIndent: 20),
+
+            // ── Day rows ──────────────────────────────────────────────
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.03, 0),
+                    end: Offset.zero,
+                  ).animate(anim),
+                  child: child,
+                ),
+              ),
+              child: ClipRRect(
+                key: ValueKey<int>(_weekIndex),
+                borderRadius: totalWeeks <= 1
+                    ? const BorderRadius.vertical(bottom: Radius.circular(16))
+                    : BorderRadius.zero,
+                child: _currentRecords.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(28),
+                        child: Center(
+                          child: Text(
+                            'No records for this week',
+                            style: TextStyle(color: Colors.grey.shade400),
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _currentRecords.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1, indent: 20),
+                        itemBuilder: (context, i) =>
+                            _AttendanceRow(record: _currentRecords[i]),
+                      ),
+              ),
+            ),
+
+            // ── Week dot indicators ────────────────────────────────────
+            if (totalWeeks > 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(totalWeeks, (i) {
+                    final active = i == _weekIndex;
+                    return GestureDetector(
+                      onTap: () => _goTo(i),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: active ? 18 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? const Color(0xFF460A14)
+                              : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nav arrow
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NavArrow extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  const _NavArrow({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: AnimatedOpacity(
+          opacity: enabled ? 1.0 : 0.25,
+          duration: const Duration(milliseconds: 150),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0xFF460A14).withValues(alpha: 0.07),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFF460A14).withValues(alpha: 0.2),
+              ),
+            ),
+            child: Icon(icon, size: 18, color: const Color(0xFF460A14)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Summary chip
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SummaryChip extends StatelessWidget {
+  final String label;
+  final MaterialColor color;
+
+  const _SummaryChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.shade50,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color.shade700,
+        ),
       ),
     );
   }
@@ -126,8 +457,6 @@ class _AttendanceRow extends StatelessWidget {
   final AttendanceRecord record;
   const _AttendanceRow({required this.record});
 
-  // ── Status helpers ────────────────────────────────────────────────────────
-
   bool get _isMissedClockOut {
     final today = DateTime.now();
     final isToday = record.date.year == today.year &&
@@ -139,16 +468,13 @@ class _AttendanceRow extends StatelessWidget {
   bool get _isLate {
     if (!record.isComplete) return false;
     final local = record.timeIn!.toLocal();
-    // After 08:15 Manila time is considered Late (mirrors backend logic).
     return local.hour > 8 || (local.hour == 8 && local.minute > 15);
   }
 
   bool get _isAbsent => record.isAbsent;
 
-  /// Returns the report_type string expected by the backend, or null if this
-  /// record is not reportable by the intern.
   String? get _reportType {
-    if (record.isReported) return null; // already reported
+    if (record.isReported) return null;
     if (_isMissedClockOut) return 'missed_clock_out';
     if (_isAbsent) return 'absent';
     if (_isLate) return 'late';
@@ -169,7 +495,6 @@ class _AttendanceRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          // ── Date badge ─────────────────────────────────────────────────
           Container(
             width: 44,
             padding: const EdgeInsets.symmetric(vertical: 6),
@@ -205,10 +530,7 @@ class _AttendanceRow extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(width: 14),
-
-          // ── Time In / Out ──────────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,9 +553,11 @@ class _AttendanceRow extends StatelessWidget {
                           size: 12, color: Colors.grey.shade400),
                       const SizedBox(width: 4),
                       Text(
-                        record.timeIn != null ? _fmtTime(record.timeIn!) : '--',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        record.timeIn != null
+                            ? _fmtTime(record.timeIn!)
+                            : '--',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
                       ),
                       const SizedBox(width: 10),
                       Icon(
@@ -263,14 +587,12 @@ class _AttendanceRow extends StatelessWidget {
                 else
                   Text(
                     'No clock-in recorded',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade400),
                   ),
               ],
             ),
           ),
-
-          // ── Hours + status + report button ─────────────────────────────
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -298,7 +620,6 @@ class _AttendanceRow extends StatelessWidget {
                 isLate: _isLate,
                 isReported: record.isReported,
               ),
-              // ── Report button (shown for Late, Absent, Missed Clock-Out) ──
               if (rt != null) ...[
                 const SizedBox(height: 6),
                 _ReportButton(
@@ -314,8 +635,6 @@ class _AttendanceRow extends StatelessWidget {
     );
   }
 
-  // ── Formatters ────────────────────────────────────────────────────────────
-
   String _fmtTime(DateTime dt) {
     final local = dt.toLocal();
     final h = local.hour % 12 == 0 ? 12 : local.hour % 12;
@@ -328,14 +647,6 @@ class _AttendanceRow extends StatelessWidget {
     final hh = h.floor();
     final mm = ((h - hh) * 60).round();
     return '${hh}h ${mm.toString().padLeft(2, '0')}m';
-  }
-
-  String _monthAbbr(int m) {
-    const months = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
-    ];
-    return months[m - 1];
   }
 
   String _dayName(int wd) {
@@ -435,13 +746,13 @@ class _StatusBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Report button — works for all three reportable statuses
+// Report button
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReportButton extends StatefulWidget {
   final int recordId;
-  final String date;       // "YYYY-MM-DD"
-  final String reportType; // 'late' | 'absent' | 'missed_clock_out'
+  final String date;
+  final String reportType;
 
   const _ReportButton({
     required this.recordId,
@@ -458,13 +769,10 @@ class _ReportButtonState extends State<_ReportButton> {
 
   String get _buttonLabel {
     switch (widget.reportType) {
-      case 'late':
-        return 'Dispute Late Mark';
-      case 'absent':
-        return 'Dispute Absence';
+      case 'late':           return 'Dispute Late Mark';
+      case 'absent':         return 'Dispute Absence';
       case 'missed_clock_out':
-      default:
-        return 'Report to Admin';
+      default:               return 'Report to Admin';
     }
   }
 
@@ -493,9 +801,8 @@ class _ReportButtonState extends State<_ReportButton> {
               ? 'Report submitted. Admin will review your record.'
               : res['error'] ?? 'Failed to submit report.',
         ),
-        backgroundColor: res['ok'] == true
-            ? Colors.green.shade700
-            : Colors.red.shade700,
+        backgroundColor:
+            res['ok'] == true ? Colors.green.shade700 : Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -551,12 +858,11 @@ class _ReportButtonState extends State<_ReportButton> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Report issue dialog — collects a reason, adapts copy per status
+// Report issue dialog
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReportIssueDialog extends StatefulWidget {
-  final String reportType; // 'late' | 'absent' | 'missed_clock_out'
-
+  final String reportType;
   const _ReportIssueDialog({required this.reportType});
 
   @override
@@ -573,29 +879,19 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
     super.dispose();
   }
 
-  // ── Copy helpers ──────────────────────────────────────────────────────────
-
   String get _title {
     switch (widget.reportType) {
-      case 'late':
-        return 'Dispute Late Mark';
-      case 'absent':
-        return 'Dispute Absence';
-      case 'missed_clock_out':
-      default:
-        return 'Report Missed Clock-Out';
+      case 'late':   return 'Dispute Late Mark';
+      case 'absent': return 'Dispute Absence';
+      default:       return 'Report Missed Clock-Out';
     }
   }
 
   IconData get _icon {
     switch (widget.reportType) {
-      case 'late':
-        return Icons.schedule_rounded;
-      case 'absent':
-        return Icons.person_off_rounded;
-      case 'missed_clock_out':
-      default:
-        return Icons.alarm_off_rounded;
+      case 'late':   return Icons.schedule_rounded;
+      case 'absent': return Icons.person_off_rounded;
+      default:       return Icons.alarm_off_rounded;
     }
   }
 
@@ -605,7 +901,6 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
         return 'If you believe your late mark is incorrect (e.g. you clocked in on time but the system recorded it late), explain below. The admin will review and may adjust your time-in.';
       case 'absent':
         return 'If you were present but have no clock-in on record (e.g. forgot to clock in, biometric error), explain below. The admin can mark you present or excuse the absence.';
-      case 'missed_clock_out':
       default:
         return 'This will notify the admin that you forgot to clock out. They will review and set your time-out manually.';
     }
@@ -613,13 +908,9 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
 
   String get _hint {
     switch (widget.reportType) {
-      case 'late':
-        return 'e.g. I was in the office at 8:00 AM but the system logged 8:45 AM…';
-      case 'absent':
-        return 'e.g. I reported to the office but forgot to clock in…';
-      case 'missed_clock_out':
-      default:
-        return 'e.g. I left at 5 PM but forgot to clock out…';
+      case 'late':   return 'e.g. I was in the office at 8:00 AM but the system logged 8:45 AM…';
+      case 'absent': return 'e.g. I reported to the office but forgot to clock in…';
+      default:       return 'e.g. I left at 5 PM but forgot to clock out…';
     }
   }
 
@@ -635,11 +926,9 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           Icon(_icon, color: const Color(0xFF460A14), size: 22),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              _title,
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w700),
-            ),
+            child: Text(_title,
+                style: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -649,22 +938,15 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Explainer ──────────────────────────────────────────────
-            Text(
-              _bodyText,
-              style: const TextStyle(
-                  fontSize: 13, color: Colors.black54, height: 1.5),
-            ),
+            Text(_bodyText,
+                style: const TextStyle(
+                    fontSize: 13, color: Colors.black54, height: 1.5)),
             const SizedBox(height: 14),
-
-            // ── Reason field ───────────────────────────────────────────
-            Text(
-              'Reason',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700),
-            ),
+            Text('Reason',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700)),
             const SizedBox(height: 6),
             TextFormField(
               controller: _ctrl,
