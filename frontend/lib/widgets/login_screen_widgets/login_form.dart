@@ -117,9 +117,9 @@ class LoginForm extends StatelessWidget {
                               const Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100), size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                auth.error?.toLowerCase() == "invalid email or password"
-                                    ? "invalid email or password"
-                                    : (auth.error ?? "invalid email or password"),
+                                auth.error?.toLowerCase() == "The email or password you entered is incorrect."
+                                    ? "The email or password you entered is incorrect."
+                                    : (auth.error ?? "The email or password you entered is incorrect."),
                                 style: const TextStyle(
                                   color: Color(0xFFE65100),
                                   fontSize: 14,

@@ -78,7 +78,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
       setState(() {
         step = 2;
-        stepMsg = null;
+        // SECURITY UPDATE: Avoid email enumeration with a generic response
+        stepMsg = 'If an account exists for this email, a reset code has been sent.';
         _clearOtpBoxes();
         _newPassCtrl.clear();
         _confPassCtrl.clear();
@@ -86,6 +87,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       _startOtpTimer(expirySeconds);
       _otpFocusNodes.first.requestFocus();
     } else {
+      // Even on a server error we do not reveal if the email exists
       setState(() => stepMsg = res['error'] ?? 'Request failed');
     }
   }
@@ -348,7 +350,6 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     );
   }
 
-  // Reusable button builder replacing BlueButton dynamically for dark mode
   Widget _buildActionButton({
     required String label,
     required VoidCallback? onPressed,
@@ -389,7 +390,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
         ),
       );
     }
-    // Assuming BlueButton exists and handles light mode as per original logic
+    // Assumes BlueButton is defined in your existing widget/theme collection
     return BlueButton(
       label: label,
       onPressed: onPressed,
@@ -402,7 +403,6 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     final dec = pillInputDecoration();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Reusable text styles matching Register/Login logic
     final labelStyle = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.bold,
@@ -425,14 +425,14 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     final focusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
       borderSide: const BorderSide(
-        color: Color(0xFF6366F1), // The purple color when clicked
+        color: Color(0xFF6366F1), 
         width: 2,
       ),
     );
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F0F16) : Colors.white, // Dark mode sheet bg
+        color: isDark ? const Color(0xFF0F0F16) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
       padding: EdgeInsets.only(

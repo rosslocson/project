@@ -93,7 +93,7 @@ func (s *AuthService) Login(email, password, ip string) (*LoginResult, error) {
 	}
 
 	// SECURE: Generic error message for all failures
-	genericErr := errors.New("invalid email or password")
+	genericErr := errors.New("The email or password you entered is incorrect.")
 	// SECURE: Dummy hash to simulate processing time for non-existent users
 	dummyHash := []byte("$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa")
 
@@ -260,7 +260,7 @@ func ValidatePasswordStrength(password string) error {
 func ValidateEmailFormat(email string) error {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if !re.MatchString(email) {
-		return errors.New("invalid email format")
+		return errors.New("Invalid email format")
 	}
 	return nil
 }
