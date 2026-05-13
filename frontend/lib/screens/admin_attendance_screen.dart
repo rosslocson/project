@@ -22,10 +22,9 @@ import '../widgets/admin_attendance_widgets/review_report_sheet.dart';
 import 'export_attendance.dart';
 import 'admin_glass_topbar.dart' as admin_topbar;
 
-
 // Re-export HamburgerIcon so other attendance files can reuse it from one place.
-export '../widgets/admin_attendance_widgets/attendance_table.dart' show HamburgerIcon;
-
+export '../widgets/admin_attendance_widgets/attendance_table.dart'
+    show HamburgerIcon;
 
 class AdminAttendanceScreen extends StatefulWidget {
   const AdminAttendanceScreen({super.key});
@@ -60,7 +59,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   bool _loading = true;
   String? _error;
 
-  // ── Pending reports bell (reload after resolve) ───────────────────────────
+  // ── Pending reports bell key ──────────────────────────────────────────────
   final GlobalKey<_PendingBellState> _bellKey = GlobalKey();
 
   @override
@@ -99,10 +98,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final result = await AdminAttendanceService.fetchAttendance(
       allDates: isAllDates,
       period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-      dateFrom: (isCustom && _isRangeMode) ? toApiDate(_customRangeStart) : null,
+      dateFrom:
+          (isCustom && _isRangeMode) ? toApiDate(_customRangeStart) : null,
       dateTo: (isCustom && _isRangeMode) ? toApiDate(_customRangeEnd) : null,
       date: (isCustom && !_isRangeMode) ? toApiDate(_customDate) : null,
-      search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+      search:
+          _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
       status: _selectedStatus == 'All' ? null : _selectedStatus,
       page: page,
       limit: _limit,
@@ -124,6 +125,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     }
   }
 
+  /// Called after any report is resolved (from table row OR bell panel).
   void _onReportResolved() {
     _load(page: _page);
     _bellKey.currentState?.reload();
@@ -174,15 +176,19 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 
   int get _activeFilterCount =>
-      (_searchCtrl.text.isNotEmpty ? 1 : 0) + (_selectedStatus != 'All' ? 1 : 0);
+      (_searchCtrl.text.isNotEmpty ? 1 : 0) +
+      (_selectedStatus != 'All' ? 1 : 0);
 
-  int get _pendingReportCount => _records.where((r) => r.hasOpenReport).length;
+  int get _pendingReportCount =>
+      _records.where((r) => r.hasOpenReport).length;
 
   void _clearAllFilters() {
     _searchCtrl.clear();
     setState(() => _selectedStatus = 'All');
     _load();
   }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +214,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   child: Container(
                     decoration: const BoxDecoration(
                       image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.jpg'),
+                        image:
+                            AssetImage('assets/images/space_background.jpg'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -220,7 +227,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                     children: [
                       _buildTopBar(),
                       const SizedBox(height: 15),
-
                       Expanded(child: _buildCard()),
                     ],
                   ),
@@ -243,12 +249,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         isAdmin: true,
         title: 'Attendance',
         showWelcome: false,
-        // Hint: If GlassTopBar accepts an action widget, you might want to place
-        // _PendingBell(key: _bellKey, onResolved: _onReportResolved) here.
       ),
     );
   }
-
 
   Widget _buildCard() {
     return Padding(
@@ -274,7 +277,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               _buildToolbar(),
               _buildPeriodRow(),
               if (!_loading && _pendingReportCount > 0) _buildPendingBanner(),
-              if (!_loading && _pendingReportCount > 0) const SizedBox(height: 12),
+              if (!_loading && _pendingReportCount > 0)
+                const SizedBox(height: 12),
               const Divider(height: 1, thickness: 1, color: kBorder),
               Expanded(child: _buildBody()),
               if (_total > _limit) _buildPagination(),
@@ -285,6 +289,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
+  // ── Card header — contains title, record count, bell, and export button ───
+
   Widget _buildCardHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(28, 22, 28, 18),
@@ -294,6 +300,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       ),
       child: Row(
         children: [
+          // Icon
           Container(
             width: 40,
             height: 40,
@@ -305,6 +312,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 color: Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
+
+          // Title + record count / date range
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,15 +334,18 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       _loading
                           ? 'Loading…'
                           : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                      style: const TextStyle(fontSize: 12, color: kTextMid),
+                      style:
+                          const TextStyle(fontSize: 12, color: kTextMid),
                     ),
-                    if (!_loading && _period != AttendancePeriod.allDates) ...[
+                    if (!_loading &&
+                        _period != AttendancePeriod.allDates) ...[
                       const SizedBox(width: 8),
                       Container(
                         width: 1,
                         height: 11,
                         color: kBorder,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        margin:
+                            const EdgeInsets.symmetric(horizontal: 2),
                       ),
                       const SizedBox(width: 6),
                       const Icon(Icons.calendar_today_rounded,
@@ -353,6 +365,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               ],
             ),
           ),
+
+          // ── Pending-reports bell ────────────────────────────────────────
+          _PendingBell(
+            key: _bellKey,
+            onResolved: _onReportResolved,
+          ),
+          const SizedBox(width: 10),
+
+          // ── Export button ───────────────────────────────────────────────
           ExportButton(
             onTap: () async {
               final isAllDates = _period == AttendancePeriod.allDates;
@@ -361,10 +382,17 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 context,
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
-                  period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
-                  date: (isCustom && !_isRangeMode) ? toApiDate(_customDate) : null,
-                  search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
-                  status: _selectedStatus == 'All' ? null : _selectedStatus,
+                  period: (!isAllDates && !isCustom)
+                      ? _period.apiPeriod
+                      : null,
+                  date: (isCustom && !_isRangeMode)
+                      ? toApiDate(_customDate)
+                      : null,
+                  search: _searchCtrl.text.trim().isEmpty
+                      ? null
+                      : _searchCtrl.text.trim(),
+                  status:
+                      _selectedStatus == 'All' ? null : _selectedStatus,
                 ),
               );
             },
@@ -373,6 +401,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       ),
     );
   }
+
+  // ── Toolbar ───────────────────────────────────────────────────────────────
 
   Widget _buildToolbar() {
     return Padding(
@@ -413,6 +443,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       ),
     );
   }
+
+  // ── Period chips ──────────────────────────────────────────────────────────
 
   Widget _buildPeriodRow() {
     const fixedPeriods = [
@@ -455,6 +487,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
+  // ── Pending-reports banner (inline, above table) ──────────────────────────
+
   Widget _buildPendingBanner() {
     final count = _pendingReportCount;
     return Container(
@@ -491,8 +525,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 ),
                 const SizedBox(height: 2),
                 const Text(
-                  'Tap the review icon (📋) on flagged rows or use the bell above.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                  'Tap the 🔔 bell or the review icon (📋) on flagged rows.',
+                  style:
+                      TextStyle(fontSize: 11, color: Color(0xFFB45309)),
                 ),
               ],
             ),
@@ -504,7 +539,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               _load();
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
                 color: const Color(0xFFB45309),
                 borderRadius: BorderRadius.circular(20),
@@ -532,6 +568,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
+  // ── Body (loading / empty / table) ────────────────────────────────────────
+
   Widget _buildBody() {
     if (_error != null) {
       return Center(
@@ -548,7 +586,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   color: Colors.red.shade400, size: 36),
             ),
             const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
+            Text(_error!,
+                style:
+                    TextStyle(color: Colors.red.shade600, fontSize: 13)),
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () => _load(page: _page),
@@ -604,6 +644,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
+  // ── Pagination ────────────────────────────────────────────────────────────
+
   Widget _buildPagination() {
     final totalPages = (_total / _limit).ceil();
     return Container(
@@ -647,101 +689,75 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Pending-reports bell widget (private to this file)
+// _PendingBell — notification bell placed beside the Export button
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PendingBell extends StatefulWidget {
   final VoidCallback? onResolved;
 
-  // FIXED: Added this.onResolved to satisfy the final variable requirement
   const _PendingBell({super.key, this.onResolved});
-
 
   @override
   State<_PendingBell> createState() => _PendingBellState();
 }
 
-class _PendingBellState extends State<_PendingBell> {
+class _PendingBellState extends State<_PendingBell>
+    with SingleTickerProviderStateMixin {
   List<AdminAttendanceRecord> _pending = [];
   bool _loading = true;
+
+  late final AnimationController _shakeCtrl;
+  late final Animation<double> _shakeAnim;
 
   @override
   void initState() {
     super.initState();
+
+    // Subtle shake animation when new reports arrive
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _shakeAnim = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -6.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -6.0, end: 6.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 6.0, end: -4.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -4.0, end: 4.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 4.0, end: 0.0), weight: 1),
+    ]).animate(_shakeCtrl);
+
     reload();
   }
 
+  @override
+  void dispose() {
+    _shakeCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Called externally via GlobalKey after a report is resolved from the table.
   Future<void> reload() async {
     if (!mounted) return;
     setState(() => _loading = true);
 
     final res = await AdminAttendanceService.fetchPendingReports();
-
     if (!mounted) return;
 
+    final prev = _pending.length;
     setState(() {
       _pending = res['ok'] == true
           ? (res['records'] as List<AdminAttendanceRecord>)
           : [];
       _loading = false;
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: Colors.white70,
-        ),
-      );
+    // Shake if count increased
+    if (_pending.length > prev) {
+      _shakeCtrl.forward(from: 0);
     }
-
-    final count = _pending.length;
-    return GestureDetector(
-      onTap: count == 0 ? null : () => _showPanel(context),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Icon(
-            count > 0
-                ? Icons.notifications_active_rounded
-                : Icons.notifications_outlined,
-            color: count > 0 ? Colors.amber.shade300 : Colors.white70,
-            size: 26,
-          ),
-          if (count > 0)
-            Positioned(
-              top: -4,
-              right: -4,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEF4444),
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text(
-                  '$count',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
   }
 
-  void _showPanel(BuildContext context) {
+  void _openPanel(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -755,10 +771,98 @@ class _PendingBellState extends State<_PendingBell> {
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    final count = _pending.length;
+    final hasReports = count > 0;
+
+    return Tooltip(
+      message: hasReports
+          ? '$count pending ${count == 1 ? 'report' : 'reports'}'
+          : 'No pending reports',
+      child: GestureDetector(
+        onTap: hasReports ? () => _openPanel(context) : null,
+        child: AnimatedBuilder(
+          animation: _shakeAnim,
+          builder: (_, child) => Transform.translate(
+            offset: Offset(_shakeAnim.value, 0),
+            child: child,
+          ),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: hasReports
+                  ? const Color(0xFFFFFBEB)
+                  : const Color(0xFFF4F4F8),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasReports
+                    ? const Color(0xFFFCD34D)
+                    : kBorder,
+                width: 1.5,
+              ),
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  hasReports
+                      ? Icons.notifications_active_rounded
+                      : Icons.notifications_outlined,
+                  size: 20,
+                  color: hasReports
+                      ? const Color(0xFF92400E)
+                      : kTextMid,
+                ),
+                if (hasReports)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      constraints: const BoxConstraints(
+                          minWidth: 17, minHeight: 17),
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        count > 99 ? '99+' : '$count',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          height: 1.7,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Pending-reports panel (inside the bell sheet)
+// _PendingPanel — draggable bottom sheet listing all pending reports
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PendingPanel extends StatelessWidget {
@@ -780,6 +884,7 @@ class _PendingPanel extends StatelessWidget {
         ),
         child: Column(
           children: [
+            // ── Drag handle ─────────────────────────────────────────────
             const SizedBox(height: 12),
             Center(
               child: Container(
@@ -792,13 +897,22 @@ class _PendingPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            // ── Header ──────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  const Icon(Icons.pending_actions,
-                      color: Color(0xFFF59E0B), size: 20),
-                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDE68A),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.pending_actions_rounded,
+                        color: Color(0xFF92400E), size: 18),
+                  ),
+                  const SizedBox(width: 10),
                   Text(
                     'Pending Reports (${records.length})',
                     style: const TextStyle(
@@ -807,24 +921,60 @@ class _PendingPanel extends StatelessWidget {
                       color: kTextDark,
                     ),
                   ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F4F8),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close,
+                          size: 16, color: kTextMid),
+                    ),
+                  ),
                 ],
               ),
             ),
+
             const SizedBox(height: 8),
             const Divider(height: 1),
+
+            // ── List ────────────────────────────────────────────────────
             Expanded(
               child: records.isEmpty
                   ? const Center(
-                      child: Text(
-                        'No pending reports',
-                        style: TextStyle(color: kTextMid, fontSize: 13),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded,
+                              size: 40, color: Color(0xFF22C55E)),
+                          SizedBox(height: 12),
+                          Text(
+                            'All caught up!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: kTextDark,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'No pending reports to review.',
+                            style:
+                                TextStyle(fontSize: 12, color: kTextMid),
+                          ),
+                        ],
                       ),
                     )
                   : ListView.separated(
                       controller: ctrl,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       itemCount: records.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 8),
                       itemBuilder: (ctx, i) => _PendingTile(
                         record: records[i],
                         onResolved: () {
@@ -840,6 +990,10 @@ class _PendingPanel extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _PendingTile — single row inside the pending panel
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _PendingTile extends StatelessWidget {
   final AdminAttendanceRecord record;
@@ -866,8 +1020,11 @@ class _PendingTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Avatar
             InternAvatar(url: record.avatarUrl, name: record.internName),
             const SizedBox(width: 12),
+
+            // Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -890,22 +1047,53 @@ class _PendingTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     record.formattedDate,
-                    style: const TextStyle(fontSize: 12, color: kTextMid),
+                    style: const TextStyle(
+                        fontSize: 12, color: kTextMid),
                   ),
                   if (record.reportReason != null) ...[
                     const SizedBox(height: 6),
-                    Text(
-                      record.reportReason!,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        record.reportReason!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF92400E),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ],
               ),
             ),
+
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: kTextMid),
+
+            // Chevron + "Review" label
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.rate_review_outlined,
+                    size: 18, color: kAccent),
+                const SizedBox(height: 2),
+                Text(
+                  'Review',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: kAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
