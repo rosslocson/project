@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
 import '../app_theme.dart';
-import 'error_banner.dart';
 import 'locked_banner.dart';
 
 const kCosmicBlue = Color(0xFF00022E);
@@ -100,10 +99,79 @@ class LoginForm extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
               ] else if (auth.error != null) ...[
-                ErrorBanner(
-                  auth: auth,
-                  attemptsLeft: attemptsLeft,
-                  onForgotPassword: onForgotPassword,
+                // Custom banner matching image_71b702.png
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF4E5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFFB74D), width: 1),
+                  ),
+                  child: Stack(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100), size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                auth.error?.toLowerCase() == "invalid email or password"
+                                    ? "invalid email or password"
+                                    : (auth.error ?? "invalid email or password"),
+                                style: const TextStyle(
+                                  color: Color(0xFFE65100),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Text(
+                                "Attempts left: ",
+                                style: TextStyle(color: Color(0xFFE65100), fontSize: 13),
+                              ),
+                              Row(
+                                children: List.generate(
+                                  attemptsLeft > 0 ? attemptsLeft : 0,
+                                  (index) => const Padding(
+                                    padding: EdgeInsets.only(right: 4.0),
+                                    child: Icon(Icons.circle, size: 10, color: Color(0xFFFFA000)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: onForgotPassword,
+                            child: const Text(
+                              "Forgot password? Reset it →",
+                              style: TextStyle(
+                                color: Color(0xFFE65100),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: const Icon(Icons.close, color: Color(0xFFFFA000), size: 20),
+                          onPressed: () => auth.clearError(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -207,7 +275,6 @@ class LoginForm extends StatelessWidget {
 
               const SizedBox(height: 36),
 
-              // Force identical sizing constraint for both Dark Mode and Light Mode buttons
               SizedBox(
                 height: 50,
                 child: isDark

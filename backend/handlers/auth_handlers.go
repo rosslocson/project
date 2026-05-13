@@ -14,8 +14,6 @@ import (
 	"project/backend/services"
 )
 
-// ── Request Structs ────────────────────────────────────────────────────────
-
 type RegisterRequest struct {
 	FirstName        string `json:"first_name"`
 	LastName         string `json:"last_name"`
@@ -47,8 +45,6 @@ type ResetPasswordRequest struct {
 	ConfirmPassword string `json:"confirm_password"`
 }
 
-// ── Registration & Login Endpoints ─────────────────────────────────────────
-
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -61,31 +57,25 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	// 1. BACKEND ENFORCEMENT: Check Email Format
 	if err := services.ValidateEmailFormat(strings.TrimSpace(req.Email)); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
 		return
 	}
 
-	// 2. BACKEND ENFORCEMENT: Check Password Strength
 	if err := services.ValidatePasswordStrength(req.Password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
 		return
 	}
 
-	// 2. BACKEND ENFORCEMENT: Force the position to "Intern"
-	// We ignore req.Position to prevent tampering.
 	enforcedPosition := "Intern"
-
 	userRepo := repositories.NewUserRepository(h.DB)
 	authService := services.NewAuthService(userRepo)
 
 	ojtHours := req.RequiredOjtHours
 	if ojtHours <= 0 {
-		ojtHours = 400 // Default OJT hours if not provided or invalid
+		ojtHours = 400
 	}
 
-	// Pass the enforcedPosition instead of req.Position
 	user, token, err := authService.Register(
 		req.FirstName, req.LastName, strings.TrimSpace(req.Email), req.Password,
 		req.Phone, req.Department, enforcedPosition, models.RoleUser, ojtHours,
@@ -115,10 +105,12 @@ func (h *Handler) Login(c *gin.Context) {
 	userRepo := repositories.NewUserRepository(h.DB)
 	authService := services.NewAuthService(userRepo)
 
-	// The service handles all the lockout logic, attempts counting, and hashing checks
-	result, err := authService.Login(strings.TrimSpace(req.Email), req.Password)
+	// Fetch IP Address to securely track attempts over the network layer
+	ip := c.ClientIP()
+	result, err := authService.Login(strings.TrimSpace(req.Email), req.Password, ip)
+	
 	if err != nil {
-		if result.IsLocked {
+		if result != nil && result.IsLocked {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"ok":               false,
 				"error":            "Account temporarily locked",
@@ -128,19 +120,23 @@ func (h *Handler) Login(c *gin.Context) {
 			})
 			return
 		}
+		
+		attemptsLeft := 0
+		if result != nil {
+			attemptsLeft = result.AttemptsLeft
+		}
+		
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"ok":            false,
-			"error":         result.Error.Error(),
-			"attempts_left": result.AttemptsLeft,
+			"error":         err.Error(),
+			"attempts_left": attemptsLeft,
 		})
 		return
 	}
 
-	// Re-fetch full user from DB — result.User only has auth fields,
-	// not school/program/skills etc. This is why data was stale after re-login.
 	fullUser, err := userRepo.GetByID(result.User.ID)
 	if err != nil {
-		fullUser = result.User // non-fatal fallback
+		fullUser = result.User
 	}
 
 	h.logActivity(result.User.ID, "LOGIN", "User logged in", c.ClientIP())
@@ -148,11 +144,9 @@ func (h *Handler) Login(c *gin.Context) {
 		"ok":      true,
 		"message": "Login successful",
 		"token":   result.Token,
-		"user":    fullUser, // complete profile
+		"user":    fullUser,
 	})
 }
-
-// ── 6-Digit OTP Endpoints ──────────────────────────────────────────────────
 
 func (h *Handler) ForgotPassword(c *gin.Context) {
 	var req ForgotPasswordRequest
@@ -165,7 +159,6 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 
 	var user models.User
 	if err := h.DB.Where("email = ?", recipientEmail).First(&user).Error; err != nil {
-		// Prevent email enumeration by returning a success message regardless
 		c.JSON(http.StatusOK, gin.H{"ok": true, "message": "If the email exists, an OTP was sent."})
 		return
 	}
@@ -234,26 +227,22 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// 1. Enforce secure password
 	if err := services.ValidatePasswordStrength(req.NewPassword); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
 		return
 	}
 
-	// 2. Find user by OTP
 	var user models.User
 	if err := h.DB.Where("reset_otp = ?", strings.TrimSpace(req.OTP)).First(&user).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid or expired OTP"})
 		return
 	}
 
-	// 3. Check if OTP is expired
 	if user.ResetOTPExpiry == nil || user.ResetOTPExpiry.Before(time.Now()) {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "OTP has expired"})
 		return
 	}
 
-	// 4. Hash the new password securely
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to encrypt password"})
@@ -261,7 +250,6 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	}
 	user.Password = string(hashedPassword)
 
-	// 5. Clear the OTP fields and unlock the account
 	user.ResetOTP = ""
 	user.ResetOTPExpiry = nil
 	user.FailedAttempts = 0

@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -22,6 +23,17 @@ const (
 	lockDuration     = 1 * time.Minute
 )
 
+// IPLock tracks failed login attempts by IP address to prevent brute-force via random emails
+type IPLock struct {
+	Attempts    int
+	LockedUntil *time.Time
+}
+
+var (
+	ipTrackerMu sync.Mutex
+	ipTracker   = make(map[string]*IPLock)
+)
+
 type AuthService struct {
 	userRepo *repositories.UserRepository
 }
@@ -30,17 +42,15 @@ func NewAuthService(userRepo *repositories.UserRepository) *AuthService {
 	return &AuthService{userRepo: userRepo}
 }
 
-func (s *AuthService) Register(firstName, lastName, email, password, phone, department, position string, role models.Role, requiredOjtHours int) (*models.User, string, error) { // Reject admin registration
+func (s *AuthService) Register(firstName, lastName, email, password, phone, department, position string, role models.Role, requiredOjtHours int) (*models.User, string, error) {
 	if role == models.RoleAdmin {
 		return nil, "", errors.New("admin role cannot be registered. Contact administrator.")
 	}
 
-	// Check existing email
 	if _, err := s.userRepo.GetByEmail(email); err == nil {
 		return nil, "", errors.New("email already registered")
 	}
 
-	// Hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("❌ Password hashing failed: %v", err)
@@ -56,7 +66,7 @@ func (s *AuthService) Register(firstName, lastName, email, password, phone, depa
 		Phone:            phone,
 		Department:       department,
 		Position:         position,
-		Role:             models.RoleUser, // Force user role
+		Role:             models.RoleUser,
 		IsActive:         true,
 		RequiredOjtHours: requiredOjtHours,
 	}
@@ -68,7 +78,6 @@ func (s *AuthService) Register(firstName, lastName, email, password, phone, depa
 	return user, token, err
 }
 
-// LoginResult contains the outcome of a login attempt
 type LoginResult struct {
 	User           *models.User
 	Token          string
@@ -78,92 +87,95 @@ type LoginResult struct {
 	AttemptsLeft   int
 }
 
-func (s *AuthService) Login(email, password string) (*LoginResult, error) {
+func (s *AuthService) Login(email, password, ip string) (*LoginResult, error) {
 	result := &LoginResult{
 		AttemptsLeft: maxLoginAttempts,
 	}
 
+	// SECURE: Generic error message for all failures
+	genericErr := errors.New("invalid email or password")
+	// SECURE: Dummy hash to simulate processing time for non-existent users
+	dummyHash := []byte("$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa")
+
+	// 1. Check IP lock first (prevents bypassing lockout by guessing different/fake emails)
+	ipTrackerMu.Lock()
+	ipLock, exists := ipTracker[ip]
+	if !exists {
+		ipLock = &IPLock{}
+		ipTracker[ip] = ipLock
+	}
+
+	if ipLock.LockedUntil != nil {
+		if time.Now().Before(*ipLock.LockedUntil) {
+			retryAfter := int(ipLock.LockedUntil.Sub(time.Now()).Seconds())
+			ipTrackerMu.Unlock()
+
+			result.IsLocked = true
+			result.RetryAfterSecs = retryAfter
+			result.AttemptsLeft = 0
+			result.Error = errors.New("account temporarily locked")
+			return result, result.Error
+		} else {
+			// Lock expired
+			ipLock.Attempts = 0
+			ipLock.LockedUntil = nil
+		}
+	}
+	ipTrackerMu.Unlock()
+
+	// 2. Fetch User
 	user, err := s.userRepo.GetByEmail(email)
 	if err != nil {
-		log.Printf("🔍 Login: Email '%s' not found in database", email)
-		result.Error = errors.New("invalid email or password")
-		return result, result.Error
+		log.Printf("🔍 Login: Email not found, simulating check to prevent timing analysis")
+		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+		return s.handleFailedAttempt(ip, genericErr)
 	}
 
-	log.Printf("🔍 Login: User found - Email: %s, Role: %s, Active: %v", user.Email, user.Role, user.IsActive)
-	log.Printf("🔍 Failed login count: %d", user.FailedAttempts)
-
-	if !user.IsActive {
-		log.Printf("⚠️ Login failed: Account is deactivated for %s", email)
-		result.Error = errors.New("account deactivated")
-		return result, result.Error
-	}
-
-	if user.IsArchived {
-		log.Printf("⚠️ Login failed: Account is archived for %s", email)
-		result.Error = errors.New("account archived")
-		return result, result.Error
-	}
-
-	// Check if account is locked
+	// 3. User locked check
 	if user.LockedUntil != nil && time.Now().Before(*user.LockedUntil) {
 		retryAfter := int(user.LockedUntil.Sub(time.Now()).Seconds())
-		log.Printf("🔒 Account locked for %s. Retry after %d seconds", email, retryAfter)
 		result.IsLocked = true
 		result.RetryAfterSecs = retryAfter
-		result.Error = errors.New("account temporarily locked due to failed login attempts")
+		result.AttemptsLeft = 0
+		result.Error = errors.New("account temporarily locked")
 		return result, result.Error
 	}
 
-	// Clear lock if expired
-	if user.LockedUntil != nil && time.Now().After(*user.LockedUntil) {
-		log.Printf("🔓 Lock expired for %s, resetting counters", email)
-		user.FailedAttempts = 0
-		user.LockedUntil = nil
-		s.userRepo.Update(user)
+	// 4. Validate Account Activity
+	if !user.IsActive || user.IsArchived {
+		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+		return s.handleFailedAttempt(ip, genericErr)
 	}
 
-	// Check if password is bcrypt hash (starts with $2a$ or $2b$)
+	// 5. Verify Password
 	passwordTrimmed := strings.TrimSpace(password)
 	if !strings.HasPrefix(user.Password, "$2a$") && !strings.HasPrefix(user.Password, "$2b$") {
-		hashPreview := user.Password
-		if len(hashPreview) > 20 {
-			hashPreview = hashPreview[:20]
-		}
-		log.Printf("❌ CRITICAL: Password in DB for %s is NOT bcrypt hashed! First 20 chars: %s", user.Email, hashPreview)
-		result.Error = errors.New("invalid email or password")
-		return result, result.Error
+		bcrypt.CompareHashAndPassword(dummyHash, []byte(passwordTrimmed))
+		return s.handleFailedAttempt(ip, genericErr)
 	}
 
-	// Verify password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(passwordTrimmed))
 	if err != nil {
 		log.Printf("❌ Password mismatch for %s", user.Email)
 
-		// Increment failed login count
+		// Update database user failed attempts limit alongside IP limit
 		user.FailedAttempts++
-		result.AttemptsLeft = maxLoginAttempts - user.FailedAttempts
-		log.Printf("⚠️ Failed login attempt %d/%d for %s", user.FailedAttempts, maxLoginAttempts, user.Email)
-
-		// Lock account if max attempts reached
 		if user.FailedAttempts >= maxLoginAttempts {
 			lockUntil := time.Now().Add(lockDuration)
 			user.LockedUntil = &lockUntil
-			log.Printf("🔒 Account locked for %s until %v (max attempts reached)", email, lockUntil)
-			result.IsLocked = true
-			result.RetryAfterSecs = int(lockDuration.Seconds())
 		}
-
-		// Update user with new failed count
 		s.userRepo.Update(user)
 
-		result.Error = errors.New("invalid email or password")
-		return result, result.Error
+		return s.handleFailedAttempt(ip, genericErr)
 	}
 
 	log.Printf("✅ Password verified successfully for %s", user.Email)
 
-	// Reset counters on successful login
+	// Clear IP tracker on success
+	ipTrackerMu.Lock()
+	delete(ipTracker, ip)
+	ipTrackerMu.Unlock()
+
 	user.FailedAttempts = 0
 	user.LockedUntil = nil
 	now := time.Now()
@@ -182,6 +194,39 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 	return result, nil
 }
 
+// handleFailedAttempt centrally processes fail counts and lockouts per IP
+func (s *AuthService) handleFailedAttempt(ip string, err error) (*LoginResult, error) {
+	ipTrackerMu.Lock()
+	defer ipTrackerMu.Unlock()
+
+	lock, exists := ipTracker[ip]
+	if !exists {
+		lock = &IPLock{}
+		ipTracker[ip] = lock
+	}
+
+	lock.Attempts++
+	attemptsLeft := maxLoginAttempts - lock.Attempts
+	if attemptsLeft < 0 {
+		attemptsLeft = 0
+	}
+
+	result := &LoginResult{
+		Error:        err,
+		AttemptsLeft: attemptsLeft,
+	}
+
+	if lock.Attempts >= maxLoginAttempts {
+		t := time.Now().Add(lockDuration)
+		lock.LockedUntil = &t
+		result.IsLocked = true
+		result.RetryAfterSecs = int(lockDuration.Seconds())
+		result.Error = errors.New("account temporarily locked")
+	}
+
+	return result, result.Error
+}
+
 func (s *AuthService) generateToken(userID uint, role models.Role) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
@@ -196,51 +241,33 @@ func (s *AuthService) generateToken(userID uint, role models.Role) (string, erro
 	return token.SignedString([]byte(secret))
 }
 
-// ------------------------------------------------------------------
-// 2. Validate Password Strength (Matches your Flutter Regex)
-// ------------------------------------------------------------------
 func ValidatePasswordStrength(password string) error {
 	if len(password) < 8 {
 		return errors.New("password must be at least 8 characters long")
 	}
-
-	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
-	if !hasUpper {
+	if !regexp.MustCompile(`[A-Z]`).MatchString(password) {
 		return errors.New("password must contain at least one uppercase letter")
 	}
-
-	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
-	if !hasNumber {
+	if !regexp.MustCompile(`[0-9]`).MatchString(password) {
 		return errors.New("password must contain at least one number")
 	}
-
-	hasSpecial := regexp.MustCompile(`[!@#$%^&*(),.?":{}|<>]`).MatchString(password)
-	if !hasSpecial {
+	if !regexp.MustCompile(`[!@#$%^&*(),.?":{}|<>]`).MatchString(password) {
 		return errors.New("password must contain at least one special character")
 	}
-
 	return nil
 }
 
-// ------------------------------------------------------------------
-// 3. Validate Email Format
-// ------------------------------------------------------------------
 func ValidateEmailFormat(email string) error {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-
 	if !re.MatchString(email) {
 		return errors.New("invalid email format")
 	}
 	return nil
 }
 
-// ------------------------------------------------------------------
-// 4. Generate OTP
-// ------------------------------------------------------------------
 func GenerateOTP() (string, error) {
 	const otpChars = "1234567890"
 	otpLength := 6
-
 	otp := make([]byte, otpLength)
 	for i := range otp {
 		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(otpChars))))

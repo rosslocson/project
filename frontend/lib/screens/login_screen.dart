@@ -88,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen>
       _startLockCountdown(result['retry_after_secs'] as int? ?? 60);
     } else {
       setState(() => _attemptsLeft =
-          result['attempts_left'] as int? ?? _attemptsLeft - 1);
+          result['attempts_left'] as int? ?? 0);
     }
   }
 
@@ -133,7 +133,6 @@ class _LoginScreenState extends State<LoginScreen>
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Extracted the left-side visual content into a variable to avoid repeating code
     final leftSideContent = Stack(
       children: [
         Positioned.fill(
@@ -145,8 +144,7 @@ class _LoginScreenState extends State<LoginScreen>
                 height: 280,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.public,
-                        size: 120, color: Colors.white),
+                    const Icon(Icons.public, size: 120, color: Colors.white),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -194,8 +192,7 @@ class _LoginScreenState extends State<LoginScreen>
             right: 24,
             child: IconButton(
               padding: EdgeInsets.zero,
-              constraints:
-                  const BoxConstraints.tightFor(width: 36, height: 36),
+              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
               splashRadius: 18,
               icon: Icon(
                 isDark
@@ -209,22 +206,19 @@ class _LoginScreenState extends State<LoginScreen>
           );
 
           if (constraints.maxWidth > 900) {
-            // Desktop layout
             return Stack(
               children: [
                 Row(
                   children: [
                     Expanded(
                       child: isDark
-                          // DARK MODE: Untouched, uses your original AppBackground
                           ? AppBackground(
                               backgroundAsset: 'assets/images/star_background.png',
                               child: leftSideContent,
                             )
-                          // LIGHT MODE: Bypasses AppBackground, forces the image explicitly
                           : Container(
                               decoration: const BoxDecoration(
-                                color: Color(0xFF050510), // Base dark color in case of transparent PNG
+                                color: Color(0xFF050510),
                                 image: DecorationImage(
                                   image: AssetImage('assets/images/star_background.png'),
                                   fit: BoxFit.cover,
@@ -258,13 +252,9 @@ class _LoginScreenState extends State<LoginScreen>
             );
           }
 
-          // Mobile layout content
           final mobileContent = Center(
             child: Container(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 24,
-              ),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF0B0B13) : Colors.white,
                 borderRadius: BorderRadius.circular(32),
@@ -278,22 +268,18 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ],
               ),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: formWidget,
             ),
           );
 
-          // Mobile layout return
           return Stack(
             children: [
               isDark
-                  // DARK MODE: Untouched
                   ? AppBackground(
                       backgroundAsset: 'assets/images/star_background.png',
                       child: mobileContent,
                     )
-                  // LIGHT MODE: Bypasses AppBackground, applies star image directly
                   : Container(
                       decoration: const BoxDecoration(
                         color: Color(0xFF050510),
