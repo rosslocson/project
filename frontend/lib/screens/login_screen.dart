@@ -190,18 +190,23 @@ class _LoginScreenState extends State<LoginScreen>
           final themeToggle = Positioned(
             top: 24,
             right: 24,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-              splashRadius: 18,
-              icon: Icon(
-                isDark
-                    ? Icons.wb_sunny_outlined
-                    : Icons.nightlight_round_outlined,
-                color: isDark ? Colors.white : const Color(0xFF00022E),
-                size: 20,
+            child: Tooltip(
+              message: isDark ? 'Light Mode' : 'Dark Mode',
+              waitDuration: const Duration(milliseconds: 300),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+                splashRadius: 18,
+                hoverColor: isDark ? Colors.white24 : Colors.black12, // Added distinct hover background
+                icon: Icon(
+                  isDark
+                      ? Icons.wb_sunny_outlined
+                      : Icons.nightlight_round_outlined,
+                  color: isDark ? Colors.white : const Color(0xFF00022E),
+                  size: 20,
+                ),
+                onPressed: () => context.read<ThemeProvider>().toggleTheme(),
               ),
-              onPressed: () => context.read<ThemeProvider>().toggleTheme(),
             ),
           );
 
