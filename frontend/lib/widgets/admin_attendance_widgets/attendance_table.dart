@@ -2,6 +2,10 @@
 // Table widget that renders attendance records, including the status badge,
 // intern avatar with auth-gated image fetching, remark column, and
 // report / review actions.
+//
+// NOTE: PendingReportsBell has been removed from this file.
+// The canonical bell now lives in admin_attendance_screen.dart (_PendingBell)
+// and is placed beside the Export button in the card header.
 
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -103,7 +107,8 @@ class AttendanceTable extends StatelessWidget {
     );
   }
 
-  TableRow _buildRow(BuildContext context, AdminAttendanceRecord r, int index) {
+  TableRow _buildRow(
+      BuildContext context, AdminAttendanceRecord r, int index) {
     return TableRow(
       decoration: BoxDecoration(
         color: index.isEven ? kSurface : const Color(0xFFFAFAFC),
@@ -445,7 +450,9 @@ class _ActionCell extends StatelessWidget {
           child: Icon(
             alreadyReported ? Icons.flag : Icons.flag_outlined,
             size: 20,
-            color: alreadyReported ? const Color(0xFFF59E0B) : kTextMid,
+            color: alreadyReported
+                ? const Color(0xFFF59E0B)
+                : kTextMid,
           ),
         ),
       ),
@@ -504,8 +511,8 @@ class StatusBadge extends StatelessWidget {
         textAlign: TextAlign.center,
         maxLines: 1,
         softWrap: false,
-        style:
-            TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 12),
+        style: TextStyle(
+            color: text, fontWeight: FontWeight.w600, fontSize: 12),
       ),
     );
   }
@@ -610,255 +617,18 @@ class _InternAvatarState extends State<InternAvatar> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PendingReportsBell — drop into your admin AppBar actions
+// HamburgerIcon — re-exported by admin_attendance_screen.dart
 // ─────────────────────────────────────────────────────────────────────────────
-//
-// Usage inside your admin screen:
-//
-//   AppBar(
-//     actions: [
-//       PendingReportsBell(onRefresh: _reloadTable),
-//       const SizedBox(width: 8),
-//     ],
-//   )
 
-class PendingReportsBell extends StatefulWidget {
-  final VoidCallback? onRefresh;
-  const PendingReportsBell({super.key, this.onRefresh});
-
-  @override
-  State<PendingReportsBell> createState() => _PendingReportsBellState();
-}
-
-class _PendingReportsBellState extends State<PendingReportsBell> {
-  List<AdminAttendanceRecord> _pending = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final res = await AdminAttendanceService.fetchPendingReports();
-    if (!mounted) return;
-    setState(() {
-      _pending = res['ok'] == true
-          ? (res['records'] as List<AdminAttendanceRecord>)
-          : [];
-      _loading = false;
-    });
-  }
+class HamburgerIcon extends StatelessWidget {
+  final VoidCallback onTap;
+  const HamburgerIcon({super.key, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.all(12),
-        child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    }
-
-    final count = _pending.length;
     return GestureDetector(
-      onTap: count == 0 ? null : () => _showPanel(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(
-              Icons.notifications_outlined,
-              color: count > 0 ? kAccent : kTextMid,
-            ),
-            if (count > 0)
-              Positioned(
-                top: -4,
-                right: -4,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEF4444),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '$count',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPanel(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _PendingPanel(
-        records: _pending,
-        onResolved: () {
-          _load();
-          widget.onRefresh?.call();
-        },
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Pending reports panel (inside bell)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _PendingPanel extends StatelessWidget {
-  final List<AdminAttendanceRecord> records;
-  final VoidCallback? onResolved;
-
-  const _PendingPanel({required this.records, this.onResolved});
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      maxChildSize: 0.95,
-      minChildSize: 0.4,
-      builder: (_, ctrl) => Container(
-        decoration: const BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  const Icon(Icons.pending_actions,
-                      color: Color(0xFFF59E0B), size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Pending Reports (${records.length})',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: kTextDark,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView.separated(
-                controller: ctrl,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                itemCount: records.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (ctx, i) => _PendingTile(
-                  record: records[i],
-                  onResolved: () {
-                    Navigator.pop(context);
-                    onResolved?.call();
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PendingTile extends StatelessWidget {
-  final AdminAttendanceRecord record;
-  final VoidCallback? onResolved;
-
-  const _PendingTile({required this.record, this.onResolved});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () =>
-          ReviewReportSheet.show(context, record, onResolved: onResolved),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFBEB),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFCD34D)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InternAvatar(url: record.avatarUrl, name: record.internName),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          record.internName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: kTextDark,
-                          ),
-                        ),
-                      ),
-                      StatusBadge(status: record.status),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(record.formattedDate,
-                      style: const TextStyle(fontSize: 12, color: kTextMid)),
-                  if (record.reportReason != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      record.reportReason!,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF92400E)),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: kTextMid),
-          ],
-        ),
-      ),
+      onTap: onTap,
+      child: const Icon(Icons.menu_rounded, size: 22, color: kTextMid),
     );
   }
 }
