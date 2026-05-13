@@ -135,7 +135,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     
     final Color headingColor = isDark ? Colors.white : const Color(0xFF00022E);
-    final Color accentColor = const Color(0xFF6366F1);
+    const Color accentColor = Color(0xFF6366F1);
     final Color bgColor = isDark ? const Color(0xFF02030A) : Colors.white;
     final Color orbitColor = isDark ? Colors.white.withOpacity(0.15) : const Color(0xFF00022E).withOpacity(0.08);
 

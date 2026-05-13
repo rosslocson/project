@@ -175,11 +175,14 @@ class _NavItemState extends State<_NavItem> {
   Widget build(BuildContext context) {
     final active = widget.current == widget.route;
     final theme = context.internTheme;
+    
+    // Universal hover effect code for both light and dark modes
+    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
       onExit: (_) => setState(() => _isHovering = false),
-        cursor: active ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      cursor: active ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -187,7 +190,7 @@ class _NavItemState extends State<_NavItem> {
           color: active
               ? theme.sidebarActiveBackground
               : _isHovering
-                  ? theme.sidebarHoverBackground
+                  ? hoverColor
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -256,6 +259,8 @@ class _SignOutButtonState extends State<_SignOutButton> {
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    // Universal hover effect code for both light and dark modes
+    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -264,7 +269,7 @@ class _SignOutButtonState extends State<_SignOutButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         color: _isHovering
-            ? theme.sidebarHoverBackground
+            ? hoverColor
             : Colors.transparent,
         child: InkWell(
           hoverColor: Colors.transparent,
@@ -317,6 +322,8 @@ class _CloseButtonState extends State<_CloseButton> {
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    // Universal hover effect code for both light and dark modes
+    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -326,8 +333,8 @@ class _CloseButtonState extends State<_CloseButton> {
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
           color: _isHovering
-              ? theme.sidebarHoverBackground
-              : theme.sidebarHoverBackground.withValues(alpha: 0.55),
+              ? hoverColor
+              : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Material(

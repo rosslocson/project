@@ -1078,12 +1078,12 @@ class _PendingTile extends StatelessWidget {
             const SizedBox(width: 8),
 
             // Chevron + "Review" label
-            Column(
+            const Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.rate_review_outlined,
+                Icon(Icons.rate_review_outlined,
                     size: 18, color: kAccent),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   'Review',
                   style: TextStyle(
