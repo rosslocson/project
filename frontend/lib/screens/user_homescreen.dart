@@ -38,8 +38,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     });
 
     final res = await ApiService.getInterns();
-    debugPrint('🔍 INTERNS KEYS: ${res.keys.toList()}');
-    debugPrint('🔍 INTERNS FULL: $res');
+    // Avoid noisy logs; intern parsing is handled by InternProfile.fromJson.
+
 
     if (!mounted) return;
 

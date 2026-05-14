@@ -9,11 +9,14 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  /// Prevent race conditions between storage restore + refresh.
+  Future<void>? _refreshFuture;
+
   Map<String, dynamic>? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _user != null;
-  bool get isAdmin => _user?['role'] == 'admin';
+  bool get isAdmin => (_user?['role'] ?? '') == 'admin';
 
   AuthProvider() {
     _loadFromStorage();
@@ -26,11 +29,15 @@ class AuthProvider extends ChangeNotifier {
 
     if (userStr != null) {
       try {
-        _user = jsonDecode(userStr) as Map<String, dynamic>;
-        notifyListeners();
-        debugPrint(
-            '📦 _loadFromStorage: restored ${_user!.keys.length} keys from cache');
-        debugPrint('📦 cached keys: ${_user!.keys.toList()}');
+        final decoded = jsonDecode(userStr);
+        if (decoded is Map<String, dynamic>) {
+          _user = _normalizeCachedUser(decoded);
+          notifyListeners();
+          debugPrint('📦 _loadFromStorage: restored ${_user!.keys.length} keys from cache');
+        } else {
+          await prefs.remove('user');
+          debugPrint('📥 _loadFromStorage: cache corrupted, cleared (not a map)');
+        }
       } catch (_) {
         await prefs.remove('user');
         debugPrint('💥 _loadFromStorage: cache corrupted, cleared');
@@ -40,6 +47,56 @@ class AuthProvider extends ChangeNotifier {
     if (token != null && token.isNotEmpty) {
       await refreshProfile();
     }
+  }
+
+  Map<String, dynamic> _normalizeCachedUser(Map<String, dynamic> input) {
+    // Normalize only the high-risk fields; keep backward compatibility.
+    final out = Map<String, dynamic>.from(input);
+
+    dynamic normalizeNullableString(dynamic v) {
+      if (v == null) return null;
+      if (v is String) {
+        final s = v.trim();
+        if (s.isEmpty) return null;
+        if (s.toLowerCase() == 'null') return null;
+        // Common placeholder for empty dates.
+        if (s.startsWith('0001-01-01')) return null;
+        return s;
+      }
+      return v;
+    }
+
+    // Normalize known date-ish placeholders that can appear as strings.
+    for (final k in [
+      'locked_until',
+      'updated_at',
+      'created_at',
+      'start_date',
+      'end_date',
+      'estimated_end_date',
+      'last_login_at',
+    ]) {
+      if (out.containsKey(k)) {
+        out[k] = normalizeNullableString(out[k]);
+      }
+    }
+
+    // Normalize role (empty strings -> null).
+    if (out.containsKey('role')) {
+      out['role'] = normalizeNullableString(out['role']);
+    }
+
+    // For numeric fields that might be cached as strings, only trim; don't force defaults.
+    for (final k in ['required_ojt_hours', 'failed_attempts']) {
+      if (!out.containsKey(k)) continue;
+      final v = out[k];
+      if (v is String) {
+        final s = v.trim();
+        if (s.isEmpty) out[k] = null;
+      }
+    }
+
+    return out;
   }
 
   Future<Map<String, dynamic>> loginWithDetails(
@@ -56,6 +113,7 @@ class AuthProvider extends ChangeNotifier {
         await ApiService.saveToken(res['token']);
 
         _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
+        _user = _normalizeCachedUser(_user!);
         await _persistUser();
         notifyListeners();
 
@@ -92,6 +150,7 @@ class AuthProvider extends ChangeNotifier {
       if (res['ok'] == true) {
         await ApiService.saveToken(res['token']);
         _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
+        _user = _normalizeCachedUser(_user!);
         await _persistUser();
         notifyListeners();
 
@@ -115,79 +174,87 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> refreshProfile() async {
-    try {
-      final res = await ApiService.getProfile();
+    // Ensure deterministic final state under concurrent calls.
+    if (_refreshFuture != null) return _refreshFuture!;
 
-      Map<String, dynamic> profile;
-      if (res['id'] != null) {
-        profile = res;
-      } else if (res['data'] is Map && (res['data'] as Map)['id'] != null) {
-        profile = Map<String, dynamic>.from(res['data'] as Map);
-      } else if (res['user'] is Map && (res['user'] as Map)['id'] != null) {
-        profile = Map<String, dynamic>.from(res['user'] as Map);
-      } else {
-        debugPrint('⚠️ refreshProfile: no id found — skipping merge.');
-        return;
-      }
+    _refreshFuture = () async {
+      try {
+        final res = await ApiService.getProfile();
 
-      // Fields where an empty string from the server should NOT overwrite
-      // a locally-saved non-empty value (e.g. after the user just saved them).
-      const preserveIfEmpty = {
-        'department',
-        'position',
-        'school',
-        'program',
-        'specialization',
-        'year_level',
-        'intern_number',
-        'start_date',
-        'end_date',
-        'bio',
-        'technical_skills',
-        'soft_skills',
-        'linked_in',
-        'git_hub',
-        'phone',
-        'avatar_url',
-      };
-
-      final merged = Map<String, dynamic>.from(_user ?? {});
-      for (final entry in profile.entries) {
-        final serverVal = entry.value;
-        final cachedVal = merged[entry.key];
-
-        if (serverVal == null) {
-          // Never overwrite with null
-          debugPrint(
-              '  ⚠️ server null for "${entry.key}" — keeping cached: $cachedVal');
-          continue;
+        Map<String, dynamic> profile;
+        if (res['id'] != null) {
+          profile = res;
+        } else if (res['data'] is Map && (res['data'] as Map)['id'] != null) {
+          profile = Map<String, dynamic>.from(res['data'] as Map);
+        } else if (res['user'] is Map && (res['user'] as Map)['id'] != null) {
+          profile = Map<String, dynamic>.from(res['user'] as Map);
+        } else {
+          debugPrint('⚠️ refreshProfile: no id found — skipping merge.');
+          return;
         }
 
-        if (preserveIfEmpty.contains(entry.key) &&
-            serverVal is String &&
-            serverVal.trim().isEmpty &&
-            cachedVal is String &&
-            cachedVal.trim().isNotEmpty) {
-          // Server returned "" but we have a real value locally — keep local
-          debugPrint(
-              '  ⚠️ server empty string for "${entry.key}" — keeping cached: $cachedVal');
-          continue;
+        final cached = Map<String, dynamic>.from(_user ?? {});
+        final merged = Map<String, dynamic>.from(cached);
+
+        final overwritten = <String, Map<String, dynamic>>{};
+
+        bool isServerValid(dynamic v) {
+          if (v == null) return false;
+          if (v is String) {
+            final s = v.trim();
+            if (s.isEmpty) return false;
+            if (s.toLowerCase() == 'null') return false;
+            if (s.startsWith('0001-01-01')) return false;
+          }
+          return true;
         }
 
-        merged[entry.key] = serverVal;
-      }
+        for (final entry in profile.entries) {
+          final key = entry.key;
+          final serverVal = entry.value;
+          final cachedVal = merged[key];
 
-      _user = merged;
-      await _persistUser();
-      notifyListeners();
-      debugPrint('✅ refreshProfile complete — ${_user!.keys.length} keys');
-    } catch (e, st) {
-      debugPrint('⚠️ refreshProfile error: $e\n$st');
-    }
+          // Priority rules:
+          // 1) Server value only when it's valid (non-null, non-empty, non-placeholder)
+          // 2) Otherwise keep cached value as-is
+          if (!isServerValid(serverVal)) {
+            continue;
+          }
+
+          if (cachedVal != serverVal) {
+            overwritten[key] = {
+              'cached': cachedVal,
+              'server': serverVal,
+            };
+          }
+
+          merged[key] = serverVal;
+        }
+
+        _user = merged;
+        await _persistUser();
+        notifyListeners();
+
+        if (overwritten.isNotEmpty) {
+          final keys = overwritten.keys.take(8).toList();
+          debugPrint(
+              '🔄 refreshProfile: merged ${overwritten.length} updated fields (sample: $keys)');
+        } else {
+          debugPrint('✅ refreshProfile complete: no meaningful changes');
+        }
+      } catch (e, st) {
+        debugPrint('⚠️ refreshProfile error: $e\n$st');
+      } finally {
+        _refreshFuture = null;
+      }
+    }();
+
+    return _refreshFuture!;
   }
 
   Future<void> updateUserData(Map<String, dynamic> data) async {
     _user = {...?_user, ...data};
+    _user = _normalizeCachedUser(_user!);
     await _persistUser();
     notifyListeners();
   }
@@ -216,3 +283,4 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 }
+

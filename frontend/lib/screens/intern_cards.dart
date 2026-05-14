@@ -76,17 +76,29 @@ class InternProfile {
       if (value == null) return null;
       final str = value.toString().trim();
       if (str.isEmpty || str.toLowerCase() == 'null') return null;
+      // Convert common date placeholders coming from DB/legacy data.
+      if (str.startsWith('0001-01-01')) return null;
       return str;
     }
 
     List<String> parseStringList(dynamic value) {
       if (value == null) return [];
-      if (value is List) return value.map((e) => e.toString()).toList();
+      if (value is List) {
+        return value
+            .map((e) => e.toString().trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+      }
       if (value is String && value.isNotEmpty) {
-        return value.split(',').map((s) => s.trim()).toList();
+        return value
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
       }
       return [];
     }
+
 
     // Defensive date parser with clean formatting (no external packages).
     // - Accepts ISO-8601 timestamps, plain dates (YYYY-MM-DD), or other strings.
@@ -114,9 +126,13 @@ class InternProfile {
         return null;
       }
 
+      // Treat placeholder dates explicitly (common from DB defaults).
+      if (normalized.startsWith('0001-01-01')) return null;
+
       // 1) Try full ISO 8601 parsing first.
       final dt = DateTime.tryParse(normalized);
       if (dt != null) {
+
         const months = [
           'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
