@@ -30,7 +30,9 @@ class UserInternCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         child: Hero(
-          tag: 'intern-${intern.internNumber}',
+          // Ensure a unique, non-null tag for every hero in the route subtree.
+          // Using internNumber alone can produce duplicates like "N/A".
+          tag: 'intern-hero-${intern.id}',
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(

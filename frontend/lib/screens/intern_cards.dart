@@ -561,8 +561,10 @@ class InternDetailPage extends StatelessWidget {
                 ],
               ),
               child: Hero(
-                tag: 'intern-${intern.id}',
+                // Unique per route subtree; intern.id is non-null and stable.
+                tag: ValueKey('intern-hero-${intern.id}'),
                 child: InternAvatar(
+
                   intern: intern,
                   size: 210, // Adjusted slightly so bio & links fit perfectly
                   borderRadius: 200, 
