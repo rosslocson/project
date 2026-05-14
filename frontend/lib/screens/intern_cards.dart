@@ -88,6 +88,22 @@ class InternProfile {
       return [];
     }
 
+    // Defensive date parser with clean formatting
+    String? parseDate(dynamic value) {
+      final str = parseString(value);
+      if (str == null) return null;
+      try {
+        final dt = DateTime.parse(str);
+        const months = [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+      } catch (_) {
+        return str; // Fallback to raw string if parsing fails
+      }
+    }
+
     final firstName = parseString(json['first_name']) ?? '';
     final lastName = parseString(json['last_name']) ?? '';
     final fullName = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
@@ -107,8 +123,9 @@ class InternProfile {
       department: parseString(json['department']),
       bio: parseString(json['bio']),
       yearLevel: parseString(json['year_level']),
-      startDate: parseString(json['start_date']), // Safely parsed now
-      endDate: parseString(json['end_date']),     // Safely parsed now
+      // Applying defensive check for common alternative JSON keys and clean formatting
+      startDate: parseDate(json['start_date'] ?? json['startDate']), 
+      endDate: parseDate(json['end_date'] ?? json['endDate']),     
       githubUrl: parseString(json['git_hub']),
       linkedInUrl: parseString(json['linked_in']),
     );

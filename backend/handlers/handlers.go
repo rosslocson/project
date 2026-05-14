@@ -61,13 +61,13 @@ type UpdateProfileRequest struct {
 	RequiredOjtHours *int   `json:"required_ojt_hours"`
 
 	// Edit Profile fields
-	School         string `json:"school"`
-	Program        string `json:"program"`
-	Specialization string `json:"specialization"`
-	YearLevel      string `json:"year_level"`
-	InternNumber   string `json:"intern_number"`
-	StartDate      string `json:"start_date"`
-	EndDate        string `json:"end_date"`
+	School         string       `json:"school"`
+	Program        string       `json:"program"`
+	Specialization string       `json:"specialization"`
+	YearLevel      string       `json:"year_level"`
+	InternNumber   string       `json:"intern_number"`
+	StartDate      *models.Date `json:"start_date"`
+	EndDate        *models.Date `json:"end_date"`
 
 	// Skills fields
 	Bio             string `json:"bio"`
@@ -188,15 +188,11 @@ func (h *Handler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func computeEstimatedEndDate(startDateStr string, requiredHours int) string {
-	startDateStr = strings.TrimSpace(startDateStr)
-	if startDateStr == "" || requiredHours <= 0 {
+func computeEstimatedEndDate(startDate *models.Date, requiredHours int) string {
+	if startDate == nil || requiredHours <= 0 {
 		return ""
 	}
-	current, err := time.Parse("2006-01-02", startDateStr)
-	if err != nil {
-		return ""
-	}
+	current := startDate.Time
 	daysNeeded := (requiredHours + 7) / 8
 	daysWorked := 0
 	for daysWorked < daysNeeded {
@@ -270,32 +266,14 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 	startDateValue := user.StartDate
 	endDateValue := user.EndDate
-	if req.StartDate != "" {
-		if _, err := parseProfileDate(req.StartDate, "start_date"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	if req.StartDate != nil {
 		startDateValue = req.StartDate
 	}
-	if req.EndDate != "" {
-		if _, err := parseProfileDate(req.EndDate, "end_date"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	if req.EndDate != nil {
 		endDateValue = req.EndDate
 	}
-	if startDateValue != "" && endDateValue != "" {
-		parsedStart, err := parseProfileDate(startDateValue, "start_date")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		parsedEnd, err := parseProfileDate(endDateValue, "end_date")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		if parsedEnd.Before(parsedStart) {
+	if startDateValue != nil && endDateValue != nil {
+		if endDateValue.Time.Before(startDateValue.Time) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "End date cannot be before start date"})
 			return
 		}
@@ -332,11 +310,19 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	if req.InternNumber != "" {
 		updates["intern_number"] = req.InternNumber
 	}
-	if req.StartDate != "" {
-		updates["start_date"] = req.StartDate
+	if req.StartDate != nil {
+		if req.StartDate.Time.IsZero() {
+			updates["start_date"] = nil // Explicitly clear date
+		} else {
+			updates["start_date"] = req.StartDate
+		}
 	}
-	if req.EndDate != "" {
-		updates["end_date"] = req.EndDate
+	if req.EndDate != nil {
+		if req.EndDate.Time.IsZero() {
+			updates["end_date"] = nil // Explicitly clear date
+		} else {
+			updates["end_date"] = req.EndDate
+		}
 	}
 	if req.Bio != "" {
 		updates["bio"] = req.Bio

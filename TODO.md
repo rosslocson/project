@@ -1,12 +1,9 @@
 # TODO
 
-- [x] Inspect `user_homescreen.dart` and `user_glass_topbar.dart` hamburger/menu implementation.
-- [x] Inspect each target user screen to confirm whether their hamburger/menu matches `user_homescreen.dart`.
-- [x] Identify mismatch risk: `user_my_profile_screen.dart` used local sidebar state instead of `SidebarProvider`.
-- [x] Update `frontend/lib/screens/user_my_profile_screen.dart` to use `SidebarProvider.isUserSidebarOpen` for sidebar + `GlassTopBar` hamburger behavior.
-- [x] Update `frontend/lib/screens/user_edit_profile_screen.dart` to use `SidebarProvider.isUserSidebarOpen` for sidebar + `GlassTopBar` hamburger behavior.
-
-
-- [ ] Verify other target pages (About & Contact, Account Settings, Attendance) already match `user_homescreen.dart` hamburger behavior.
-- [ ] Run a quick Flutter build/analyze to ensure compilation succeeds (no tests run).
+- [ ] Fix PostgreSQL safe migration for start_date/end_date (remove unsafe cast; idempotent; log invalid rows)
+- [ ] Improve models.Date scanning to never error on empty-string/invalid values (treat as NULL) while preserving strict JSON parsing
+- [ ] Ensure OTP/forgot-password flows cannot be blocked by date field scan failures (defensive selects to avoid selecting start_date/end_date when not needed)
+- [ ] Ensure admin seeding respects uniqueness and does not repeatedly update/insert incorrectly
+- [ ] Add defensive logging for rows with invalid date values during startup cleanup
+- [ ] Verify compilation (no tests) and run quick `go vet`/`go test` if available
 

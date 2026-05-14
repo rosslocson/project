@@ -108,7 +108,7 @@ func (h *Handler) Login(c *gin.Context) {
 	// Fetch IP Address to securely track attempts over the network layer
 	ip := c.ClientIP()
 	result, err := authService.Login(strings.TrimSpace(req.Email), req.Password, ip)
-	
+
 	if err != nil {
 		if result != nil && result.IsLocked {
 			c.JSON(http.StatusTooManyRequests, gin.H{
@@ -120,12 +120,12 @@ func (h *Handler) Login(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		attemptsLeft := 0
 		if result != nil {
 			attemptsLeft = result.AttemptsLeft
 		}
-		
+
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"ok":            false,
 			"error":         err.Error(),
@@ -158,7 +158,10 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	recipientEmail := strings.ToLower(strings.TrimSpace(req.Email))
 
 	var user models.User
-	if err := h.DB.Where("email = ?", recipientEmail).First(&user).Error; err != nil {
+	// Select only OTP columns to avoid scanning legacy start_date/end_date.
+	if err := h.DB.Select("id", "email", "reset_token", "reset_token_expiry").
+		Where("email = ?", recipientEmail).
+		First(&user).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{"ok": true, "message": "If the email exists, an OTP was sent."})
 		return
 	}
@@ -172,7 +175,12 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	expiry := time.Now().Add(2 * time.Minute)
 	user.ResetOTP = otp
 	user.ResetOTPExpiry = &expiry
-	if err := h.DB.Save(&user).Error; err != nil {
+
+	// Persist only the reset token columns to avoid any field/column mapping surprises.
+	if err := h.DB.Model(&user).Select("reset_token", "reset_token_expiry").Updates(map[string]interface{}{
+		"reset_token":        user.ResetOTP,
+		"reset_token_expiry": user.ResetOTPExpiry,
+	}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Could not save OTP"})
 		return
 	}
@@ -202,7 +210,10 @@ func (h *Handler) VerifyResetOTP(c *gin.Context) {
 	}
 
 	var user models.User
-	if err := h.DB.Where("reset_otp = ?", strings.TrimSpace(req.OTP)).First(&user).Error; err != nil {
+	// Select only reset-token columns to avoid scanning legacy start_date/end_date.
+	if err := h.DB.Select("id", "reset_token", "reset_token_expiry").
+		Where("reset_token = ?", strings.TrimSpace(req.OTP)).
+		First(&user).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid or expired OTP"})
 		return
 	}
@@ -233,7 +244,10 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	}
 
 	var user models.User
-	if err := h.DB.Where("reset_otp = ?", strings.TrimSpace(req.OTP)).First(&user).Error; err != nil {
+	// Select only reset-token columns to avoid scanning legacy start_date/end_date.
+	if err := h.DB.Select("id", "reset_token", "reset_token_expiry").
+		Where("reset_token = ?", strings.TrimSpace(req.OTP)).
+		First(&user).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid or expired OTP"})
 		return
 	}

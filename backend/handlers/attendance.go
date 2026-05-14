@@ -252,10 +252,8 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 		AddDate(0, 0, -1)
 
 	var walkStart time.Time
-	if user.StartDate != "" {
-		if parsed, err := time.ParseInLocation("2006-01-02", user.StartDate, loc); err == nil {
-			walkStart = parsed
-		}
+	if user.StartDate != nil {
+		walkStart = time.Date(user.StartDate.Year(), user.StartDate.Month(), user.StartDate.Day(), 0, 0, 0, 0, loc)
 	}
 
 	if walkStart.IsZero() {

@@ -35,7 +35,9 @@ func seedAdminAccount(db *gorm.DB) {
 	err = db.Unscoped().Where("email = ?", adminEmail).First(&existingAdmin).Error
 
 	if err == nil {
+		// Admin exists: restore if needed and update password only if required.
 		if existingAdmin.DeletedAt.Valid {
+
 			log.Println("⚠️ Admin account was soft-deleted. Restoring...")
 			if err := db.Unscoped().Model(&existingAdmin).Updates(map[string]interface{}{
 				"deleted_at": nil,
@@ -141,7 +143,52 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
+	// IMPORTANT: do NOT auto-migrate into DATE columns when existing rows contain empty strings
+	// or non-parseable values. Legacy systems sometimes store "" in DATE columns and
+	// PostgreSQL will error during casts.
+	//
+	// Safe, idempotent two-phase cleanup:
+	// 1) Convert only valid YYYY-MM-DD strings to DATE; everything else becomes NULL.
+	// 2) Run AutoMigrate after cleanup.
+	if err := DB.Exec(`
+		-- Phase 1: sanitize start_date/end_date to either a valid date or NULL.
+		-- Use regex to only cast strings that match YYYY-MM-DD.
+		UPDATE users
+		SET
+			start_date = CASE
+				WHEN start_date IS NULL THEN NULL
+				WHEN (start_date::text) ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN (start_date::text)::date
+				ELSE NULL
+			END,
+			end_date = CASE
+				WHEN end_date IS NULL THEN NULL
+				WHEN (end_date::text) ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN (end_date::text)::date
+				ELSE NULL
+			END
+		;
+	`).Error; err != nil {
+		log.Printf("⚠️ Safe date cleanup before migration failed (continuing): %v", err)
+	}
+
+	// Defensive observability: count invalid date-like rows (do not fail startup).
+	type invalidDatesRow struct {
+		InvalidStart int64
+		InvalidEnd   int64
+	}
+	var row invalidDatesRow
+	if err := DB.Raw(`
+		SELECT
+			COALESCE(SUM(CASE WHEN start_date IS NOT NULL AND (start_date::text) !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN 1 ELSE 0 END), 0) AS invalid_start,
+			COALESCE(SUM(CASE WHEN end_date   IS NOT NULL AND (end_date::text)   !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN 1 ELSE 0 END), 0) AS invalid_end
+		FROM users
+	`).Scan(&row).Error; err != nil {
+		log.Printf("⚠️ Could not compute invalid start/end_date counts: %v", err)
+	} else if row.InvalidStart > 0 || row.InvalidEnd > 0 {
+		log.Printf("⚠️ Detected legacy invalid dates: invalid_start=%d invalid_end=%d (these should have been nulled)", row.InvalidStart, row.InvalidEnd)
+	}
+
 	DB.AutoMigrate(
+
 		&models.User{},
 		&models.ActivityLog{},
 		&models.Department{},
@@ -155,7 +202,9 @@ func main() {
 
 	h := handlers.NewHandler(DB)
 
-	r := gin.Default()
+	// gin.Default() already includes Logger + Recovery.
+	r := gin.New()
+	r.Use(gin.Logger(), gin.Recovery())
 	r.MaxMultipartMemory = 32 << 20
 
 	r.Use(cors.New(cors.Config{
