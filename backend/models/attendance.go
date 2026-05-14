@@ -3,9 +3,10 @@ package models
 import "time"
 
 type Attendance struct {
-	ID            uint       `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID        uint       `gorm:"not null;index"           json:"user_id"`
-	Date          time.Time  `gorm:"type:date;not null"       json:"date"`
+	ID     uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID uint      `gorm:"not null;index"           json:"user_id"`
+	Date   time.Time `gorm:"type:date;not null"       json:"date"`
+
 	TimeIn        *time.Time `gorm:"type:timestamptz"         json:"time_in"`
 	TimeOut       *time.Time `gorm:"type:timestamptz"         json:"time_out"`
 	HoursRendered *float64   `gorm:"->"                       json:"hours_rendered"`

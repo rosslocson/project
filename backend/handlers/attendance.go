@@ -229,11 +229,32 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 
 	// ── Fetch all real attendance records for this user ───────────────────────
 	var records []models.Attendance
-	h.DB.
+	// Constrain DB fetch to the date window we actually walk in Go.
+	// End is yesterday (today is handled separately by GetAttendanceSummary).
+	loc := manilaLoc()
+	now := time.Now().In(loc)
+	yesterday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -1)
+
+	// Start is intern's start_date if available; otherwise we will set it later
+	// after we have fetched the available records.
+	var walkStart time.Time
+	if user.StartDate != nil {
+		walkStart = time.Date(user.StartDate.Year(), user.StartDate.Month(), user.StartDate.Day(), 0, 0, 0, 0, loc)
+	}
+
+	start := time.Time{}
+	if !walkStart.IsZero() {
+		start = walkStart
+	}
+
+	q := h.DB.
 		Select(attendanceSelectWithHours).
-		Where("user_id = ?", userID).
-		Order("date DESC").
-		Find(&records)
+		Where("user_id = ? AND date <= ?", userID, yesterday)
+	if !start.IsZero() {
+		q = q.Where("date >= ?", start)
+	}
+	q = q.Order("date DESC")
+	q.Find(&records)
 
 	// ── Build a date → record lookup map ─────────────────────────────────────
 	type dateKey = string // "YYYY-MM-DD"
@@ -245,16 +266,7 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 
 	// ── Determine the walk range ──────────────────────────────────────────────
 	// Start: intern's start_date (or fall back to earliest real record).
-	// End:   yesterday (today is handled separately by the summary endpoint).
-	loc := manilaLoc()
-	now := time.Now().In(loc)
-	yesterday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).
-		AddDate(0, 0, -1)
-
-	var walkStart time.Time
-	if user.StartDate != nil {
-		walkStart = time.Date(user.StartDate.Year(), user.StartDate.Month(), user.StartDate.Day(), 0, 0, 0, 0, loc)
-	}
+	// End:   already computed above.
 
 	if walkStart.IsZero() {
 		if len(records) > 0 {
@@ -685,17 +697,17 @@ func (h *Handler) GetWeeklyAttendance(c *gin.Context) {
 
 	err := h.DB.Raw(`
 		SELECT
-			TO_CHAR(date, 'YYYY-MM-DD') AS date,
+			TO_CHAR(a.date, 'YYYY-MM-DD') AS date,
 			CASE
-				WHEN time_in IS NOT NULL AND time_out IS NOT NULL
-					THEN EXTRACT(EPOCH FROM (time_out - time_in)) / 3600.0
+				WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL
+					THEN EXTRACT(EPOCH FROM (a.time_out - a.time_in)) / 3600.0
 				ELSE 0
 			END AS hours
-		FROM attendance
-		WHERE user_id = ?
-		AND date >= ?
-		AND date < ?
-		ORDER BY date ASC
+		FROM attendance a
+		WHERE a.user_id = ?
+		AND a.date >= ?
+		AND a.date < ?
+		ORDER BY a.date ASC
 	`, userID, weekStart, weekEnd).Scan(&rows).Error
 
 	if err != nil {

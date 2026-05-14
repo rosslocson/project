@@ -1,9 +1,14 @@
-# TODO
+## TODO - Performance Optimizations (Go/Gin/GORM/Postgres)
 
-- [ ] Fix PostgreSQL safe migration for start_date/end_date (remove unsafe cast; idempotent; log invalid rows)
-- [ ] Improve models.Date scanning to never error on empty-string/invalid values (treat as NULL) while preserving strict JSON parsing
-- [ ] Ensure OTP/forgot-password flows cannot be blocked by date field scan failures (defensive selects to avoid selecting start_date/end_date when not needed)
-- [ ] Ensure admin seeding respects uniqueness and does not repeatedly update/insert incorrectly
-- [ ] Add defensive logging for rows with invalid date values during startup cleanup
-- [ ] Verify compilation (no tests) and run quick `go vet`/`go test` if available
+- [ ] Add missing composite indexes in `backend/schema.sql`:
+  - attendance(user_id, date)
+  - (optional) attendance(user_id, date) WHERE time_out IS NULL
+  - activity_logs(created_at DESC)
+  - (optional) activity_logs(user_id, created_at DESC)
+- [ ] Constrain `GetDashboardStats` weekly logs query (avoid loading all rows): add LIMIT and/or reduce Preload scope.
+- [ ] Rewrite `GetWeeklyAttendance` SQL to order/filter by raw `date` (avoid TO_CHAR in ORDER BY).
+- [ ] Constrain `GetAttendanceHistory` DB fetch: limit by computed `walkStart..yesterday`.
+- [ ] Ensure `GetAttendanceHistory` still fills absences exactly as before (response shape unchanged).
+- [ ] Update or add GORM index tags in `backend/models/attendance.go` if needed for consistency.
+- [ ] Sanity-check compile (no tests run).
 

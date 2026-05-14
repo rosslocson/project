@@ -88,23 +88,104 @@ class InternProfile {
       return [];
     }
 
-    // Defensive date parser with clean formatting
+    // Defensive date parser with clean formatting (no external packages).
+    // - Accepts ISO-8601 timestamps, plain dates (YYYY-MM-DD), or other strings.
+    // - Returns formatted 'Mon DD, YYYY' when parsing succeeds.
+    // - If parsing fails, returns the trimmed raw string (so UI never shows TBA due to parse issues).
+    // - Returns null for explicit null-ish / placeholder values.
     String? parseDate(dynamic value) {
-      final str = parseString(value);
-      if (str == null) return null;
-      try {
-        final dt = DateTime.parse(str);
+      // Pass through real DateTime values.
+      if (value is DateTime) {
         const months = [
           'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
         ];
+        final dt = value.toLocal();
         return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-      } catch (_) {
-        return str; // Fallback to raw string if parsing fails
       }
+
+      final str = parseString(value);
+      if (str == null) return null;
+
+      final normalized = str.trim();
+      if (normalized.isEmpty) return null;
+      final lower = normalized.toLowerCase();
+      if (lower == 'tba' || lower == 'na' || lower == 'n/a' || lower == 'unknown') {
+        return null;
+      }
+
+      // 1) Try full ISO 8601 parsing first.
+      final dt = DateTime.tryParse(normalized);
+      if (dt != null) {
+        const months = [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        final local = dt.toLocal();
+        return '${months[local.month - 1]} ${local.day}, ${local.year}';
+      }
+
+      // 2) If it's a plain date string like YYYY-MM-DD, try parsing safely.
+      //    DateTime.tryParse should handle this, but this catches cases like "YYYY-MM-DDTHH:mm" already handled above.
+      if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(normalized)) {
+        final parts = normalized.split('-');
+        final year = int.tryParse(parts[0]);
+        final month = int.tryParse(parts[1]);
+        final day = int.tryParse(parts[2]);
+        if (year != null && month != null && day != null) {
+          const months = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          ];
+          final safeMonth = month.clamp(1, 12);
+          return '${months[safeMonth - 1]} $day, $year';
+        }
+      }
+
+      // 3) As a last resort, return raw string so the UI can still display something meaningful.
+      return normalized;
     }
 
+    // Prefer date values from any of these key variants.
+    dynamic firstPresent(Map<String, dynamic> j, List<String> keys) {
+      for (final k in keys) {
+        if (!j.containsKey(k)) continue;
+        final v = j[k];
+        // Treat explicit null as missing.
+        if (v == null) continue;
+        // Also treat placeholder strings as missing.
+        final s = v is String ? v.trim() : null;
+        if (s != null) {
+          final lower = s.toLowerCase();
+          if (lower == 'tba' || lower == 'null' || lower == 'na' || lower == 'n/a') {
+            continue;
+          }
+        }
+        return v;
+      }
+      return null;
+    }
+
+    final startRaw = firstPresent(json, const [
+      'start_date',
+      'startDate',
+      'start',
+      'start_date_str',
+    ]);
+    final endRaw = firstPresent(json, const [
+      'end_date',
+      'endDate',
+      'end',
+      'end_date_str',
+    ]);
+
+
+    // Fallbacks (keep null safe)
+    final startDateValue = startRaw ?? json['startDate'] ?? json['start_date'];
+    final endDateValue = endRaw ?? json['endDate'] ?? json['end_date'];
+
     final firstName = parseString(json['first_name']) ?? '';
+
     final lastName = parseString(json['last_name']) ?? '';
     final fullName = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
 
@@ -123,12 +204,13 @@ class InternProfile {
       department: parseString(json['department']),
       bio: parseString(json['bio']),
       yearLevel: parseString(json['year_level']),
-      // Applying defensive check for common alternative JSON keys and clean formatting
-      startDate: parseDate(json['start_date'] ?? json['startDate']), 
-      endDate: parseDate(json['end_date'] ?? json['endDate']),     
+      // Defensive date parsing with key fallbacks + clean formatting
+      startDate: parseDate(startDateValue),
+      endDate: parseDate(endDateValue),
       githubUrl: parseString(json['git_hub']),
       linkedInUrl: parseString(json['linked_in']),
     );
+
   }
 }
 
