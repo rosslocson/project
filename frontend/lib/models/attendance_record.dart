@@ -76,7 +76,7 @@ class AdminAttendanceRecord {
       status: j['status'] as String? ?? 'Absent',
       isMissedClockOut: j['is_missed_clock_out'] == true,
       isReported: j['is_reported'] == true,
-      remark: j['remark'] as String?,
+      remark: j['admin_note'] as String?,
       reportReason: j['report_reason'] as String?,
       reportStatus: j['report_status'] as String?,
       reportedAt: j['reported_at'] as String?,

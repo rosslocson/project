@@ -152,7 +152,9 @@ class AdminAttendanceService {
       final res = await http.patch(
         Uri.parse('${ApiService.baseUrl}/admin/attendance/$recordId/remark'),
         headers: await ApiService.authHeaders(),
-        body: jsonEncode({'remark': remark}),
+        body: jsonEncode({
+          'admin_note': remark
+        }), // ← was 'remark', must match backend column
       );
       return ApiService.parse(res);
     } catch (e) {

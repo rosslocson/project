@@ -36,6 +36,10 @@ type AdminAttendanceRow struct {
 	HoursRendered *float64 `json:"hours_rendered"` // nullable
 	Status        string   `json:"status"`         // Present | Late | Absent | On Shift | Missed Clock Out
 	IsReported    bool     `json:"is_reported"`
+	ReportReason  string   `json:"report_reason"`
+	ReportType    string   `json:"report_type"`
+	ReportedAt    *string  `json:"reported_at"`
+	AdminNote     *string  `json:"admin_note"`
 }
 
 // ── Timezone helper ───────────────────────────────────────────────────────────
@@ -197,6 +201,10 @@ type attendanceRaw struct {
 	TimeOut       *string  `gorm:"column:time_out"`
 	HoursRendered *float64 `gorm:"column:hours_rendered"`
 	IsReported    bool     `gorm:"column:is_reported"`
+	ReportReason  string   `gorm:"column:report_reason"`
+	ReportType    string   `gorm:"column:report_type"`
+	ReportedAt    *string  `gorm:"column:reported_at"`
+	AdminNote     *string  `gorm:"column:admin_note"`
 }
 
 func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
@@ -213,6 +221,10 @@ func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
 			HoursRendered: computeHours(r.TimeIn, r.TimeOut, r.Date),
 			Status:        deriveStatus(r.TimeIn, r.TimeOut, r.Date),
 			IsReported:    r.IsReported,
+			ReportReason:  r.ReportReason,
+			ReportType:    r.ReportType,
+			ReportedAt:    r.ReportedAt,
+			AdminNote:     r.AdminNote,
 		})
 	}
 	return out
@@ -229,7 +241,11 @@ const internSelectSingleDate = `
 	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
 	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
 	` + adminAttendanceHoursExpr + `                                                             AS hours_rendered,
-	COALESCE(a.is_reported, false)                                                               AS is_reported
+	COALESCE(a.is_reported, false)                                                               AS is_reported,
+	COALESCE(a.report_reason, '')                                                                AS report_reason,
+	COALESCE(a.report_type, '')                                                                  AS report_type,
+	TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM')                 AS reported_at,
+	a.admin_note
 `
 
 const internSelectAllDates = `
@@ -241,7 +257,11 @@ const internSelectAllDates = `
 	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
 	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
 	` + adminAttendanceHoursExpr + `                                                             AS hours_rendered,
-	COALESCE(a.is_reported, false)                                                               AS is_reported
+	COALESCE(a.is_reported, false)                                                               AS is_reported,
+	COALESCE(a.report_reason, '')                                                                AS report_reason,
+	COALESCE(a.report_type, '')                                                                  AS report_type,
+	TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM')                 AS reported_at,
+	a.admin_note
 `
 
 // ── date range helper ─────────────────────────────────────────────────────────
