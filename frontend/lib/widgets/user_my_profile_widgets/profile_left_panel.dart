@@ -53,14 +53,20 @@ class ProfileLeftPanel extends StatelessWidget {
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 4),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              width: 4),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 20, offset: const Offset(0, 10)),
+                            BoxShadow(
+                                color: Colors.black.withOpacity(0.25),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10)),
                           ],
                         ),
                         child: CircleAvatar(
                           radius: 68,
-                          backgroundColor: theme.topbarText.withValues(alpha: 0.1),
+                          backgroundColor:
+                              theme.topbarText.withValues(alpha: 0.1),
                           child: ClipOval(
                             child: finalAvatarUrl.isNotEmpty
                                 ? Image.network(
@@ -78,15 +84,20 @@ class ProfileLeftPanel extends StatelessWidget {
                       GestureDetector(
                         onTap: () => context.go('/edit-profile'),
                         child: Container(
-                          width: 36, height: 36,
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
                             color: theme.surface,
                             shape: BoxShape.circle,
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 4)),
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4)),
                             ],
                           ),
-                          child: Icon(Icons.edit_rounded, color: theme.surfaceText, size: 18),
+                          child: Icon(Icons.edit_rounded,
+                              color: theme.surfaceText, size: 18),
                         ),
                       ),
                     ],
@@ -95,9 +106,16 @@ class ProfileLeftPanel extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
-                      first.isEmpty && last.isEmpty ? 'Name Not Set' : '$first $last',
+                      first.isEmpty && last.isEmpty
+                          ? 'Name Not Set'
+                          : '$first $last',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: theme.dashboardCardText, letterSpacing: 0.5, height: 1.2),
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: theme.dashboardCardText,
+                          letterSpacing: 0.5,
+                          height: 1.2),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -106,32 +124,53 @@ class ProfileLeftPanel extends StatelessWidget {
                     child: Text(
                       user?['email'] ?? '',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: theme.dashboardCardText.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w400, height: 1.4),
+                      style: TextStyle(
+                          color: theme.dashboardCardText.withValues(alpha: 0.7),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          height: 1.4),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.blueAccent.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
+                      border:
+                          Border.all(color: Colors.blueAccent.withOpacity(0.3)),
                     ),
-                    child: const Text('INTERN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Colors.lightBlueAccent)),
+                    child: const Text('INTERN',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
+                            color: Colors.lightBlueAccent)),
                   ),
                   const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Divider(color: Colors.white.withOpacity(0.10), height: 1),
+                    child: Divider(
+                        color: Colors.white.withOpacity(0.10), height: 1),
                   ),
                   const SizedBox(height: 24),
-                  QuickInfoTile(icon: Icons.business_rounded, label: 'Department', value: getProfileVal(user, 'department')),
+                  QuickInfoTile(
+                      icon: Icons.business_rounded,
+                      label: 'Department',
+                      value: getProfileVal(user, 'department')),
                   const SizedBox(height: 16),
-                  QuickInfoTile(icon: Icons.work_outline_rounded, label: 'Position', value: getProfileVal(user, 'position')),
+                  QuickInfoTile(
+                      icon: Icons.work_outline_rounded,
+                      label: 'Position',
+                      value: getProfileVal(user, 'position')),
                   const SizedBox(height: 16),
-                  QuickInfoTile(icon: Icons.school_rounded, label: 'School', value: getProfileVal(user, 'school')),
+                  QuickInfoTile(
+                      icon: Icons.school_rounded,
+                      label: 'School',
+                      value: getProfileVal(user, 'school')),
                 ],
               ),
             ),
@@ -140,15 +179,18 @@ class ProfileLeftPanel extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: SizedBox(
               width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => context.go('/edit-profile'),
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                    style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.surface,
-                  foregroundColor: theme.surfaceText,
+              child: ElevatedButton.icon(
+                onPressed: () => context.go('/edit-profile'),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Edit Profile',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00022E),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                   elevation: 4,
                   shadowColor: Colors.black.withOpacity(0.2),
                 ),

@@ -102,8 +102,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           (isCustom && _isRangeMode) ? toApiDate(_customRangeStart) : null,
       dateTo: (isCustom && _isRangeMode) ? toApiDate(_customRangeEnd) : null,
       date: (isCustom && !_isRangeMode) ? toApiDate(_customDate) : null,
-      search:
-          _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+      search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
       status: _selectedStatus == 'All' ? null : _selectedStatus,
       page: page,
       limit: _limit,
@@ -179,8 +178,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       (_searchCtrl.text.isNotEmpty ? 1 : 0) +
       (_selectedStatus != 'All' ? 1 : 0);
 
-  int get _pendingReportCount =>
-      _records.where((r) => r.hasOpenReport).length;
+  int get _pendingReportCount => _records.where((r) => r.hasOpenReport).length;
 
   void _clearAllFilters() {
     _searchCtrl.clear();
@@ -214,8 +212,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   child: Container(
                     decoration: const BoxDecoration(
                       image: DecorationImage(
-                        image:
-                            AssetImage('assets/images/space_background.jpg'),
+                        image: AssetImage('assets/images/space_background.jpg'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -334,18 +331,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       _loading
                           ? 'Loading…'
                           : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                      style:
-                          const TextStyle(fontSize: 12, color: kTextMid),
+                      style: const TextStyle(fontSize: 12, color: kTextMid),
                     ),
-                    if (!_loading &&
-                        _period != AttendancePeriod.allDates) ...[
+                    if (!_loading && _period != AttendancePeriod.allDates) ...[
                       const SizedBox(width: 8),
                       Container(
                         width: 1,
                         height: 11,
                         color: kBorder,
-                        margin:
-                            const EdgeInsets.symmetric(horizontal: 2),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
                       ),
                       const SizedBox(width: 6),
                       const Icon(Icons.calendar_today_rounded,
@@ -382,17 +376,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 context,
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
-                  period: (!isAllDates && !isCustom)
-                      ? _period.apiPeriod
-                      : null,
+                  period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
                   date: (isCustom && !_isRangeMode)
                       ? toApiDate(_customDate)
                       : null,
                   search: _searchCtrl.text.trim().isEmpty
                       ? null
                       : _searchCtrl.text.trim(),
-                  status:
-                      _selectedStatus == 'All' ? null : _selectedStatus,
+                  status: _selectedStatus == 'All' ? null : _selectedStatus,
                 ),
               );
             },
@@ -526,8 +517,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 const SizedBox(height: 2),
                 const Text(
                   'Tap the 🔔 bell or the review icon (📋) on flagged rows.',
-                  style:
-                      TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                  style: TextStyle(fontSize: 11, color: Color(0xFFB45309)),
                 ),
               ],
             ),
@@ -539,8 +529,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               _load();
             },
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
                 color: const Color(0xFFB45309),
                 borderRadius: BorderRadius.circular(20),
@@ -587,8 +576,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             ),
             const SizedBox(height: 12),
             Text(_error!,
-                style:
-                    TextStyle(color: Colors.red.shade600, fontSize: 13)),
+                style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
             const SizedBox(height: 16),
             TextButton.icon(
               onPressed: () => _load(page: _page),
@@ -809,9 +797,7 @@ class _PendingBellState extends State<_PendingBell>
                   : const Color(0xFFF4F4F8),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: hasReports
-                    ? const Color(0xFFFCD34D)
-                    : kBorder,
+                color: hasReports ? const Color(0xFFFCD34D) : kBorder,
                 width: 1.5,
               ),
             ),
@@ -824,17 +810,15 @@ class _PendingBellState extends State<_PendingBell>
                       ? Icons.notifications_active_rounded
                       : Icons.notifications_outlined,
                   size: 20,
-                  color: hasReports
-                      ? const Color(0xFF92400E)
-                      : kTextMid,
+                  color: hasReports ? const Color(0xFF92400E) : kTextMid,
                 ),
                 if (hasReports)
                   Positioned(
                     top: -4,
                     right: -4,
                     child: Container(
-                      constraints: const BoxConstraints(
-                          minWidth: 17, minHeight: 17),
+                      constraints:
+                          const BoxConstraints(minWidth: 17, minHeight: 17),
                       padding: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: const BoxDecoration(
                         color: Color(0xFFEF4444),
@@ -930,8 +914,7 @@ class _PendingPanel extends StatelessWidget {
                         color: const Color(0xFFF4F4F8),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.close,
-                          size: 16, color: kTextMid),
+                      child: const Icon(Icons.close, size: 16, color: kTextMid),
                     ),
                   ),
                 ],
@@ -962,8 +945,7 @@ class _PendingPanel extends StatelessWidget {
                           SizedBox(height: 4),
                           Text(
                             'No pending reports to review.',
-                            style:
-                                TextStyle(fontSize: 12, color: kTextMid),
+                            style: TextStyle(fontSize: 12, color: kTextMid),
                           ),
                         ],
                       ),
@@ -973,8 +955,7 @@ class _PendingPanel extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
                       itemCount: records.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: 8),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (ctx, i) => _PendingTile(
                         record: records[i],
                         onResolved: () {
@@ -1047,8 +1028,7 @@ class _PendingTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     record.formattedDate,
-                    style: const TextStyle(
-                        fontSize: 12, color: kTextMid),
+                    style: const TextStyle(fontSize: 12, color: kTextMid),
                   ),
                   if (record.reportReason != null) ...[
                     const SizedBox(height: 6),
@@ -1081,8 +1061,7 @@ class _PendingTile extends StatelessWidget {
             const Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.rate_review_outlined,
-                    size: 18, color: kAccent),
+                Icon(Icons.rate_review_outlined, size: 18, color: kAccent),
                 SizedBox(height: 2),
                 Text(
                   'Review',

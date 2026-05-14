@@ -87,12 +87,12 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
     sidebarActiveForeground: Color(0xFF4F5DE6),
     sidebarHoverBackground: Color(0xFFE8F0FF),
     // Brand Colors Applied
-    topbarText: Color(0xFF00022E), 
+    topbarText: Color(0xFF00022E),
     topbarMutedText: Color(0xFF6B7280),
     topbarScrim: Color(0xFFFFFFFF),
     surface: Color(0xFFFFFFFF),
-    surfaceText: Color(0xFF000000), 
-    mutedText: Color(0xFF6B7280), 
+    surfaceText: Color(0xFF000000),
+    mutedText: Color(0xFF6B7280),
     border: Color(0xFFD9E3F7),
     // Cards untouched
     dashboardCardStart: Color(0xFFFFFFFF),
@@ -102,8 +102,8 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
     metricCardText: Color(0xFF0A1425),
     metricCardMutedText: Color(0xFF6B7280),
     listBackground: Color(0xFFFFFFFF),
-    listText: Color(0xFF000000), 
-    listMutedText: Color(0xFF6B7280), 
+    listText: Color(0xFF000000),
+    listMutedText: Color(0xFF6B7280),
     userBadgeBackground: Color(0xFFEAFBF1),
     adminBadgeBackground: Color(0xFFFDECEC),
     formFill: Color(0xFFF9FAFB),
@@ -123,11 +123,11 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
     sidebarHoverBackground: Color(0x1AFFFFFF),
     // Brand Colors Applied
     topbarText: Color(0xFFFFFFFF),
-    topbarMutedText: Color(0xB3FFFFFF), 
+    topbarMutedText: Color(0xB3FFFFFF),
     topbarScrim: Color(0xFF050505),
     surface: Color(0xFF0B0B13),
-    surfaceText: Color(0xFFFFFFFF), 
-    mutedText: Color(0xB3FFFFFF), 
+    surfaceText: Color(0xFFFFFFFF),
+    mutedText: Color(0xB3FFFFFF),
     border: Color(0xFF2A2A38),
     // Cards untouched
     dashboardCardStart: Color(0xFF0B0B13),
@@ -137,8 +137,8 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
     metricCardText: Color(0xFFFFFFFF),
     metricCardMutedText: Color(0xFFAEB4C4),
     listBackground: Color(0xFF0B0B13),
-    listText: Color(0xFFFFFFFF), 
-    listMutedText: Color(0xB3FFFFFF), 
+    listText: Color(0xFFFFFFFF),
+    listMutedText: Color(0xB3FFFFFF),
     userBadgeBackground: Color(0x3316A34A),
     adminBadgeBackground: Color(0x33DC2626),
     formFill: Color(0xFF14141D),
@@ -200,11 +200,9 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
       dashboardCardStart: dashboardCardStart ?? this.dashboardCardStart,
       dashboardCardEnd: dashboardCardEnd ?? this.dashboardCardEnd,
       dashboardCardText: dashboardCardText ?? this.dashboardCardText,
-      metricCardBackground:
-          metricCardBackground ?? this.metricCardBackground,
+      metricCardBackground: metricCardBackground ?? this.metricCardBackground,
       metricCardText: metricCardText ?? this.metricCardText,
-      metricCardMutedText:
-          metricCardMutedText ?? this.metricCardMutedText,
+      metricCardMutedText: metricCardMutedText ?? this.metricCardMutedText,
       listBackground: listBackground ?? this.listBackground,
       listText: listText ?? this.listText,
       listMutedText: listMutedText ?? this.listMutedText,
@@ -283,16 +281,16 @@ ThemeData internSpaceTheme({required Brightness brightness}) {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
+        foregroundColor:
+            isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: colors.formFill,
       hintStyle: TextStyle(
-        color: isDark ? const Color(0xB3FFFFFF) : const Color(0x8A000000), 
-        fontSize: 13
-      ),
+          color: isDark ? const Color(0xB3FFFFFF) : const Color(0x8A000000),
+          fontSize: 13),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colors.border),
@@ -300,9 +298,8 @@ ThemeData internSpaceTheme({required Brightness brightness}) {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E), 
-          width: 1.5
-        ),
+            color: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
+            width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -322,8 +319,10 @@ InputDecoration pillInputDecoration({
   Widget? suffix,
   Widget? prefix,
 }) {
-  final isDark = context != null ? Theme.of(context).brightness == Brightness.dark : false;
-  final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+  final isDark =
+      context != null ? Theme.of(context).brightness == Brightness.dark : false;
+  final primaryColor =
+      isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
   final hintColor = isDark ? const Color(0xB3FFFFFF) : const Color(0x8A000000);
 
   return InputDecoration(
@@ -337,13 +336,13 @@ InputDecoration pillInputDecoration({
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
       borderSide: BorderSide(
-        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200, 
-        width: 1.5
-      ),
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+          width: 1.5),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
-      borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5), width: 2),
+      borderSide:
+          BorderSide(color: primaryColor.withValues(alpha: 0.5), width: 2),
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
@@ -359,19 +358,17 @@ InputDecoration pillInputDecoration({
   );
 }
 
-Widget fieldLabel(String text) => Builder(
-  builder: (context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: isDark ? Colors.white : const Color(0xFF00022E),
-      ),
-    );
-  }
-);
+Widget fieldLabel(String text) => Builder(builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : const Color(0xFF00022E),
+        ),
+      );
+    });
 
 class BlueButton extends StatelessWidget {
   final String label;
@@ -452,18 +449,13 @@ class PillDropdown extends StatelessWidget {
       hint: Text(
         hint,
         style: TextStyle(
-          color: isDark ? const Color(0xB3FFFFFF) : const Color(0x8A000000), 
-          fontSize: 13
-        ),
+            color: isDark ? const Color(0xB3FFFFFF) : const Color(0x8A000000),
+            fontSize: 13),
       ),
-      icon: Icon(
-        Icons.keyboard_arrow_down, 
-        color: isDark ? Colors.white70 : Colors.grey.shade500
-      ),
+      icon: Icon(Icons.keyboard_arrow_down,
+          color: isDark ? Colors.white70 : Colors.grey.shade500),
       style: TextStyle(
-        color: isDark ? Colors.white : Colors.black87, 
-        fontSize: 13
-      ),
+          color: isDark ? Colors.white : Colors.black87, fontSize: 13),
       dropdownColor: isDark ? const Color(0xFF14141D) : Colors.white,
       items: items
           .map(

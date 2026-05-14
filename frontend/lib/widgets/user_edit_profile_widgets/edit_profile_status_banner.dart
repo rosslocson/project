@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_theme.dart';
 
 class EditProfileStatusBanner extends StatelessWidget {
   final String msg;
@@ -18,9 +19,14 @@ class EditProfileStatusBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: success ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
+        color: success
+            ? Colors.green.withValues(alpha: 0.15)
+            : Colors.red.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: success ? Colors.green.withValues(alpha: 0.4) : Colors.red.withValues(alpha: 0.4)),
+        border: Border.all(
+            color: success
+                ? Colors.green.withValues(alpha: 0.4)
+                : Colors.red.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -33,12 +39,15 @@ class EditProfileStatusBanner extends StatelessWidget {
           Expanded(
             child: Text(
               msg,
-              style: TextStyle(color: success ? Colors.green.shade800 : Colors.red.shade800, fontSize: 13),
+              style: TextStyle(
+                  color: success ? Colors.green.shade800 : Colors.red.shade800,
+                  fontSize: 13),
             ),
           ),
           GestureDetector(
             onTap: onClose,
-            child: const Icon(Icons.close, size: 16, color: Colors.black54),
+            child: Icon(Icons.close,
+                size: 16, color: context.internTheme.mutedText),
           ),
         ],
       ),

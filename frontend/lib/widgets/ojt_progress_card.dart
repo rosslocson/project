@@ -1,6 +1,4 @@
 // lib/widgets/ojt_progress_card.dart
-//
-// Reusable card showing total OJT hours, required hours, and a progress bar.
 
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
@@ -14,17 +12,24 @@ class OjtProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pct = summary.progressPercent;
     final color = _progressColor(pct);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.surface,
+        color: isDark ? Colors.white.withValues(alpha: 0.04) : theme.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : theme.border,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor,
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.3)
+                : theme.shadowColor,
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -33,18 +38,24 @@ class OjtProgressCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header row ──────────────────────────────────────────────────
+          // ── Header ──────────────────────────────────────────────────────
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF460A14).withValues(alpha: 0.08),
+                  color: isDark
+                      ? color.withValues(alpha: 0.15)
+                      : const Color(0xFF460A14).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
+                  border: isDark
+                      ? Border.all(
+                          color: color.withValues(alpha: 0.3), width: 1)
+                      : null,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.timer_outlined,
-                  color: Color(0xFF460A14),
+                  color: isDark ? color : const Color(0xFF460A14),
                   size: 20,
                 ),
               ),
@@ -63,15 +74,23 @@ class OjtProgressCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color: isDark
+                        ? Colors.green.withValues(alpha: 0.15)
+                        : Colors.green.shade50,
                     borderRadius: BorderRadius.circular(20),
+                    border: isDark
+                        ? Border.all(
+                            color: Colors.green.withValues(alpha: 0.4),
+                            width: 1)
+                        : null,
                   ),
                   child: Text(
                     'Complete!',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Colors.green.shade700,
+                      color:
+                          isDark ? Colors.greenAccent : Colors.green.shade700,
                     ),
                   ),
                 ),
@@ -80,31 +99,37 @@ class OjtProgressCard extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          // ── Stats row ───────────────────────────────────────────────────
+          // ── Stats row ────────────────────────────────────────────────────
           Row(
             children: [
               _StatChip(
                 label: 'Rendered',
                 value: _fmtHours(summary.totalHoursRendered),
-                color: const Color(0xFF460A14),
+                color: isDark ? Colors.white : const Color(0xFF460A14),
+                isDark: isDark,
               ),
               const SizedBox(width: 12),
               _StatChip(
                 label: 'Required',
                 value: _fmtHours(summary.requiredHours),
-                color: Colors.grey.shade600,
+                color: theme.mutedText,
+                isDark: isDark,
               ),
               const SizedBox(width: 12),
               _StatChip(
                 label: 'Remaining',
                 value: _fmtHours(summary.remainingHours),
                 color: color,
+                isDark: isDark,
               ),
               const SizedBox(width: 12),
               _StatChip(
                 label: 'Days',
                 value: '${summary.totalDays}',
-                color: Colors.blueGrey.shade600,
+                color: isDark
+                    ? Colors.blueAccent.shade100
+                    : Colors.blueGrey.shade600,
+                isDark: isDark,
               ),
             ],
           ),
@@ -117,14 +142,16 @@ class OjtProgressCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: pct,
               minHeight: 10,
-              backgroundColor: theme.formFill,
+              backgroundColor: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : theme.formFill,
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
 
           const SizedBox(height: 8),
 
-          // ── Percentage label ─────────────────────────────────────────────
+          // ── Labels ───────────────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -151,10 +178,10 @@ class OjtProgressCard extends StatelessWidget {
   }
 
   Color _progressColor(double pct) {
-    if (pct >= 1.0) return Colors.green.shade600;
-    if (pct >= 0.75) return Colors.blue.shade600;
-    if (pct >= 0.5) return const Color(0xFF460A14);
-    return Colors.orange.shade600;
+    if (pct >= 1.0) return Colors.greenAccent.shade400;
+    if (pct >= 0.75) return Colors.blueAccent.shade200;
+    if (pct >= 0.5) return const Color(0xFF7367F0);
+    return Colors.orange.shade400;
   }
 
   String _fmtHours(double h) {
@@ -169,11 +196,13 @@ class _StatChip extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final bool isDark;
 
   const _StatChip({
     required this.label,
     required this.value,
     required this.color,
+    required this.isDark,
   });
 
   @override

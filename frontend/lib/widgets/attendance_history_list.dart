@@ -23,8 +23,18 @@ String _weekKey(DateTime monday) =>
 
 String _monthAbbr(int m) {
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return months[m - 1];
 }
@@ -89,9 +99,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
       list.sort((a, b) => a.date.compareTo(b.date));
     }
     // Sort weeks newest first
-    final weeks = grouped.keys
-        .map((k) => DateTime.parse(k))
-        .toList()
+    final weeks = grouped.keys.map((k) => DateTime.parse(k)).toList()
       ..sort((a, b) => b.compareTo(a));
 
     setState(() {
@@ -168,8 +176,8 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                 const Spacer(),
                 if (isCurrentWeek)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(20),
@@ -202,8 +210,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     totalWeeks > 0
                         ? 'Week ${_weekIndex + 1} of $totalWeeks'
                         : '—',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
               ],
             ),
@@ -553,9 +560,7 @@ class _AttendanceRow extends StatelessWidget {
                           size: 12, color: Colors.grey.shade400),
                       const SizedBox(width: 4),
                       Text(
-                        record.timeIn != null
-                            ? _fmtTime(record.timeIn!)
-                            : '--',
+                        record.timeIn != null ? _fmtTime(record.timeIn!) : '--',
                         style: TextStyle(
                             fontSize: 12, color: Colors.grey.shade600),
                       ),
@@ -587,8 +592,7 @@ class _AttendanceRow extends StatelessWidget {
                 else
                   Text(
                     'No clock-in recorded',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade400),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                   ),
               ],
             ),
@@ -600,8 +604,7 @@ class _AttendanceRow extends StatelessWidget {
                 _isAbsent
                     ? '0h 00m'
                     : ((record.hoursWorked ?? record.hoursRendered) != null
-                        ? _fmtHours(
-                            record.hoursWorked ?? record.hoursRendered!)
+                        ? _fmtHours(record.hoursWorked ?? record.hoursRendered!)
                         : '--'),
                 style: TextStyle(
                   fontSize: 14,
@@ -651,8 +654,13 @@ class _AttendanceRow extends StatelessWidget {
 
   String _dayName(int wd) {
     const days = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-      'Friday', 'Saturday', 'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
     ];
     return days[wd - 1];
   }
@@ -687,40 +695,40 @@ class _StatusBadge extends StatelessWidget {
     final IconData icon;
 
     if (isAbsent) {
-      bg    = Colors.grey.shade100;
-      fg    = Colors.grey.shade500;
+      bg = Colors.grey.shade100;
+      fg = Colors.grey.shade500;
       label = 'Absent';
-      icon  = Icons.person_off_rounded;
+      icon = Icons.person_off_rounded;
     } else if (isComplete && isLate) {
-      bg    = Colors.orange.shade50;
-      fg    = Colors.orange.shade700;
+      bg = Colors.orange.shade50;
+      fg = Colors.orange.shade700;
       label = 'Late';
-      icon  = Icons.schedule_rounded;
+      icon = Icons.schedule_rounded;
     } else if (isComplete) {
-      bg    = Colors.green.shade50;
-      fg    = Colors.green.shade700;
+      bg = Colors.green.shade50;
+      fg = Colors.green.shade700;
       label = 'Complete';
-      icon  = Icons.check_circle_rounded;
+      icon = Icons.check_circle_rounded;
     } else if (isOngoing) {
-      bg    = Colors.blue.shade50;
-      fg    = Colors.blue.shade700;
+      bg = Colors.blue.shade50;
+      fg = Colors.blue.shade700;
       label = 'On Shift';
-      icon  = Icons.timelapse_rounded;
+      icon = Icons.timelapse_rounded;
     } else if (isReported) {
-      bg    = Colors.purple.shade50;
-      fg    = Colors.purple.shade700;
+      bg = Colors.purple.shade50;
+      fg = Colors.purple.shade700;
       label = 'Reported';
-      icon  = Icons.flag_rounded;
+      icon = Icons.flag_rounded;
     } else if (isMissedClockOut) {
-      bg    = Colors.red.shade50;
-      fg    = Colors.red.shade700;
+      bg = Colors.red.shade50;
+      fg = Colors.red.shade700;
       label = 'Missed Clock Out';
-      icon  = Icons.alarm_off_rounded;
+      icon = Icons.alarm_off_rounded;
     } else {
-      bg    = Colors.orange.shade50;
-      fg    = Colors.orange.shade700;
+      bg = Colors.orange.shade50;
+      fg = Colors.orange.shade700;
       label = 'Incomplete';
-      icon  = Icons.warning_amber_rounded;
+      icon = Icons.warning_amber_rounded;
     }
 
     return Container(
@@ -736,8 +744,8 @@ class _StatusBadge extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             label,
-            style: TextStyle(
-                fontSize: 10, fontWeight: FontWeight.w700, color: fg),
+            style:
+                TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
           ),
         ],
       ),
@@ -769,10 +777,13 @@ class _ReportButtonState extends State<_ReportButton> {
 
   String get _buttonLabel {
     switch (widget.reportType) {
-      case 'late':           return 'Dispute Late Mark';
-      case 'absent':         return 'Dispute Absence';
+      case 'late':
+        return 'Dispute Late Mark';
+      case 'absent':
+        return 'Dispute Absence';
       case 'missed_clock_out':
-      default:               return 'Report to Admin';
+      default:
+        return 'Report to Admin';
     }
   }
 
@@ -804,8 +815,7 @@ class _ReportButtonState extends State<_ReportButton> {
         backgroundColor:
             res['ok'] == true ? Colors.green.shade700 : Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -881,17 +891,23 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
 
   String get _title {
     switch (widget.reportType) {
-      case 'late':   return 'Dispute Late Mark';
-      case 'absent': return 'Dispute Absence';
-      default:       return 'Report Missed Clock-Out';
+      case 'late':
+        return 'Dispute Late Mark';
+      case 'absent':
+        return 'Dispute Absence';
+      default:
+        return 'Report Missed Clock-Out';
     }
   }
 
   IconData get _icon {
     switch (widget.reportType) {
-      case 'late':   return Icons.schedule_rounded;
-      case 'absent': return Icons.person_off_rounded;
-      default:       return Icons.alarm_off_rounded;
+      case 'late':
+        return Icons.schedule_rounded;
+      case 'absent':
+        return Icons.person_off_rounded;
+      default:
+        return Icons.alarm_off_rounded;
     }
   }
 
@@ -908,9 +924,12 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
 
   String get _hint {
     switch (widget.reportType) {
-      case 'late':   return 'e.g. I was in the office at 8:00 AM but the system logged 8:45 AM…';
-      case 'absent': return 'e.g. I reported to the office but forgot to clock in…';
-      default:       return 'e.g. I left at 5 PM but forgot to clock out…';
+      case 'late':
+        return 'e.g. I was in the office at 8:00 AM but the system logged 8:45 AM…';
+      case 'absent':
+        return 'e.g. I reported to the office but forgot to clock in…';
+      default:
+        return 'e.g. I left at 5 PM but forgot to clock out…';
     }
   }
 
@@ -927,8 +946,8 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(_title,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w700)),
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -955,8 +974,7 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
               autofocus: true,
               decoration: InputDecoration(
                 hintText: _hint,
-                hintStyle:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                 filled: true,
                 fillColor: Colors.grey.shade50,
                 contentPadding: const EdgeInsets.all(12),
@@ -970,8 +988,8 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(
-                      color: Color(0xFF460A14), width: 1.5),
+                  borderSide:
+                      const BorderSide(color: Color(0xFF460A14), width: 1.5),
                 ),
                 counterStyle:
                     TextStyle(fontSize: 10, color: Colors.grey.shade400),
@@ -990,8 +1008,7 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel',
-              style: TextStyle(color: Colors.black45)),
+          child: const Text('Cancel', style: TextStyle(color: Colors.black45)),
         ),
         ElevatedButton.icon(
           onPressed: () {
@@ -1004,10 +1021,9 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF460A14),
             foregroundColor: Colors.white,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ],

@@ -10,9 +10,7 @@ import '../widgets/attendance_history_list.dart';
 import '../widgets/ojt_progress_card.dart';
 import '../widgets/user_layout.dart';
 import '../widgets/app_background.dart';
-
-
-
+import '../widgets/app_theme.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -45,13 +43,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Future<void> _loadSummary() async {
     setState(() => _summaryLoading = true);
     final s = await AttendanceService.getSummary();
-    if (mounted) setState(() { _summary = s; _summaryLoading = false; });
+    if (mounted)
+      setState(() {
+        _summary = s;
+        _summaryLoading = false;
+      });
   }
 
   Future<void> _loadHistory() async {
     setState(() => _historyLoading = true);
     final h = await AttendanceService.getHistory();
-    if (mounted) setState(() { _history = h; _historyLoading = false; });
+    if (mounted)
+      setState(() {
+        _history = h;
+        _historyLoading = false;
+      });
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -86,8 +92,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   void _showSnack(String msg, {bool isSuccess = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor:
-          isSuccess ? Colors.green.shade700 : Colors.red.shade700,
+      backgroundColor: isSuccess ? Colors.green.shade700 : Colors.red.shade700,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -104,6 +109,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildAttendanceContent(BuildContext context) {
     final sidebar = context.watch<SidebarProvider>();
+    final theme = context.internTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AppBackground(
       child: Column(
@@ -117,7 +124,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               showWelcome: false,
               user: context.watch<AuthProvider>().user,
               isSidebarOpen: sidebar.isUserSidebarOpen,
-              onToggleSidebar: () => sidebar.setUserSidebarOpen(!sidebar.isUserSidebarOpen),
+              onToggleSidebar: () =>
+                  sidebar.setUserSidebarOpen(!sidebar.isUserSidebarOpen),
             ),
           ),
           const SizedBox(height: 15),
@@ -125,59 +133,80 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           // ── Main content container ────────────────────────────
           Expanded(
             child: Padding(
-              padding:
-                  const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+              padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.95), // Fixed
+                  // Glass dark surface — mirrors admin card style
+                  color: isDark ? theme.surface : theme.metricCardBackground,
                   borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : theme.border,
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark
+                          ? Colors.black.withValues(alpha: 0.4)
+                          : theme.shadowColor,
+                      blurRadius: 32,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Refresh button ────────────────────────
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: IconButton(
-                            onPressed: _loadAll,
-                            icon: const Icon(Icons.refresh_rounded,
-                                color: Colors.black54),
-                            tooltip: 'Refresh',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Card header ───────────────────────────
+                      _buildCardHeader(theme, isDark),
+
+                      // ── Scrollable body ───────────────────────
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(28, 20, 28, 32),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // ── Clock card ──────────────────
+                              AttendanceClockCard(
+                                summary: _summary,
+                                isLoading: _actionLoading || _summaryLoading,
+                                onTimeIn: _handleTimeIn,
+                                onTimeOut: _handleTimeOut,
+                                isOjtComplete: _summary?.isComplete ?? false,
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // ── OJT progress ────────────────
+                              if (_summaryLoading)
+                                Center(
+                                  child: CircularProgressIndicator(
+                                    color: isDark
+                                        ? const Color(0xFF7367F0)
+                                        : const Color(0xFF00022E),
+                                  ),
+                                )
+                              else if (_summary != null)
+                                OjtProgressCard(summary: _summary!),
+
+                              const SizedBox(height: 20),
+
+                              // ── History ──────────────────────
+                              AttendanceHistoryList(
+                                records: _history,
+                                isLoading: _historyLoading,
+                              ),
+
+                              const SizedBox(height: 12),
+                            ],
                           ),
                         ),
-
-                        // ── Clock card ────────────────────────────
-                        AttendanceClockCard(
-                          summary: _summary,
-                          isLoading: _actionLoading || _summaryLoading,
-                          onTimeIn: _handleTimeIn,
-                          onTimeOut: _handleTimeOut,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // ── OJT progress ──────────────────────────
-                        if (_summaryLoading)
-                          const Center(
-                              child: CircularProgressIndicator())
-                        else if (_summary != null)
-                          OjtProgressCard(summary: _summary!),
-
-                        const SizedBox(height: 20),
-
-                        // ── History ───────────────────────────────
-                        AttendanceHistoryList(
-                          records: _history,
-                          isLoading: _historyLoading,
-                        ),
-
-                        const SizedBox(height: 32),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -185,6 +214,121 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
         ],
       ),
-    ); // Fixed: Added missing semicolon
+    );
+  }
+
+  Widget _buildCardHeader(InternSpaceThemeColors theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(28, 22, 28, 18),
+      decoration: BoxDecoration(
+        color: isDark
+            ? theme.surface.withValues(alpha: 0.8)
+            : theme.metricCardBackground,
+        border: Border(
+          bottom: BorderSide(color: theme.border, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : const Color(0xFF00022E),
+              borderRadius: BorderRadius.circular(12),
+              border: isDark
+                  ? Border.all(
+                      color: Colors.white.withValues(alpha: 0.12), width: 1)
+                  : null,
+            ),
+            child: Icon(
+              Icons.fact_check_outlined,
+              color: isDark ? Colors.white70 : Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'My Attendance',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: theme.surfaceText,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _summaryLoading
+                      ? 'Loading…'
+                      : '${_history.length} record${_history.length != 1 ? 's' : ''} total',
+                  style: TextStyle(fontSize: 12, color: theme.mutedText),
+                ),
+              ],
+            ),
+          ),
+          // Refresh button
+          _GlassIconButton(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Refresh',
+            isDark: isDark,
+            onTap: _loadAll,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small glass-style icon button matching the admin screen aesthetic.
+class _GlassIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _GlassIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.08),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: isDark ? Colors.white60 : Colors.black45,
+          ),
+        ),
+      ),
+    );
   }
 }

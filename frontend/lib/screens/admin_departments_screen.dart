@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../services/api_service.dart';
 
 import '../widgets/admin_sidebar.dart';
 import 'admin_glass_topbar.dart' as admin_topbar;
-
-
+import '../widgets/app_theme.dart';
+import '../widgets/app_background.dart';
 
 // ── Imported Extracted Widgets ──
 import '../widgets/admin_departments_widgets/department_list_content.dart';
@@ -111,9 +112,12 @@ class _ConfigScreenState extends State<ConfigScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkInternTheme;
+    final theme = context.internTheme;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
@@ -127,65 +131,52 @@ class _ConfigScreenState extends State<ConfigScreen>
                 : null,
           ),
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.jpg'),
-                        fit: BoxFit.cover,
-                      ),
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 72,
+                    child: admin_topbar.GlassTopBar(
+                      isSidebarOpen: _isSidebarOpen,
+                      onToggleSidebar: () =>
+                          setState(() => _isSidebarOpen = true),
+                      user: context.read<AuthProvider>().user,
+                      isAdmin: true,
+                      title: 'Departments',
+                      showWelcome: false,
                     ),
                   ),
-                ),
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: 72,
-                        child: admin_topbar.GlassTopBar(
-                          isSidebarOpen: _isSidebarOpen,
-                          onToggleSidebar: () =>
-                              setState(() => _isSidebarOpen = true),
-                          user: context.read<AuthProvider>().user,
-                          isAdmin: true,
-                          title: 'Departments',
-                          showWelcome: false,
+                  const SizedBox(height: 15),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, bottom: 28),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color:
+                              isDark ? theme.surface : theme.sidebarBackground,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: theme.border),
                         ),
-                      ),
-
-                      const SizedBox(height: 15),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                              left: 100, right: 100, bottom: 28),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.95),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: DepartmentListContent(
-                                loading: _loadingDept,
-                                items: _departments,
-                                searchHint: 'Search departments...',
-                                onAdd: _addDepartment,
-                                onEdit: (id, name) =>
-                                    _editItem(id: id, currentName: name),
-                                onDelete: (id, name) =>
-                                    _deleteItem(id: id, name: name),
-                              ),
-                            ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: DepartmentListContent(
+                            loading: _loadingDept,
+                            items: _departments,
+                            searchHint: 'Search departments...',
+                            onAdd: _addDepartment,
+                            onEdit: (id, name) =>
+                                _editItem(id: id, currentName: name),
+                            onDelete: (id, name) =>
+                                _deleteItem(id: id, name: name),
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

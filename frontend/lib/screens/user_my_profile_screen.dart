@@ -22,7 +22,8 @@ class MyProfileScreen extends StatefulWidget {
   State<MyProfileScreen> createState() => _MyProfileScreenState();
 }
 
-class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderStateMixin {
+class _MyProfileScreenState extends State<MyProfileScreen>
+    with TickerProviderStateMixin {
   bool _loading = true;
   String? _fetchError;
   // Sidebar open state is controlled by SidebarProvider to match GlassTopBar hamburger behavior.
@@ -128,7 +129,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                       pageTitle: 'My Profile',
                       showWelcome: false,
                       user: user,
-                      isSidebarOpen: context.watch<SidebarProvider>().isUserSidebarOpen,
+                      isSidebarOpen:
+                          context.watch<SidebarProvider>().isUserSidebarOpen,
                       onToggleSidebar: () => context
                           .read<SidebarProvider>()
                           .setUserSidebarOpen(!context
@@ -139,10 +141,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                   const SizedBox(height: 15),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: theme.surface,
+                          color: theme.metricCardBackground,
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
@@ -155,9 +158,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: _loading
-                              ? Center(child: CircularProgressIndicator(color: theme.surfaceText))
+                              ? Center(
+                                  child: CircularProgressIndicator(
+                                      color: theme.surfaceText))
                               : Row(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     ProfileLeftPanel(
                                       user: user,
@@ -170,7 +176,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                                     ),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
                                         children: [
                                           if (_fetchError != null)
                                             ProfileRetryBanner(
@@ -179,31 +186,57 @@ class _MyProfileScreenState extends State<MyProfileScreen> with TickerProviderSt
                                             ),
                                           Container(
                                             decoration: BoxDecoration(
-                                              border: Border(bottom: BorderSide(color: theme.border)),
+                                              border: Border(
+                                                  bottom: BorderSide(
+                                                      color: theme.border)),
                                             ),
-                                            padding: const EdgeInsets.only(top: 8),
+                                            padding:
+                                                const EdgeInsets.only(top: 8),
                                             child: TabBar(
                                               controller: _tabs,
                                               labelColor: theme.surfaceText,
-                                              unselectedLabelColor: theme.mutedText,
-                                              indicatorColor: const Color(0xFF6B4EFF),
+                                              unselectedLabelColor:
+                                                  theme.mutedText,
+                                              indicatorColor:
+                                                  const Color(0xFF00022E),
                                               indicatorWeight: 3,
                                               dividerColor: Colors.transparent,
-                                              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                                              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                                              labelStyle: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 14),
+                                              unselectedLabelStyle:
+                                                  const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      fontSize: 14),
                                               tabs: const [
-                                                Tab(iconMargin: EdgeInsets.only(bottom: 6), icon: Icon(Icons.school_outlined, size: 20), text: 'Academic Info'),
-                                                Tab(iconMargin: EdgeInsets.only(bottom: 6), icon: Icon(Icons.stars_outlined, size: 20), text: 'Skills & Profile'),
+                                                Tab(
+                                                    iconMargin: EdgeInsets.only(
+                                                        bottom: 6),
+                                                    icon: Icon(
+                                                        Icons.school_outlined,
+                                                        size: 20),
+                                                    text: 'Academic Info'),
+                                                Tab(
+                                                    iconMargin: EdgeInsets.only(
+                                                        bottom: 6),
+                                                    icon: Icon(
+                                                        Icons.stars_outlined,
+                                                        size: 20),
+                                                    text: 'Skills & Profile'),
                                               ],
                                             ),
                                           ),
                                           Expanded(
                                             child: Container(
-                                              color: theme.surface,
+                                              color: theme.metricCardBackground,
                                               child: TabBarView(
                                                 controller: _tabs,
                                                 children: [
-                                                  ProfileAcademicTab(user: user, requiredHours: _requiredHours),
+                                                  ProfileAcademicTab(
+                                                      user: user,
+                                                      requiredHours:
+                                                          _requiredHours),
                                                   ProfileSkillsTab(user: user),
                                                 ],
                                               ),

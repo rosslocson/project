@@ -49,15 +49,15 @@ class AttendanceTable extends StatelessWidget {
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(28),   // left gutter
-    1: FlexColumnWidth(3),     // Intern
-    2: FlexColumnWidth(2),     // Date
-    3: FlexColumnWidth(1.5),   // Time In
-    4: FlexColumnWidth(1.5),   // Time Out
-    5: FlexColumnWidth(1.5),   // Hours
-    6: FlexColumnWidth(2),     // Status
-    7: FlexColumnWidth(2.5),   // Remark
-    8: FixedColumnWidth(36),   // Action (report / review)
+    0: FixedColumnWidth(28), // left gutter
+    1: FlexColumnWidth(3), // Intern
+    2: FlexColumnWidth(2), // Date
+    3: FlexColumnWidth(1.5), // Time In
+    4: FlexColumnWidth(1.5), // Time Out
+    5: FlexColumnWidth(1.5), // Hours
+    6: FlexColumnWidth(2), // Status
+    7: FlexColumnWidth(2.5), // Remark
+    8: FixedColumnWidth(36), // Action (report / review)
   };
 
   @override
@@ -81,7 +81,7 @@ class AttendanceTable extends StatelessWidget {
   TableRow _buildHeader() {
     return TableRow(
       decoration: const BoxDecoration(
-        color: kCardBg,
+        color: Colors.transparent,
         border: Border(bottom: BorderSide(color: kBorder, width: 1.5)),
       ),
       children: [
@@ -110,8 +110,8 @@ class AttendanceTable extends StatelessWidget {
   TableRow _buildRow(
       BuildContext context, AdminAttendanceRecord r, int index) {
     return TableRow(
-      decoration: BoxDecoration(
-        color: index.isEven ? kSurface : const Color(0xFFFAFAFC),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       children: [
         const SizedBox.shrink(),
@@ -429,10 +429,10 @@ class _ActionCell extends StatelessWidget {
 
     // Status-specific tooltip shown before the dialog opens.
     final String reportHint = switch (r.status) {
-      'Absent'           => 'Dispute absence',
-      'Late'             => 'Dispute late mark',
+      'Absent' => 'Dispute absence',
+      'Late' => 'Dispute late mark',
       'Missed Clock Out' => 'Report missed clock-out',
-      _                  => 'Report an issue',
+      _ => 'Report an issue',
     };
 
     return Padding(

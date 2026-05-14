@@ -39,8 +39,11 @@ class ProfileFormTab extends StatelessWidget {
   }) {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
-    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
-    final errorColor = isDark ? const Color(0xFF7367F0).withOpacity(0.6) : const Color(0xFF00022E).withOpacity(0.6);
+    final primaryColor =
+        isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final errorColor = isDark
+        ? const Color(0xFF7367F0).withOpacity(0.6)
+        : const Color(0xFF00022E).withOpacity(0.6);
 
     return InputDecoration(
       labelText: label,
@@ -85,52 +88,53 @@ class ProfileFormTab extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(label,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10,
+                  color: theme.mutedText,
+                  fontWeight: FontWeight.w600)),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: (value != null && items.contains(value))
+                    ? value
+                    : null, // ← fix here
+                isDense: true,
+                hint: Text(hint,
+                    style: TextStyle(
+                        color: theme.mutedText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                isExpanded: true,
+                icon: Icon(Icons.keyboard_arrow_down,
+                    color: theme.mutedText, size: 18),
                 style: TextStyle(
-                    fontSize: 10,
-                    color: theme.mutedText,
-                    fontWeight: FontWeight.w600)),
-            Expanded(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: (value != null && items.contains(value))
-                      ? value
-                      : null, // ← fix here
-                  isDense: true,
-                  hint: Text(hint,
-                      style: TextStyle(
-                          color: theme.mutedText,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500)),
-                  isExpanded: true,
-                  icon: Icon(Icons.keyboard_arrow_down,
-                      color: theme.mutedText, size: 18),
-                  style: TextStyle(
-                      color: theme.surfaceText,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500),
-                  items: items
-                      .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s, overflow: TextOverflow.ellipsis)))
-                      .toList(),
-                  onChanged: onChanged,
-                ),
+                    color: theme.surfaceText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500),
+                items: items
+                    .map((s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s, overflow: TextOverflow.ellipsis)))
+                    .toList(),
+                onChanged: onChanged,
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
-    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final primaryColor =
+        isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -150,19 +154,23 @@ class ProfileFormTab extends StatelessWidget {
                   ],
                   Row(children: [
                     Expanded(
-                      child: TextFormField(
+                        child: TextFormField(
                       controller: firstCtrl,
                       style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: theme.surfaceText),
                       decoration: _getFormDecoration(context, 'First Name'),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     )),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: TextFormField(
+                        child: TextFormField(
                       controller: lastCtrl,
                       style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: theme.surfaceText),
                       decoration: _getFormDecoration(context, 'Last Name'),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     )),
@@ -175,7 +183,8 @@ class ProfileFormTab extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         color: theme.mutedText),
-                    decoration: _getFormDecoration(context, 'Email (cannot change)',
+                    decoration: _getFormDecoration(
+                        context, 'Email (cannot change)',
                         prefixIcon: Icons.email_outlined),
                   ),
                   const SizedBox(height: 16),
@@ -214,11 +223,11 @@ class ProfileFormTab extends StatelessWidget {
                       width: 20,
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2))
-                  : const Text('Save Changes',
+                  : const Text('SAVE CHANGES',
                       style: TextStyle(
                           fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          letterSpacing: 0.5)),
+                          fontSize: 13,
+                          letterSpacing: 0.8)),
             ),
           ),
         ),

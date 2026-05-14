@@ -1,18 +1,9 @@
-// lib/widgets/admin_attendance_widgets/attendance_ui_components.dart
-// Small reusable UI widgets: export button, icon action button,
-// pagination buttons, and hamburger icon.
-
 import 'package:flutter/material.dart';
-
 import '../../models/attendance_constants.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Export button
-// ─────────────────────────────────────────────────────────────────────────────
+import '../../widgets/app_theme.dart';
 
 class ExportButton extends StatelessWidget {
   final VoidCallback onTap;
-
   const ExportButton({super.key, required this.onTap});
 
   @override
@@ -45,10 +36,6 @@ class ExportButton extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Icon action button (e.g. Refresh)
-// ─────────────────────────────────────────────────────────────────────────────
-
 class IconActionButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
@@ -63,27 +50,26 @@ class IconActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: const Color(0xFFF4F5F8),
+        color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF4F5F8),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(10),
-            child: Icon(icon, color: kTextMid, size: 18),
+            child: Icon(icon, color: theme.mutedText, size: 18),
           ),
         ),
       ),
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Pagination button
-// ─────────────────────────────────────────────────────────────────────────────
 
 class PageButton extends StatelessWidget {
   final IconData icon;
@@ -99,8 +85,14 @@ class PageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkInternTheme;
+
     return Material(
-      color: enabled ? kButtonDark : const Color(0xFFF4F5F8),
+      color: enabled
+          ? kButtonDark
+          : isDark
+              ? const Color(0xFF1A1A2E)
+              : const Color(0xFFF4F5F8),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -108,16 +100,17 @@ class PageButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(7),
           child: Icon(icon,
-              size: 18, color: enabled ? Colors.white : kTextLight),
+              size: 18,
+              color: enabled
+                  ? Colors.white
+                  : isDark
+                      ? Colors.white30
+                      : kTextLight),
         ),
       ),
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Hamburger / open-sidebar icon
-// ─────────────────────────────────────────────────────────────────────────────
 
 class HamburgerIcon extends StatelessWidget {
   const HamburgerIcon({super.key});

@@ -1,14 +1,6 @@
-// lib/widgets/admin_attendance_widgets/attendance_filters.dart
-// Filter bar widgets: search field, status dropdown, period chips,
-// active filters badge.
-
 import 'package:flutter/material.dart';
-
 import '../../models/attendance_constants.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Search field
-// ─────────────────────────────────────────────────────────────────────────────
+import '../../widgets/app_theme.dart';
 
 class AttendanceSearchField extends StatelessWidget {
   final TextEditingController controller;
@@ -22,33 +14,36 @@ class AttendanceSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     return SizedBox(
       height: 42,
       child: TextField(
         controller: controller,
-        style: const TextStyle(fontSize: 13, color: kTextDark),
+        style: TextStyle(fontSize: 13, color: theme.surfaceText),
         decoration: InputDecoration(
           hintText: 'Search intern by name…',
-          hintStyle: const TextStyle(fontSize: 13, color: kTextLight),
+          hintStyle: TextStyle(fontSize: 13, color: theme.mutedText),
           prefixIcon:
-              const Icon(Icons.search_rounded, size: 18, color: kTextLight),
+              Icon(Icons.search_rounded, size: 18, color: theme.mutedText),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close_rounded,
-                      size: 16, color: kTextLight),
+                  icon: Icon(Icons.close_rounded,
+                      size: 16, color: theme.mutedText),
                   padding: EdgeInsets.zero,
                   onPressed: onClear,
                 )
               : null,
           filled: true,
-          fillColor: const Color(0xFFF4F5F8),
+          fillColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF4F5F8),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kAccent, width: 1.5),
+            borderSide: BorderSide(color: kAccent, width: 1.5),
           ),
           contentPadding:
               const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
@@ -57,10 +52,6 @@ class AttendanceSearchField extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Status dropdown
-// ─────────────────────────────────────────────────────────────────────────────
 
 class AttendanceStatusDropdown extends StatelessWidget {
   final String value;
@@ -74,11 +65,14 @@ class AttendanceStatusDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     return Container(
       height: 42,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F5F8),
+        color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF4F5F8),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
@@ -86,13 +80,16 @@ class AttendanceStatusDropdown extends StatelessWidget {
           value: value,
           onChanged: onChanged,
           isDense: true,
-          style: const TextStyle(fontSize: 13, color: kTextDark),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded,
-              size: 18, color: kTextMid),
+          style: TextStyle(fontSize: 13, color: theme.surfaceText),
+          dropdownColor: isDark ? const Color(0xFF0B0F2F) : Colors.white,
+          icon: Icon(Icons.keyboard_arrow_down_rounded,
+              size: 18, color: theme.mutedText),
           items: kAttendanceStatuses
               .map((s) => DropdownMenuItem<String>(
                     value: s,
-                    child: Text(s, style: const TextStyle(fontSize: 13)),
+                    child: Text(s,
+                        style:
+                            TextStyle(fontSize: 13, color: theme.surfaceText)),
                   ))
               .toList(),
         ),
@@ -100,10 +97,6 @@ class AttendanceStatusDropdown extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Period chip
-// ─────────────────────────────────────────────────────────────────────────────
 
 class PeriodChip extends StatelessWidget {
   final String label;
@@ -121,12 +114,19 @@ class PeriodChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? kButtonDark : const Color(0xFFF4F5F8),
+          color: selected
+              ? kButtonDark
+              : isDark
+                  ? const Color(0xFF1A1A2E)
+                  : const Color(0xFFF4F5F8),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected ? kButtonDark : Colors.transparent,
@@ -137,8 +137,8 @@ class PeriodChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 13,
-                  color: selected ? Colors.white : kTextMid),
+              Icon(icon,
+                  size: 13, color: selected ? Colors.white : theme.mutedText),
               const SizedBox(width: 5),
             ],
             Text(
@@ -146,7 +146,7 @@ class PeriodChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : kTextMid,
+                color: selected ? Colors.white : theme.mutedText,
               ),
             ),
           ],
@@ -155,10 +155,6 @@ class PeriodChip extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Active filters badge
-// ─────────────────────────────────────────────────────────────────────────────
 
 class ActiveFiltersBadge extends StatelessWidget {
   final int count;
