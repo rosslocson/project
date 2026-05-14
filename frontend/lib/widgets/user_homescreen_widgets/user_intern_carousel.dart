@@ -37,16 +37,10 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
     return widget.interns.where((intern) {
       final dyn = intern as dynamic;
 
-      // Only ARCHIVED users must be filtered out from the carousel.
-      // Do NOT hide INACTIVE users.
-      final statusStr = dyn.status?.toString().toLowerCase() ?? '';
+      // Spec rule: hide only archived interns.
+      // NOTE: InternProfile does NOT have a `status` field, so we must check the actual backend shape.
 
-      // Spec rule: exclude ONLY status == "Archive" (case-insensitive match).
-      if (statusStr == 'archive' || statusStr.contains('archive')) {
-        return false;
-      }
-
-      // Fallback for older backend shapes: also hide ONLY when is_archived is true.
+      // Primary: is_archived / isArchived (only archived should be hidden)
       bool isArchived = false;
       try {
         isArchived = dyn.is_archived == true || dyn.isArchived == true;
