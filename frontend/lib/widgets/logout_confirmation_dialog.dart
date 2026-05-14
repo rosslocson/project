@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 const _kBlue = Color(0xFF00022E);
+// Extracted from the provided image's dark mode palette
+const _kDarkBg = Color(0xFF111118); 
+const _kDarkLogoutRed = Color(0xFFFF6B6B); 
 
 class LogoutConfirmationDialog extends StatelessWidget {
   final String title;
@@ -18,6 +21,24 @@ class LogoutConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Theme-adaptive colors
+    final backgroundColor = isDark ? _kDarkBg : Colors.white;
+    final shadowColor = isDark ? Colors.black.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.18);
+    
+    // To match the image, the logout action gets a reddish tint in dark mode
+    final actionColor = isDark ? _kDarkLogoutRed : _kBlue;
+    final iconBgColor = isDark 
+        ? _kDarkLogoutRed.withValues(alpha: 0.15) 
+        : _kBlue.withValues(alpha: 0.08);
+        
+    final titleColor = isDark ? Colors.white : Colors.black87;
+    final descriptionColor = isDark ? Colors.grey.shade400 : Colors.grey.shade500;
+    
+    final cancelTextColor = isDark ? Colors.white70 : Colors.black54;
+    final cancelBorderColor = isDark ? Colors.white24 : Colors.grey.shade300;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
@@ -26,11 +47,11 @@ class LogoutConfirmationDialog extends StatelessWidget {
         width: 420,
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: shadowColor,
               blurRadius: 32,
               offset: const Offset(0, 8),
             ),
@@ -45,20 +66,19 @@ class LogoutConfirmationDialog extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _kBlue.withValues(alpha: 0.08),
+                    color: iconBgColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child:
-                      const Icon(Icons.logout_rounded, color: _kBlue, size: 20),
+                  child: Icon(Icons.logout_rounded, color: actionColor, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: Colors.black87,
+                      color: titleColor,
                     ),
                   ),
                 ),
@@ -69,7 +89,7 @@ class LogoutConfirmationDialog extends StatelessWidget {
               description,
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.grey.shade500,
+                color: descriptionColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -80,14 +100,17 @@ class LogoutConfirmationDialog extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context, false),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black54,
-                      side: BorderSide(color: Colors.grey.shade300),
+                      foregroundColor: cancelTextColor,
+                      side: BorderSide(color: cancelBorderColor),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: Text(cancelLabel,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    child: Text(
+                      cancelLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -95,14 +118,17 @@ class LogoutConfirmationDialog extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context, true),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kBlue,
-                      foregroundColor: Colors.white,
+                      backgroundColor: actionColor,
+                      foregroundColor: isDark ? _kDarkBg : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: Text(confirmLabel,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    child: Text(
+                      confirmLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
               ],

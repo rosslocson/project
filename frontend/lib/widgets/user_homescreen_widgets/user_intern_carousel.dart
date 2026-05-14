@@ -32,15 +32,44 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
   int _currentPage = 0;
   static const double _viewportFraction = 0.55;
 
+  /// Single source of truth for filtering logic.
+  List<InternProfile> get visibleInterns {
+    return widget.interns.where((intern) {
+      final dyn = intern as dynamic;
+
+      // Only ARCHIVED users must be filtered out from the carousel.
+      // Do NOT hide INACTIVE users.
+      final statusStr = dyn.status?.toString().toLowerCase() ?? '';
+
+      // Spec rule: exclude ONLY status == "Archive" (case-insensitive match).
+      if (statusStr == 'archive' || statusStr.contains('archive')) {
+        return false;
+      }
+
+      // Fallback for older backend shapes: also hide ONLY when is_archived is true.
+      bool isArchived = false;
+      try {
+        isArchived = dyn.is_archived == true || dyn.isArchived == true;
+      } catch (_) {}
+
+      if (isArchived) return false;
+
+      return true;
+    }).toList();
+  }
+
   @override
   void initState() {
     super.initState();
-    _currentPage = widget.interns.isNotEmpty ? widget.interns.length * 1000 : 0;
+    final safeList = visibleInterns;
+    _currentPage = safeList.isNotEmpty ? safeList.length * 1000 : 0;
+    
     _pageController = PageController(
       viewportFraction: _viewportFraction,
       initialPage: _currentPage,
     );
-    if (!widget.loading && widget.interns.isNotEmpty) {
+    
+    if (!widget.loading && safeList.isNotEmpty) {
       _startAutoScroll();
     }
   }
@@ -49,17 +78,15 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
   void didUpdateWidget(covariant UserInternCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // If we switch between loading/loaded or the intern list changes,
-    // re-sync controller position so the carousel doesn't break.
+    final safeList = visibleInterns;
     final listChanged = widget.interns != oldWidget.interns;
-    final canScroll = widget.interns.isNotEmpty;
+    final canScroll = safeList.isNotEmpty;
 
     if (listChanged && canScroll) {
       _autoScrollTimer?.cancel();
 
-      _currentPage = widget.interns.length * 1000;
+      _currentPage = safeList.length * 1000;
 
-      // Dispose the old controller and create a new one.
       _pageController.dispose();
       _pageController = PageController(
         viewportFraction: _viewportFraction,
@@ -71,7 +98,6 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
       }
     }
 
-    // Stop auto-scroll when going back to an empty or loading state.
     if ((!canScroll || widget.loading) && _autoScrollTimer != null) {
       _autoScrollTimer?.cancel();
       _autoScrollTimer = null;
@@ -87,7 +113,8 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
 
   void _startAutoScroll() {
     _autoScrollTimer?.cancel();
-    if (widget.interns.isEmpty) return;
+    if (visibleInterns.isEmpty) return;
+    
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (!mounted) return;
       _pageController.nextPage(
@@ -124,13 +151,14 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
       ),
     )
         .then((_) {
-      if (mounted) _startAutoScroll(); // Resume scrolling when returning
+      if (mounted) _startAutoScroll();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    final safeList = visibleInterns;
 
     // Loading state
     if (widget.loading) {
@@ -181,8 +209,8 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
       );
     }
 
-    // Empty state
-    if (widget.interns.isEmpty) {
+    // Empty state 
+    if (safeList.isEmpty) {
       return SizedBox(
         height: 320,
         child: Center(
@@ -194,7 +222,7 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
       );
     }
 
-// Main Carousel
+    // Main Carousel
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -251,7 +279,7 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
             controller: _pageController,
             onPageChanged: (i) => setState(() => _currentPage = i),
             itemBuilder: (context, index) {
-              final intern = widget.interns[index % widget.interns.length];
+              final intern = safeList[index % safeList.length];
               final isCenter = index == _currentPage;
 
               return AnimatedScale(
@@ -279,21 +307,24 @@ class _UserInternCarouselState extends State<UserInternCarousel> {
             _ArrowButton(icon: Icons.chevron_left, onTap: _prev),
             const SizedBox(width: 20),
             Row(
-              children: List.generate(widget.interns.length, (i) {
-                final active = i == (_currentPage % widget.interns.length);
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: active ? 20 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: active
-                        ? InternCarouselPalette.dotActive
-                        : InternCarouselPalette.dotActive.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
+              children: List.generate(
+                safeList.length,
+                (i) {
+                  final active = i == (_currentPage % safeList.length);
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: active ? 20 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: active
+                          ? InternCarouselPalette.dotActive
+                          : InternCarouselPalette.dotActive.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                },
+              ),
             ),
             const SizedBox(width: 20),
             _ArrowButton(icon: Icons.chevron_right, onTap: _next),

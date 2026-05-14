@@ -958,7 +958,10 @@ func (h *Handler) GetActivityLogs(c *gin.Context) {
 
 func (h *Handler) ListInterns(c *gin.Context) {
 	var interns []models.User
-	h.DB.Where("role = ? AND is_active = ?", models.RoleUser, true).
+	// Card visibility rule:
+	// - Show ACTIVE and INACTIVE interns
+	// - Hide ONLY ARCHIVED interns
+	h.DB.Where("role = ? AND is_archived = ?", models.RoleUser, false).
 		Select(`id, first_name, last_name, email, department, position,
                avatar_url, school, program, specialization, bio, year_level,
                technical_skills, soft_skills, intern_number,
