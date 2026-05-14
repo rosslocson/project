@@ -31,21 +31,16 @@ class AdminSidebar extends StatelessWidget {
         children: [
           // Logo / brand & Close Button
           Padding(
-            // Adjusted left padding to 20 to align with the 'MENU' label
-            padding:
-                const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
+            padding: const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
             child: Row(
               children: [
-                // Added Transform.scale to zoom the logo without moving text
                 Transform.scale(
                   scale: 1.3,
-                  // REVISED: Using IndexedStack to keep BOTH images fully loaded in memory at all times.
-                  // This guarantees absolutely zero delay when switching themes.
                   child: IndexedStack(
                     index: isDarkMode ? 0 : 1,
                     children: [
                       Image.asset(
-                        'assets/images/logo_file.png', // Index 0: Dark mode logo
+                        'assets/images/logo_file.png', 
                         height: 40,
                         width: 48,
                         fit: BoxFit.contain,
@@ -54,7 +49,7 @@ class AdminSidebar extends StatelessWidget {
                         },
                       ),
                       Image.asset(
-                        'assets/images/logo_file_lightmode.png', // Index 1: Light mode logo
+                        'assets/images/logo_file_lightmode.png',
                         height: 40,
                         width: 48,
                         fit: BoxFit.contain,
@@ -162,51 +157,55 @@ class _NavItem extends StatefulWidget {
 }
 
 class _NavItemState extends State<_NavItem> {
-  bool _isHovering = false;
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final active = widget.current == widget.route;
     final theme = context.internTheme;
+    
+    // Universal hover effect code for both light and dark modes
+    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() => _isHovering = false),
       cursor: active ? SystemMouseCursors.basic : SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: active
-              ? theme.sidebarActiveBackground
-              : _isHovering
-                  ? theme.sidebarHoverBackground
-                  : Colors.transparent,
+          color: active 
+              ? theme.sidebarActiveBackground 
+              : (_isHovered ? hoverColor : Colors.transparent),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: ListTile(
-          dense: true,
-          hoverColor: Colors.transparent, // Disable default material hover
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          leading: Icon(
-            widget.icon,
-            size: 20,
-            color:
-                active ? theme.sidebarActiveForeground : theme.sidebarText,
+        // Disables native Material splash/highlight effects
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
           ),
-          title: Text(
-            widget.label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-              color:
-                  active ? theme.sidebarActiveForeground : theme.sidebarText,
+          child: ListTile(
+            dense: true,
+            hoverColor: Colors.transparent, 
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            leading: Icon(
+              widget.icon,
+              size: 20,
+              color: active ? theme.sidebarActiveForeground : theme.sidebarText,
             ),
+            title: Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                color: active ? theme.sidebarActiveForeground : theme.sidebarText,
+              ),
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onTap: active ? null : () => context.go(widget.route),
           ),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          onTap: active ? null : () => context.go(widget.route),
         ),
       ),
     );
@@ -244,54 +243,46 @@ class _SignOutButton extends StatefulWidget {
 }
 
 class _SignOutButtonState extends State<_SignOutButton> {
-  bool _isHovering = false;
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    // Universal hover effect code for both light and dark modes
+    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() => _isHovering = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        color: _isHovering
-            ? theme.sidebarHoverBackground
-            : Colors.transparent,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            hoverColor: Colors.transparent, // Prevent duplicate hover effects
-            onTap: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                barrierDismissible: true,
-                builder: (context) => const LogoutConfirmationDialog(),
-              );
-              if (confirmed == true) {
-                context.read<AuthProvider>().logout();
-                context.go('/login');
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Row(
-                children: [
-                  Icon(Icons.logout_rounded,
-                      color: theme.sidebarText, size: 22),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Log Out',
-                    style: TextStyle(
-                      color: theme.sidebarText,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: () async {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            barrierDismissible: true,
+            builder: (context) => const LogoutConfirmationDialog(),
+          );
+          if (confirmed == true) {
+            context.read<AuthProvider>().logout();
+            context.go('/login');
+          }
+        },
+        child: Container(
+          color: _isHovered ? hoverColor : Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Row(
+            children: [
+              Icon(Icons.logout_rounded, color: theme.sidebarText, size: 22),
+              const SizedBox(width: 16),
+              Text(
+                'Log Out',
+                style: TextStyle(
+                  color: theme.sidebarText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -308,39 +299,30 @@ class _CloseButton extends StatefulWidget {
 }
 
 class _CloseButtonState extends State<_CloseButton> {
-  bool _isHovering = false;
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    // Universal hover effect code for both light and dark modes
+    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() => _isHovering = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: _isHovering
-              ? theme.sidebarHoverBackground
-              : Colors.transparent, // Changed to transparent so the circle stays hidden until hovered, just like dark mode
-          shape: BoxShape.circle,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            hoverColor: Colors.transparent,
-            onTap: widget.onClose,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Icon(
-                Icons.close_rounded,
-                color: theme.sidebarText,
-                size: 20,
-              ),
-            ),
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onClose,
+        child: Container(
+          padding: const EdgeInsets.all(8.0),
+          decoration: BoxDecoration(
+            color: _isHovered ? hoverColor : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.close_rounded,
+            color: theme.sidebarText,
+            size: 20,
           ),
         ),
       ),

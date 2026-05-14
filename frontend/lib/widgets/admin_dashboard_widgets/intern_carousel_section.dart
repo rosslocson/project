@@ -4,7 +4,7 @@ import '../app_theme.dart';
 import '../intern_carousel_palette.dart';
 
 // Intern profile & detail page models
-import '../../screens/intern_widgets.dart';
+import '../../screens/intern_cards.dart';
 import '../../screens/intern_directory_screen.dart';
 import '../../screens/intern_ross_profile_page.dart';
 

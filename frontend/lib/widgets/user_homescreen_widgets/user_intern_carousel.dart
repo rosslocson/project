@@ -4,7 +4,7 @@ import '../app_theme.dart';
 import '../intern_carousel_palette.dart';
 
 // Adjust this import path based on where InternProfile and InternDetailPage are located
-import '../../screens/intern_widgets.dart';
+import '../../screens/intern_cards.dart';
 import '../../screens/intern_directory_screen.dart';
 import 'user_intern_card.dart';
 

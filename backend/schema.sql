@@ -22,7 +22,19 @@ CREATE TABLE IF NOT EXISTS users (
     failed_login_count INTEGER DEFAULT 0,
     locked_until TIMESTAMP WITH TIME ZONE,
     reset_token VARCHAR,
-    reset_token_expiry TIMESTAMP WITH TIME ZONE
+    reset_token_expiry TIMESTAMP WITH TIME ZONE,
+    school VARCHAR,
+    program VARCHAR,
+    specialization VARCHAR,
+    year_level VARCHAR,
+    intern_number VARCHAR,
+    start_date VARCHAR,
+    end_date VARCHAR,
+    technical_skills TEXT,
+    soft_skills TEXT,
+    linked_in VARCHAR,
+    git_hub VARCHAR,
+    required_ojt_hours INTEGER DEFAULT 400
 );
 
 -- Departments table
