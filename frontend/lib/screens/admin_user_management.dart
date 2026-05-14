@@ -410,10 +410,10 @@ class _UsersScreenState extends State<UsersScreen> {
                   ),
                   const SizedBox(height: 15),
                   Expanded(
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-                      child: SingleChildScrollView(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.only(left: 100, right: 100, bottom: 28),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

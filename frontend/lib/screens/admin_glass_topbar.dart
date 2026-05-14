@@ -137,7 +137,7 @@ class GlassTopBar extends StatelessWidget {
                   const SizedBox(height: 2),
                   if (user != null && showWelcome)
                     Text(
-                      'Welcome, $fullName',
+                      'Welcome, $firstName',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,

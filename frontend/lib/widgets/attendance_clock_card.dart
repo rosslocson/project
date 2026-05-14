@@ -175,7 +175,7 @@ class AttendanceClockCard extends StatelessWidget {
   }) {
     final defaultBg =
         isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFF00022E);
-    final defaultFg = Colors.white;
+    const defaultFg = Colors.white;
     final defaultBorder =
         isDark ? Colors.white.withValues(alpha: 0.3) : const Color(0xFF00022E);
     final disabledBg =

@@ -43,21 +43,23 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Future<void> _loadSummary() async {
     setState(() => _summaryLoading = true);
     final s = await AttendanceService.getSummary();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _summary = s;
         _summaryLoading = false;
       });
+    }
   }
 
   Future<void> _loadHistory() async {
     setState(() => _historyLoading = true);
     final h = await AttendanceService.getHistory();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _history = h;
         _historyLoading = false;
       });
+    }
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────

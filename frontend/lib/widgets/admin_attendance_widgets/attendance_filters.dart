@@ -43,7 +43,7 @@ class AttendanceSearchField extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: kAccent, width: 1.5),
+            borderSide: const BorderSide(color: kAccent, width: 1.5),
           ),
           contentPadding:
               const EdgeInsets.symmetric(vertical: 0, horizontal: 14),

@@ -236,8 +236,9 @@ class UserProfileTab extends StatelessWidget {
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Required';
                       final parsed = int.tryParse(v.trim());
-                      if (parsed == null || parsed <= 0)
+                      if (parsed == null || parsed <= 0) {
                         return 'Enter a valid number of hours';
+                      }
                       return null;
                     },
                   ),
