@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../intern_carousel_palette.dart';
-import '../../screens/intern_widgets.dart';
+import '../../screens/intern_cards.dart';
 import '../../screens/intern_ross_profile_page.dart';
 
 class UserInternCard extends StatelessWidget {

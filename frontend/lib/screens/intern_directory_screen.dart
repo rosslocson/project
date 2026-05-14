@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../services/api_service.dart';
 import '../providers/theme_provider.dart';
-import 'intern_widgets.dart';
+import 'intern_cards.dart';
 
 class InternDirectoryScreen extends StatefulWidget {
   const InternDirectoryScreen({super.key});
