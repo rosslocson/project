@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -19,133 +20,136 @@ class UserSidebar extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: 250,
+      width: 270,
       decoration: BoxDecoration(
-        color: theme.sidebarBackground,
+        color: theme.sidebarBackground.withOpacity(isDarkMode ? 0.4 : 0.8),
         border: Border(
-          right: BorderSide(color: theme.border),
+          right: BorderSide(
+            color: theme.border.withOpacity(0.15),
+            width: 1,
+          ),
         ),
       ),
-      child: Column(
-        children: [
-          // Logo / brand & Close Button
-          Padding(
-            // Adjusted left padding to 20 to align with the 'MENU' label
-            padding:
-                const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
-            child: Row(
-              children: [
-                // ──────────────────────────────────────────────────────────────
-                // Added Transform.scale to zoom the logo without moving text
-                Transform.scale(
-                  scale: 1.3, // Adjust this value to zoom more or less
-                  child: IndexedStack(
-                    index: isDarkMode ? 0 : 1,
-                    children: [
-                      Image.asset(
-                        'assets/images/logo_file.png', // Index 0: Dark mode logo
-                        height: 40,
-                        width: 48,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.public,
-                              color: theme.sidebarText, size: 24);
-                        },
-                      ),
-                      Image.asset(
-                        'assets/images/logo_file_lightmode.png', // Index 1: Light mode logo
-                        height: 40,
-                        width: 48,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.public,
-                              color: theme.sidebarText, size: 24);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                // ──────────────────────────────────────────────────────────────
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: Text(
-                    'InternSpace',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: theme.sidebarText,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-
-                _CloseButton(onClose: onClose),
-              ],
-            ),
-          ),
-
-          // Nav items (user only)
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                const _SectionLabel('MENU'),
-                _NavItem(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
-                  route: '/home',
-                  current: currentRoute,
-                ),
-                _NavItem(
-                  icon: Icons.person_outline,
-                  label: 'My Profile',
-                  route: '/profile',
-                  current: currentRoute,
-                ),
-                _NavItem(
-                  icon: Icons.edit_outlined,
-                  label: 'Edit Profile',
-                  route: '/edit-profile',
-                  current: currentRoute,
-                ),
-                _NavItem(
-                  icon: Icons.settings_outlined,
-                  label: 'Account Settings',
-                  route: '/account-settings',
-                  current: currentRoute,
-                ),
-                // ── OJT / Attendance section ──────────────────────────────
-                const _SectionLabel('OJT'),
-                _NavItem(
-                  icon: Icons.access_time_rounded,
-                  label: 'Attendance',
-                  route: '/attendance',
-                  current: currentRoute,
-                ),
-                // ── Info section ──────────────────────────────────────────
-                const _SectionLabel('INFO'),
-                _NavItem(
-                  icon: Icons.info_outline_rounded,
-                  label: 'About & Contact',
-                  route: '/about',
-                  current: currentRoute,
-                ),
-              ],
-            ),
-          ),
-
-          // Sign out
-          Column(
-            mainAxisSize: MainAxisSize.min,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Divider(color: theme.border, height: 1),
-              const _SignOutButton(),
+              // Logo & Close Button Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 16, 32),
+                child: Row(
+                  children: [
+                    IndexedStack(
+                      index: isDarkMode ? 0 : 1,
+                      children: [
+                        Image.asset(
+                          'assets/images/logo_file.png', 
+                          height: 44,
+                          width: 44,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Icon(Icons.public, color: theme.sidebarText, size: 34),
+                        ),
+                        Image.asset(
+                          'assets/images/logo_file_lightmode.png',
+                          height: 44,
+                          width: 44,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Icon(Icons.public, color: theme.sidebarText, size: 34),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'InternSpace',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: theme.sidebarText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    _CloseButton(onClose: onClose),
+                  ],
+                ),
+              ),
+
+              // Nav items (user only)
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    const _SectionLabel('Menu'),
+                    _NavItem(
+                      icon: Icons.home_rounded,
+                      label: 'Home',
+                      route: '/home',
+                      current: currentRoute,
+                    ),
+                    _NavItem(
+                      icon: Icons.person_outline,
+                      label: 'My Profile',
+                      route: '/profile',
+                      current: currentRoute,
+                    ),
+                    _NavItem(
+                      icon: Icons.edit_outlined,
+                      label: 'Edit Profile',
+                      route: '/edit-profile',
+                      current: currentRoute,
+                    ),
+                    _NavItem(
+                      icon: Icons.settings_outlined,
+                      label: 'Account Settings',
+                      route: '/account-settings',
+                      current: currentRoute,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    const _SectionLabel('OJT'),
+                    _NavItem(
+                      icon: Icons.access_time_rounded,
+                      label: 'Attendance',
+                      route: '/attendance',
+                      current: currentRoute,
+                    ),
+
+                    const SizedBox(height: 16),
+                    const _SectionLabel('Info'),
+                    _NavItem(
+                      icon: Icons.info_outline_rounded,
+                      label: 'About & Contact',
+                      route: '/about',
+                      current: currentRoute,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Footer / Sign Out with thin line
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Divider(
+                    color: theme.border.withOpacity(0.15),
+                    height: 1,
+                    thickness: 3,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8, bottom: 16),
+                    child: _SignOutButton(),
+                  ),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -169,54 +173,97 @@ class _NavItem extends StatefulWidget {
 }
 
 class _NavItemState extends State<_NavItem> {
-  bool _isHovering = false;
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final active = widget.current == widget.route;
     final theme = context.internTheme;
     
-    // Universal hover effect code for both light and dark modes
-    final hoverColor = theme.sidebarText.withOpacity(0.08);
-
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() => _isHovering = false),
       cursor: active ? SystemMouseCursors.basic : SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: active
-              ? theme.sidebarActiveBackground
-              : _isHovering
-                  ? hoverColor
-                  : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: ListTile(
-          dense: true,
-          hoverColor: Colors.transparent,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          leading: Icon(
-            widget.icon,
-            size: 20,
-            color:
-                active ? theme.sidebarActiveForeground : theme.sidebarText,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: active ? null : () => context.go(widget.route),
+        child: Container(
+          height: 48,
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          child: Stack(
+            children: [
+              if (active)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          theme.sidebarActiveBackground.withOpacity(0.15),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                  ),
+                ),
+              
+              if (active)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      color: theme.sidebarActiveBackground,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(4),
+                        bottomRight: Radius.circular(4),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.sidebarActiveBackground.withOpacity(0.6),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                left: (_isHovered && !active) ? 32.0 : 28.0, 
+                top: 0,
+                bottom: 0,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      widget.icon,
+                      size: 20,
+                      color: active 
+                          ? theme.sidebarActiveForeground 
+                          : theme.sidebarText.withOpacity(_isHovered ? 0.9 : 0.5),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                        color: active 
+                            ? theme.sidebarActiveForeground 
+                            : theme.sidebarText.withOpacity(_isHovered ? 0.9 : 0.5),
+                        letterSpacing: 0.6, 
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          title: Text(
-            widget.label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-              color:
-                  active ? theme.sidebarActiveForeground : theme.sidebarText,
-            ),
-          ),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          onTap: active ? null : () => context.go(widget.route),
         ),
       ),
     );
@@ -232,17 +279,17 @@ class _SectionLabel extends StatelessWidget {
     final theme = context.internTheme;
 
     return Padding(
-        padding: const EdgeInsets.only(left: 20, top: 16, bottom: 12),
-        child: Text(
-          text.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: theme.sidebarMutedText,
-            letterSpacing: 1.0,
-          ),
+      padding: const EdgeInsets.only(left: 28, top: 16, bottom: 16),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: theme.sidebarMutedText.withOpacity(0.7),
+          letterSpacing: 2.0, 
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -254,53 +301,61 @@ class _SignOutButton extends StatefulWidget {
 }
 
 class _SignOutButtonState extends State<_SignOutButton> {
-  bool _isHovering = false;
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
-    // Universal hover effect code for both light and dark modes
-    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() => _isHovering = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        color: _isHovering
-            ? hoverColor
-            : Colors.transparent,
-        child: InkWell(
-          hoverColor: Colors.transparent,
-          onTap: () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              barrierDismissible: true,
-              builder: (context) => const LogoutConfirmationDialog(),
-            );
-            if (confirmed == true) {
-              context.read<AuthProvider>().logout();
-              context.go('/login');
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: Row(
-              children: [
-                Icon(Icons.logout_rounded,
-                    color: theme.sidebarText, size: 22),
-                const SizedBox(width: 16),
-                Text(
-                  'Log Out',
-                  style: TextStyle(
-                    color: theme.sidebarText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: () async {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            barrierDismissible: true,
+            builder: (context) => const LogoutConfirmationDialog(),
+          );
+          if (confirmed == true) {
+            context.read<AuthProvider>().logout();
+            context.go('/login');
+          }
+        },
+        child: Container(
+          height: 48,
+          color: Colors.transparent,
+          child: Stack(
+            children: [
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                left: _isHovered ? 32.0 : 28.0,
+                top: 0,
+                bottom: 0,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.logout_rounded, 
+                      color: _isHovered ? Colors.redAccent : theme.sidebarText.withOpacity(0.5), 
+                      size: 20
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Log Out',
+                      style: TextStyle(
+                        color: _isHovered ? Colors.redAccent : theme.sidebarText.withOpacity(0.5),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.6, 
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -317,41 +372,29 @@ class _CloseButton extends StatefulWidget {
 }
 
 class _CloseButtonState extends State<_CloseButton> {
-  bool _isHovering = false;
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
-    // Universal hover effect code for both light and dark modes
-    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() => _isHovering = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: _isHovering
-              ? hoverColor
-              : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            hoverColor: Colors.transparent,
-            onTap: widget.onClose,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Icon(
-                Icons.close_rounded,
-                color: theme.sidebarText,
-                size: 20,
-              ),
-            ),
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onClose,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(6.0),
+          decoration: BoxDecoration(
+            color: _isHovered ? theme.sidebarText.withOpacity(0.08) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.menu_open_rounded, 
+            color: theme.sidebarText.withOpacity(_isHovered ? 1.0 : 0.5),
+            size: 22,
           ),
         ),
       ),

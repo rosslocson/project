@@ -100,6 +100,91 @@ class UserPasswordTab extends StatelessWidget {
         ),
       );
 
+  Widget _buildActionButtons(BuildContext context) {
+    // We use AnimatedBuilder to listen to changes in the text controllers.
+    // This allows the buttons to dynamically appear/disappear as the user types
+    // without needing to convert this to a StatefulWidget.
+    return AnimatedBuilder(
+      animation: Listenable.merge([curPassCtrl, newPassCtrl, confirmPassCtrl]),
+      builder: (context, child) {
+        final hasEdits = curPassCtrl.text.isNotEmpty ||
+                         newPassCtrl.text.isNotEmpty ||
+                         confirmPassCtrl.text.isNotEmpty;
+
+        if (!hasEdits) {
+          // Fallback spacing when nothing is typed yet
+          return const SizedBox(height: 28);
+        }
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: savingPass ? null : () {
+                      // Cancel logic: clear fields and reset form state
+                      curPassCtrl.clear();
+                      newPassCtrl.clear();
+                      confirmPassCtrl.clear();
+                      formKey.currentState?.reset();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.internTheme.surfaceText,
+                      side: BorderSide(color: context.internTheme.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'CANCEL',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: savingPass ? null : onSave,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: savingPass
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'CONFIRM PASSWORD',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                letterSpacing: 0.5),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -167,6 +252,7 @@ class UserPasswordTab extends StatelessWidget {
             ),
           ),
         ),
+<<<<<<< HEAD
         Padding(
           padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
           child: SizedBox(
@@ -197,6 +283,10 @@ class UserPasswordTab extends StatelessWidget {
             ),
           ),
         ),
+=======
+        // Replace the single button with the separated logic method
+        _buildActionButtons(context),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ],
     );
   }

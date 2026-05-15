@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart'
-    show debugPrint, defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show debugPrint, defaultTargetPlatform, kIsWeb, TargetPlatform, kDebugMode;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -173,8 +173,11 @@ class ApiService {
 
   static Future<Map<String, dynamic>> uploadAvatar(XFile imageFile) async {
     try {
-      debugPrint('📤 Starting avatar upload...');
-      debugPrint('📄 File: ${imageFile.name}');
+      if (kDebugMode) {
+        debugPrint('📤 Starting avatar upload...');
+        debugPrint('📄 File: ${imageFile.name}');
+      }
+
 
       var request = http.MultipartRequest(
         'POST',
@@ -185,27 +188,19 @@ class ApiService {
       final headers = await _authHeadersForMultipart();
       request.headers.addAll(headers);
 
-      // Add file using bytes on web, path on native platforms.
-      if (kIsWeb) {
-        final bytes = await imageFile.readAsBytes();
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'avatar',
-            bytes,
-            filename: imageFile.name.isNotEmpty ? imageFile.name : 'avatar.jpg',
-          ),
-        );
-      } else {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'avatar', // MUST MATCH BACKEND
-            imageFile.path,
-            filename: imageFile.name,
-          ),
-        );
-      }
+      // Upload from bytes (avoid native temp-file + disk I/O).
+      final bytes = await imageFile.readAsBytes();
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'avatar',
+          bytes,
+          filename: imageFile.name.isNotEmpty ? imageFile.name : 'avatar.jpg',
+        ),
+      );
 
-      debugPrint('✅ File attached to request');
+
+      if (kDebugMode) debugPrint('✅ File attached to request');
+
 
       // Send request with timeout
       final streamedResponse = await request.send().timeout(
@@ -217,18 +212,23 @@ class ApiService {
 
       var response = await http.Response.fromStream(streamedResponse);
 
-      debugPrint('🔙 Server response - Status: ${response.statusCode}');
-      debugPrint('📋 Response body: ${response.body}');
+      if (kDebugMode) {
+        debugPrint('🔙 Server response - Status: ${response.statusCode}');
+        debugPrint('📋 Response body: ${response.body}');
+      }
+
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        debugPrint('✅ Upload successful');
+        if (kDebugMode) debugPrint('✅ Upload successful');
+
         return {
           'ok': true,
           'user': data['user'] ?? data,
         };
       } else {
-        debugPrint('❌ Upload error - Status: ${response.statusCode}');
+        if (kDebugMode) debugPrint('❌ Upload error - Status: ${response.statusCode}');
+
         try {
           final errorData = jsonDecode(response.body);
           return {
@@ -243,7 +243,8 @@ class ApiService {
         }
       }
     } catch (e) {
-      debugPrint('❌ Avatar upload exception: $e');
+      if (kDebugMode) debugPrint('❌ Avatar upload exception: $e');
+
       return {
         'ok': false,
         'error': 'Failed to upload: ${e.toString()}',

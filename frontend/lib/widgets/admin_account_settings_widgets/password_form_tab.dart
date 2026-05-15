@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import 'status_message_banner.dart';
 
-class PasswordFormTab extends StatelessWidget {
+class PasswordFormTab extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController curPassCtrl;
   final TextEditingController newPassCtrl;
@@ -35,6 +35,27 @@ class PasswordFormTab extends StatelessWidget {
     required this.onToggleConf,
     required this.onSave,
   });
+
+  @override
+  State<PasswordFormTab> createState() => _PasswordFormTabState();
+}
+
+class _PasswordFormTabState extends State<PasswordFormTab> {
+  // This helps clean up state evaluations when the parent component changes status
+  bool get _hasUnsavedChanges {
+    return widget.curPassCtrl.text.isNotEmpty ||
+        widget.newPassCtrl.text.isNotEmpty ||
+        widget.confirmPassCtrl.text.isNotEmpty;
+  }
+
+  void _cancelChanges() {
+    setState(() {
+      widget.curPassCtrl.clear();
+      widget.newPassCtrl.clear();
+      widget.confirmPassCtrl.clear();
+      widget.formKey.currentState?.reset();
+    });
+  }
 
   InputDecoration _getFormDecoration(
     BuildContext context,
@@ -73,12 +94,23 @@ class PasswordFormTab extends StatelessWidget {
     );
   }
 
+<<<<<<< HEAD
   Widget _passField(BuildContext context,
           {required TextEditingController controller,
           required String label,
           required bool obscure,
           required VoidCallback onToggle,
           required String? Function(String?) validator}) =>
+=======
+  Widget _passField(
+    BuildContext context, {
+    required TextEditingController controller,
+    required String label,
+    required bool obscure,
+    required VoidCallback onToggle,
+    required String? Function(String?) validator,
+  }) =>
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       TextFormField(
         controller: controller,
         obscureText: obscure,
@@ -98,6 +130,75 @@ class PasswordFormTab extends StatelessWidget {
         ),
       );
 
+  Widget _buildActionButtons(BuildContext context, Color primaryColor) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([widget.curPassCtrl, widget.newPassCtrl, widget.confirmPassCtrl]),
+      builder: (context, child) {
+        if (!_hasUnsavedChanges && !widget.savingPass) {
+          return const SizedBox(height: 28);
+        }
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: widget.savingPass ? null : _cancelChanges,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.internTheme.surfaceText,
+                      side: BorderSide(color: context.internTheme.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'CANCEL',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: widget.savingPass ? null : widget.onSave,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: widget.savingPass
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'CONFIRM PASSWORD',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                letterSpacing: 0.5),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDarkInternTheme;
@@ -111,29 +212,29 @@ class PasswordFormTab extends StatelessWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
             child: Form(
-              key: formKey,
+              key: widget.formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (passMsg != null) ...[
-                    StatusMessageBanner(msg: passMsg!, success: passSuccess),
+                  if (widget.passMsg != null) ...[
+                    StatusMessageBanner(msg: widget.passMsg!, success: widget.passSuccess),
                     const SizedBox(height: 16),
                   ],
                   _passField(
                     context,
-                    controller: curPassCtrl,
+                    controller: widget.curPassCtrl,
                     label: 'Current Password',
-                    obscure: obscureCur,
-                    onToggle: onToggleCur,
+                    obscure: widget.obscureCur,
+                    onToggle: widget.onToggleCur,
                     validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
                   const SizedBox(height: 20),
                   _passField(
                     context,
-                    controller: newPassCtrl,
+                    controller: widget.newPassCtrl,
                     label: 'New Password',
-                    obscure: obscureNew,
-                    onToggle: onToggleNew,
+                    obscure: widget.obscureNew,
+                    onToggle: widget.onToggleNew,
                     validator: (v) {
                       if (v == null || v.length < 8) return 'Min 8 characters';
                       if (!v.contains(RegExp(r'[A-Z]'))) {
@@ -151,15 +252,19 @@ class PasswordFormTab extends StatelessWidget {
                   const SizedBox(height: 20),
                   _passField(
                     context,
-                    controller: confirmPassCtrl,
+                    controller: widget.confirmPassCtrl,
                     label: 'Confirm New Password',
-                    obscure: obscureConf,
-                    onToggle: onToggleConf,
+                    obscure: widget.obscureConf,
+                    onToggle: widget.onToggleConf,
                     validator: (v) {
                       if (v!.isEmpty) return 'Required';
+<<<<<<< HEAD
                       if (v != newPassCtrl.text) {
                         return 'Passwords do not match';
                       }
+=======
+                      if (v != widget.newPassCtrl.text) return 'Passwords do not match';
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
                       return null;
                     },
                   ),
@@ -168,6 +273,7 @@ class PasswordFormTab extends StatelessWidget {
             ),
           ),
         ),
+<<<<<<< HEAD
         Padding(
           padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
           child: SizedBox(
@@ -196,6 +302,9 @@ class PasswordFormTab extends StatelessWidget {
             ),
           ),
         ),
+=======
+        _buildActionButtons(context, primaryColor),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ],
     );
   }

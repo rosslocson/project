@@ -4,7 +4,7 @@ import 'user_account_status_banner.dart';
 
 const _kBlue = Color(0xFF00022E);
 
-class UserProfileTab extends StatelessWidget {
+class UserProfileTab extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController firstCtrl;
   final TextEditingController lastCtrl;
@@ -38,6 +38,58 @@ class UserProfileTab extends StatelessWidget {
     required this.onDeptChanged,
     required this.onSave,
   });
+
+  @override
+  State<UserProfileTab> createState() => _UserProfileTabState();
+}
+
+class _UserProfileTabState extends State<UserProfileTab> {
+  // We store the initial states to compare against current inputs
+  late String _initFirst;
+  late String _initLast;
+  late String _initOjt;
+  String? _initDept;
+
+  @override
+  void initState() {
+    super.initState();
+    _captureInitialState();
+  }
+
+  void _captureInitialState() {
+    _initFirst = widget.firstCtrl.text;
+    _initLast = widget.lastCtrl.text;
+    _initOjt = widget.ojtHoursCtrl.text;
+    _initDept = widget.selectedDept;
+  }
+
+  @override
+  void didUpdateWidget(covariant UserProfileTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the department finishes loading later, update the baseline
+    if (oldWidget.loadingDepts && !widget.loadingDepts) {
+      _initDept = widget.selectedDept;
+    }
+    // If the user successfully saves, update the baseline to the newly saved values
+    if (widget.profileSuccess && !oldWidget.profileSuccess) {
+      _captureInitialState();
+    }
+  }
+
+  bool get _hasUnsavedChanges {
+    return widget.firstCtrl.text != _initFirst ||
+        widget.lastCtrl.text != _initLast ||
+        widget.ojtHoursCtrl.text != _initOjt ||
+        widget.selectedDept != _initDept;
+  }
+
+  void _cancelChanges() {
+    widget.firstCtrl.text = _initFirst;
+    widget.lastCtrl.text = _initLast;
+    widget.ojtHoursCtrl.text = _initOjt;
+    widget.onDeptChanged(_initDept);
+    widget.formKey.currentState?.reset();
+  }
 
   InputDecoration _getFormDecoration(
     BuildContext context,
@@ -158,6 +210,77 @@ class UserProfileTab extends StatelessWidget {
     );
   }
 
+  Widget _buildActionButtons(BuildContext context) {
+    // We use AnimatedBuilder to evaluate button visibility instantly as the user types
+    return AnimatedBuilder(
+      animation: Listenable.merge(
+          [widget.firstCtrl, widget.lastCtrl, widget.ojtHoursCtrl]),
+      builder: (context, child) {
+        if (!_hasUnsavedChanges) {
+          // Empty space maintains your UI layout spacing when hidden
+          return const SizedBox(height: 28);
+        }
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: widget.savingProfile ? null : _cancelChanges,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.internTheme.surfaceText,
+                      side: BorderSide(color: context.internTheme.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'CANCEL',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: widget.savingProfile ? null : widget.onSave,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: widget.savingProfile
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : const Text('SAVE',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                letterSpacing: 0.5)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
@@ -169,19 +292,20 @@ class UserProfileTab extends StatelessWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
             child: Form(
-              key: formKey,
+              key: widget.formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (profileMsg != null) ...[
+                  if (widget.profileMsg != null) ...[
                     UserAccountStatusBanner(
-                        msg: profileMsg!, success: profileSuccess),
+                        msg: widget.profileMsg!,
+                        success: widget.profileSuccess),
                     const SizedBox(height: 16),
                   ],
                   Row(children: [
                     Expanded(
                       child: TextFormField(
-                        controller: firstCtrl,
+                        controller: widget.firstCtrl,
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -193,7 +317,7 @@ class UserProfileTab extends StatelessWidget {
                     const SizedBox(width: 16),
                     Expanded(
                       child: TextFormField(
-                        controller: lastCtrl,
+                        controller: widget.lastCtrl,
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -205,7 +329,7 @@ class UserProfileTab extends StatelessWidget {
                   ]),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: emailCtrl,
+                    controller: widget.emailCtrl,
                     enabled: false,
                     style: TextStyle(
                         fontSize: 14,
@@ -216,21 +340,21 @@ class UserProfileTab extends StatelessWidget {
                         prefixIcon: Icons.email_outlined),
                   ),
                   const SizedBox(height: 16),
-                  loadingDepts
+                  widget.loadingDepts
                       ? _loadingDropdown(context, 'Department')
                       : _dropdownField(
                           context,
                           label: 'Department',
-                          value: selectedDept,
-                          hint: departments.isEmpty
+                          value: widget.selectedDept,
+                          hint: widget.departments.isEmpty
                               ? 'None available'
                               : 'Select Department',
-                          items: departments,
-                          onChanged: onDeptChanged,
+                          items: widget.departments,
+                          onChanged: widget.onDeptChanged,
                         ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: ojtHoursCtrl,
+                    controller: widget.ojtHoursCtrl,
                     keyboardType: TextInputType.number,
                     style: TextStyle(
                         fontSize: 14,
@@ -253,6 +377,7 @@ class UserProfileTab extends StatelessWidget {
             ),
           ),
         ),
+<<<<<<< HEAD
         Padding(
           padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
           child: SizedBox(
@@ -283,6 +408,9 @@ class UserProfileTab extends StatelessWidget {
             ),
           ),
         ),
+=======
+        _buildActionButtons(context),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ],
     );
   }

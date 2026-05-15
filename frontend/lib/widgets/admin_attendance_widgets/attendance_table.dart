@@ -139,19 +139,45 @@ class AttendanceTable extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
           child: r.timeIn != null
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      margin: const EdgeInsets.only(right: 6),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: r.isOnTime
-                            ? const Color(0xFF22C55E)
-                            : const Color(0xFFEF4444),
+              ? Builder(builder: (context) {
+                  // Parse the timeIn string (e.g. "8:20 AM" / "08:05 AM")
+                  // and mark late only at 08:15 or later.
+                  bool isLate = false;
+                  try {
+                    final raw = r.timeIn!.trim().toUpperCase();
+                    final isPm = raw.endsWith('PM');
+                    final digits = raw
+                        .replaceAll('AM', '')
+                        .replaceAll('PM', '')
+                        .trim();
+                    final parts = digits.split(':');
+                    int hour = int.parse(parts[0]);
+                    final minute =
+                        parts.length > 1 ? int.parse(parts[1]) : 0;
+                    if (isPm && hour != 12) hour += 12;
+                    if (!isPm && hour == 12) hour = 0;
+                    // Late if clocked in at 08:15 or later
+                    isLate = hour > 8 || (hour == 8 && minute >= 15);
+                  } catch (_) {
+                    // If parsing fails, fall back to the model flag
+                    isLate = !r.isOnTime;
+                  }
+
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        margin: const EdgeInsets.only(right: 6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isLate
+                              ? const Color(0xFFEF4444)
+                              : const Color(0xFF22C55E),
+                        ),
                       ),
+<<<<<<< HEAD
                     ),
                     Text(
                       r.timeIn!,
@@ -167,6 +193,21 @@ class AttendanceTable extends StatelessWidget {
                 )
               : Text('--',
                   style: TextStyle(fontSize: 13, color: theme.mutedText)),
+=======
+                      Text(
+                        r.timeIn!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          //fontWeight: FontWeight.w600,
+                          color: isLate ? const Color(0xFFDC2626) : kTextMid,
+                        ),
+                      ),
+                    ],
+                  );
+                })
+              : const Text('--',
+                  style: TextStyle(fontSize: 13, color: kTextMid)),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
         ),
 
         _cell(context, r.timeOut ?? '--'),

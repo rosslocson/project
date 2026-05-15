@@ -9,14 +9,21 @@ import '../models/attendance_model.dart';
 import '../services/attendance_service.dart';
 import 'app_theme.dart';
 
+// ── Theme constants matching MyProfileScreen dark blue palette ────────────
+const _kNavy      = Color(0xFF0B132B);   // card dark blue — primary bg
+const _kDeep      = Color(0xFF060A17);   // card darker blue — accents / fills
+const _kAccent    = Color(0xFF4F8EF7);   // bright blue — active states
+const _kBorder    = Color(0xFF1E2D50);   // subtle border
+const _kTextHead  = Color(0xFF0B132B);   // dark headings (on white surface)
+const _kTextSub   = Color(0xFF64748B);   // muted body (on white surface)
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Returns the Monday of the ISO week that [date] belongs to.
 DateTime _weekStart(DateTime date) {
   final d = DateTime(date.year, date.month, date.day);
-  return d.subtract(Duration(days: d.weekday - 1)); // weekday: 1=Mon … 7=Sun
+  return d.subtract(Duration(days: d.weekday - 1));
 }
 
 String _weekKey(DateTime monday) =>
@@ -24,18 +31,8 @@ String _weekKey(DateTime monday) =>
 
 String _monthAbbr(int m) {
   const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
+    'Jan','Feb','Mar','Apr','May','Jun',
+    'Jul','Aug','Sep','Oct','Nov','Dec',
   ];
   return months[m - 1];
 }
@@ -67,13 +64,8 @@ class AttendanceHistoryList extends StatefulWidget {
 }
 
 class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
-  /// Index into [_weeks]; 0 = most recent week.
   int _weekIndex = 0;
-
-  /// Sorted list of week-start Mondays, descending (newest first).
   List<DateTime> _weeks = [];
-
-  /// Map from weekKey → records for that week, sorted Mon→Fri.
   Map<String, List<AttendanceRecord>> _grouped = {};
 
   @override
@@ -155,10 +147,15 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
         border: isDark ? Border.all(color: theme.border) : null,
         boxShadow: [
           BoxShadow(
+<<<<<<< HEAD
             color: isDark
                 ? Colors.black.withValues(alpha: 0.3)
                 : Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
+=======
+            color: _kNavy.withValues(alpha: 0.08),
+            blurRadius: 16,
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
             offset: const Offset(0, 4),
           ),
         ],
@@ -166,35 +163,37 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+          // ── Header ────────────────────────────────────────────────────
+          Container(
+            decoration: const BoxDecoration(
+              color: _kNavy,
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             child: Row(
               children: [
-                Icon(Icons.history_rounded, color: accentColor, size: 20),
+                const Icon(Icons.history_rounded,
+                    color: Colors.white70, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Attendance History',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: theme.surfaceText,
+                    color: Colors.white,
                   ),
                 ),
                 const Spacer(),
                 if (isCurrentWeek)
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.green.withValues(alpha: 0.15)
-                          : Colors.green.shade50,
+                      color: Colors.green.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
-                      border: isDark
-                          ? Border.all(
-                              color: Colors.green.withValues(alpha: 0.3))
-                          : null,
+                      border: Border.all(
+                          color: Colors.green.shade300.withOpacity(0.4)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -202,22 +201,18 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.greenAccent
-                                : Colors.green.shade500,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF4ADE80),
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
+                        const SizedBox(width: 5),
+                        const Text(
                           'This Week',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? Colors.greenAccent
-                                : Colors.green.shade700,
+                            color: Color(0xFF4ADE80),
                           ),
                         ),
                       ],
@@ -228,20 +223,19 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     totalWeeks > 0
                         ? 'Week ${_weekIndex + 1} of $totalWeeks'
                         : '—',
-                    style: TextStyle(fontSize: 12, color: theme.mutedText),
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.white54),
                   ),
               ],
             ),
           ),
 
-          Divider(height: 1, indent: 20, endIndent: 20, color: theme.border),
-
-          // ── Body ────────────────────────────────────────────────────────
+          // ── Body ──────────────────────────────────────────────────────
           if (widget.isLoading)
-            Padding(
-              padding: const EdgeInsets.all(32),
+            const Padding(
+              padding: EdgeInsets.all(32),
               child: Center(
-                child: CircularProgressIndicator(color: accentColor),
+                child: CircularProgressIndicator(color: _kAccent),
               ),
             )
           else if (_weeks.isEmpty)
@@ -262,7 +256,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
               ),
             )
           else ...[
-            // ── Week navigator bar ───────────────────────────────────────
+            // ── Week navigator bar ──────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Row(
@@ -284,7 +278,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: theme.surfaceText,
+                            color: _kTextHead,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -330,7 +324,8 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
             ),
 
             const SizedBox(height: 8),
-            Divider(height: 1, indent: 20, endIndent: 20, color: theme.border),
+            Divider(height: 1, indent: 20, endIndent: 20,
+                color: Colors.grey.shade100),
 
             // ── Day rows ──────────────────────────────────────────────────
             AnimatedSwitcher(
@@ -350,7 +345,8 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
               child: ClipRRect(
                 key: ValueKey<int>(_weekIndex),
                 borderRadius: totalWeeks <= 1
-                    ? const BorderRadius.vertical(bottom: Radius.circular(16))
+                    ? const BorderRadius.vertical(
+                        bottom: Radius.circular(16))
                     : BorderRadius.zero,
                 child: _currentRecords.isEmpty
                     ? Padding(
@@ -358,7 +354,8 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                         child: Center(
                           child: Text(
                             'No records for this week',
-                            style: TextStyle(color: theme.mutedText),
+                            style:
+                                TextStyle(color: Colors.grey.shade400),
                           ),
                         ),
                       )
@@ -366,12 +363,12 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _currentRecords.length,
-                        separatorBuilder: (_, __) =>
-                            Divider(height: 1, indent: 20, color: theme.border),
-                        itemBuilder: (context, i) => _AttendanceRow(
-                          record: _currentRecords[i],
-                          accentColor: accentColor,
-                        ),
+                        separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            indent: 20,
+                            color: Colors.grey.shade100),
+                        itemBuilder: (context, i) =>
+                            _AttendanceRow(record: _currentRecords[i]),
                       ),
               ),
             ),
@@ -392,7 +389,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                         width: active ? 18 : 6,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: active ? accentColor : theme.border,
+                          color: active ? _kAccent : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -439,11 +436,11 @@ class _NavArrow extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.08),
+              color: _kAccent.withOpacity(0.08),
               shape: BoxShape.circle,
-              border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+              border: Border.all(color: _kAccent.withOpacity(0.25)),
             ),
-            child: Icon(icon, size: 18, color: accentColor),
+            child: Icon(icon, size: 18, color: _kAccent),
           ),
         ),
       ),
@@ -473,7 +470,11 @@ class _SummaryChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? color.withValues(alpha: 0.15) : color.shade50,
         borderRadius: BorderRadius.circular(20),
+<<<<<<< HEAD
         border: isDark ? Border.all(color: color.withValues(alpha: 0.3)) : null,
+=======
+        border: Border.all(color: color.shade200),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ),
       child: Text(
         label,
@@ -541,21 +542,20 @@ class _AttendanceRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          // ── Date badge ─────────────────────────────────────────────────
+          // ── Date tile ──────────────────────────────────────────────
           Container(
             width: 44,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: _isAbsent
-                  ? (isDark ? theme.metricCardBackground : Colors.grey.shade100)
-                  : accentColor.withValues(alpha: isDark ? 0.15 : 0.07),
+                  ? Colors.grey.shade100
+                  : _kNavy.withOpacity(0.07),
               borderRadius: BorderRadius.circular(10),
-              border: isDark
-                  ? Border.all(
-                      color: _isAbsent
-                          ? theme.border
-                          : accentColor.withValues(alpha: 0.25))
-                  : null,
+              border: Border.all(
+                color: _isAbsent
+                    ? Colors.grey.shade200
+                    : _kBorder.withOpacity(0.4),
+              ),
             ),
             child: Column(
               children: [
@@ -563,7 +563,7 @@ class _AttendanceRow extends StatelessWidget {
                   _monthAbbr(record.date.month),
                   style: TextStyle(
                     fontSize: 10,
-                    color: _isAbsent ? theme.mutedText : accentColor,
+                    color: _isAbsent ? Colors.grey.shade400 : _kAccent,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -572,7 +572,7 @@ class _AttendanceRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: _isAbsent ? theme.mutedText : accentColor,
+                    color: _isAbsent ? Colors.grey.shade400 : _kNavy,
                     height: 1.1,
                   ),
                 ),
@@ -581,7 +581,7 @@ class _AttendanceRow extends StatelessWidget {
           ),
           const SizedBox(width: 14),
 
-          // ── Day name + times ───────────────────────────────────────────
+          // ── Day + times ────────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,7 +591,7 @@ class _AttendanceRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: _isAbsent ? theme.mutedText : theme.surfaceText,
+                    color: _isAbsent ? Colors.grey.shade400 : _kTextHead,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -602,8 +602,11 @@ class _AttendanceRow extends StatelessWidget {
                           size: 12, color: theme.mutedText),
                       const SizedBox(width: 4),
                       Text(
-                        record.timeIn != null ? _fmtTime(record.timeIn!) : '--',
-                        style: TextStyle(fontSize: 12, color: theme.mutedText),
+                        record.timeIn != null
+                            ? _fmtTime(record.timeIn!)
+                            : '--',
+                        style: const TextStyle(
+                            fontSize: 12, color: _kTextSub),
                       ),
                       const SizedBox(width: 10),
                       Icon(
@@ -622,7 +625,7 @@ class _AttendanceRow extends StatelessWidget {
                           fontSize: 12,
                           color: _isMissedClockOut
                               ? Colors.red.shade400
-                              : theme.mutedText,
+                              : _kTextSub,
                           fontWeight: _isMissedClockOut
                               ? FontWeight.w600
                               : FontWeight.normal,
@@ -633,13 +636,14 @@ class _AttendanceRow extends StatelessWidget {
                 else
                   Text(
                     'No clock-in recorded',
-                    style: TextStyle(fontSize: 12, color: theme.mutedText),
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade400),
                   ),
               ],
             ),
           ),
 
-          // ── Hours + status ─────────────────────────────────────────────
+          // ── Hours + status ─────────────────────────────────────────
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -647,12 +651,13 @@ class _AttendanceRow extends StatelessWidget {
                 _isAbsent
                     ? '0h 00m'
                     : ((record.hoursWorked ?? record.hoursRendered) != null
-                        ? _fmtHours(record.hoursWorked ?? record.hoursRendered!)
+                        ? _fmtHours(
+                            record.hoursWorked ?? record.hoursRendered!)
                         : '--'),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: _isAbsent ? theme.mutedText : theme.surfaceText,
+                  color: _isAbsent ? Colors.grey.shade400 : _kTextHead,
                 ),
               ),
               const SizedBox(height: 4),
@@ -697,13 +702,8 @@ class _AttendanceRow extends StatelessWidget {
 
   String _dayName(int wd) {
     const days = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
+      'Monday','Tuesday','Wednesday','Thursday',
+      'Friday','Saturday','Sunday',
     ];
     return days[wd - 1];
   }
@@ -757,8 +757,13 @@ class _StatusBadge extends StatelessWidget {
       label = 'Complete';
       icon = Icons.check_circle_rounded;
     } else if (isOngoing) {
+<<<<<<< HEAD
       bg = isDark ? Colors.blue.withValues(alpha: 0.15) : Colors.blue.shade50;
       fg = isDark ? Colors.lightBlueAccent : Colors.blue.shade700;
+=======
+      bg = _kAccent.withOpacity(0.1);
+      fg = _kAccent;
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       label = 'On Shift';
       icon = Icons.timelapse_rounded;
     } else if (isReported) {
@@ -787,7 +792,11 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
+<<<<<<< HEAD
         border: isDark ? Border.all(color: fg.withValues(alpha: 0.3)) : null,
+=======
+        border: Border.all(color: fg.withOpacity(0.3)),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -796,8 +805,8 @@ class _StatusBadge extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             label,
-            style:
-                TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
+            style: TextStyle(
+                fontSize: 10, fontWeight: FontWeight.w700, color: fg),
           ),
         ],
       ),
@@ -869,10 +878,12 @@ class _ReportButtonState extends State<_ReportButton> {
               ? 'Report submitted. Admin will review your record.'
               : res['error'] ?? 'Failed to submit report.',
         ),
-        backgroundColor:
-            res['ok'] == true ? Colors.green.shade700 : Colors.red.shade700,
+        backgroundColor: res['ok'] == true
+            ? Colors.green.shade700
+            : Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -889,12 +900,19 @@ class _ReportButtonState extends State<_ReportButton> {
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
           color: _submitting
+<<<<<<< HEAD
               ? (isDark
                   ? Colors.orange.withValues(alpha: 0.15)
                   : Colors.orange.shade50)
               : accent.withValues(alpha: isDark ? 0.12 : 0.07),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: accent.withValues(alpha: 0.25)),
+=======
+              ? _kAccent.withOpacity(0.08)
+              : _kNavy.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _kAccent.withOpacity(0.35)),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -905,18 +923,30 @@ class _ReportButtonState extends State<_ReportButton> {
                 height: 10,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
+<<<<<<< HEAD
                   color: accent.withValues(alpha: 0.6),
                 ),
               )
             else
               Icon(Icons.flag_rounded, size: 10, color: accent),
+=======
+                  color: _kAccent.withOpacity(0.7),
+                ),
+              )
+            else
+              const Icon(Icons.flag_rounded, size: 10, color: _kAccent),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
             const SizedBox(width: 4),
             Text(
               _submitting ? 'Submitting…' : _buttonLabel,
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
+<<<<<<< HEAD
                 color: accent,
+=======
+                color: _kAccent,
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
               ),
             ),
           ],
@@ -999,6 +1029,7 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< HEAD
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
     final accent = widget.accentColor;
@@ -1027,10 +1058,27 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
       ),
       content: Form(
         key: _formKey,
+=======
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: _kNavy.withOpacity(0.15),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+<<<<<<< HEAD
             Text(
               _bodyText,
               style: TextStyle(
@@ -1082,10 +1130,154 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
                 }
                 return null;
               },
+=======
+            // ── Dark header ──────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              decoration: const BoxDecoration(
+                color: _kNavy,
+                borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Icon(_icon, color: _kAccent, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Body ────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _bodyText,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          color: _kTextSub,
+                          height: 1.5),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Reason',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _kTextHead,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: _ctrl,
+                      maxLines: 3,
+                      maxLength: 300,
+                      autofocus: true,
+                      style: const TextStyle(
+                          fontSize: 13, color: _kTextHead),
+                      decoration: InputDecoration(
+                        hintText: _hint,
+                        hintStyle: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade400),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.all(12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide:
+                              BorderSide(color: Colors.grey.shade200),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide:
+                              BorderSide(color: Colors.grey.shade200),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                              color: _kAccent, width: 1.5),
+                        ),
+                        counterStyle: TextStyle(
+                            fontSize: 10, color: Colors.grey.shade400),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().length < 5) {
+                          return 'Please enter at least 5 characters.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Actions ─────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _kTextSub,
+                    ),
+                    child: const Text('Cancel',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (_formKey.currentState?.validate() ?? false) {
+                        Navigator.pop(context, _ctrl.text.trim());
+                      }
+                    },
+                    icon: const Icon(Icons.send_rounded, size: 15),
+                    label: const Text('Submit Report'),
+                    style: ButtonStyle(
+                      backgroundColor:
+                          WidgetStateProperty.resolveWith((states) =>
+                              states.contains(WidgetState.disabled)
+                                  ? _kAccent.withOpacity(0.4)
+                                  : _kAccent),
+                      foregroundColor:
+                          WidgetStateProperty.all(Colors.white),
+                      elevation: WidgetStateProperty.all(0),
+                      padding: WidgetStateProperty.all(
+                        const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 11),
+                      ),
+                      shape: WidgetStateProperty.all(
+                        RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
             ),
           ],
         ),
       ),
+<<<<<<< HEAD
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
@@ -1108,6 +1300,8 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           ),
         ),
       ],
+=======
+>>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
     );
   }
 }

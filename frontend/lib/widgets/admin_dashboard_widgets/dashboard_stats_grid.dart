@@ -30,38 +30,38 @@ class DashboardStatsGrid extends StatelessWidget {
           children: [
             _buildGlowingCard(
               child: StatCard(
-                title: 'Total Users',
-                value: '${stats?['total_users'] ?? 0}',
-                icon: Icons.people,
+                title: 'Total Interns',
+                value: '${stats?['total_interns'] ?? 0}',
+                icon: Icons.school,
                 color: const Color(0xFF0A1425),
-                subtitle: 'Registered accounts',
+                subtitle: 'Registered interns',
               ),
             ),
             _buildGlowingCard(
               child: StatCard(
-                title: 'Active Users',
-                value: '${stats?['active_users'] ?? 0}',
+                title: 'Present',
+                value: '${stats?['present_count'] ?? 0}',
                 icon: Icons.check_circle,
                 color: const Color(0xFF0A1425),
-                subtitle: 'Currently active',
+                subtitle: 'Present today',
               ),
             ),
             _buildGlowingCard(
               child: StatCard(
-                title: 'Admins',
-                value: '${stats?['admin_users'] ?? 0}',
-                icon: Icons.admin_panel_settings,
+                title: 'Absent',
+                value: '${stats?['absent_count'] ?? 0}',
+                icon: Icons.cancel,
                 color: const Color(0xFF0A1425),
-                subtitle: 'Administrator accounts',
+                subtitle: 'Absent today',
               ),
             ),
             _buildGlowingCard(
               child: StatCard(
-                title: 'Inactive',
-                value: '${stats?['new_users'] ?? 0}',
-                icon: Icons.person_off,
+                title: 'Late',
+                value: '${stats?['late_count'] ?? 0}',
+                icon: Icons.watch_later,
                 color: const Color(0xFF0A1425),
-                subtitle: 'Inactive accounts',
+                subtitle: 'Late arrivals today',
               ),
             ),
           ],

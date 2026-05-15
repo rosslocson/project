@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -16,124 +17,132 @@ class AdminSidebar extends StatelessWidget {
     final isAdmin = auth.isAdmin;
     final theme = context.internTheme;
     
-    // Determine if the current theme is dark mode
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: 250,
+      width: 270,
       decoration: BoxDecoration(
-        color: theme.sidebarBackground,
+        color: theme.sidebarBackground.withOpacity(isDarkMode ? 0.4 : 0.8),
         border: Border(
-          right: BorderSide(color: theme.border),
+          right: BorderSide(
+            color: theme.border.withOpacity(0.15),
+            width: 1,
+          ),
         ),
       ),
-      child: Column(
-        children: [
-          // Logo / brand & Close Button
-          Padding(
-            padding: const EdgeInsets.only(left: 20, top: 48, right: 20, bottom: 32),
-            child: Row(
-              children: [
-                Transform.scale(
-                  scale: 1.3,
-                  child: IndexedStack(
-                    index: isDarkMode ? 0 : 1,
-                    children: [
-                      Image.asset(
-                        'assets/images/logo_file.png', 
-                        height: 40,
-                        width: 48,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.public, color: theme.sidebarText, size: 24);
-                        },
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Logo & Close Button Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 16, 32),
+                child: Row(
+                  children: [
+                    IndexedStack(
+                      index: isDarkMode ? 0 : 1,
+                      children: [
+                        Image.asset(
+                          'assets/images/logo_file.png', 
+                          height: 44,
+                          width: 44,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Icon(Icons.public, color: theme.sidebarText, size: 34),
+                        ),
+                        Image.asset(
+                          'assets/images/logo_file_lightmode.png',
+                          height: 44,
+                          width: 44,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Icon(Icons.public, color: theme.sidebarText, size: 34),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'InternSpace',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: theme.sidebarText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                      Image.asset(
-                        'assets/images/logo_file_lightmode.png',
-                        height: 40,
-                        width: 48,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.public, color: theme.sidebarText, size: 24);
-                        },
+                    ),
+                    _CloseButton(onClose: onClose),
+                  ],
+                ),
+              ),
+
+              // Navigation Links
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    const _SectionLabel('Menu'),
+                    _NavItem(
+                      icon: Icons.grid_view_rounded,
+                      label: 'Dashboard',
+                      route: '/dashboard',
+                      current: currentRoute,
+                    ),
+                    _NavItem(
+                      icon: Icons.settings_outlined,
+                      label: 'Account Settings',
+                      route: '/admin/account-settings',
+                      current: currentRoute,
+                    ),
+                    
+                    if (isAdmin) ...[
+                      const SizedBox(height: 32),
+                      const _SectionLabel('Administration'),
+                      _NavItem(
+                        icon: Icons.manage_accounts_outlined,
+                        label: 'User Management',
+                        route: '/users',
+                        current: currentRoute,
+                      ),
+                      _NavItem(
+                        icon: Icons.business_outlined,
+                        label: 'Departments',
+                        route: '/config',
+                        current: currentRoute,
+                      ),
+                      _NavItem(
+                        icon: Icons.punch_clock_outlined,
+                        label: 'Attendance',
+                        route: '/admin/attendance',
+                        current: currentRoute,
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'InternSpace',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: theme.sidebarText,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
+              ),
 
-                _CloseButton(onClose: onClose),
-              ],
-            ),
-          ),
-
-          // Nav items
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                const _SectionLabel('MENU'),
-                _NavItem(
-                  icon: Icons.grid_view_rounded,
-                  label: 'Dashboard',
-                  route: '/dashboard',
-                  current: currentRoute,
-                ),
-                _NavItem(
-                  icon: Icons.settings_outlined,
-                  label: 'Account Settings',
-                  route: '/admin/account-settings',
-                  current: currentRoute,
-                ),
-                // Admin specific section
-                if (isAdmin) ...[
-                  const SizedBox(height: 16),
-                  const _SectionLabel('ADMINISTRATION'),
-                  _NavItem(
-                    icon: Icons.manage_accounts_outlined,
-                    label: 'User Management',
-                    route: '/users',
-                    current: currentRoute,
+              // Footer / Sign Out with thin line
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Divider(
+                    color: theme.border.withOpacity(0.15),
+                    height: 1,
+                    thickness: 3,
                   ),
-                  _NavItem(
-                    icon: Icons.business_outlined,
-                    label: 'Departments',
-                    route: '/config',
-                    current: currentRoute,
-                  ),
-                  _NavItem(
-                    icon: Icons.punch_clock_outlined,
-                    label: 'Attendance',
-                    route: '/admin/attendance',
-                    current: currentRoute,
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8, bottom: 16),
+                    child: _SignOutButton(),
                   ),
                 ],
-              ],
-            ),
-          ),
-
-          // Sign out
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Divider(color: theme.border, height: 1),
-              const _SignOutButton(),
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -164,47 +173,89 @@ class _NavItemState extends State<_NavItem> {
     final active = widget.current == widget.route;
     final theme = context.internTheme;
     
-    // Universal hover effect code for both light and dark modes
-    final hoverColor = theme.sidebarText.withOpacity(0.08);
-
     return MouseRegion(
       cursor: active ? SystemMouseCursors.basic : SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: active 
-              ? theme.sidebarActiveBackground 
-              : (_isHovered ? hoverColor : Colors.transparent),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        // Disables native Material splash/highlight effects
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-          ),
-          child: ListTile(
-            dense: true,
-            hoverColor: Colors.transparent, 
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-            leading: Icon(
-              widget.icon,
-              size: 20,
-              color: active ? theme.sidebarActiveForeground : theme.sidebarText,
-            ),
-            title: Text(
-              widget.label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                color: active ? theme.sidebarActiveForeground : theme.sidebarText,
+      child: GestureDetector(
+        onTap: active ? null : () => context.go(widget.route),
+        child: Container(
+          height: 48,
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          child: Stack(
+            children: [
+              if (active)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          theme.sidebarActiveBackground.withOpacity(0.15),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                  ),
+                ),
+              
+              if (active)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      color: theme.sidebarActiveBackground,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(4),
+                        bottomRight: Radius.circular(4),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.sidebarActiveBackground.withOpacity(0.6),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                left: (_isHovered && !active) ? 32.0 : 28.0,
+                top: 0,
+                bottom: 0,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      widget.icon,
+                      size: 20,
+                      color: active 
+                          ? theme.sidebarActiveForeground 
+                          : theme.sidebarText.withOpacity(_isHovered ? 0.9 : 0.5),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                        color: active 
+                            ? theme.sidebarActiveForeground 
+                            : theme.sidebarText.withOpacity(_isHovered ? 0.9 : 0.5),
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            onTap: active ? null : () => context.go(widget.route),
+            ],
           ),
         ),
       ),
@@ -221,14 +272,14 @@ class _SectionLabel extends StatelessWidget {
     final theme = context.internTheme;
 
     return Padding(
-      padding: const EdgeInsets.only(left: 20, top: 16, bottom: 12),
+      padding: const EdgeInsets.only(left: 28, top: 16, bottom: 16),
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: theme.sidebarMutedText,
-          letterSpacing: 1.0,
+          color: theme.sidebarMutedText.withOpacity(0.7),
+          letterSpacing: 2.0,
         ),
       ),
     );
@@ -248,8 +299,6 @@ class _SignOutButtonState extends State<_SignOutButton> {
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
-    // Universal hover effect code for both light and dark modes
-    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -268,18 +317,35 @@ class _SignOutButtonState extends State<_SignOutButton> {
           }
         },
         child: Container(
-          color: _isHovered ? hoverColor : Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Row(
+          height: 48,
+          color: Colors.transparent,
+          child: Stack(
             children: [
-              Icon(Icons.logout_rounded, color: theme.sidebarText, size: 22),
-              const SizedBox(width: 16),
-              Text(
-                'Log Out',
-                style: TextStyle(
-                  color: theme.sidebarText,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                left: _isHovered ? 32.0 : 28.0,
+                top: 0,
+                bottom: 0,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.logout_rounded, 
+                      color: _isHovered ? Colors.redAccent : theme.sidebarText.withOpacity(0.5), 
+                      size: 20
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Log Out',
+                      style: TextStyle(
+                        color: _isHovered ? Colors.redAccent : theme.sidebarText.withOpacity(0.5),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -304,8 +370,6 @@ class _CloseButtonState extends State<_CloseButton> {
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
-    // Universal hover effect code for both light and dark modes
-    final hoverColor = theme.sidebarText.withOpacity(0.08);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -313,16 +377,17 @@ class _CloseButtonState extends State<_CloseButton> {
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: widget.onClose,
-        child: Container(
-          padding: const EdgeInsets.all(8.0),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(6.0),
           decoration: BoxDecoration(
-            color: _isHovered ? hoverColor : Colors.transparent,
-            shape: BoxShape.circle,
+            color: _isHovered ? theme.sidebarText.withOpacity(0.08) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
-            Icons.close_rounded,
-            color: theme.sidebarText,
-            size: 20,
+            Icons.menu_open_rounded,
+            color: theme.sidebarText.withOpacity(_isHovered ? 1.0 : 0.5),
+            size: 22,
           ),
         ),
       ),

@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:crop_your_image/crop_your_image.dart';
-import 'package:image/image.dart' as img;
+
+import '../services/image_processing_service.dart';
 
 class AvatarCropScreen extends StatefulWidget {
+
+
   final Uint8List imageBytes;
   final String? fileName;
 
@@ -17,54 +20,27 @@ class _AvatarCropScreenState extends State<AvatarCropScreen> {
   final CropController _controller = CropController();
   bool _isSaving = false;
 
-  /// Compress and resize image for faster upload
-  /// - Max dimension: 512x512
-  /// - Quality: 85% JPEG compression
-  /// - Reduces file size by ~70-80%
   Future<Uint8List> _compressImage(Uint8List imageBytes) async {
     try {
-      // Decode the image
-      final image = img.decodeImage(imageBytes);
-      if (image == null) return imageBytes;
-
-      // Resize to max 512x512 while maintaining aspect ratio
-      int size = 512;
-      int newWidth = image.width;
-      int newHeight = image.height;
-
-      if (newWidth > size || newHeight > size) {
-        if (newWidth > newHeight) {
-          newHeight = (size * newHeight) ~/ newWidth;
-          newWidth = size;
-        } else {
-          newWidth = (size * newWidth) ~/ newHeight;
-          newHeight = size;
-        }
-      }
-
-      final resized = img.copyResize(image, width: newWidth, height: newHeight);
-
-      // Encode as JPEG with 85% quality for compression
-      final compressed = img.encodeJpg(resized, quality: 85);
-      debugPrint('🗜️ Compressed: ${imageBytes.length} → ${compressed.length} bytes (${((1 - compressed.length / imageBytes.length) * 100).toStringAsFixed(1)}% reduction)');
-      
-      return Uint8List.fromList(compressed);
+      return await ImageProcessingService.resizeAndCompressJpg(
+        bytes: imageBytes,
+        maxSide: 512,
+        quality: 85,
+      );
     } catch (e) {
       debugPrint('⚠️ Compression failed, using original: $e');
       return imageBytes;
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    //print("Crop screen opened with ${widget.imageBytes.length} bytes");
-  }
+
+
 
   void _cropImage() {
     if (_isSaving) return;
+    
+    // Start the loading spinner
     setState(() => _isSaving = true);
-    //print("🖼️ Crop button pressed");
     _controller.crop();
   }
 
@@ -95,21 +71,20 @@ class _AvatarCropScreenState extends State<AvatarCropScreen> {
                 withCircleUi: true,
                 aspectRatio: 1.0,
                 onCropped: (croppedData) async {
-                  setState(() => _isSaving = false);
+                  // 🚨 REMOVED: setState(() => _isSaving = false);
+                  // We keep _isSaving = true so the spinner continues while compressing!
+                  
                   try {
-                    //print("✂️ Image cropped: ${croppedData.length} bytes");
-                    
-                    // Compress for faster upload
+                    // Compress in the background (off UI thread)
                     final compressed = await _compressImage(croppedData);
-                    
-                    //print("📦 Compressed to ${compressed.length} bytes");
-                    //print("🔙 Returning optimized bytes");
-                    if (mounted) {
-                      Navigator.pop(context, compressed);
-                    }
+                    if (!mounted) return;
+                    // Return compressed bytes to caller
+                    Navigator.pop(context, compressed);
                   } catch (e) {
-                    //print("❌ Error cropping image: $e");
+
                     if (mounted) {
+                      // Only stop the loading spinner if an error occurs
+                      setState(() => _isSaving = false);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error cropping image: $e'),

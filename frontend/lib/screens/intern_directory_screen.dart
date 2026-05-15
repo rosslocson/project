@@ -30,11 +30,11 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
   late Animation<Matrix4> _mapAnimation;
 
   final double _perspectiveRatio = 0.35; 
-  double _canvasWidth = 3000.0;
-  double _canvasHeight = 2000.0;
+  double _canvasWidth = 4000.0;
+  double _canvasHeight = 2800.0;
 
-  final List<double> _orbitRadiiX = [300.0, 550.0, 850.0, 1200.0, 1600.0];
-  final List<int> _orbitCapacities = [6, 12, 24, 36, 50];
+  final List<double> _orbitRadiiX = [450.0, 800.0, 1200.0, 1650.0, 2150.0];
+  final List<int> _orbitCapacities = [5, 10, 18, 30, 45];
 
   @override
   void initState() {
@@ -72,11 +72,11 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
         loaded.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         _interns = loaded;
         _filteredInterns = loaded;
-        if (_interns.length > 128) {
-          _orbitRadiiX.add(2000.0);
-          _orbitCapacities.add(80);
-          _canvasWidth = 4500.0;
-          _canvasHeight = 3000.0;
+        if (_interns.length > 108) {
+          _orbitRadiiX.add(2700.0);
+          _orbitCapacities.add(60);
+          _canvasWidth = 5500.0;
+          _canvasHeight = 3500.0;
         }
         _loading = false;
       });
@@ -96,10 +96,13 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
       if (query.isEmpty) {
         _filteredInterns = _interns;
       } else {
-        _filteredInterns = _interns.where((intern) =>
-          intern.name.toLowerCase().contains(query) ||
-          intern.internNumber.toLowerCase().contains(query)
-        ).toList();
+        _filteredInterns = _interns.where((intern) {
+          final nameMatch = intern.name.toLowerCase().contains(query);
+          final numberMatch = intern.internNumber.toLowerCase().contains(query);
+          final schoolMatch = intern.school.toLowerCase().contains(query); 
+
+          return nameMatch || numberMatch || schoolMatch;
+        }).toList();
       }
     });
   }
@@ -128,6 +131,18 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     } else {
       _transformationController.value = targetMatrix;
     }
+  }
+
+  // DYNAMIC SCALING LOGIC
+  // Calculates size multiplier based on current number of visible users
+  double get _currentScaleFactor {
+    int count = _filteredInterns.length;
+    if (count == 0) return 1.0;
+    if (count <= 10) return 1.5;   // Very few users -> Much larger
+    if (count <= 25) return 1.25;  // Few users -> Slightly larger
+    if (count <= 50) return 1.0;   // Normal amount -> Base size
+    if (count <= 80) return 0.85;  // Many users -> Slightly smaller
+    return 0.7;                    // Crowded -> Smallest size
   }
 
   @override
@@ -360,6 +375,9 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     List<Widget> planets = [];
     final double centerX = _canvasWidth / 2;
     final double centerY = _canvasHeight / 2;
+    
+    // Retrieve the calculated scale factor based on current users
+    final double scaleFactor = _currentScaleFactor;
     int currentInternIndex = 0;
 
     for (int ringIndex = 0; ringIndex < _orbitRadiiX.length; ringIndex++) {
@@ -377,12 +395,14 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
 
         planets.add(
           Positioned(
-            left: x - 60,
-            top: y - 140,
+            // Apply scale factor to positioning offsets so cards stay centered on the orbit ring
+            left: x - (80 * scaleFactor), 
+            top: y - (160 * scaleFactor),
             child: OrbitalPlanetNode(
               intern: _filteredInterns[currentInternIndex], 
               ringIndex: ringIndex,
               isDark: isDark,
+              scaleFactor: scaleFactor, // Pass scale to the node
             ),
           ),
         );
@@ -425,12 +445,10 @@ class CentralSun extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Eclipse/Fiery colors for Dark Mode
     const Color fieryRed = Color(0xFFD50000);
     const Color coronaYellow = Color(0xFFFFD600);
     const Color ambientPurple = Color(0xFF6200EA);
     
-    // Light mode bright colors
     const Color sunYellow = Color(0xFFFFF176);
     const Color paleYellow = Color(0xFFFFF9C4);
     const Color coreWhite = Colors.white;
@@ -441,7 +459,6 @@ class CentralSun extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 1. Ambient Background Glow (Removed in Light mode to prevent "dark shadow")
           if (isDark)
             Container(
               width: 490,
@@ -457,7 +474,6 @@ class CentralSun extends StatelessWidget {
               ),
             ),
           
-          // 2. Outer Flare Aura (Removed in Light mode to prevent "smudging")
           if (isDark)
             Container(
               width: 450,
@@ -474,7 +490,6 @@ class CentralSun extends StatelessWidget {
               ),
             ),
 
-          // 3. Corona/Halo Ring (Bright yellow glow)
           Container(
             width: 210,
             height: 210,
@@ -495,7 +510,6 @@ class CentralSun extends StatelessWidget {
             ),
           ),
 
-          // 4. THE CORE
           Container(
             width: 195,
             height: 195,
@@ -525,8 +539,15 @@ class OrbitalPlanetNode extends StatelessWidget {
   final InternProfile intern;
   final int ringIndex;
   final bool isDark;
+  final double scaleFactor;
 
-  const OrbitalPlanetNode({super.key, required this.intern, required this.ringIndex, required this.isDark});
+  const OrbitalPlanetNode({
+    super.key, 
+    required this.intern, 
+    required this.ringIndex, 
+    required this.isDark,
+    required this.scaleFactor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -539,6 +560,10 @@ class OrbitalPlanetNode extends StatelessWidget {
     ];
     Color accentColor = accents[ringIndex % accents.length];
 
+    // Ensure text doesn't become impossibly small to read
+    final double titleFontSize = math.max(12 * scaleFactor, 8.0);
+    final double subFontSize = math.max(9 * scaleFactor, 6.0);
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -547,26 +572,30 @@ class OrbitalPlanetNode extends StatelessWidget {
         );
       },
       child: SizedBox(
-        width: 120,
-        height: 160,
+        // Apply scaling to the container size
+        width: 160 * scaleFactor,
+        height: 180 * scaleFactor,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(8 * scaleFactor),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 4 * scaleFactor, 
+                    vertical: 6 * scaleFactor
+                  ),
                   decoration: BoxDecoration(
                     color: isDark ? Colors.black.withOpacity(0.4) : Colors.white.withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(8 * scaleFactor),
                     border: Border(
-                      bottom: BorderSide(color: accentColor.withOpacity(0.8), width: 2),
+                      bottom: BorderSide(color: accentColor.withOpacity(0.8), width: 2 * scaleFactor),
                     ),
                     boxShadow: isDark ? [] : [
-                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: Offset(0, 4 * scaleFactor))
                     ],
                   ),
                   child: Column(
@@ -575,18 +604,19 @@ class OrbitalPlanetNode extends StatelessWidget {
                         intern.name,
                         style: TextStyle(
                           color: isDark ? Colors.white : const Color(0xFF00022E),
-                          fontSize: 12,
+                          fontSize: titleFontSize,
                           fontWeight: FontWeight.bold,
                         ),
-                        maxLines: 1,
+                        maxLines: 2, 
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                       ),
+                      SizedBox(height: 2 * scaleFactor),
                       Text(
                         intern.internNumber,
                         style: TextStyle(
                           color: isDark ? Colors.white54 : const Color(0xFF6B7280),
-                          fontSize: 9,
+                          fontSize: subFontSize,
                         ),
                       ),
                     ],
@@ -594,39 +624,41 @@ class OrbitalPlanetNode extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12 * scaleFactor),
             Stack(
               alignment: Alignment.center,
               children: [
+                // Outer glow scales dynamically
                 Container(
-                  width: 54,
-                  height: 54,
+                  width: 54 * scaleFactor,
+                  height: 54 * scaleFactor,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
                         color: accentColor.withOpacity(isDark ? 0.4 : 0.2),
-                        blurRadius: 15,
-                        spreadRadius: 2,
+                        blurRadius: 15 * scaleFactor,
+                        spreadRadius: 2 * scaleFactor,
                       ),
                     ],
                   ),
                 ),
+                // Inner ring scales dynamically
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 50 * scaleFactor,
+                  height: 50 * scaleFactor,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: accentColor.withOpacity(0.8), width: 1.5),
+                    border: Border.all(color: accentColor.withOpacity(0.8), width: 1.5 * scaleFactor),
                   ),
                   child: ClipOval(
                     child: Container(
                       color: isDark ? const Color(0xFF141526) : Colors.white,
                       child: InternAvatar(
                         intern: intern,
-                        size: 50,
-                        borderRadius: 25,
-                        fontSize: 20,
+                        size: 50 * scaleFactor,
+                        borderRadius: 25 * scaleFactor,
+                        fontSize: 20 * scaleFactor,
                       ),
                     ),
                   ),
@@ -634,8 +666,8 @@ class OrbitalPlanetNode extends StatelessWidget {
               ],
             ),
             Container(
-              height: 20,
-              width: 1,
+              height: 20 * scaleFactor,
+              width: 1 * scaleFactor,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
