@@ -20,19 +20,19 @@ class AdminSidebar extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: 270, // Slightly wider for a breathable, clean layout
+      width: 270,
       decoration: BoxDecoration(
-        color: theme.sidebarBackground.withOpacity(isDarkMode ? 0.4 : 0.8), // Glassmorphism base
+        color: theme.sidebarBackground.withOpacity(isDarkMode ? 0.4 : 0.8),
         border: Border(
           right: BorderSide(
-            color: theme.border.withOpacity(0.15), // Very subtle separator
+            color: theme.border.withOpacity(0.15),
             width: 1,
           ),
         ),
       ),
       child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16), // Blurs the starry background
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -46,15 +46,15 @@ class AdminSidebar extends StatelessWidget {
                       children: [
                         Image.asset(
                           'assets/images/logo_file.png', 
-                          height: 44, // Increased from 36
-                          width: 44,  // Increased from 36
+                          height: 44,
+                          width: 44,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) => Icon(Icons.public, color: theme.sidebarText, size: 34),
                         ),
                         Image.asset(
                           'assets/images/logo_file_lightmode.png',
-                          height: 44, // Increased from 36
-                          width: 44,  // Increased from 36
+                          height: 44,
+                          width: 44,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) => Icon(Icons.public, color: theme.sidebarText, size: 34),
                         ),
@@ -100,7 +100,7 @@ class AdminSidebar extends StatelessWidget {
                     ),
                     
                     if (isAdmin) ...[
-                      const SizedBox(height: 32), // Increased spacing before the Administration section
+                      const SizedBox(height: 32),
                       const _SectionLabel('Administration'),
                       _NavItem(
                         icon: Icons.manage_accounts_outlined,
@@ -125,10 +125,20 @@ class AdminSidebar extends StatelessWidget {
                 ),
               ),
 
-              // Footer / Sign Out
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: _SignOutButton(),
+              // Footer / Sign Out with thin line
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Divider(
+                    color: theme.border.withOpacity(0.15),
+                    height: 1,
+                    thickness: 3,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8, bottom: 16),
+                    child: _SignOutButton(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -171,10 +181,9 @@ class _NavItemState extends State<_NavItem> {
         onTap: active ? null : () => context.go(widget.route),
         child: Container(
           height: 48,
-          margin: const EdgeInsets.symmetric(vertical: 6), // Increased vertical spacing between items
+          margin: const EdgeInsets.symmetric(vertical: 6),
           child: Stack(
             children: [
-              // Active Background Gradient Fade
               if (active)
                 Positioned.fill(
                   child: Container(
@@ -191,7 +200,6 @@ class _NavItemState extends State<_NavItem> {
                   ),
                 ),
               
-              // Glowing Edge Indicator
               if (active)
                 Positioned(
                   left: 0,
@@ -216,11 +224,10 @@ class _NavItemState extends State<_NavItem> {
                   ),
                 ),
 
-              // Content with Hover Shift
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
-                left: (_isHovered && !active) ? 32.0 : 28.0, // Smooth slide right on hover
+                left: (_isHovered && !active) ? 32.0 : 28.0,
                 top: 0,
                 bottom: 0,
                 child: Row(
@@ -242,7 +249,7 @@ class _NavItemState extends State<_NavItem> {
                         color: active 
                             ? theme.sidebarActiveForeground 
                             : theme.sidebarText.withOpacity(_isHovered ? 0.9 : 0.5),
-                        letterSpacing: 0.6, // Increased letter spacing for the items
+                        letterSpacing: 0.6,
                       ),
                     ),
                   ],
@@ -265,14 +272,14 @@ class _SectionLabel extends StatelessWidget {
     final theme = context.internTheme;
 
     return Padding(
-      padding: const EdgeInsets.only(left: 28, top: 16, bottom: 16), // Increased vertical padding
+      padding: const EdgeInsets.only(left: 28, top: 16, bottom: 16),
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: theme.sidebarMutedText.withOpacity(0.7), // Increased opacity from 0.4 to 0.7
-          letterSpacing: 2.0, // Increased letter spacing from 1.5 to 2.0
+          color: theme.sidebarMutedText.withOpacity(0.7),
+          letterSpacing: 2.0,
         ),
       ),
     );
@@ -335,7 +342,7 @@ class _SignOutButtonState extends State<_SignOutButton> {
                         color: _isHovered ? Colors.redAccent : theme.sidebarText.withOpacity(0.5),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        letterSpacing: 0.6, // Also added letter spacing here for consistency
+                        letterSpacing: 0.6,
                       ),
                     ),
                   ],
@@ -378,7 +385,7 @@ class _CloseButtonState extends State<_CloseButton> {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
-            Icons.menu_open_rounded, // Mirrors the aesthetic of a top-left hamburger menu
+            Icons.menu_open_rounded,
             color: theme.sidebarText.withOpacity(_isHovered ? 1.0 : 0.5),
             size: 22,
           ),
