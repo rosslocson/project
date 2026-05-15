@@ -22,6 +22,10 @@ class UserEditProfileScreen extends StatefulWidget {
 class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     with TickerProviderStateMixin {
   late TabController _tabs;
+  // Separate scroll controllers for each tab to bridge scroll updates to the screen edge
+  late ScrollController _academicScrollController;
+  late ScrollController _skillsScrollController;
+
   // Sidebar open state is controlled by SidebarProvider to match GlassTopBar hamburger behavior.
   // ignore: unused_field
   final bool _sidebarVisible = true;
@@ -142,6 +146,10 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    _tabs.addListener(_handleTabChange);
+    
+    _academicScrollController = ScrollController();
+    _skillsScrollController = ScrollController();
 
     final user = context.read<AuthProvider>().user ?? {};
 
@@ -166,9 +174,18 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     _loadConfig();
   }
 
+  void _handleTabChange() {
+    if (!mounted) return;
+    // Forces outer Scrollbar to update its reference to the newly active ScrollController
+    setState(() {});
+  }
+
   @override
   void dispose() {
+    _tabs.removeListener(_handleTabChange);
     _tabs.dispose();
+    _academicScrollController.dispose();
+    _skillsScrollController.dispose();
     for (final c in [
       _schoolCtrl,
       _programCtrl,
@@ -353,6 +370,10 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Select the appropriate controller based on the current visible tab layout
+    final activeScrollController =
+        _tabs.index == 0 ? _academicScrollController : _skillsScrollController;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Row(
@@ -392,265 +413,299 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                   ),
                   const SizedBox(height: 15),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 100, right: 100, bottom: 28),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: context.internTheme.metricCardBackground,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: context.internTheme.shadowColor,
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: _initialLoading
-                              ? const Center(
-                                  child: CircularProgressIndicator(
-                                      color: kCrimsonDeep))
-                              : Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    if (_successMsg != null)
-                                      EditProfileStatusBanner(
-                                        msg: _successMsg!,
-                                        success: true,
-                                        onClose: () =>
-                                            setState(() => _successMsg = null),
-                                      ),
-                                    if (_errorMsg != null)
-                                      EditProfileStatusBanner(
-                                        msg: _errorMsg!,
-                                        success: false,
-                                        onClose: () =>
-                                            setState(() => _errorMsg = null),
-                                      ),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                            bottom: BorderSide(
-                                                color: context
-                                                    .internTheme.border)),
-                                      ),
-                                      child: TabBar(
-                                        controller: _tabs,
-                                        labelColor:
-                                            context.internTheme.surfaceText,
-                                        unselectedLabelColor:
-                                            context.internTheme.mutedText,
-                                        indicatorColor: kCrimsonDeep,
-                                        indicatorWeight: 3,
-                                        dividerColor: Colors.transparent,
-                                        tabs: [
-                                          Tab(
-                                            iconMargin: const EdgeInsets.only(
-                                                bottom: 4),
-                                            icon: const Icon(
-                                                Icons.school_outlined,
-                                                size: 18),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Text('Academic Info'),
-                                                if (_academicTabInvalid) ...[
-                                                  const SizedBox(width: 6),
-                                                  Container(
-                                                    width: 18,
-                                                    height: 18,
-                                                    decoration:
-                                                        const BoxDecoration(
-                                                      color: Colors.redAccent,
-                                                      shape: BoxShape.circle,
+                    child: Scrollbar(
+                      controller: activeScrollController,
+                      thumbVisibility: true, // Forces display at the edge of the screen layout
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                            left: 100, right: 100, bottom: 28),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: context.internTheme.metricCardBackground,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: context.internTheme.shadowColor,
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: _initialLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                        color: kCrimsonDeep))
+                                : Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      if (_successMsg != null)
+                                        EditProfileStatusBanner(
+                                          msg: _successMsg!,
+                                          success: true,
+                                          onClose: () => setState(
+                                              () => _successMsg = null),
+                                        ),
+                                      if (_errorMsg != null)
+                                        EditProfileStatusBanner(
+                                          msg: _errorMsg!,
+                                          success: false,
+                                          onClose: () =>
+                                              setState(() => _errorMsg = null),
+                                        ),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                              bottom: BorderSide(
+                                                  color: context
+                                                      .internTheme.border)),
+                                        ),
+                                        child: TabBar(
+                                          controller: _tabs,
+                                          labelColor: context
+                                              .internTheme.surfaceText,
+                                          unselectedLabelColor:
+                                              context.internTheme.mutedText,
+                                          indicatorColor: kCrimsonDeep,
+                                          indicatorWeight: 3,
+                                          dividerColor: Colors.transparent,
+                                          tabs: [
+                                            Tab(
+                                              iconMargin: const EdgeInsets.only(
+                                                  bottom: 4),
+                                              icon: const Icon(
+                                                  Icons.school_outlined,
+                                                  size: 18),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Text('Academic Info'),
+                                                  if (_academicTabInvalid) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      width: 18,
+                                                      height: 18,
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                        color:
+                                                            Colors.redAccent,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      alignment:
+                                                          Alignment.center,
+                                                      child: const Text(
+                                                        '!',
+                                                        style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 12,
+                                                            height: 1.1,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                      ),
                                                     ),
-                                                    alignment: Alignment.center,
-                                                    child: const Text(
-                                                      '!',
-                                                      style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 12,
-                                                          height: 1.1,
-                                                          fontWeight:
-                                                              FontWeight.bold),
-                                                    ),
-                                                  ),
-                                                ]
-                                              ],
-                                            ),
-                                          ),
-                                          Tab(
-                                            iconMargin: const EdgeInsets.only(
-                                                bottom: 4),
-                                            icon: const Icon(
-                                                Icons.stars_outlined,
-                                                size: 18),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Text('Skills'),
-                                                if (_skillsTabInvalid) ...[
-                                                  const SizedBox(width: 6),
-                                                  Container(
-                                                    width: 18,
-                                                    height: 18,
-                                                    decoration:
-                                                        const BoxDecoration(
-                                                      color: Colors.redAccent,
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    alignment: Alignment.center,
-                                                    child: const Text(
-                                                      '!',
-                                                      style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 12,
-                                                          height: 1.1,
-                                                          fontWeight:
-                                                              FontWeight.bold),
-                                                    ),
-                                                  ),
-                                                ]
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: TabBarView(
-                                        controller: _tabs,
-                                        children: [
-                                          AcademicInfoTab(
-                                            key: ValueKey(
-                                                'academic-$_formResetVersion'),
-                                            formKey: _academicKey,
-                                            departments: _departments,
-                                            selectedDept: _selectedDept,
-                                            defaultPosition: _defaultPosition,
-                                            schoolCtrl: _schoolCtrl,
-                                            programCtrl: _programCtrl,
-                                            specCtrl: _specCtrl,
-                                            yearCtrl: _yearCtrl,
-                                            internNumCtrl: _internNumCtrl,
-                                            startCtrl: _startCtrl,
-                                            endCtrl: _endCtrl,
-                                            onDeptChanged: (v) {
-                                              setState(() => _selectedDept = v);
-                                              _handleProfileFieldChanged();
-                                            },
-                                            onPickStart: () =>
-                                                _pickDate(_startCtrl),
-                                            onPickEnd: () =>
-                                                _pickDate(_endCtrl),
-                                            onChanged:
-                                                _handleProfileFieldChanged,
-                                            requiredHours: _requiredHours,
-                                          ),
-                                          SkillsProfileTab(
-                                            key: ValueKey(
-                                                'skills-$_formResetVersion'),
-                                            formKey: _skillsKey,
-                                            bioCtrl: _bioCtrl,
-                                            techSkillsCtrl: _techSkillsCtrl,
-                                            softSkillsCtrl: _softSkillsCtrl,
-                                            linkedinCtrl: _linkedinCtrl,
-                                            githubCtrl: _githubCtrl,
-                                            onChanged:
-                                                _handleProfileFieldChanged,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Modified Buttons Block
-                                    if (_hasUnsavedChanges)
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                            40, 0, 40, 28),
-                                        child: Row(
-                                          children: [
-                                            Expanded(
-                                              child: SizedBox(
-                                                height: 48,
-                                                child: OutlinedButton(
-                                                  onPressed: _saving
-                                                      ? null
-                                                      : _cancelChanges,
-                                                  style:
-                                                      OutlinedButton.styleFrom(
-                                                    foregroundColor: context
-                                                        .internTheme
-                                                        .surfaceText,
-                                                    side: BorderSide(
-                                                        color: context
-                                                            .internTheme
-                                                            .border),
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    'CANCEL CHANGES',
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w800,
-                                                        fontSize: 15,
-                                                        letterSpacing: 0.8),
-                                                  ),
-                                                ),
+                                                  ]
+                                                ],
                                               ),
                                             ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: SizedBox(
-                                                height: 48,
-                                                child: ElevatedButton(
-                                                  onPressed:
-                                                      _saving ? null : _save,
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: kCrimsonDeep,
-                                                    foregroundColor: Colors.white,
-                                                    shape: RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                                12)),
-                                                    elevation: 0,
-                                                  ),
-                                                  child: _saving
-                                                      ? const SizedBox(
-                                                          height: 20,
-                                                          width: 20,
-                                                          child:
-                                                              CircularProgressIndicator(
-                                                                  color: Colors
-                                                                      .white,
-                                                                  strokeWidth: 2),
-                                                        )
-                                                      : const Text(
-                                                          'SAVE CHANGES',
-                                                          style: TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight.w800,
-                                                              fontSize: 15,
-                                                              letterSpacing: 0.8),
-                                                        ),
-                                                ),
+                                            Tab(
+                                              iconMargin: const EdgeInsets.only(
+                                                  bottom: 4),
+                                              icon: const Icon(
+                                                  Icons.stars_outlined,
+                                                  size: 18),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Text('Skills'),
+                                                  if (_skillsTabInvalid) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      width: 18,
+                                                      height: 18,
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                        color:
+                                                            Colors.redAccent,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      alignment:
+                                                          Alignment.center,
+                                                      child: const Text(
+                                                        '!',
+                                                        style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 12,
+                                                            height: 1.1,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                      ),
+                                                    ),
+                                                  ]
+                                                ],
                                               ),
                                             ),
                                           ],
                                         ),
-                                      )
-                                    else
-                                      const SizedBox(height: 28), // Retains bottom spacing for the tab view
-                                  ],
-                                ),
+                                      ),
+                                      Expanded(
+                                        child: ScrollConfiguration(
+                                          // Strips away native internal card scrollbars
+                                          behavior: ScrollConfiguration.of(context)
+                                              .copyWith(scrollbars: false),
+                                          child: TabBarView(
+                                            controller: _tabs,
+                                            children: [
+                                              PrimaryScrollController(
+                                                controller: _academicScrollController,
+                                                child: AcademicInfoTab(
+                                                  key: ValueKey(
+                                                      'academic-$_formResetVersion'),
+                                                  formKey: _academicKey,
+                                                  departments: _departments,
+                                                  selectedDept: _selectedDept,
+                                                  defaultPosition:
+                                                      _defaultPosition,
+                                                  schoolCtrl: _schoolCtrl,
+                                                  programCtrl: _programCtrl,
+                                                  specCtrl: _specCtrl,
+                                                  yearCtrl: _yearCtrl,
+                                                  internNumCtrl: _internNumCtrl,
+                                                  startCtrl: _startCtrl,
+                                                  endCtrl: _endCtrl,
+                                                  onDeptChanged: (v) {
+                                                    setState(() =>
+                                                        _selectedDept = v);
+                                                    _handleProfileFieldChanged();
+                                                  },
+                                                  onPickStart: () =>
+                                                      _pickDate(_startCtrl),
+                                                  onPickEnd: () =>
+                                                      _pickDate(_endCtrl),
+                                                  onChanged:
+                                                      _handleProfileFieldChanged,
+                                                  requiredHours: _requiredHours,
+                                                ),
+                                              ),
+                                              PrimaryScrollController(
+                                                controller: _skillsScrollController,
+                                                child: SkillsProfileTab(
+                                                  key: ValueKey(
+                                                      'skills-$_formResetVersion'),
+                                                  formKey: _skillsKey,
+                                                  bioCtrl: _bioCtrl,
+                                                  techSkillsCtrl:
+                                                      _techSkillsCtrl,
+                                                  softSkillsCtrl:
+                                                      _softSkillsCtrl,
+                                                  linkedinCtrl: _linkedinCtrl,
+                                                  githubCtrl: _githubCtrl,
+                                                  onChanged:
+                                                      _handleProfileFieldChanged,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      // Modified Buttons Block
+                                      if (_hasUnsavedChanges)
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                              40, 0, 40, 28),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: SizedBox(
+                                                  height: 48,
+                                                  child: OutlinedButton(
+                                                    onPressed: _saving
+                                                        ? null
+                                                        : _cancelChanges,
+                                                    style: OutlinedButton
+                                                        .styleFrom(
+                                                      foregroundColor: context
+                                                          .internTheme
+                                                          .surfaceText,
+                                                      side: BorderSide(
+                                                          color: context
+                                                              .internTheme
+                                                              .border),
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(12),
+                                                      ),
+                                                    ),
+                                                    child: const Text(
+                                                      'CANCEL CHANGES',
+                                                      style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          fontSize: 15,
+                                                          letterSpacing: 0.8),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: SizedBox(
+                                                  height: 48,
+                                                  child: ElevatedButton(
+                                                    onPressed: _saving
+                                                        ? null
+                                                        : _save,
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      backgroundColor:
+                                                          kCrimsonDeep,
+                                                      foregroundColor:
+                                                          Colors.white,
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          12)),
+                                                      elevation: 0,
+                                                    ),
+                                                    child: _saving
+                                                        ? const SizedBox(
+                                                            height: 20,
+                                                            width: 20,
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    strokeWidth:
+                                                                        2),
+                                                          )
+                                                        : const Text(
+                                                            'SAVE CHANGES',
+                                                            style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w800,
+                                                                fontSize: 15,
+                                                                letterSpacing:
+                                                                    0.8),
+                                                          ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      else
+                                        const SizedBox(height: 28),
+                                    ],
+                                  ),
+                          ),
                         ),
                       ),
                     ),
