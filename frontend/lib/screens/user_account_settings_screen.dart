@@ -1,5 +1,6 @@
-import 'dart:async';
 import 'dart:io';
+
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
@@ -12,9 +13,14 @@ import '../providers/sidebar_provider.dart';
 import '../widgets/app_background.dart';
 import '../services/api_service.dart';
 import '../widgets/avatar_action_dialog.dart';
+import 'package:image/image.dart' as img;
+
 import '../widgets/user_layout.dart';
 import '../widgets/app_theme.dart';
 import 'avatar_crop_screen.dart';
+
+import '../services/image_processing_service.dart';
+
 
 // ── Imported Extracted Widgets ──
 import '../widgets/user_account_settings_widgets/user_profile_tab.dart';
@@ -65,6 +71,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   final ImagePicker _picker = ImagePicker();
   Uint8List? _localAvatarBytes;
   File? _avatarFile;
+
 
   @override
   void initState() {
@@ -136,8 +143,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       if (pickedFile == null) return;
 
       final pickedFileBytes = await pickedFile.readAsBytes();
+      // Pre-downscale BEFORE opening crop UI to ensure the crop screen opens instantly
+      // and does not decode huge bitmaps on the UI thread.
+      final preDownscaledBytes = await ImageProcessingService.resizeAndCompressJpg(
+        bytes: pickedFileBytes,
+        maxSide: 1024,
+        quality: 85,
+      );
+
+
       final mimeType =
-          lookupMimeType(pickedFile.name, headerBytes: pickedFileBytes);
+          lookupMimeType(pickedFile.name, headerBytes: preDownscaledBytes);
+
 
       if (mimeType == null || !mimeType.startsWith('image/')) {
         if (mounted) {
@@ -156,8 +173,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
         MaterialPageRoute(
-          builder: (_) => AvatarCropScreen(
-            imageBytes: pickedFileBytes,
+builder: (_) => AvatarCropScreen(
+            // Use pre-downscaled bytes so crop opens fast.
+            imageBytes: preDownscaledBytes,
             fileName: pickedFile.name,
           ),
         ),
@@ -170,24 +188,13 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         _isUploadingAvatar = true;
       });
 
-      final XFile uploadFile;
-      if (kIsWeb) {
-        uploadFile = XFile.fromData(
-          croppedBytes,
-          name: pickedFile.name.isNotEmpty ? pickedFile.name : 'avatar.jpg',
-        );
-      } else {
-        final tempFile =
-            File('${(await getTemporaryDirectory()).path}/cropped_avatar.jpg');
-        await tempFile.writeAsBytes(croppedBytes);
-        if (!mounted) return;
+      // Upload directly from bytes (avoid extra temp file write + extra read).
+      // Keep existing local preview via `_localAvatarBytes`.
+      final uploadFile = XFile.fromData(
+        croppedBytes,
+        name: pickedFile.name.isNotEmpty ? pickedFile.name : 'avatar.jpg',
+      );
 
-        setState(() {
-          _avatarFile = tempFile;
-          _localAvatarBytes = null;
-        });
-        uploadFile = XFile(tempFile.path);
-      }
 
       final res = await ApiService.uploadAvatar(uploadFile);
       if (!mounted) return;

@@ -409,15 +409,29 @@ func compressImage(imageBytes []byte) ([]byte, error) {
 }
 
 func resizeImage(src image.Image, newWidth, newHeight int) image.Image {
+	// Faster resizing: do nearest-neighbor scaling with direct pixel sampling.
+	// This avoids per-pixel Set() overhead patterns by keeping a minimal loop.
+	// Note: Still CPU-bound, but significantly faster than the previous dst.Set-heavy approach.
+	// If you need even more speed, switch to a dedicated imaging library.
 	srcBounds := src.Bounds()
 	srcWidth := srcBounds.Dx()
 	srcHeight := srcBounds.Dy()
+
 	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
 	for y := 0; y < newHeight; y++ {
+		srcY := (y * srcHeight) / newHeight
 		for x := 0; x < newWidth; x++ {
 			srcX := (x * srcWidth) / newWidth
-			srcY := (y * srcHeight) / newHeight
-			dst.Set(x, y, src.At(srcBounds.Min.X+srcX, srcBounds.Min.Y+srcY))
+			c := src.At(srcBounds.Min.X+srcX, srcBounds.Min.Y+srcY)
+			r, g, b, a := c.RGBA()
+			dx := x * 4
+			dy := y * dst.Stride
+			_ = dy
+			// rgba in 16-bit; convert to 8-bit
+			dst.Pix[dy+dx+0] = uint8(r >> 8)
+			dst.Pix[dy+dx+1] = uint8(g >> 8)
+			dst.Pix[dy+dx+2] = uint8(b >> 8)
+			dst.Pix[dy+dx+3] = uint8(a >> 8)
 		}
 	}
 	return dst
@@ -501,21 +515,15 @@ func (h *Handler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated user"})
-		return
-	}
-	user.EstimatedEndDate = computeEstimatedEndDate(user.StartDate, user.RequiredOjtHours)
-	user.AvatarURL = normalizeAvatarURL(c, user.AvatarURL)
-
 	h.logActivity(userID, "AVATAR_UPLOAD", "Avatar uploaded: "+filename, c.ClientIP())
 
+	// Minimal JSON payload keeps avatar update fast.
+	// Client only needs the new `avatar_url` for an instant UI refresh.
 	c.JSON(http.StatusOK, gin.H{
 		"message":    "Avatar uploaded successfully",
-		"user":       user,
-		"avatar_url": user.AvatarURL,
+		"avatar_url": avatarURL,
 	})
+
 }
 
 func (h *Handler) RemoveAvatar(c *gin.Context) {
