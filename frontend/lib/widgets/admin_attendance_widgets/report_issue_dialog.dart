@@ -127,10 +127,10 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
                 // Drag handle
                 Center(
                   child: Container(
-                    width: 40,
+                    width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4F8EF7).withOpacity(0.5),
+                      color: _kBorderBlue,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -245,8 +245,7 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
                   maxLines: 3,
                   maxLength: 300,
                   style: const TextStyle(
-                      fontSize: 13, color: Colors.white),
-                  cursorColor: _kAccentBlue,
+                      fontSize: 13, color: _kTextPrimary),
                   decoration: InputDecoration(
                     hintText: 'Describe the issue in detail…',
                     hintStyle: const TextStyle(
@@ -285,24 +284,16 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
                 // Submit button
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
+                  child: FilledButton(
                     onPressed: _submitting ? null : _submit,
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.resolveWith(
-                        (states) => states.contains(WidgetState.disabled)
-                            ? _kAccentBlue.withOpacity(0.35)
-                            : _kAccentBlue,
-                      ),
-                      foregroundColor:
-                          WidgetStateProperty.all(Colors.white),
-                      overlayColor: WidgetStateProperty.all(
-                          Colors.white.withOpacity(0.08)),
-                      elevation: WidgetStateProperty.all(0),
-                      shape: WidgetStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _kAccentBlue,
+                      disabledBackgroundColor:
+                          _kAccentBlue.withOpacity(0.4),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: _submitting
@@ -310,7 +301,8 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
                             height: 18,
                             width: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2,
+                                color: Colors.white),
                           )
                         : const Text(
                             'Submit Report',

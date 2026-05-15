@@ -701,7 +701,6 @@ class _PendingBellState extends State<_PendingBell>
   void initState() {
     super.initState();
 
-    // Subtle shake animation when new reports arrive
     _shakeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -729,30 +728,37 @@ class _PendingBellState extends State<_PendingBell>
     setState(() => _loading = true);
 
     final res = await AdminAttendanceService.fetchPendingReports();
+    debugPrint(
+        '🔔 Bell fetch: ok=${res['ok']}, count=${(res['records'] as List?)?.length ?? 0}');
+
     if (!mounted) return;
 
     final prev = _pending.length;
+
     setState(() {
       _pending = res['ok'] == true
-          ? (res['records'] as List<AdminAttendanceRecord>)
+          ? (res['records'] as List<AdminAttendanceRecord>? ?? [])
           : [];
       _loading = false;
     });
 
-    // Shake if count increased
     if (_pending.length > prev) {
       _shakeCtrl.forward(from: 0);
     }
   }
 
-  void _openPanel(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+  // FIX: Store the root navigator context at bell-open time so the panel
+  //      and its tiles can show ReviewReportSheet on top of everything,
+  //      rather than trying to push inside the bottom-sheet sub-tree.
+  void _openPanel(BuildContext rootCtx) {
+    showDialog(
+      context: rootCtx,
+      useRootNavigator: true,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (_) => _PendingPanel(
-        records: _pending,
-        onResolved: () {
+        initialRecords: _pending,
+        rootContext: rootCtx,
+        onRecordResolved: () {
           reload();
           widget.onResolved?.call();
         },
@@ -781,7 +787,8 @@ class _PendingBellState extends State<_PendingBell>
           ? '$count pending ${count == 1 ? 'report' : 'reports'}'
           : 'No pending reports',
       child: GestureDetector(
-        onTap: hasReports ? () => _openPanel(context) : null,
+        // Pass context (Scaffold-level) as root context.
+        onTap: () => _openPanel(context),
         child: AnimatedBuilder(
           animation: _shakeAnim,
           builder: (_, child) => Transform.translate(
@@ -846,126 +853,202 @@ class _PendingBellState extends State<_PendingBell>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// _PendingPanel — draggable bottom sheet listing all pending reports
+// _PendingPanel — draggable bottom sheet listing all pending reports.
+// StatefulWidget so it can refresh its own list in-place after each resolve
+// without closing and re-opening.
+//
+// FIX: Accepts rootContext so _PendingTile can open ReviewReportSheet using
+//      a context that lives above the bottom-sheet route, preventing the
+//      "Navigator operation requested with a context that does not include a
+//      Navigator" error and ensuring the review sheet stacks correctly.
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _PendingPanel extends StatelessWidget {
-  final List<AdminAttendanceRecord> records;
-  final VoidCallback? onResolved;
+class _PendingPanel extends StatefulWidget {
+  final List<AdminAttendanceRecord> initialRecords;
+  final VoidCallback? onRecordResolved;
+  /// A context rooted at the Scaffold / root navigator — used by tiles to
+  /// open ReviewReportSheet on top of this bottom sheet.
+  final BuildContext rootContext;
 
-  const _PendingPanel({required this.records, this.onResolved});
+  const _PendingPanel({
+    required this.initialRecords,
+    required this.rootContext,
+    this.onRecordResolved,
+  });
+
+  @override
+  State<_PendingPanel> createState() => _PendingPanelState();
+}
+
+class _PendingPanelState extends State<_PendingPanel> {
+  late List<AdminAttendanceRecord> _records;
+  bool _refreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _records = List<AdminAttendanceRecord>.from(widget.initialRecords);
+  }
+
+  /// Refreshes the list in-place — panel stays open.
+  Future<void> _refresh() async {
+    if (!mounted) return;
+    setState(() => _refreshing = true);
+
+    final res = await AdminAttendanceService.fetchPendingReports();
+    debugPrint(
+        '📋 Panel refresh: ok=${res['ok']}, count=${(res['records'] as List<AdminAttendanceRecord>?)?.length ?? 0}');
+
+    if (!mounted) return;
+
+    setState(() {
+      _records = res['ok'] == true
+          ? (res['records'] as List<AdminAttendanceRecord>? ?? [])
+          : [];
+      _refreshing = false;
+    });
+  }
+
+  void _onTileResolved() {
+    _refresh();
+    widget.onRecordResolved?.call();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      maxChildSize: 0.95,
-      minChildSize: 0.4,
-      builder: (_, ctrl) => Container(
-        decoration: const BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    final screenHeight = MediaQuery.of(context).size.height;
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: screenHeight * 0.78,
         ),
-        child: Column(
-          children: [
-            // ── Drag handle ─────────────────────────────────────────────
-            const SizedBox(height: 12),
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ── Header ──────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFDE68A),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.pending_actions_rounded,
-                        color: Color(0xFF92400E), size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Pending Reports (${records.length})',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: kTextDark,
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF4F4F8),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.close, size: 16, color: kTextMid),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-
-            // ── List ────────────────────────────────────────────────────
-            Expanded(
-              child: records.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle_outline_rounded,
-                              size: 40, color: Color(0xFF22C55E)),
-                          SizedBox(height: 12),
-                          Text(
-                            'All caught up!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: kTextDark,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'No pending reports to review.',
-                            style: TextStyle(fontSize: 12, color: kTextMid),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      controller: ctrl,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      itemCount: records.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (ctx, i) => _PendingTile(
-                        record: records[i],
-                        onResolved: () {
-                          Navigator.pop(context);
-                          onResolved?.call();
-                        },
-                      ),
-                    ),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 32,
+              offset: const Offset(0, 8),
             ),
           ],
+        ),
+        child: Material(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDE68A),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.pending_actions_rounded,
+                          color: Color(0xFF92400E), size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Pending Reports (${_records.length})',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: kTextDark,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (_refreshing)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: _refresh,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF4F4F8),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.refresh_rounded,
+                              size: 16, color: kTextMid),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F4F8),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.close,
+                            size: 16, color: kTextMid),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // List
+              Flexible(
+                child: _records.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_outline_rounded,
+                                size: 40, color: Color(0xFF22C55E)),
+                            SizedBox(height: 12),
+                            Text(
+                              'All caught up!',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: kTextDark,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'No pending reports to review.',
+                              style: TextStyle(fontSize: 12, color: kTextMid),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        itemCount: _records.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) => _PendingTile(
+                          record: _records[i],
+                          rootContext: widget.rootContext,
+                          onResolved: _onTileResolved,
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -979,18 +1062,23 @@ class _PendingPanel extends StatelessWidget {
 class _PendingTile extends StatelessWidget {
   final AdminAttendanceRecord record;
   final VoidCallback? onResolved;
+  /// Root-level context for opening ReviewReportSheet above the bottom sheet.
+  final BuildContext rootContext;
 
-  const _PendingTile({required this.record, this.onResolved});
+  const _PendingTile({
+    required this.record,
+    required this.rootContext,
+    this.onResolved,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: () => ReviewReportSheet.show(
-        context,
+        rootContext,
         record,
         onResolved: onResolved,
       ),
-      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -1022,7 +1110,9 @@ class _PendingTile extends StatelessWidget {
                           ),
                         ),
                       ),
-                      StatusBadge(status: record.status),
+                      IntrinsicWidth(
+                        child: StatusBadge(status: record.status),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -1057,7 +1147,7 @@ class _PendingTile extends StatelessWidget {
 
             const SizedBox(width: 8),
 
-            // Chevron + "Review" label
+            // Review label + icon
             const Column(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -89,15 +89,24 @@ class AdminAttendanceService {
   }
 
   // ── Fetch pending reports ──────────────────────────────────────────────────
+  // FIX: Removed the stray ?status=pending query param (backend ignores it,
+  //      but it caused confusion). The real fix is the correct list cast below.
   static Future<Map<String, dynamic>> fetchPendingReports() async {
     try {
-      final uri = Uri.parse(
-          '${ApiService.baseUrl}/admin/attendance/reports?status=pending');
+      final uri =
+          Uri.parse('${ApiService.baseUrl}/admin/attendance/reports');
       final res = await http.get(uri, headers: await ApiService.authHeaders());
+
+      debugPrint('🔔 RAW STATUS: ${res.statusCode}');
+      debugPrint('🔔 RAW BODY: ${res.body}');
+
       final body = jsonDecode(res.body) as Map<String, dynamic>;
 
       if (body['ok'] == true) {
-        final records = (body['records'] as List? ?? [])
+        // FIX: was `res['records'] as List<AdminAttendanceRecord>` which
+        //      silently throws a cast exception at runtime because the list
+        //      comes back as List<dynamic>.  Cast each element individually.
+        final records = (body['records'] as List<dynamic>? ?? [])
             .map((e) =>
                 AdminAttendanceRecord.fromJson(e as Map<String, dynamic>))
             .toList();
@@ -105,11 +114,12 @@ class AdminAttendanceService {
       }
       return {'ok': false, 'error': body['error'] ?? 'Unknown error'};
     } catch (e) {
+      debugPrint('🔔 fetchPendingReports error: $e');
       return {'ok': false, 'error': 'Connection error: $e'};
     }
   }
 
-  // ── Resolve an attendance issue (the ONE resolve method) ──────────────────
+  // ── Resolve an attendance issue ────────────────────────────────────────────
   // resolution: 'set_timeout' | 'excuse' | 'mark_present' | 'adjust_timein' | 'no_action'
   // timeOut / adjustedTimeIn formatted as "HH:MM" (24-hour) — matches backend.
   static Future<Map<String, dynamic>> resolveAttendanceIssue({
@@ -132,7 +142,6 @@ class AdminAttendanceService {
       };
 
       final res = await http.post(
-        // ← POST, not PATCH
         Uri.parse('${ApiService.baseUrl}/admin/attendance/$recordId/resolve'),
         headers: await ApiService.authHeaders(),
         body: jsonEncode(body),
@@ -143,7 +152,9 @@ class AdminAttendanceService {
     }
   }
 
-// Add this back to AdminAttendanceService
+  // ── Update admin remark ────────────────────────────────────────────────────
+  // FIX: was sending 'admin_note' but the backend Go struct expects 'remark'.
+  //   Backend: var body struct { Remark string `json:"remark"` }
   static Future<Map<String, dynamic>> updateRemark(
     int recordId,
     String remark,
@@ -152,9 +163,7 @@ class AdminAttendanceService {
       final res = await http.patch(
         Uri.parse('${ApiService.baseUrl}/admin/attendance/$recordId/remark'),
         headers: await ApiService.authHeaders(),
-        body: jsonEncode({
-          'admin_note': remark
-        }), // ← was 'remark', must match backend column
+        body: jsonEncode({'remark': remark}), // FIX: was 'admin_note'
       );
       return ApiService.parse(res);
     } catch (e) {

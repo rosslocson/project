@@ -581,11 +581,34 @@ func formatClockTime(t time.Time) string {
 }
 
 func (h *Handler) GetDashboardStats(c *gin.Context) {
-	// ── Counts ────────────────────────────────────────────────────────────
-	var totalUsers, activeUsers, adminUsers int64
-	h.DB.Model(&models.User{}).Count(&totalUsers)
-	h.DB.Model(&models.User{}).Where("is_active = true").Count(&activeUsers)
-	h.DB.Model(&models.User{}).Where("role = ?", models.RoleAdmin).Count(&adminUsers)
+	today := time.Now().Local().Format("2006-01-02")
+
+	// ── Intern counts ─────────────────────────────────────────────────────
+	var totalInterns int64
+	h.DB.Model(&models.User{}).
+		Where("role = ? AND is_archived = ?", models.RoleUser, false).
+		Count(&totalInterns)
+
+		// ── Today's attendance stats (derived from actual data) ───────────────
+		// Present: clocked in today (time_in is not null)
+		// Present: clocked in at or before 8:15 AM today
+	var presentCount int64
+	h.DB.Model(&models.Attendance{}).
+		Where("date = ? AND time_in IS NOT NULL AND EXTRACT(HOUR FROM time_in AT TIME ZONE 'Asia/Manila') * 60 + EXTRACT(MINUTE FROM time_in AT TIME ZONE 'Asia/Manila') <= 495", today).
+		Count(&presentCount)
+
+	// Late: clocked in after 8:15 AM today (8:16 AM onwards)
+	var lateCount int64
+	h.DB.Model(&models.Attendance{}).
+		Where("date = ? AND time_in IS NOT NULL AND EXTRACT(HOUR FROM time_in AT TIME ZONE 'Asia/Manila') * 60 + EXTRACT(MINUTE FROM time_in AT TIME ZONE 'Asia/Manila') > 495", today).
+		Count(&lateCount)
+
+	// Absent: total interns minus those who clocked in at all today
+	var clockedInToday int64
+	h.DB.Model(&models.Attendance{}).
+		Where("date = ? AND time_in IS NOT NULL", today).
+		Count(&clockedInToday)
+	absentCount := totalInterns - clockedInToday
 
 	// ── Pagination params ─────────────────────────────────────────────────
 	pageStr := c.DefaultQuery("page", "1")
@@ -600,27 +623,28 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 	}
 	offset := (page - 1) * limit
 
-	// ── Recent users (paginated) ──────────────────────────────────────────
-	var totalUserCount int64
-	h.DB.Model(&models.User{}).Count(&totalUserCount)
-	totalPages := int((totalUserCount + int64(limit) - 1) / int64(limit))
+	// ── Recent interns (paginated) ────────────────────────────────────────
+	var totalInternCount int64
+	h.DB.Model(&models.User{}).
+		Where("role = ? AND is_archived = ?", models.RoleUser, false).
+		Count(&totalInternCount)
+	totalPages := int((totalInternCount + int64(limit) - 1) / int64(limit))
 	if totalPages == 0 {
 		totalPages = 1
 	}
 
 	var recentUsers []models.User
-	h.DB.Order("created_at desc").Limit(limit).Offset(offset).Find(&recentUsers)
+	h.DB.Where("role = ? AND is_archived = ?", models.RoleUser, false).
+		Order("created_at desc").Limit(limit).Offset(offset).Find(&recentUsers)
 
-	// ── Recent logs (small preview, not paginated) ────────────────────────
+	// ── Recent logs ───────────────────────────────────────────────────────
 	var recentLogs []models.ActivityLog
 	h.DB.Preload("User").Order("created_at desc").Limit(10).Find(&recentLogs)
 
-	// ── Weekly activity logs ──────────────────────────────────────────────
+	// ── Weekly logs (activity + clock in/out) ─────────────────────────────
 	now := time.Now().Local()
 	sevenDaysAgo := now.AddDate(0, 0, -7)
 	tomorrow := now.AddDate(0, 0, 1).Add(time.Hour)
-
-	fmt.Printf("DEBUG: Dashboard Stats - Querying logs from %v to %v (past 7 days)\n", sevenDaysAgo, tomorrow)
 
 	var allWeeklyLogs []models.ActivityLog
 	h.DB.Preload("User").
@@ -628,12 +652,6 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 		Order("created_at desc").
 		Find(&allWeeklyLogs)
 
-	fmt.Printf("DEBUG: Dashboard Stats - Found %d activity logs in the past 7 days\n", len(allWeeklyLogs))
-
-	// ── Weekly attendance rows (joined with users for names) ──────────────
-	//
-	// We use a raw scan into an anonymous struct so we don't need a
-	// gorm:"foreignKey" association on models.Attendance.
 	type attendanceRow struct {
 		UserID    uint       `gorm:"column:user_id"`
 		FirstName string     `gorm:"column:first_name"`
@@ -644,26 +662,14 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 
 	var attendanceRows []attendanceRow
 	h.DB.Raw(`
-		SELECT
-			a.user_id,
-			u.first_name,
-			u.last_name,
-			a.time_in,
-			a.time_out
+		SELECT a.user_id, u.first_name, u.last_name, a.time_in, a.time_out
 		FROM attendance a
 		LEFT JOIN users u ON u.id = a.user_id
 		WHERE a.date >= ? AND a.date <= ?
-	`,
-		sevenDaysAgo.Format("2006-01-02"),
-		now.Format("2006-01-02"),
-	).Scan(&attendanceRows)
+	`, sevenDaysAgo.Format("2006-01-02"), now.Format("2006-01-02")).
+		Scan(&attendanceRows)
 
-	fmt.Printf("DEBUG: Dashboard Stats - Found %d attendance records in the past 7 days\n", len(attendanceRows))
-
-	// ── Merge activity logs + attendance into one combined slice ──────────
 	combined := make([]attendanceLogEntry, 0, len(allWeeklyLogs)+len(attendanceRows)*2)
-
-	// Add existing activity logs
 	for i := range allWeeklyLogs {
 		log := allWeeklyLogs[i]
 		combined = append(combined, attendanceLogEntry{
@@ -671,18 +677,14 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 			Action:    log.Action,
 			Details:   log.Details,
 			CreatedAt: log.CreatedAt,
-			User:      log.User, // models.User — already preloaded
+			User:      log.User,
 		})
 	}
-
-	// Add synthetic CLOCK_IN / CLOCK_OUT entries from attendance
 	for _, row := range attendanceRows {
 		userMap := map[string]interface{}{
 			"first_name": row.FirstName,
 			"last_name":  row.LastName,
 		}
-
-		// CLOCK_IN — time_in must be non-nil
 		if row.TimeIn != nil {
 			combined = append(combined, attendanceLogEntry{
 				Action:    "CLOCK_IN",
@@ -691,8 +693,6 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 				User:      userMap,
 			})
 		}
-
-		// CLOCK_OUT — time_out must be non-nil (user has clocked out)
 		if row.TimeOut != nil {
 			combined = append(combined, attendanceLogEntry{
 				Action:    "CLOCK_OUT",
@@ -702,23 +702,21 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 			})
 		}
 	}
-
-	// Sort newest-first
 	sort.Slice(combined, func(i, j int) bool {
 		return combined[i].CreatedAt.After(combined[j].CreatedAt)
 	})
 
 	// ── Response ──────────────────────────────────────────────────────────
 	c.JSON(http.StatusOK, gin.H{
-		"total_users":  totalUsers,
-		"active_users": activeUsers,
-		"admin_users":  adminUsers,
-		"new_users":    totalUsers - activeUsers,
-		"recent_users": recentUsers,
-		"recent_logs":  recentLogs,
-		"weekly_logs":  combined, // ✅ activity logs + clock-in/out merged
-		"total_pages":  totalPages,
-		"current_page": page,
+		"total_interns": totalInterns,
+		"present_count": presentCount,
+		"absent_count":  absentCount,
+		"late_count":    lateCount,
+		"recent_users":  recentUsers,
+		"recent_logs":   recentLogs,
+		"weekly_logs":   combined,
+		"total_pages":   totalPages,
+		"current_page":  page,
 	})
 }
 
