@@ -20,19 +20,19 @@ class UserSidebar extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: 270, // Matched with AdminSidebar for consistency
+      width: 270,
       decoration: BoxDecoration(
-        color: theme.sidebarBackground.withOpacity(isDarkMode ? 0.4 : 0.8), // Glassmorphism base
+        color: theme.sidebarBackground.withOpacity(isDarkMode ? 0.4 : 0.8),
         border: Border(
           right: BorderSide(
-            color: theme.border.withOpacity(0.15), // Very subtle separator
+            color: theme.border.withOpacity(0.15),
             width: 1,
           ),
         ),
       ),
       child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16), // Blurs the starry background
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -46,7 +46,7 @@ class UserSidebar extends StatelessWidget {
                       children: [
                         Image.asset(
                           'assets/images/logo_file.png', 
-                          height: 44, // Increased logo size
+                          height: 44,
                           width: 44,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) => Icon(Icons.public, color: theme.sidebarText, size: 34),
@@ -132,10 +132,20 @@ class UserSidebar extends StatelessWidget {
                 ),
               ),
 
-              // Footer / Sign Out
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: _SignOutButton(),
+              // Footer / Sign Out with thin line
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Divider(
+                    color: theme.border.withOpacity(0.15),
+                    height: 1,
+                    thickness: 3,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8, bottom: 16),
+                    child: _SignOutButton(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -181,7 +191,6 @@ class _NavItemState extends State<_NavItem> {
           margin: const EdgeInsets.symmetric(vertical: 6),
           child: Stack(
             children: [
-              // Active Background Gradient Fade
               if (active)
                 Positioned.fill(
                   child: Container(
@@ -198,7 +207,6 @@ class _NavItemState extends State<_NavItem> {
                   ),
                 ),
               
-              // Glowing Edge Indicator
               if (active)
                 Positioned(
                   left: 0,
@@ -223,7 +231,6 @@ class _NavItemState extends State<_NavItem> {
                   ),
                 ),
 
-              // Content with Hover Shift
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
