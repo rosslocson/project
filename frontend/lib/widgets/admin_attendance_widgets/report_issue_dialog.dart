@@ -9,6 +9,14 @@ import '../../models/attendance_record.dart';
 import '../../models/attendance_constants.dart';
 import '../../services/attendance_service.dart';
 
+// ── Theme constants matching MyProfileScreen / ProfileLeftPanel dark blue ──
+const _kSheetBg     = Color(0xFF0B132B);   // card dark blue
+const _kSheetDeep   = Color(0xFF060A17);   // card darker blue
+const _kAccentBlue  = Color(0xFF4F8EF7);   // readable accent on dark bg
+const _kTextPrimary = Color(0xFFFFFFFF);   // white headings
+const _kTextSub     = Color(0xFFB0BAD3);   // muted body text
+const _kBorderBlue  = Color(0xFF1E2D50);   // subtle border
+
 class ReportIssueDialog extends StatefulWidget {
   final AdminAttendanceRecord record;
   final VoidCallback? onReported;
@@ -70,11 +78,9 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
       _error = null;
     });
 
-    // ✅ Uses the intern-facing endpoint, not the admin service
     final result = await AttendanceService.reportMissedClockOut(
       widget.record.id.toString(),
-      reason: reason, // pass reason if your service supports it,
-      // otherwise just the id
+      reason: reason,
     );
 
     if (!mounted) return;
@@ -101,128 +107,223 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
     return Container(
       margin: EdgeInsets.only(bottom: bottomPadding),
       decoration: const BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        color: _kSheetBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+          // ── Dark header band ─────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+            decoration: const BoxDecoration(
+              color: _kSheetDeep,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-          ),
-          const SizedBox(height: 20),
-
-          // Title + current status chip
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Report an Issue',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: kTextDark,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4F8EF7).withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              _StatusChip(status: widget.record.status),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${widget.record.internName} · ${widget.record.formattedDate}',
-            style: const TextStyle(fontSize: 13, color: kTextMid),
-          ),
-          const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
-          // Quick-reason chips
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _presets.map((p) {
-              final selected = _selectedPreset == p;
-              return ChoiceChip(
-                label: Text(p),
-                selected: selected,
-                onSelected: (_) => setState(() {
-                  _selectedPreset = selected ? null : p;
-                  if (!selected) {
-                    _controller.text = p == 'Other' ? '' : p;
-                    _controller.selection = TextSelection.fromPosition(
-                      TextPosition(offset: _controller.text.length),
-                    );
-                  }
-                }),
-                selectedColor: kAccent.withOpacity(0.15),
-                labelStyle: TextStyle(
-                  fontSize: 12,
-                  color: selected ? kAccent : kTextMid,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                // Title + status chip
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Report an Issue',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: _kTextPrimary,
+                        ),
+                      ),
+                    ),
+                    _StatusChip(status: widget.record.status),
+                  ],
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(
-                      color: selected ? kAccent : Colors.grey.shade300),
+                const SizedBox(height: 5),
+                Text(
+                  '${widget.record.internName} · ${widget.record.formattedDate}',
+                  style: const TextStyle(fontSize: 13, color: _kTextSub),
                 ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // Free-text reason
-          TextField(
-            controller: _controller,
-            maxLines: 3,
-            maxLength: 300,
-            decoration: InputDecoration(
-              hintText: 'Describe the issue in detail…',
-              errorText: _error,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: kAccent),
-              ),
-              contentPadding: const EdgeInsets.all(14),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
 
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _submitting ? null : _submit,
-              style: FilledButton.styleFrom(
-                backgroundColor: kAccent,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+          // ── Body ─────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section label
+                const Text(
+                  'QUICK REASON',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: _kTextSub,
+                  ),
                 ),
-              ),
-              child: _submitting
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text(
-                      'Submit Report',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                const SizedBox(height: 10),
+
+                // Quick-reason chips
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _presets.map((p) {
+                    final selected = _selectedPreset == p;
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        _selectedPreset = selected ? null : p;
+                        if (!selected) {
+                          _controller.text = p == 'Other' ? '' : p;
+                          _controller.selection = TextSelection.fromPosition(
+                            TextPosition(offset: _controller.text.length),
+                          );
+                        }
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? _kAccentBlue.withOpacity(0.18)
+                              : _kSheetDeep,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: selected ? _kAccentBlue : _kBorderBlue,
+                            width: selected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          p,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: selected ? _kAccentBlue : _kTextSub,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+
+                // Section label
+                const Text(
+                  'DETAILS',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: _kTextSub,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Free-text reason
+                TextField(
+                  controller: _controller,
+                  maxLines: 3,
+                  maxLength: 300,
+                  style: const TextStyle(
+                      fontSize: 13, color: Colors.white),
+                  cursorColor: _kAccentBlue,
+                  decoration: InputDecoration(
+                    hintText: 'Describe the issue in detail…',
+                    hintStyle: const TextStyle(
+                        fontSize: 13, color: _kTextSub),
+                    errorText: _error,
+                    errorStyle: const TextStyle(color: Color(0xFFFF6B6B)),
+                    counterStyle:
+                        const TextStyle(color: _kTextSub, fontSize: 11),
+                    filled: true,
+                    fillColor: _kSheetDeep,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: _kBorderBlue),
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: _kBorderBlue),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                          color: _kAccentBlue, width: 1.5),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                          color: Color(0xFFFF6B6B)),
+                    ),
+                    contentPadding: const EdgeInsets.all(14),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Submit button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.resolveWith(
+                        (states) => states.contains(WidgetState.disabled)
+                            ? _kAccentBlue.withOpacity(0.35)
+                            : _kAccentBlue,
+                      ),
+                      foregroundColor:
+                          WidgetStateProperty.all(Colors.white),
+                      overlayColor: WidgetStateProperty.all(
+                          Colors.white.withOpacity(0.08)),
+                      elevation: WidgetStateProperty.all(0),
+                      shape: WidgetStateProperty.all(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text(
+                            'Submit Report',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -237,22 +338,35 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      'Late' => const Color(0xFFF59E0B),
-      'Missed Clock Out' => const Color(0xFFEA580C),
-      _ => const Color(0xFFEF4444),
+    final (Color border, Color text, Color bg) = switch (status) {
+      'Late' => (
+          const Color(0xFFF59E0B),
+          const Color(0xFFF59E0B),
+          const Color(0xFFF59E0B).withOpacity(0.15),
+        ),
+      'Missed Clock Out' => (
+          const Color(0xFFEA580C),
+          const Color(0xFFEA580C),
+          const Color(0xFFEA580C).withOpacity(0.15),
+        ),
+      _ => (
+          const Color(0xFFEF4444),
+          const Color(0xFFEF4444),
+          const Color(0xFFEF4444).withOpacity(0.15),
+        ),
     };
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: bg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color),
+        border: Border.all(color: border),
       ),
       child: Text(
         status,
-        style:
-            TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+        style: TextStyle(
+            fontSize: 11, color: text, fontWeight: FontWeight.w700),
       ),
     );
   }
