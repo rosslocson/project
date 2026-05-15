@@ -37,25 +37,49 @@ class ProfileFormTab extends StatefulWidget {
 }
 
 class _ProfileFormTabState extends State<ProfileFormTab> {
-  bool _isEditing = false;
+  // Baseline storage properties to accurately calculate real unsaved updates
+  late String _initFirst;
+  late String _initLast;
+  String? _initDept;
+
+  @override
+  void initState() {
+    super.initState();
+    _captureInitialState();
+  }
+
+  void _captureInitialState() {
+    _initFirst = widget.firstCtrl.text;
+    _initLast = widget.lastCtrl.text;
+    _initDept = widget.selectedDept;
+  }
 
   @override
   void didUpdateWidget(covariant ProfileFormTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Automatically hide the save button again if a save just completed successfully
-    if (oldWidget.savingProfile && !widget.savingProfile && widget.profileSuccess) {
-      setState(() {
-        _isEditing = false;
-      });
+    // Baseline synchronization if asynchronous configuration loads later
+    if (oldWidget.isLoadingDepartments && !widget.isLoadingDepartments) {
+      _initDept = widget.selectedDept;
+    }
+    // Automatically hide actions when an upper-tier save execution succeeds
+    if (widget.profileSuccess && !oldWidget.profileSuccess) {
+      _captureInitialState();
     }
   }
 
-  void _markAsEdited() {
-    if (!_isEditing) {
-      setState(() {
-        _isEditing = true;
-      });
-    }
+  bool get _hasUnsavedChanges {
+    return widget.firstCtrl.text != _initFirst ||
+        widget.lastCtrl.text != _initLast ||
+        widget.selectedDept != _initDept;
+  }
+
+  void _cancelChanges() {
+    setState(() {
+      widget.firstCtrl.text = _initFirst;
+      widget.lastCtrl.text = _initLast;
+      widget.onDeptChanged(_initDept);
+      widget.formKey.currentState?.reset();
+    });
   }
 
   InputDecoration _getFormDecoration(
@@ -65,33 +89,22 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
   }) {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
-    final primaryColor =
-        isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
     final errorColor = isDark
         ? const Color(0xFF7367F0).withOpacity(0.6)
         : const Color(0xFF00022E).withOpacity(0.6);
 
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(
-          fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
-      prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, color: theme.mutedText, size: 18)
-          : null,
+      labelStyle: TextStyle(fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: theme.mutedText, size: 18) : null,
       filled: true,
       fillColor: theme.formFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.border, width: 1)),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 1.5)),
-      errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: errorColor, width: 1)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.border, width: 1)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 1.5)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: errorColor, width: 1)),
     );
   }
 
@@ -102,7 +115,6 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
     required String hint,
     required List<String> items,
     required void Function(String?)? onChanged,
-    VoidCallback? onTap,
   }) {
     final theme = context.internTheme;
 
@@ -119,34 +131,22 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(label,
-              style: TextStyle(
-                  fontSize: 10,
-                  color: theme.mutedText,
-                  fontWeight: FontWeight.w600)),
+              style: TextStyle(fontSize: 10, color: theme.mutedText, fontWeight: FontWeight.w600)),
           Expanded(
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: (value != null && items.contains(value)) ? value : null,
                 isDense: true,
                 hint: Text(hint,
-                    style: TextStyle(
-                        color: theme.mutedText,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500)),
+                    style: TextStyle(color: theme.mutedText, fontSize: 13, fontWeight: FontWeight.w500)),
                 isExpanded: true,
-                icon: Icon(Icons.keyboard_arrow_down,
-                    color: theme.mutedText, size: 18),
-                style: TextStyle(
-                    color: theme.surfaceText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500),
+                icon: Icon(Icons.keyboard_arrow_down, color: theme.mutedText, size: 18),
+                style: TextStyle(color: theme.surfaceText, fontSize: 14, fontWeight: FontWeight.w500),
                 items: items
                     .map((s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(s, overflow: TextOverflow.ellipsis)))
+                        value: s, child: Text(s, overflow: TextOverflow.ellipsis)))
                     .toList(),
                 onChanged: onChanged,
-                onTap: onTap, // Triggers when the dropdown is clicked
               ),
             ),
           ),
@@ -155,12 +155,74 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
     );
   }
 
+  Widget _buildActionButtons(BuildContext context, Color primaryColor) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([widget.firstCtrl, widget.lastCtrl]),
+      builder: (context, child) {
+        if (!_hasUnsavedChanges && !widget.savingProfile) {
+          return const SizedBox(height: 28);
+        }
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: widget.savingProfile ? null : _cancelChanges,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.internTheme.surfaceText,
+                      side: BorderSide(color: context.internTheme.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'CANCEL',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: widget.savingProfile ? null : widget.onSave,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: widget.savingProfile
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'SAVE CHANGES',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.8),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
-    final primaryColor =
-        isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,21 +236,14 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (widget.profileMsg != null) ...[
-                    StatusMessageBanner(
-                        msg: widget.profileMsg!,
-                        success: widget.profileSuccess),
+                    StatusMessageBanner(msg: widget.profileMsg!, success: widget.profileSuccess),
                     const SizedBox(height: 16),
                   ],
                   Row(children: [
                     Expanded(
                         child: TextFormField(
                       controller: widget.firstCtrl,
-                      onTap: _markAsEdited,
-                      onChanged: (_) => _markAsEdited(),
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: theme.surfaceText),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
                       decoration: _getFormDecoration(context, 'First Name'),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     )),
@@ -196,12 +251,7 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
                     Expanded(
                         child: TextFormField(
                       controller: widget.lastCtrl,
-                      onTap: _markAsEdited,
-                      onChanged: (_) => _markAsEdited(),
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: theme.surfaceText),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.surfaceText),
                       decoration: _getFormDecoration(context, 'Last Name'),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     )),
@@ -210,13 +260,8 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
                   TextFormField(
                     controller: widget.emailCtrl,
                     enabled: false,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: theme.mutedText),
-                    decoration: _getFormDecoration(
-                        context, 'Email (cannot change)',
-                        prefixIcon: Icons.email_outlined),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.mutedText),
+                    decoration: _getFormDecoration(context, 'Email (cannot change)', prefixIcon: Icons.email_outlined),
                   ),
                   const SizedBox(height: 16),
                   _dropdownField(
@@ -225,16 +270,13 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
                     value: widget.selectedDept,
                     hint: widget.isLoadingDepartments
                         ? 'Loading departments...'
-                        : (widget.departments.isEmpty
-                            ? 'N/A'
-                            : 'Select Department'),
+                        : (widget.departments.isEmpty ? 'N/A' : 'Select Department'),
                     items: widget.departments,
-                    onTap: _markAsEdited,
                     onChanged: widget.isLoadingDepartments
                         ? null
                         : (val) {
-                            _markAsEdited();
                             widget.onDeptChanged(val);
+                            setState(() {}); // Reflect selection updates directly to action triggers
                           },
                   ),
                 ],
@@ -242,50 +284,7 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
             ),
           ),
         ),
-        
-        // Use AnimatedSwitcher to smoothly reveal the button when interacted with
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return SizeTransition(
-              sizeFactor: animation,
-              axisAlignment: -1.0,
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          },
-          // We show the button if they are editing OR if it is actively saving
-          child: (_isEditing || widget.savingProfile)
-              ? Padding(
-                  key: const ValueKey('save_button'),
-                  padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-                  child: SizedBox(
-                    height: 48,
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: widget.savingProfile ? null : widget.onSave,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: widget.savingProfile
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : const Text('SAVE CHANGES',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  letterSpacing: 0.8)),
-                    ),
-                  ),
-                )
-              : const SizedBox.shrink(key: ValueKey('empty_space')),
-        ),
+        _buildActionButtons(context, primaryColor),
       ],
     );
   }

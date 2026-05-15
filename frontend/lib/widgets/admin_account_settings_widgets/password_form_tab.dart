@@ -41,25 +41,20 @@ class PasswordFormTab extends StatefulWidget {
 }
 
 class _PasswordFormTabState extends State<PasswordFormTab> {
-  bool _isEditing = false;
-
-  @override
-  void didUpdateWidget(covariant PasswordFormTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Automatically hide the save button again if a save just completed successfully
-    if (oldWidget.savingPass && !widget.savingPass && widget.passSuccess) {
-      setState(() {
-        _isEditing = false;
-      });
-    }
+  // This helps clean up state evaluations when the parent component changes status
+  bool get _hasUnsavedChanges {
+    return widget.curPassCtrl.text.isNotEmpty ||
+        widget.newPassCtrl.text.isNotEmpty ||
+        widget.confirmPassCtrl.text.isNotEmpty;
   }
 
-  void _markAsEdited() {
-    if (!_isEditing) {
-      setState(() {
-        _isEditing = true;
-      });
-    }
+  void _cancelChanges() {
+    setState(() {
+      widget.curPassCtrl.clear();
+      widget.newPassCtrl.clear();
+      widget.confirmPassCtrl.clear();
+      widget.formKey.currentState?.reset();
+    });
   }
 
   InputDecoration _getFormDecoration(
@@ -93,15 +88,11 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
     required bool obscure,
     required VoidCallback onToggle,
     required String? Function(String?) validator,
-    VoidCallback? onTap,
-    void Function(String)? onChanged,
   }) =>
       TextFormField(
         controller: controller,
         obscureText: obscure,
         validator: validator,
-        onTap: onTap,
-        onChanged: onChanged,
         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: context.internTheme.surfaceText),
         decoration: _getFormDecoration(context, label, prefixIcon: Icons.lock_outline).copyWith(
           suffixIcon: IconButton(
@@ -110,6 +101,75 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
           ),
         ),
       );
+
+  Widget _buildActionButtons(BuildContext context, Color primaryColor) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([widget.curPassCtrl, widget.newPassCtrl, widget.confirmPassCtrl]),
+      builder: (context, child) {
+        if (!_hasUnsavedChanges && !widget.savingPass) {
+          return const SizedBox(height: 28);
+        }
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: widget.savingPass ? null : _cancelChanges,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: context.internTheme.surfaceText,
+                      side: BorderSide(color: context.internTheme.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'CANCEL',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: widget.savingPass ? null : widget.onSave,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: widget.savingPass
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'CONFIRM PASSWORD',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                letterSpacing: 0.5),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,8 +197,6 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
                     label: 'Current Password',
                     obscure: widget.obscureCur,
                     onToggle: widget.onToggleCur,
-                    onTap: _markAsEdited,
-                    onChanged: (_) => _markAsEdited(),
                     validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
                   const SizedBox(height: 20),
@@ -148,8 +206,6 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
                     label: 'New Password',
                     obscure: widget.obscureNew,
                     onToggle: widget.onToggleNew,
-                    onTap: _markAsEdited,
-                    onChanged: (_) => _markAsEdited(),
                     validator: (v) {
                       if (v == null || v.length < 8) return 'Min 8 characters';
                       if (!v.contains(RegExp(r'[A-Z]'))) return 'Need one uppercase letter';
@@ -165,8 +221,6 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
                     label: 'Confirm New Password',
                     obscure: widget.obscureConf,
                     onToggle: widget.onToggleConf,
-                    onTap: _markAsEdited,
-                    onChanged: (_) => _markAsEdited(),
                     validator: (v) {
                       if (v!.isEmpty) return 'Required';
                       if (v != widget.newPassCtrl.text) return 'Passwords do not match';
@@ -178,41 +232,7 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
             ),
           ),
         ),
-        
-        // Use AnimatedSwitcher to smoothly reveal the button when interacted with
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return SizeTransition(
-              sizeFactor: animation,
-              axisAlignment: -1.0,
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          },
-          // Show the button if they are editing OR if it is actively saving
-          child: (_isEditing || widget.savingPass)
-              ? Padding(
-                  key: const ValueKey('save_button'),
-                  padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-                  child: SizedBox(
-                    height: 48,
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: widget.savingPass ? null : widget.onSave,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: widget.savingPass
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5)),
-                    ),
-                  ),
-                )
-              : const SizedBox.shrink(key: ValueKey('empty_space')),
-        ),
+        _buildActionButtons(context, primaryColor),
       ],
     );
   }
