@@ -1,7 +1,7 @@
 // lib/widgets/admin_attendance_widgets/attendance_table.dart
 // Table widget that renders attendance records, including the status badge,
-// intern avatar with auth-gated image fetching, remark column, and
-// report / review actions.
+// intern avatar with auth-gated image fetching, report reason column,
+// admin note (remark) column, and report / review actions.
 //
 // NOTE: PendingReportsBell has been removed from this file.
 // The canonical bell now lives in admin_attendance_screen.dart (_PendingBell)
@@ -37,7 +37,7 @@ class AttendanceTable extends StatelessWidget {
     this.isAdmin = false,
   });
 
-  // Headers match the 7 data columns (columns 1–7 in _colWidths).
+  // Headers match the 8 data columns (columns 1–8 in _colWidths).
   static const _headers = [
     'Intern',
     'Date',
@@ -45,19 +45,21 @@ class AttendanceTable extends StatelessWidget {
     'Time Out',
     'Hours',
     'Status',
-    'Remark',
+    'Report Reason',
+    'Admin Note',
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(28), // left gutter
-    1: FlexColumnWidth(3), // Intern
-    2: FlexColumnWidth(2), // Date
-    3: FlexColumnWidth(1.5), // Time In
-    4: FlexColumnWidth(1.5), // Time Out
-    5: FlexColumnWidth(1.5), // Hours
-    6: FlexColumnWidth(2), // Status
-    7: FlexColumnWidth(2.5), // Remark
-    8: FixedColumnWidth(36), // Action (report / review)
+    0: FixedColumnWidth(16),  // left gutter — balanced with right
+    1: FlexColumnWidth(4),    // Intern — wider
+    2: FlexColumnWidth(2),    // Date
+    3: FlexColumnWidth(1.4),  // Time In
+    4: FlexColumnWidth(1.4),  // Time Out
+    5: FlexColumnWidth(1.2),  // Hours
+    6: FlexColumnWidth(3),    // Status — wide enough for "Missed Clock Out"
+    7: FlexColumnWidth(1.8),  // Report Reason — narrower, wraps to next line
+    8: FlexColumnWidth(1.8),  // Admin Note — narrower
+    9: FixedColumnWidth(16),  // right gutter — balanced with left
   };
 
   @override
@@ -110,9 +112,7 @@ class AttendanceTable extends StatelessWidget {
   TableRow _buildRow(
       BuildContext context, AdminAttendanceRecord r, int index) {
     return TableRow(
-      decoration: const BoxDecoration(
-        color: Colors.transparent,
-      ),
+      decoration: const BoxDecoration(color: Colors.transparent),
       children: [
         const SizedBox.shrink(),
 
@@ -183,8 +183,11 @@ class AttendanceTable extends StatelessWidget {
           child: Center(child: StatusBadge(status: r.status)),
         ),
 
-        // ── Remark column ────────────────────────────────────────────────
-        _RemarkCell(record: r, isAdmin: isAdmin, onChanged: onRefresh),
+        // ── Report Reason column ─────────────────────────────────────────
+        _ReportReasonCell(record: r, isAdmin: isAdmin),
+
+        // ── Admin Note (Remark) column ───────────────────────────────────
+        _AdminNoteCell(record: r, isAdmin: isAdmin, onChanged: onRefresh),
 
         // ── Action cell ──────────────────────────────────────────────────
         _ActionCell(record: r, isAdmin: isAdmin, onRefresh: onRefresh),
@@ -203,25 +206,56 @@ class AttendanceTable extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Remark cell — inline editable for admin, read-only for intern
+// Report Reason cell — read-only for both intern and admin
+// Shows the intern's filed report reason as an amber chip, or '--' if none.
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _RemarkCell extends StatefulWidget {
+class _ReportReasonCell extends StatelessWidget {
+  final AdminAttendanceRecord record;
+  final bool isAdmin;
+
+  const _ReportReasonCell({
+    required this.record,
+    required this.isAdmin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final reportReason = record.reportReason;
+    final hasReportReason = reportReason != null && reportReason.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+      child: hasReportReason
+          ? _ReportReasonChip(reason: reportReason)
+          : const Text(
+              '--',
+              style: TextStyle(fontSize: 13, color: kTextMid),
+            ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin Note cell — inline editable for admin, read-only for intern
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AdminNoteCell extends StatefulWidget {
   final AdminAttendanceRecord record;
   final bool isAdmin;
   final VoidCallback? onChanged;
 
-  const _RemarkCell({
+  const _AdminNoteCell({
     required this.record,
     required this.isAdmin,
     this.onChanged,
   });
 
   @override
-  State<_RemarkCell> createState() => _RemarkCellState();
+  State<_AdminNoteCell> createState() => _AdminNoteCellState();
 }
 
-class _RemarkCellState extends State<_RemarkCell> {
+class _AdminNoteCellState extends State<_AdminNoteCell> {
   bool _editing = false;
   late final TextEditingController _ctrl;
   bool _saving = false;
@@ -233,17 +267,28 @@ class _RemarkCellState extends State<_RemarkCell> {
   }
 
   @override
+  void didUpdateWidget(_AdminNoteCell old) {
+    super.didUpdateWidget(old);
+    // When the parent refreshes after a resolve, sync the controller with
+    // the latest remark from the server — but only when not actively editing,
+    // so we never clobber text the admin is mid-typing.
+    if (!_editing && old.record.remark != widget.record.remark) {
+      _ctrl.text = widget.record.remark ?? '';
+    }
+  }
+
+  @override
   void dispose() {
     _ctrl.dispose();
     super.dispose();
   }
 
+  // ── Save remark via the dedicated PATCH endpoint ─────────────────────────
   Future<void> _save() async {
     setState(() => _saving = true);
-    await AdminAttendanceService.resolveAttendanceIssue(
-      recordId: widget.record.id,
-      resolution: 'no_action',
-      note: _ctrl.text.trim(),
+    await AdminAttendanceService.updateRemark(
+      widget.record.id,
+      _ctrl.text.trim(),
     );
     if (!mounted) return;
     setState(() {
@@ -330,7 +375,7 @@ class _RemarkCellState extends State<_RemarkCell> {
       );
     }
 
-    // ── Admin: display state (tap to edit) ───────────────────────────────
+    // ── Admin: display state — tappable to open inline edit ──────────────
     return GestureDetector(
       onTap: () => setState(() => _editing = true),
       child: Padding(
@@ -340,7 +385,7 @@ class _RemarkCellState extends State<_RemarkCell> {
           children: [
             Flexible(
               child: Text(
-                hasRemark ? remark : 'Add remark…',
+                hasRemark ? remark : 'Add note…',
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: hasRemark ? FontStyle.normal : FontStyle.italic,
@@ -354,6 +399,51 @@ class _RemarkCellState extends State<_RemarkCell> {
             const Icon(Icons.edit, size: 12, color: kTextMid),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Report reason chip — amber pill showing the intern's filed reason
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReportReasonChip extends StatelessWidget {
+  final String reason;
+  const _ReportReasonChip({required this.reason});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: const Color(0xFFFCD34D)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(Icons.flag_rounded, size: 11, color: Color(0xFF92400E)),
+          ),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Text(
+              reason,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF92400E),
+                fontStyle: FontStyle.italic,
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -416,18 +506,10 @@ class _ActionCell extends StatelessWidget {
     }
 
     // ── Intern: flag icon on reportable statuses ─────────────────────────
-    // Reportable: Absent, Late, Missed Clock Out, On Shift.
-    // Make sure your AdminAttendanceRecord.isReportable getter includes all four:
-    //   bool get isReportable =>
-    //       status == 'Absent'           ||
-    //       status == 'Late'             ||
-    //       status == 'Missed Clock Out' ||
-    //       status == 'On Shift';
     if (!r.isReportable) return const SizedBox.shrink();
 
     final alreadyReported = r.isReported;
 
-    // Status-specific tooltip shown before the dialog opens.
     final String reportHint = switch (r.status) {
       'Absent' => 'Dispute absence',
       'Late' => 'Dispute late mark',
@@ -450,9 +532,7 @@ class _ActionCell extends StatelessWidget {
           child: Icon(
             alreadyReported ? Icons.flag : Icons.flag_outlined,
             size: 20,
-            color: alreadyReported
-                ? const Color(0xFFF59E0B)
-                : kTextMid,
+            color: alreadyReported ? const Color(0xFFF59E0B) : kTextMid,
           ),
         ),
       ),
@@ -499,7 +579,7 @@ class StatusBadge extends StatelessWidget {
     };
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 140, maxWidth: 140),
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
@@ -511,6 +591,7 @@ class StatusBadge extends StatelessWidget {
         textAlign: TextAlign.center,
         maxLines: 1,
         softWrap: false,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
             color: text, fontWeight: FontWeight.w600, fontSize: 12),
       ),

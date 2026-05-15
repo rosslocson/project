@@ -33,6 +33,9 @@ const attendanceSelectWithHours = `
 	is_reported,
 	reported_at,
 	report_reason,
+	report_type,
+	resolution,
+	admin_note,
 	` + attendanceHoursExpr + ` AS hours_rendered,
 	created_at,
 	updated_at
@@ -451,37 +454,45 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 		Status        string   `gorm:"column:status"         json:"status"`
 		IsReported    bool     `gorm:"column:is_reported" json:"is_reported"`
 		ReportedAt    *string  `gorm:"column:reported_at" json:"reported_at"`
+		ReportReason  string   `gorm:"column:report_reason" json:"report_reason"`
+		ReportType    string   `gorm:"column:report_type"   json:"report_type"`
+		AdminNote     *string  `gorm:"column:admin_note"    json:"admin_note"`
 	}
 
 	baseSQL := `
-		SELECT
-			a.id,
-			a.user_id,
-			CONCAT(u.first_name, ' ', u.last_name)   AS intern_name,
-			COALESCE(u.avatar_url, '')                AS avatar_url,
-			TO_CHAR(a.date, 'YYYY-MM-DD')            AS date,
-			TO_CHAR(a.time_in,  'HH12:MI AM')        AS time_in,
-			TO_CHAR(a.time_out, 'HH12:MI AM')        AS time_out,
-			CASE
-				WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL
-					THEN EXTRACT(EPOCH FROM (a.time_out - a.time_in)) / 3600.0
-				ELSE NULL
-			END AS hours_rendered,
-			CASE
-				WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date = CURRENT_DATE
-					THEN 'On Shift'
-				WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date < CURRENT_DATE
-					THEN 'Missed Clock Out'
-				WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) < 9
-					THEN 'Present'
-				WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) >= 9
-					THEN 'Late'
-				ELSE 'Absent'
-			END AS status
-		FROM attendance a
-		LEFT JOIN users u ON u.id = a.user_id
-		WHERE 1=1
-	`
+    SELECT
+        a.id,
+        a.user_id,
+        CONCAT(u.first_name, ' ', u.last_name)   AS intern_name,
+        COALESCE(u.avatar_url, '')                AS avatar_url,
+        TO_CHAR(a.date, 'YYYY-MM-DD')            AS date,
+        TO_CHAR(a.time_in,  'HH12:MI AM')        AS time_in,
+        TO_CHAR(a.time_out, 'HH12:MI AM')        AS time_out,
+        CASE
+            WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL
+                THEN EXTRACT(EPOCH FROM (a.time_out - a.time_in)) / 3600.0
+            ELSE NULL
+        END AS hours_rendered,
+        CASE
+            WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date = CURRENT_DATE
+                THEN 'On Shift'
+            WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date < CURRENT_DATE
+                THEN 'Missed Clock Out'
+            WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) < 9
+                THEN 'Present'
+            WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) >= 9
+                THEN 'Late'
+            ELSE 'Absent'
+        END AS status,
+        a.is_reported,
+        TO_CHAR(a.reported_at, 'YYYY-MM-DD HH12:MI AM') AS reported_at,
+        COALESCE(a.report_reason, '')             AS report_reason,
+        COALESCE(a.report_type, '')               AS report_type,
+        a.admin_note
+    FROM attendance a
+    LEFT JOIN users u ON u.id = a.user_id
+    WHERE 1=1
+`
 
 	args := []interface{}{}
 
