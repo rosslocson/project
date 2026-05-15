@@ -156,7 +156,8 @@ class _ConfigScreenState extends State<ConfigScreen>
                           color:
                               isDark ? theme.surface : theme.sidebarBackground,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: theme.border),
+                          border: Border.all(
+                              color: theme.border.withValues(alpha: 0.15)),
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),

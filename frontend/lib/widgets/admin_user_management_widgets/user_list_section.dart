@@ -48,32 +48,38 @@ class UserListSection extends StatelessWidget {
           decoration: BoxDecoration(
             color: sectionBackground,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: theme.border),
+            border: Border.all(
+                color:
+                    theme.border.withValues(alpha: 0.15)), // ← reduce opacity
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: users.length,
-              separatorBuilder: (_, __) => Divider(height: 1, indent: 20, color: theme.border),
-              itemBuilder: (context, i) {
-                final u = users[i];
-                return UserTile(
-                  key: ValueKey(toInt(u['id'])),
-                  user: u,
-                  isArchivedView: isArchived(u),
-                  isCurrentUser: toInt(u['id']) == currentUserId,
-                  onToggle: () => onToggleActive(u),
-                  onArchive: () => onArchive(u),
-                  onRestore: () => onRestore(u),
-                );
-              },
+            child: ColoredBox(
+              // ← add this
+              color: sectionBackground, // ← matches your container
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: users.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, indent: 20, color: theme.border),
+                itemBuilder: (context, i) {
+                  final u = users[i];
+                  return UserTile(
+                    key: ValueKey(toInt(u['id'])),
+                    user: u,
+                    isArchivedView: isArchived(u),
+                    isCurrentUser: toInt(u['id']) == currentUserId,
+                    onToggle: () => onToggleActive(u),
+                    onArchive: () => onArchive(u),
+                    onRestore: () => onRestore(u),
+                  );
+                },
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 24),
       ],
     );
   }

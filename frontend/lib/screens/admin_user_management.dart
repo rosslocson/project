@@ -31,6 +31,9 @@ class _UsersScreenState extends State<UsersScreen> {
   bool _isSidebarOpen = true;
   String _filterStatus = 'All';
 
+// Cache per tab
+  final Map<String, List<dynamic>> _cache = {};
+
   Map<String, int> _counts = {
     'all': 0,
     'active': 0,
@@ -52,16 +55,26 @@ class _UsersScreenState extends State<UsersScreen> {
 
   // We removed the search parameter so the API just fetches the category list,
   // allowing the frontend to handle the robust search logic.
-  Future<void> _loadUsers({String? status}) async {
+  Future<void> _loadUsers({String? status, bool silent = false}) async {
     if (!mounted) return;
-    setState(() => _loading = true);
+
+    // Show cached data instantly if available
+    final cacheKey = status ?? 'all';
+    if (_cache.containsKey(cacheKey)) {
+      setState(() => _users = _cache[cacheKey]!);
+    } else if (!silent) {
+      setState(() => _loading = true);
+    }
 
     try {
       final res = await ApiService.getUsers(status: status);
       if (!mounted) return;
 
+      final fetched = res['ok'] == true ? (res['users'] ?? []) : [];
+      _cache[cacheKey] = fetched; // store in cache
+
       setState(() {
-        _users = res['ok'] == true ? (res['users'] ?? []) : [];
+        _users = fetched;
 
         if (res['counts'] != null) {
           _counts = {
@@ -78,6 +91,7 @@ class _UsersScreenState extends State<UsersScreen> {
             if (u['is_active'] == true) return 0;
             return 1;
           }
+
           return statusOrder(a).compareTo(statusOrder(b));
         });
 
@@ -90,6 +104,7 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Future<void> _silentReload() async {
+    _cache.clear(); // bust cache so next tab switch re-fetches fresh data
     try {
       final res = await ApiService.getUsers(status: 'all');
 
@@ -113,8 +128,8 @@ class _UsersScreenState extends State<UsersScreen> {
               .toList();
         } else if (_filterStatus == 'Inactive') {
           _users = allUsers
-              .where((u) =>
-                  u['is_active'] == false && u['is_archived'] == false)
+              .where(
+                  (u) => u['is_active'] == false && u['is_archived'] == false)
               .toList();
         } else if (_filterStatus == 'Archived') {
           _users = allUsers.where((u) => u['is_archived'] == true).toList();
@@ -128,6 +143,7 @@ class _UsersScreenState extends State<UsersScreen> {
             if (u['is_active'] == true) return 0;
             return 1;
           }
+
           return statusOrder(a).compareTo(statusOrder(b));
         });
       });
@@ -189,7 +205,8 @@ class _UsersScreenState extends State<UsersScreen> {
 
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
-    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final primaryColor =
+        isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -206,8 +223,8 @@ class _UsersScreenState extends State<UsersScreen> {
                 color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.archive_outlined,
-                  color: primaryColor, size: 22),
+              child:
+                  Icon(Icons.archive_outlined, color: primaryColor, size: 22),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -258,7 +275,8 @@ class _UsersScreenState extends State<UsersScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           ),
         ],
@@ -314,8 +332,10 @@ class _UsersScreenState extends State<UsersScreen> {
   void _onTabChanged(String status) {
     setState(() {
       _filterStatus = status;
-      _searchCtrl.clear(); // Good practice: clear search when swapping tabs
+      _searchCtrl.clear();
     });
+    // Also clear cache for this tab so toggles/archives stay fresh
+    // but keep other tabs cached
 
     String? apiStatus;
     if (status == 'Active') {
@@ -328,32 +348,36 @@ class _UsersScreenState extends State<UsersScreen> {
       apiStatus = 'all';
     }
 
-    _loadUsers(status: apiStatus);
+    _loadUsers(status: apiStatus, silent: true);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
     final currentUserId = _getCurrentUserId();
 
     final tabs = [
       {'id': 'All', 'label': 'All', 'count': _counts['all'] ?? 0},
       {'id': 'Active', 'label': 'Active', 'count': _counts['active'] ?? 0},
-      {'id': 'Inactive', 'label': 'Inactive', 'count': _counts['inactive'] ?? 0},
-      {'id': 'Archived', 'label': 'Archived', 'count': _counts['archived'] ?? 0},
+      {
+        'id': 'Inactive',
+        'label': 'Inactive',
+        'count': _counts['inactive'] ?? 0
+      },
+      {
+        'id': 'Archived',
+        'label': 'Archived',
+        'count': _counts['archived'] ?? 0
+      },
     ];
-
-    // 1. Initial Status Filter
-    final statusFilteredUsers = _filterStatus == 'Inactive'
-        ? _users.where((u) => u['is_archived'] != true).toList()
-        : _users;
 
     // 2. Client-Side Search Logic (Fixes the naming/spacing bugs)
     final query = _searchCtrl.text.trim().toLowerCase();
-    
-    final searchedUsers = statusFilteredUsers.where((u) {
+
+    final searchedUsers = _users.where((u) {
       if (query.isEmpty) return true;
-      
+
       final firstName = (u['first_name'] ?? '').toString().toLowerCase();
       final lastName = (u['last_name'] ?? '').toString().toLowerCase();
       final fullName = '$firstName $lastName'.trim();
@@ -365,7 +389,8 @@ class _UsersScreenState extends State<UsersScreen> {
 
     // 3. Separation by Roles
     final admins = searchedUsers.where((u) => u['role'] == 'admin').toList();
-    final internUsers = searchedUsers.where((u) => u['role'] != 'admin').toList();
+    final internUsers =
+        searchedUsers.where((u) => u['role'] != 'admin').toList();
 
     int sortSelfToTop(dynamic a, dynamic b) {
       if (toInt(a['id']) == currentUserId) return -1;
@@ -401,7 +426,8 @@ class _UsersScreenState extends State<UsersScreen> {
                     height: 72,
                     child: admin_topbar.GlassTopBar(
                       isSidebarOpen: _isSidebarOpen,
-                      onToggleSidebar: () => setState(() => _isSidebarOpen = true),
+                      onToggleSidebar: () =>
+                          setState(() => _isSidebarOpen = true),
                       user: context.read<AuthProvider>().user,
                       isAdmin: true,
                       title: 'User Management',
@@ -410,28 +436,31 @@ class _UsersScreenState extends State<UsersScreen> {
                   ),
                   const SizedBox(height: 15),
                   Expanded(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 100, right: 100, bottom: 28),
+                      child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             TextField(
                               controller: _searchCtrl,
-                              style:
-                                  TextStyle(color: theme.surfaceText, fontSize: 13),
+                              style: TextStyle(
+                                  color: theme.surfaceText, fontSize: 13),
                               decoration: InputDecoration(
                                 hintText: 'Search by name or email...',
-                                hintStyle: TextStyle(color: theme.mutedText, fontSize: 13),
-                                prefixIcon: Icon(Icons.search, color: theme.mutedText),
+                                hintStyle: TextStyle(
+                                    color: theme.mutedText, fontSize: 13),
+                                prefixIcon:
+                                    Icon(Icons.search, color: theme.mutedText),
                                 suffixIcon: _searchCtrl.text.isNotEmpty
                                     ? IconButton(
-                                        icon: Icon(Icons.clear, color: theme.mutedText),
+                                        icon: Icon(Icons.clear,
+                                            color: theme.mutedText),
                                         onPressed: () {
                                           _searchCtrl.clear();
                                           // Triggers a UI rebuild to show all users
-                                          setState(() {}); 
+                                          setState(() {});
                                         },
                                       )
                                     : null,
@@ -439,8 +468,24 @@ class _UsersScreenState extends State<UsersScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide.none,
                                 ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                      color:
+                                          theme.border.withValues(alpha: 0.15),
+                                      width: 1),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                      color:
+                                          theme.border.withValues(alpha: 0.15),
+                                      width: 1),
+                                ),
                                 filled: true,
-                                fillColor: theme.formFill,
+                                fillColor: isDark
+                                    ? theme.surface
+                                    : theme.sidebarBackground,
                               ),
                               // Live search as you type
                               onChanged: (v) {
@@ -485,33 +530,35 @@ class _UsersScreenState extends State<UsersScreen> {
                                       const SizedBox(height: 12),
                                       Text(
                                         'No users found in this category.',
-                                        style: TextStyle(color: theme.mutedText),
+                                        style:
+                                            TextStyle(color: theme.mutedText),
                                       ),
                                     ],
                                   ),
                                 ),
                               )
-                            else
-                              ...[
-                                if (admins.isNotEmpty)
-                                  UserListSection(
-                                    title: 'Administrators',
-                                    users: admins,
-                                    currentUserId: currentUserId,
-                                    onToggleActive: _toggleActive,
-                                    onArchive: _archiveUser,
-                                    onRestore: _restoreUser,
-                                  ),
-                                if (internUsers.isNotEmpty)
-                                  UserListSection(
-                                    title: 'Interns',
-                                    users: internUsers,
-                                    currentUserId: currentUserId,
-                                    onToggleActive: _toggleActive,
-                                    onArchive: _archiveUser,
-                                    onRestore: _restoreUser,
-                                  ),
-                              ],
+                            else ...[
+                              if (admins.isNotEmpty)
+                                UserListSection(
+                                  title: 'Administrators',
+                                  users: admins,
+                                  currentUserId: currentUserId,
+                                  onToggleActive: _toggleActive,
+                                  onArchive: _archiveUser,
+                                  onRestore: _restoreUser,
+                                ),
+                              if (admins.isNotEmpty && internUsers.isNotEmpty)
+                                const SizedBox(height: 16),
+                              if (internUsers.isNotEmpty)
+                                UserListSection(
+                                  title: 'Interns',
+                                  users: internUsers,
+                                  currentUserId: currentUserId,
+                                  onToggleActive: _toggleActive,
+                                  onArchive: _archiveUser,
+                                  onRestore: _restoreUser,
+                                ),
+                            ],
                           ],
                         ),
                       ),

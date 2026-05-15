@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
 import '../services/attendance_service.dart';
+import 'app_theme.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -94,11 +95,9 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
       final key = _weekKey(monday);
       grouped.putIfAbsent(key, () => []).add(r);
     }
-    // Sort records within each week Mon→Fri
     for (final list in grouped.values) {
       list.sort((a, b) => a.date.compareTo(b.date));
     }
-    // Sort weeks newest first
     final weeks = grouped.keys.map((k) => DateTime.parse(k)).toList()
       ..sort((a, b) => b.compareTo(a));
 
@@ -132,6 +131,9 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     final totalWeeks = _weeks.length;
     final monday = _weeks.isNotEmpty ? _weeks[_weekIndex] : null;
     final isNewestWeek = _weekIndex == 0;
@@ -142,13 +144,20 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
     final isCurrentWeek =
         monday != null && _weekKey(monday) == _weekKey(thisWeekMonday);
 
+    // Accent color: maroon in light, purple/indigo in dark (matches Departments)
+    final accentColor =
+        isDark ? theme.sidebarActiveForeground : const Color(0xFF460A14);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? theme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: isDark ? Border.all(color: theme.border) : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -157,20 +166,19 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ────────────────────────────────────────────────────
+          // ── Header ──────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Row(
               children: [
-                const Icon(Icons.history_rounded,
-                    color: Color(0xFF460A14), size: 20),
+                Icon(Icons.history_rounded, color: accentColor, size: 20),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Attendance History',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
+                    color: theme.surfaceText,
                   ),
                 ),
                 const Spacer(),
@@ -179,8 +187,14 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
+                      color: isDark
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : Colors.green.shade50,
                       borderRadius: BorderRadius.circular(20),
+                      border: isDark
+                          ? Border.all(
+                              color: Colors.green.withValues(alpha: 0.3))
+                          : null,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -189,7 +203,9 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.green.shade500,
+                            color: isDark
+                                ? Colors.greenAccent
+                                : Colors.green.shade500,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -199,7 +215,9 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: Colors.green.shade700,
+                            color: isDark
+                                ? Colors.greenAccent
+                                : Colors.green.shade700,
                           ),
                         ),
                       ],
@@ -210,19 +228,21 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     totalWeeks > 0
                         ? 'Week ${_weekIndex + 1} of $totalWeeks'
                         : '—',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: 12, color: theme.mutedText),
                   ),
               ],
             ),
           ),
 
-          const Divider(height: 1, indent: 20, endIndent: 20),
+          Divider(height: 1, indent: 20, endIndent: 20, color: theme.border),
 
-          // ── Body ──────────────────────────────────────────────────────
+          // ── Body ────────────────────────────────────────────────────────
           if (widget.isLoading)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: CircularProgressIndicator(color: accentColor),
+              ),
             )
           else if (_weeks.isEmpty)
             Padding(
@@ -231,18 +251,18 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                 child: Column(
                   children: [
                     Icon(Icons.event_busy_rounded,
-                        size: 48, color: Colors.grey.shade300),
+                        size: 48, color: theme.mutedText),
                     const SizedBox(height: 8),
                     Text(
                       'No attendance records yet',
-                      style: TextStyle(color: Colors.grey.shade400),
+                      style: TextStyle(color: theme.mutedText),
                     ),
                   ],
                 ),
               ),
             )
           else ...[
-            // ── Week navigator bar ─────────────────────────────────────
+            // ── Week navigator bar ───────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Row(
@@ -252,6 +272,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     enabled: !isOldestWeek,
                     onTap: () => _goTo(_weekIndex + 1),
                     tooltip: 'Previous week',
+                    accentColor: accentColor,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -260,10 +281,10 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                         Text(
                           monday != null ? _fmtWeekRange(monday) : '—',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF1A1A2E),
+                            color: theme.surfaceText,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -273,12 +294,14 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                             _SummaryChip(
                               label: '$_presentCount Present',
                               color: Colors.green,
+                              isDark: isDark,
                             ),
                             if (_lateCount > 0) ...[
                               const SizedBox(width: 6),
                               _SummaryChip(
                                 label: '$_lateCount Late',
                                 color: Colors.orange,
+                                isDark: isDark,
                               ),
                             ],
                             if (_absentCount > 0) ...[
@@ -286,6 +309,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                               _SummaryChip(
                                 label: '$_absentCount Absent',
                                 color: Colors.grey,
+                                isDark: isDark,
                               ),
                             ],
                           ],
@@ -299,15 +323,16 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     enabled: !isNewestWeek,
                     onTap: () => _goTo(_weekIndex - 1),
                     tooltip: 'Next week',
+                    accentColor: accentColor,
                   ),
                 ],
               ),
             ),
 
             const SizedBox(height: 8),
-            const Divider(height: 1, indent: 20, endIndent: 20),
+            Divider(height: 1, indent: 20, endIndent: 20, color: theme.border),
 
-            // ── Day rows ──────────────────────────────────────────────
+            // ── Day rows ──────────────────────────────────────────────────
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
               switchInCurve: Curves.easeOutCubic,
@@ -333,7 +358,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                         child: Center(
                           child: Text(
                             'No records for this week',
-                            style: TextStyle(color: Colors.grey.shade400),
+                            style: TextStyle(color: theme.mutedText),
                           ),
                         ),
                       )
@@ -342,14 +367,16 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _currentRecords.length,
                         separatorBuilder: (_, __) =>
-                            const Divider(height: 1, indent: 20),
-                        itemBuilder: (context, i) =>
-                            _AttendanceRow(record: _currentRecords[i]),
+                            Divider(height: 1, indent: 20, color: theme.border),
+                        itemBuilder: (context, i) => _AttendanceRow(
+                          record: _currentRecords[i],
+                          accentColor: accentColor,
+                        ),
                       ),
               ),
             ),
 
-            // ── Week dot indicators ────────────────────────────────────
+            // ── Week dot indicators ──────────────────────────────────────
             if (totalWeeks > 1)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -365,9 +392,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                         width: active ? 18 : 6,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: active
-                              ? const Color(0xFF460A14)
-                              : Colors.grey.shade300,
+                          color: active ? accentColor : theme.border,
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -391,12 +416,14 @@ class _NavArrow extends StatelessWidget {
   final bool enabled;
   final VoidCallback onTap;
   final String tooltip;
+  final Color accentColor;
 
   const _NavArrow({
     required this.icon,
     required this.enabled,
     required this.onTap,
     required this.tooltip,
+    required this.accentColor,
   });
 
   @override
@@ -412,13 +439,11 @@ class _NavArrow extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: const Color(0xFF460A14).withValues(alpha: 0.07),
+              color: accentColor.withValues(alpha: 0.08),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF460A14).withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: accentColor.withValues(alpha: 0.2)),
             ),
-            child: Icon(icon, size: 18, color: const Color(0xFF460A14)),
+            child: Icon(icon, size: 18, color: accentColor),
           ),
         ),
       ),
@@ -433,23 +458,29 @@ class _NavArrow extends StatelessWidget {
 class _SummaryChip extends StatelessWidget {
   final String label;
   final MaterialColor color;
+  final bool isDark;
 
-  const _SummaryChip({required this.label, required this.color});
+  const _SummaryChip({
+    required this.label,
+    required this.color,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.shade50,
+        color: isDark ? color.withValues(alpha: 0.15) : color.shade50,
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: color.withValues(alpha: 0.3)) : null,
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: color.shade700,
+          color: isDark ? color.shade200 : color.shade700,
         ),
       ),
     );
@@ -462,7 +493,12 @@ class _SummaryChip extends StatelessWidget {
 
 class _AttendanceRow extends StatelessWidget {
   final AttendanceRecord record;
-  const _AttendanceRow({required this.record});
+  final Color accentColor;
+
+  const _AttendanceRow({
+    required this.record,
+    required this.accentColor,
+  });
 
   bool get _isMissedClockOut {
     final today = DateTime.now();
@@ -493,6 +529,9 @@ class _AttendanceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     final isComplete = record.isComplete;
     final isOngoing =
         record.hasTimedIn && !record.hasTimedOut && !_isMissedClockOut;
@@ -502,14 +541,21 @@ class _AttendanceRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
+          // ── Date badge ─────────────────────────────────────────────────
           Container(
             width: 44,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: _isAbsent
-                  ? Colors.grey.shade100
-                  : const Color(0xFF460A14).withValues(alpha: 0.07),
+                  ? (isDark ? theme.metricCardBackground : Colors.grey.shade100)
+                  : accentColor.withValues(alpha: isDark ? 0.15 : 0.07),
               borderRadius: BorderRadius.circular(10),
+              border: isDark
+                  ? Border.all(
+                      color: _isAbsent
+                          ? theme.border
+                          : accentColor.withValues(alpha: 0.25))
+                  : null,
             ),
             child: Column(
               children: [
@@ -517,9 +563,7 @@ class _AttendanceRow extends StatelessWidget {
                   _monthAbbr(record.date.month),
                   style: TextStyle(
                     fontSize: 10,
-                    color: _isAbsent
-                        ? Colors.grey.shade400
-                        : const Color(0xFF460A14),
+                    color: _isAbsent ? theme.mutedText : accentColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -528,9 +572,7 @@ class _AttendanceRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: _isAbsent
-                        ? Colors.grey.shade400
-                        : const Color(0xFF460A14),
+                    color: _isAbsent ? theme.mutedText : accentColor,
                     height: 1.1,
                   ),
                 ),
@@ -538,6 +580,8 @@ class _AttendanceRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
+
+          // ── Day name + times ───────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -547,9 +591,7 @@ class _AttendanceRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: _isAbsent
-                        ? Colors.grey.shade400
-                        : const Color(0xFF1A1A2E),
+                    color: _isAbsent ? theme.mutedText : theme.surfaceText,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -557,12 +599,11 @@ class _AttendanceRow extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.login_rounded,
-                          size: 12, color: Colors.grey.shade400),
+                          size: 12, color: theme.mutedText),
                       const SizedBox(width: 4),
                       Text(
                         record.timeIn != null ? _fmtTime(record.timeIn!) : '--',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(fontSize: 12, color: theme.mutedText),
                       ),
                       const SizedBox(width: 10),
                       Icon(
@@ -570,7 +611,7 @@ class _AttendanceRow extends StatelessWidget {
                         size: 12,
                         color: _isMissedClockOut
                             ? Colors.red.shade300
-                            : Colors.grey.shade400,
+                            : theme.mutedText,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -581,7 +622,7 @@ class _AttendanceRow extends StatelessWidget {
                           fontSize: 12,
                           color: _isMissedClockOut
                               ? Colors.red.shade400
-                              : Colors.grey.shade600,
+                              : theme.mutedText,
                           fontWeight: _isMissedClockOut
                               ? FontWeight.w600
                               : FontWeight.normal,
@@ -592,11 +633,13 @@ class _AttendanceRow extends StatelessWidget {
                 else
                   Text(
                     'No clock-in recorded',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                    style: TextStyle(fontSize: 12, color: theme.mutedText),
                   ),
               ],
             ),
           ),
+
+          // ── Hours + status ─────────────────────────────────────────────
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -609,9 +652,7 @@ class _AttendanceRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: _isAbsent
-                      ? Colors.grey.shade400
-                      : const Color(0xFF1A1A2E),
+                  color: _isAbsent ? theme.mutedText : theme.surfaceText,
                 ),
               ),
               const SizedBox(height: 4),
@@ -622,6 +663,7 @@ class _AttendanceRow extends StatelessWidget {
                 isMissedClockOut: _isMissedClockOut,
                 isLate: _isLate,
                 isReported: record.isReported,
+                isDark: isDark,
               ),
               if (rt != null) ...[
                 const SizedBox(height: 6),
@@ -629,6 +671,7 @@ class _AttendanceRow extends StatelessWidget {
                   recordId: record.id,
                   date: _dateKey(record.date),
                   reportType: rt,
+                  accentColor: accentColor,
                 ),
               ],
             ],
@@ -677,6 +720,7 @@ class _StatusBadge extends StatelessWidget {
   final bool isMissedClockOut;
   final bool isLate;
   final bool isReported;
+  final bool isDark;
 
   const _StatusBadge({
     this.isAbsent = false,
@@ -685,6 +729,7 @@ class _StatusBadge extends StatelessWidget {
     this.isMissedClockOut = false,
     this.isLate = false,
     this.isReported = false,
+    required this.isDark,
   });
 
   @override
@@ -695,38 +740,44 @@ class _StatusBadge extends StatelessWidget {
     final IconData icon;
 
     if (isAbsent) {
-      bg = Colors.grey.shade100;
-      fg = Colors.grey.shade500;
+      bg = isDark ? Colors.grey.withValues(alpha: 0.15) : Colors.grey.shade100;
+      fg = isDark ? Colors.grey.shade400 : Colors.grey.shade500;
       label = 'Absent';
       icon = Icons.person_off_rounded;
     } else if (isComplete && isLate) {
-      bg = Colors.orange.shade50;
-      fg = Colors.orange.shade700;
+      bg = isDark
+          ? Colors.orange.withValues(alpha: 0.15)
+          : Colors.orange.shade50;
+      fg = isDark ? Colors.orange.shade300 : Colors.orange.shade700;
       label = 'Late';
       icon = Icons.schedule_rounded;
     } else if (isComplete) {
-      bg = Colors.green.shade50;
-      fg = Colors.green.shade700;
+      bg = isDark ? Colors.green.withValues(alpha: 0.15) : Colors.green.shade50;
+      fg = isDark ? Colors.greenAccent : Colors.green.shade700;
       label = 'Complete';
       icon = Icons.check_circle_rounded;
     } else if (isOngoing) {
-      bg = Colors.blue.shade50;
-      fg = Colors.blue.shade700;
+      bg = isDark ? Colors.blue.withValues(alpha: 0.15) : Colors.blue.shade50;
+      fg = isDark ? Colors.lightBlueAccent : Colors.blue.shade700;
       label = 'On Shift';
       icon = Icons.timelapse_rounded;
     } else if (isReported) {
-      bg = Colors.purple.shade50;
-      fg = Colors.purple.shade700;
+      bg = isDark
+          ? Colors.purple.withValues(alpha: 0.15)
+          : Colors.purple.shade50;
+      fg = isDark ? Colors.purpleAccent : Colors.purple.shade700;
       label = 'Reported';
       icon = Icons.flag_rounded;
     } else if (isMissedClockOut) {
-      bg = Colors.red.shade50;
-      fg = Colors.red.shade700;
+      bg = isDark ? Colors.red.withValues(alpha: 0.15) : Colors.red.shade50;
+      fg = isDark ? Colors.red.shade300 : Colors.red.shade700;
       label = 'Missed Clock Out';
       icon = Icons.alarm_off_rounded;
     } else {
-      bg = Colors.orange.shade50;
-      fg = Colors.orange.shade700;
+      bg = isDark
+          ? Colors.orange.withValues(alpha: 0.15)
+          : Colors.orange.shade50;
+      fg = isDark ? Colors.orange.shade300 : Colors.orange.shade700;
       label = 'Incomplete';
       icon = Icons.warning_amber_rounded;
     }
@@ -736,6 +787,7 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: fg.withValues(alpha: 0.3)) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -761,11 +813,13 @@ class _ReportButton extends StatefulWidget {
   final int recordId;
   final String date;
   final String reportType;
+  final Color accentColor;
 
   const _ReportButton({
     required this.recordId,
     required this.date,
     required this.reportType,
+    required this.accentColor,
   });
 
   @override
@@ -790,7 +844,10 @@ class _ReportButtonState extends State<_ReportButton> {
   Future<void> _submit() async {
     final reason = await showDialog<String>(
       context: context,
-      builder: (_) => _ReportIssueDialog(reportType: widget.reportType),
+      builder: (_) => _ReportIssueDialog(
+        reportType: widget.reportType,
+        accentColor: widget.accentColor,
+      ),
     );
     if (reason == null || reason.isEmpty || !mounted) return;
 
@@ -822,6 +879,9 @@ class _ReportButtonState extends State<_ReportButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkInternTheme;
+    final accent = widget.accentColor;
+
     return GestureDetector(
       onTap: _submitting ? null : _submit,
       child: AnimatedContainer(
@@ -829,12 +889,12 @@ class _ReportButtonState extends State<_ReportButton> {
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
           color: _submitting
-              ? Colors.orange.shade50
-              : const Color(0xFF460A14).withValues(alpha: 0.07),
+              ? (isDark
+                  ? Colors.orange.withValues(alpha: 0.15)
+                  : Colors.orange.shade50)
+              : accent.withValues(alpha: isDark ? 0.12 : 0.07),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(0xFF460A14).withValues(alpha: 0.25),
-          ),
+          border: Border.all(color: accent.withValues(alpha: 0.25)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -845,19 +905,18 @@ class _ReportButtonState extends State<_ReportButton> {
                 height: 10,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
-                  color: const Color(0xFF460A14).withValues(alpha: 0.6),
+                  color: accent.withValues(alpha: 0.6),
                 ),
               )
             else
-              const Icon(Icons.flag_rounded,
-                  size: 10, color: Color(0xFF460A14)),
+              Icon(Icons.flag_rounded, size: 10, color: accent),
             const SizedBox(width: 4),
             Text(
               _submitting ? 'Submitting…' : _buttonLabel,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF460A14),
+                color: accent,
               ),
             ),
           ],
@@ -873,7 +932,12 @@ class _ReportButtonState extends State<_ReportButton> {
 
 class _ReportIssueDialog extends StatefulWidget {
   final String reportType;
-  const _ReportIssueDialog({required this.reportType});
+  final Color accentColor;
+
+  const _ReportIssueDialog({
+    required this.reportType,
+    required this.accentColor,
+  });
 
   @override
   State<_ReportIssueDialog> createState() => _ReportIssueDialogState();
@@ -935,19 +999,29 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final accent = widget.accentColor;
+
     return AlertDialog(
+      backgroundColor: isDark ? theme.surface : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       title: Row(
         children: [
-          Icon(_icon, color: const Color(0xFF460A14), size: 22),
+          Icon(_icon, color: accent, size: 22),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(_title,
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            child: Text(
+              _title,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: theme.surfaceText,
+              ),
+            ),
           ),
         ],
       ),
@@ -957,44 +1031,51 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_bodyText,
-                style: const TextStyle(
-                    fontSize: 13, color: Colors.black54, height: 1.5)),
+            Text(
+              _bodyText,
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.mutedText,
+                height: 1.5,
+              ),
+            ),
             const SizedBox(height: 14),
-            Text('Reason',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700)),
+            Text(
+              'Reason',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: theme.mutedText,
+              ),
+            ),
             const SizedBox(height: 6),
             TextFormField(
               controller: _ctrl,
               maxLines: 3,
               maxLength: 300,
               autofocus: true,
+              style: TextStyle(fontSize: 13, color: theme.surfaceText),
               decoration: InputDecoration(
                 hintText: _hint,
-                hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                hintStyle: TextStyle(fontSize: 12, color: theme.mutedText),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor:
+                    isDark ? theme.metricCardBackground : Colors.grey.shade50,
                 contentPadding: const EdgeInsets.all(12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: theme.border),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: theme.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide:
-                      const BorderSide(color: Color(0xFF460A14), width: 1.5),
+                  borderSide: BorderSide(color: accent, width: 1.5),
                 ),
-                counterStyle:
-                    TextStyle(fontSize: 10, color: Colors.grey.shade400),
+                counterStyle: TextStyle(fontSize: 10, color: theme.mutedText),
               ),
-              style: const TextStyle(fontSize: 13),
               validator: (v) {
                 if (v == null || v.trim().length < 5) {
                   return 'Please enter at least 5 characters.';
@@ -1008,7 +1089,7 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Colors.black45)),
+          child: Text('Cancel', style: TextStyle(color: theme.mutedText)),
         ),
         ElevatedButton.icon(
           onPressed: () {
@@ -1019,7 +1100,7 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           icon: const Icon(Icons.send_rounded, size: 15),
           label: const Text('Submit Report'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF460A14),
+            backgroundColor: accent,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             shape:

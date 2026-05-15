@@ -8,15 +8,17 @@ class ExportButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkInternTheme;
+
     return Material(
-      color: kButtonDark,
+      color: const Color(0xFF6C63FF),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.download_rounded, size: 16, color: Colors.white),
@@ -24,9 +26,10 @@ class ExportButton extends StatelessWidget {
               Text(
                 'Export PDF',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -56,13 +59,24 @@ class IconActionButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF4F5F8),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : const Color(0xFFF4F5F8),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
+          child: Container(
             padding: const EdgeInsets.all(10),
+            decoration: isDark
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  )
+                : null,
             child: Icon(icon, color: theme.mutedText, size: 18),
           ),
         ),
@@ -91,7 +105,7 @@ class PageButton extends StatelessWidget {
       color: enabled
           ? kButtonDark
           : isDark
-              ? const Color(0xFF1A1A2E)
+              ? Colors.white.withValues(alpha: 0.06)
               : const Color(0xFFF4F5F8),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
@@ -99,13 +113,15 @@ class PageButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(7),
-          child: Icon(icon,
-              size: 18,
-              color: enabled
-                  ? Colors.white
-                  : isDark
-                      ? Colors.white30
-                      : kTextLight),
+          child: Icon(
+            icon,
+            size: 18,
+            color: enabled
+                ? Colors.white
+                : isDark
+                    ? Colors.white30
+                    : kTextLight,
+          ),
         ),
       ),
     );

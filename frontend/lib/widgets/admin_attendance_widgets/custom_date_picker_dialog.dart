@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/attendance_constants.dart';
 import '../../services/date_helpers.dart';
+import '../app_theme.dart';
 
 typedef DatePickerConfirmCallback = void Function({
   required bool isRange,
@@ -30,8 +31,7 @@ class CustomDatePickerDialog extends StatefulWidget {
   });
 
   @override
-  State<CustomDatePickerDialog> createState() =>
-      _CustomDatePickerDialogState();
+  State<CustomDatePickerDialog> createState() => _CustomDatePickerDialogState();
 }
 
 class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
@@ -43,10 +43,10 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
   @override
   void initState() {
     super.initState();
-    _isRange    = widget.initialIsRange;
+    _isRange = widget.initialIsRange;
     _singleDate = widget.initialSingleDate;
     _rangeStart = widget.initialRangeStart;
-    _rangeEnd   = widget.initialRangeEnd;
+    _rangeEnd = widget.initialRangeEnd;
   }
 
   // ── Date pickers ──────────────────────────────────────────────────────────
@@ -105,8 +105,13 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<InternSpaceThemeColors>() ??
+        InternSpaceThemeColors.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Dialog(
-      backgroundColor: kSurface,
+      backgroundColor:
+          isDark ? const Color(0xFF0B0F2F) : theme.dialogBackground,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -116,13 +121,13 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
+              _buildHeader(isDark),
               const SizedBox(height: 20),
-              _buildModeToggle(),
+              _buildModeToggle(isDark),
               const SizedBox(height: 20),
-              _buildDatePickers(),
+              _buildDatePickers(isDark),
               const SizedBox(height: 24),
-              _buildActions(),
+              _buildActions(isDark),
             ],
           ),
         ),
@@ -130,7 +135,7 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
     );
   }
 
-  Widget _buildHeader() => Row(
+  Widget _buildHeader(bool isDark) => Row(
         children: [
           Container(
             width: 36,
@@ -143,17 +148,21 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
                 color: Colors.white, size: 18),
           ),
           const SizedBox(width: 12),
-          const Text(
+          Text(
             'Custom Date Filter',
             style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: kTextDark),
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : kTextDark,
+            ),
           ),
           const Spacer(),
           IconButton(
-            icon:
-                const Icon(Icons.close_rounded, size: 18, color: kTextLight),
+            icon: Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: isDark ? Colors.white38 : kTextLight,
+            ),
             onPressed: () => Navigator.pop(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -161,10 +170,10 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
         ],
       );
 
-  Widget _buildModeToggle() => Container(
+  Widget _buildModeToggle(bool isDark) => Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: const Color(0xFFF4F5F8),
+          color: isDark ? const Color(0xFF070A1F) : const Color(0xFFF4F5F8),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -173,23 +182,26 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
               label: 'Single Date',
               icon: Icons.today_rounded,
               selected: !_isRange,
+              isDark: isDark,
               onTap: () => setState(() => _isRange = false),
             ),
             _ModeTab(
               label: 'Date Range',
               icon: Icons.date_range_rounded,
               selected: _isRange,
+              isDark: isDark,
               onTap: () => setState(() => _isRange = true),
             ),
           ],
         ),
       );
 
-  Widget _buildDatePickers() {
+  Widget _buildDatePickers(bool isDark) {
     if (!_isRange) {
       return _DatePickerTile(
         label: 'Select Date',
         value: toDisplayDate(_singleDate),
+        isDark: isDark,
         onTap: _pickSingleDate,
       );
     }
@@ -198,34 +210,36 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
         _DatePickerTile(
           label: 'From',
           value: toDisplayDate(_rangeStart),
+          isDark: isDark,
           onTap: _pickRangeStart,
         ),
         const SizedBox(height: 10),
         _DatePickerTile(
           label: 'To',
           value: toDisplayDate(_rangeEnd),
+          isDark: isDark,
           onTap: _pickRangeEnd,
         ),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFFEEF2FF),
+            color: isDark
+                ? kAccent.withValues(alpha: 0.1)
+                : const Color(0xFFEEF2FF),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-                color: kAccent.withValues(alpha: 0.3), width: 1),
+            border: Border.all(color: kAccent.withValues(alpha: 0.3), width: 1),
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline_rounded,
-                  size: 14, color: Color(0xFF4F46E5)),
+              const Icon(Icons.info_outline_rounded, size: 14, color: kAccent),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   formatDateRange(_rangeStart, _rangeEnd),
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF4F46E5),
+                    color: kAccent,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -237,22 +251,24 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
     );
   }
 
-  Widget _buildActions() => Row(
+  Widget _buildActions(bool isDark) => Row(
         children: [
           Expanded(
             child: TextButton(
               onPressed: () => Navigator.pop(context),
               style: TextButton.styleFrom(
-                foregroundColor: kTextMid,
+                foregroundColor: isDark ? Colors.white60 : kTextMid,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: kBorder),
+                  side: BorderSide(
+                    color:
+                        isDark ? Colors.white.withValues(alpha: 0.08) : kBorder,
+                  ),
                 ),
               ),
               child: const Text('Cancel',
-                  style:
-                      TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(width: 10),
@@ -261,14 +277,14 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
               onPressed: () {
                 Navigator.pop(context);
                 widget.onConfirm(
-                  isRange:    _isRange,
+                  isRange: _isRange,
                   singleDate: _isRange ? null : _singleDate,
                   rangeStart: _isRange ? _rangeStart : null,
-                  rangeEnd:   _isRange ? _rangeEnd : null,
+                  rangeEnd: _isRange ? _rangeEnd : null,
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: kButtonDark,
+                backgroundColor: kAccent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 elevation: 0,
@@ -276,8 +292,7 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
                     borderRadius: BorderRadius.circular(12)),
               ),
               child: const Text('Apply',
-                  style:
-                      TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -292,12 +307,14 @@ class _ModeTab extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool selected;
+  final bool isDark;
   final VoidCallback onTap;
 
   const _ModeTab({
     required this.label,
     required this.icon,
     required this.selected,
+    required this.isDark,
     required this.onTap,
   });
 
@@ -310,7 +327,7 @@ class _ModeTab extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: BoxDecoration(
-            color: selected ? kButtonDark : Colors.transparent,
+            color: selected ? kAccent : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
@@ -318,14 +335,22 @@ class _ModeTab extends StatelessWidget {
             children: [
               Icon(icon,
                   size: 14,
-                  color: selected ? Colors.white : kTextMid),
+                  color: selected
+                      ? Colors.white
+                      : isDark
+                          ? Colors.white38
+                          : kTextMid),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : kTextMid,
+                  color: selected
+                      ? Colors.white
+                      : isDark
+                          ? Colors.white38
+                          : kTextMid,
                 ),
               ),
             ],
@@ -339,11 +364,13 @@ class _ModeTab extends StatelessWidget {
 class _DatePickerTile extends StatelessWidget {
   final String label;
   final String value;
+  final bool isDark;
   final VoidCallback onTap;
 
   const _DatePickerTile({
     required this.label,
     required this.value,
+    required this.isDark,
     required this.onTap,
   });
 
@@ -354,18 +381,20 @@ class _DatePickerTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF4F5F8),
+          color: isDark ? const Color(0xFF070A1F) : const Color(0xFFF4F5F8),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: kBorder),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.08) : kBorder,
+          ),
         ),
         child: Row(
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: kTextLight,
+                color: isDark ? Colors.white38 : kTextLight,
                 letterSpacing: 0.5,
               ),
             ),
@@ -375,14 +404,15 @@ class _DatePickerTile extends StatelessWidget {
             Expanded(
               child: Text(
                 value,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: kTextDark),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : kTextDark,
+                ),
               ),
             ),
-            const Icon(Icons.calendar_month_rounded,
-                size: 16, color: kTextLight),
+            Icon(Icons.calendar_month_rounded,
+                size: 16, color: isDark ? Colors.white38 : kTextLight),
           ],
         ),
       ),

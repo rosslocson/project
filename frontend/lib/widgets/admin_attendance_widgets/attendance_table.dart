@@ -1,11 +1,4 @@
 // lib/widgets/admin_attendance_widgets/attendance_table.dart
-// Table widget that renders attendance records, including the status badge,
-// intern avatar with auth-gated image fetching, report reason column,
-// admin note (remark) column, and report / review actions.
-//
-// NOTE: PendingReportsBell has been removed from this file.
-// The canonical bell now lives in admin_attendance_screen.dart (_PendingBell)
-// and is placed beside the Export button in the card header.
 
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -15,6 +8,7 @@ import '../../services/api_service.dart';
 import '../../services/admin_attendance_service.dart';
 import '../../models/attendance_constants.dart';
 import '../../models/attendance_record.dart';
+import '../../widgets/app_theme.dart';
 import 'report_issue_dialog.dart';
 import 'review_report_sheet.dart';
 
@@ -25,9 +19,6 @@ import 'review_report_sheet.dart';
 class AttendanceTable extends StatelessWidget {
   final List<AdminAttendanceRecord> records;
   final VoidCallback? onRefresh;
-
-  /// Pass true when the viewer is an admin (enables inline remark editing
-  /// and the review-report sheet instead of the report-issue dialog).
   final bool isAdmin;
 
   const AttendanceTable({
@@ -37,7 +28,6 @@ class AttendanceTable extends StatelessWidget {
     this.isAdmin = false,
   });
 
-  // Headers match the 8 data columns (columns 1–8 in _colWidths).
   static const _headers = [
     'Intern',
     'Date',
@@ -50,28 +40,29 @@ class AttendanceTable extends StatelessWidget {
   ];
 
   static const _colWidths = <int, TableColumnWidth>{
-    0: FixedColumnWidth(16),  // left gutter — balanced with right
-    1: FlexColumnWidth(4),    // Intern — wider
-    2: FlexColumnWidth(2),    // Date
-    3: FlexColumnWidth(1.4),  // Time In
-    4: FlexColumnWidth(1.4),  // Time Out
-    5: FlexColumnWidth(1.2),  // Hours
-    6: FlexColumnWidth(3),    // Status — wide enough for "Missed Clock Out"
-    7: FlexColumnWidth(1.8),  // Report Reason — narrower, wraps to next line
-    8: FlexColumnWidth(1.8),  // Admin Note — narrower
-    9: FixedColumnWidth(16),  // right gutter — balanced with left
+    0: FixedColumnWidth(28),
+    1: FlexColumnWidth(3),
+    2: FlexColumnWidth(2),
+    3: FlexColumnWidth(1.5),
+    4: FlexColumnWidth(1.5),
+    5: FlexColumnWidth(1.5),
+    6: FlexColumnWidth(2),
+    7: FlexColumnWidth(2.5),
+    8: FixedColumnWidth(36),
   };
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return Table(
       columnWidths: _colWidths,
       border: TableBorder(
-        horizontalInside: BorderSide(color: Colors.grey.shade100),
+        horizontalInside: BorderSide(color: theme.border),
       ),
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
-        _buildHeader(),
+        _buildHeader(context),
         ...records
             .asMap()
             .entries
@@ -80,11 +71,13 @@ class AttendanceTable extends StatelessWidget {
     );
   }
 
-  TableRow _buildHeader() {
+  TableRow _buildHeader(BuildContext context) {
+    final theme = context.internTheme;
+
     return TableRow(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.transparent,
-        border: Border(bottom: BorderSide(color: kBorder, width: 1.5)),
+        border: Border(bottom: BorderSide(color: theme.border, width: 1.5)),
       ),
       children: [
         const SizedBox.shrink(),
@@ -95,22 +88,24 @@ class AttendanceTable extends StatelessWidget {
             child: Text(
               h.toUpperCase(),
               textAlign: centered ? TextAlign.center : TextAlign.left,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 11,
-                color: kTextMid,
+                color: theme.mutedText,
                 letterSpacing: 0.6,
               ),
             ),
           );
         }),
-        const SizedBox.shrink(), // action column header
+        const SizedBox.shrink(),
       ],
     );
   }
 
   TableRow _buildRow(
       BuildContext context, AdminAttendanceRecord r, int index) {
+    final theme = context.internTheme;
+
     return TableRow(
       decoration: const BoxDecoration(color: Colors.transparent),
       children: [
@@ -126,10 +121,10 @@ class AttendanceTable extends StatelessWidget {
               Flexible(
                 child: Text(
                   r.internName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    color: kTextDark,
+                    color: theme.surfaceText,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -138,7 +133,7 @@ class AttendanceTable extends StatelessWidget {
           ),
         ),
 
-        _cell(r.formattedDate, centered: true),
+        _cell(context, r.formattedDate, centered: true),
 
         // ── Time In with punctuality dot ─────────────────────────────────
         Padding(
@@ -164,18 +159,18 @@ class AttendanceTable extends StatelessWidget {
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: r.isOnTime
-                            ? const Color(0xFF16A34A)
-                            : const Color(0xFFDC2626),
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFEF4444),
                       ),
                     ),
                   ],
                 )
-              : const Text('--',
-                  style: TextStyle(fontSize: 13, color: kTextMid)),
+              : Text('--',
+                  style: TextStyle(fontSize: 13, color: theme.mutedText)),
         ),
 
-        _cell(r.timeOut ?? '--'),
-        _cell(r.formattedHours),
+        _cell(context, r.timeOut ?? '--'),
+        _cell(context, r.formattedHours),
 
         // ── Status badge ─────────────────────────────────────────────────
         Padding(
@@ -195,14 +190,17 @@ class AttendanceTable extends StatelessWidget {
     );
   }
 
-  Widget _cell(String text, {bool centered = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-        child: Text(
-          text,
-          textAlign: centered ? TextAlign.center : TextAlign.left,
-          style: const TextStyle(fontSize: 13, color: kTextMid),
-        ),
-      );
+  Widget _cell(BuildContext context, String text, {bool centered = false}) {
+    final theme = context.internTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+      child: Text(
+        text,
+        textAlign: centered ? TextAlign.center : TextAlign.left,
+        style: TextStyle(fontSize: 13, color: theme.mutedText),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -300,6 +298,8 @@ class _AdminNoteCellState extends State<_AdminNoteCell> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
     final remark = widget.record.remark;
     final hasRemark = remark != null && remark.isNotEmpty;
 
@@ -312,7 +312,9 @@ class _AdminNoteCellState extends State<_AdminNoteCell> {
           style: TextStyle(
             fontSize: 12,
             fontStyle: hasRemark ? FontStyle.normal : FontStyle.italic,
-            color: hasRemark ? const Color(0xFF4F46E5) : kTextMid,
+            color: hasRemark
+                ? (isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5))
+                : theme.mutedText,
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -332,17 +334,24 @@ class _AdminNoteCellState extends State<_AdminNoteCell> {
                 controller: _ctrl,
                 autofocus: true,
                 maxLines: 2,
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: 12, color: theme.surfaceText),
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.all(8),
+                  filled: true,
+                  fillColor: theme.metricCardBackground,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide(color: theme.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: theme.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: kAccent),
+                    borderSide:
+                        BorderSide(color: theme.sidebarActiveForeground),
                   ),
                 ),
               ),
@@ -389,14 +398,18 @@ class _AdminNoteCellState extends State<_AdminNoteCell> {
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: hasRemark ? FontStyle.normal : FontStyle.italic,
-                  color: hasRemark ? const Color(0xFF4F46E5) : kTextMid,
+                  color: hasRemark
+                      ? (isDark
+                          ? const Color(0xFF818CF8)
+                          : const Color(0xFF4F46E5))
+                      : theme.mutedText,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.edit, size: 12, color: kTextMid),
+            Icon(Icons.edit, size: 12, color: theme.mutedText),
           ],
         ),
       ),
@@ -466,10 +479,10 @@ class _ActionCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
     final r = record;
 
     if (isAdmin) {
-      // Admin: show review icon with orange dot only when report is pending
       if (!r.hasOpenReport) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -484,8 +497,8 @@ class _ActionCell extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.rate_review_outlined,
-                    size: 20, color: kAccent),
+                Icon(Icons.rate_review_outlined,
+                    size: 20, color: theme.sidebarActiveForeground),
                 Positioned(
                   top: -3,
                   right: -3,
@@ -505,11 +518,9 @@ class _ActionCell extends StatelessWidget {
       );
     }
 
-    // ── Intern: flag icon on reportable statuses ─────────────────────────
     if (!r.isReportable) return const SizedBox.shrink();
 
     final alreadyReported = r.isReported;
-
     final String reportHint = switch (r.status) {
       'Absent' => 'Dispute absence',
       'Late' => 'Dispute late mark',
@@ -532,7 +543,9 @@ class _ActionCell extends StatelessWidget {
           child: Icon(
             alreadyReported ? Icons.flag : Icons.flag_outlined,
             size: 20,
-            color: alreadyReported ? const Color(0xFFF59E0B) : kTextMid,
+            color: alreadyReported
+                ? const Color(0xFFF59E0B)
+                : theme.mutedText,
           ),
         ),
       ),
@@ -541,7 +554,7 @@ class _ActionCell extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Status badge
+// Status badge — dark-mode aware
 // ─────────────────────────────────────────────────────────────────────────────
 
 class StatusBadge extends StatelessWidget {
@@ -550,32 +563,64 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkInternTheme;
+
     final (Color border, Color text, Color bg) = switch (status) {
-      'Present' => (
-          const Color(0xFF22C55E),
-          const Color(0xFF16A34A),
-          const Color(0xFFF0FDF4),
-        ),
-      'Late' => (
-          const Color(0xFFF59E0B),
-          const Color(0xFFB45309),
-          const Color(0xFFFFFBEB),
-        ),
-      'On Shift' => (
-          kAccent,
-          const Color(0xFF4F46E5),
-          const Color(0xFFEEF2FF),
-        ),
-      'Missed Clock Out' => (
-          const Color(0xFFEA580C),
-          const Color(0xFFC2410C),
-          const Color(0xFFFFF7ED),
-        ),
-      _ => (
-          const Color(0xFFEF4444),
-          const Color(0xFFDC2626),
-          const Color(0xFFFEF2F2),
-        ),
+      'Present' => isDark
+          ? (
+              const Color(0xFF22C55E),
+              const Color(0xFF22C55E),
+              const Color(0xFF22C55E).withValues(alpha: 0.12),
+            )
+          : (
+              const Color(0xFF22C55E),
+              const Color(0xFF16A34A),
+              const Color(0xFFF0FDF4),
+            ),
+      'Late' => isDark
+          ? (
+              const Color(0xFFF59E0B),
+              const Color(0xFFF59E0B),
+              const Color(0xFFF59E0B).withValues(alpha: 0.12),
+            )
+          : (
+              const Color(0xFFF59E0B),
+              const Color(0xFFB45309),
+              const Color(0xFFFFFBEB),
+            ),
+      'On Shift' => isDark
+          ? (
+              const Color(0xFF818CF8),
+              const Color(0xFF818CF8),
+              const Color(0xFF818CF8).withValues(alpha: 0.12),
+            )
+          : (
+              kAccent,
+              const Color(0xFF4F46E5),
+              const Color(0xFFEEF2FF),
+            ),
+      'Missed Clock Out' => isDark
+          ? (
+              const Color(0xFFFB923C),
+              const Color(0xFFFB923C),
+              const Color(0xFFFB923C).withValues(alpha: 0.12),
+            )
+          : (
+              const Color(0xFFEA580C),
+              const Color(0xFFC2410C),
+              const Color(0xFFFFF7ED),
+            ),
+      _ => isDark // Absent + default
+          ? (
+              const Color(0xFFEF4444),
+              const Color(0xFFEF4444),
+              const Color(0xFFEF4444).withValues(alpha: 0.12),
+            )
+          : (
+              const Color(0xFFEF4444),
+              const Color(0xFFDC2626),
+              const Color(0xFFFEF2F2),
+            ),
     };
 
     return Container(
@@ -600,7 +645,7 @@ class StatusBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Intern avatar (auth-gated image fetch)
+// Intern avatar
 // ─────────────────────────────────────────────────────────────────────────────
 
 class InternAvatar extends StatefulWidget {
@@ -673,9 +718,13 @@ class _InternAvatarState extends State<InternAvatar> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkInternTheme;
+
     return CircleAvatar(
       radius: 18,
-      backgroundColor: const Color(0xFFDCEEFD),
+      backgroundColor: isDark
+          ? const Color(0xFF1E3A5F)
+          : const Color(0xFFDCEEFD),
       child: _imageBytes != null
           ? ClipOval(
               child: Image.memory(
@@ -687,8 +736,10 @@ class _InternAvatarState extends State<InternAvatar> {
             )
           : Text(
               _initials,
-              style: const TextStyle(
-                color: Color(0xFF5B9BD5),
+              style: TextStyle(
+                color: isDark
+                    ? const Color(0xFF93C5FD)
+                    : const Color(0xFF5B9BD5),
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -698,7 +749,7 @@ class _InternAvatarState extends State<InternAvatar> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HamburgerIcon — re-exported by admin_attendance_screen.dart
+// HamburgerIcon
 // ─────────────────────────────────────────────────────────────────────────────
 
 class HamburgerIcon extends StatelessWidget {
@@ -707,9 +758,10 @@ class HamburgerIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
     return GestureDetector(
       onTap: onTap,
-      child: const Icon(Icons.menu_rounded, size: 22, color: kTextMid),
+      child: Icon(Icons.menu_rounded, size: 22, color: theme.mutedText),
     );
   }
 }

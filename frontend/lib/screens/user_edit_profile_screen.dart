@@ -637,8 +637,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                         'SAVE CHANGES',
                                                         style: TextStyle(
                                                             fontWeight:
-                                                                FontWeight.w800,
-                                                            fontSize: 15,
+                                                                FontWeight.w700,
+                                                            fontSize: 16,
                                                             letterSpacing: 0.8),
                                                       ),
                                               ),

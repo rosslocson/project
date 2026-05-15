@@ -225,8 +225,8 @@ class ProfileFormTab extends StatelessWidget {
                           color: Colors.white, strokeWidth: 2))
                   : const Text('SAVE CHANGES',
                       style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
                           letterSpacing: 0.8)),
             ),
           ),

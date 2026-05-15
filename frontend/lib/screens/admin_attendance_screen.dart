@@ -19,6 +19,9 @@ import '../widgets/admin_attendance_widgets/attendance_table.dart';
 import '../widgets/admin_attendance_widgets/attendance_ui_components.dart';
 import '../widgets/admin_attendance_widgets/custom_date_picker_dialog.dart';
 import '../widgets/admin_attendance_widgets/review_report_sheet.dart';
+import '../widgets/admin_attendance_widgets/attendance_ui_components.dart';
+import '../widgets/app_theme.dart';
+import '../widgets/app_background.dart';
 import 'export_attendance.dart';
 import 'admin_glass_topbar.dart' as admin_topbar;
 
@@ -89,6 +92,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _records = [];
       _page = page;
     });
 
@@ -193,6 +197,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
@@ -206,29 +211,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 : null,
           ),
           Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/space_background.jpg'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildTopBar(),
-                      const SizedBox(height: 15),
-                      Expanded(child: _buildCard()),
-                    ],
-                  ),
-                ),
-              ],
+            child: AppBackground(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildTopBar(),
+                  const SizedBox(height: 15),
+                  Expanded(child: _buildCard()),
+                ],
+              ),
             ),
           ),
         ],
@@ -251,19 +242,16 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 
   Widget _buildCard() {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     return Padding(
       padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
       child: Container(
         decoration: BoxDecoration(
-          color: kSurface,
+          color: isDark ? theme.surface : theme.sidebarBackground,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: kBlue.withValues(alpha: 0.08),
-              blurRadius: 32,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          border: Border.all(color: theme.border.withValues(alpha: 0.15)),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
@@ -276,7 +264,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               if (!_loading && _pendingReportCount > 0) _buildPendingBanner(),
               if (!_loading && _pendingReportCount > 0)
                 const SizedBox(height: 12),
-              const Divider(height: 1, thickness: 1, color: kBorder),
+              Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: theme.border.withValues(alpha: 0.15)),
               Expanded(child: _buildBody()),
               if (_total > _limit) _buildPagination(),
             ],
@@ -289,38 +280,44 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   // ── Card header — contains title, record count, bell, and export button ───
 
   Widget _buildCardHeader() {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
+    final primaryColor =
+        isDark ? const Color(0xFF1A1F5A) : const Color(0xFF00022E);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(28, 22, 28, 18),
-      decoration: const BoxDecoration(
-        color: kCardBg,
-        border: Border(bottom: BorderSide(color: kBorder, width: 1)),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        border: Border(
+          bottom:
+              BorderSide(color: theme.border.withValues(alpha: 0.15), width: 1),
+        ),
       ),
       child: Row(
         children: [
-          // Icon
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: kButtonDark,
+              color: primaryColor,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.fact_check_outlined,
                 color: Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
-
-          // Title + record count / date range
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Attendance Records',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: kTextDark,
+                    color: theme.surfaceText,
                     letterSpacing: 0.1,
                   ),
                 ),
@@ -331,25 +328,25 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       _loading
                           ? 'Loading…'
                           : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                      style: const TextStyle(fontSize: 12, color: kTextMid),
+                      style: TextStyle(fontSize: 12, color: theme.mutedText),
                     ),
                     if (!_loading && _period != AttendancePeriod.allDates) ...[
                       const SizedBox(width: 8),
                       Container(
                         width: 1,
                         height: 11,
-                        color: kBorder,
+                        color: theme.border.withValues(alpha: 0.15),
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                       ),
                       const SizedBox(width: 6),
-                      const Icon(Icons.calendar_today_rounded,
-                          size: 11, color: kTextLight),
+                      Icon(Icons.calendar_today_rounded,
+                          size: 11, color: theme.mutedText),
                       const SizedBox(width: 4),
                       Text(
                         _activeDateRangeLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: kTextMid,
+                          color: theme.mutedText,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -359,15 +356,11 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               ],
             ),
           ),
-
-          // ── Pending-reports bell ────────────────────────────────────────
           _PendingBell(
             key: _bellKey,
             onResolved: _onReportResolved,
           ),
           const SizedBox(width: 10),
-
-          // ── Export button ───────────────────────────────────────────────
           ExportButton(
             onTap: () async {
               final isAllDates = _period == AttendancePeriod.allDates;
@@ -560,6 +553,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   // ── Body (loading / empty / table) ────────────────────────────────────────
 
   Widget _buildBody() {
+    final theme = context.internTheme;
+
+    if (_loading && _records.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     if (_error != null) {
       return Center(
         child: Column(
@@ -582,14 +583,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               onPressed: () => _load(page: _page),
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Retry'),
-              style: TextButton.styleFrom(foregroundColor: kAccent),
             ),
           ],
         ),
       );
     }
 
-    if (_records.isEmpty && !_loading) {
+    if (_records.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -597,25 +597,25 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F4F8),
+                color: theme.metricCardBackground,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.event_busy_rounded,
-                  size: 40, color: kTextLight),
+              child: Icon(Icons.event_busy_rounded,
+                  size: 40, color: theme.mutedText),
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'No attendance records found',
               style: TextStyle(
-                color: kTextMid,
+                color: theme.mutedText,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Try adjusting your filters or date range',
-              style: TextStyle(color: kTextLight, fontSize: 12),
+              style: TextStyle(color: theme.mutedText, fontSize: 12),
             ),
           ],
         ),
@@ -631,24 +631,27 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       ),
     );
   }
-
   // ── Pagination ────────────────────────────────────────────────────────────
 
   Widget _buildPagination() {
+    final theme = context.internTheme;
     final totalPages = (_total / _limit).ceil();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-      decoration: const BoxDecoration(
-        color: kCardBg,
-        border: Border(top: BorderSide(color: kBorder)),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        border: Border(
+          top: BorderSide(color: theme.border.withValues(alpha: 0.15)),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Text(
             'Page $_page of $totalPages',
-            style: const TextStyle(
-              color: kTextMid,
+            style: TextStyle(
+              color: theme.mutedText,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -656,7 +659,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           const SizedBox(width: 4),
           Text(
             '· $_total records total',
-            style: const TextStyle(color: kTextLight, fontSize: 12),
+            style: TextStyle(color: theme.mutedText, fontSize: 12),
           ),
           const SizedBox(width: 16),
           PageButton(
@@ -701,7 +704,6 @@ class _PendingBellState extends State<_PendingBell>
   void initState() {
     super.initState();
 
-    // Subtle shake animation when new reports arrive
     _shakeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -723,7 +725,6 @@ class _PendingBellState extends State<_PendingBell>
     super.dispose();
   }
 
-  /// Called externally via GlobalKey after a report is resolved from the table.
   Future<void> reload() async {
     if (!mounted) return;
     setState(() => _loading = true);
@@ -739,7 +740,6 @@ class _PendingBellState extends State<_PendingBell>
       _loading = false;
     });
 
-    // Shake if count increased
     if (_pending.length > prev) {
       _shakeCtrl.forward(from: 0);
     }
@@ -762,6 +762,8 @@ class _PendingBellState extends State<_PendingBell>
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     if (_loading) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 8),
@@ -780,63 +782,67 @@ class _PendingBellState extends State<_PendingBell>
       message: hasReports
           ? '$count pending ${count == 1 ? 'report' : 'reports'}'
           : 'No pending reports',
-      child: GestureDetector(
-        onTap: hasReports ? () => _openPanel(context) : null,
-        child: AnimatedBuilder(
-          animation: _shakeAnim,
-          builder: (_, child) => Transform.translate(
-            offset: Offset(_shakeAnim.value, 0),
-            child: child,
-          ),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: hasReports
-                  ? const Color(0xFFFFFBEB)
-                  : const Color(0xFFF4F4F8),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: hasReports ? const Color(0xFFFCD34D) : kBorder,
-                width: 1.5,
-              ),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  hasReports
-                      ? Icons.notifications_active_rounded
-                      : Icons.notifications_outlined,
-                  size: 20,
-                  color: hasReports ? const Color(0xFF92400E) : kTextMid,
-                ),
-                if (hasReports)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      constraints:
-                          const BoxConstraints(minWidth: 17, minHeight: 17),
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        shape: BoxShape.circle,
+      child: AnimatedBuilder(
+        animation: _shakeAnim,
+        builder: (_, child) => Transform.translate(
+          offset: Offset(_shakeAnim.value, 0),
+          child: child,
+        ),
+        child: Material(
+          color: hasReports ? const Color(0xFFFFFBEB) : const Color(0xFF6C63FF),
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: hasReports ? () => _openPanel(context) : null,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: hasReports
+                  ? BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFFCD34D),
+                        width: 1.5,
                       ),
-                      child: Text(
-                        count > 99 ? '99+' : '$count',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          height: 1.7,
+                    )
+                  : null,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    hasReports
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_outlined,
+                    size: 20,
+                    color: hasReports ? const Color(0xFF92400E) : Colors.white,
+                  ),
+                  if (hasReports)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        constraints:
+                            const BoxConstraints(minWidth: 17, minHeight: 17),
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEF4444),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          count > 99 ? '99+' : '$count',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            height: 1.7,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -857,14 +863,16 @@ class _PendingPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       maxChildSize: 0.95,
       minChildSize: 0.4,
       builder: (_, ctrl) => Container(
-        decoration: const BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -875,7 +883,7 @@ class _PendingPanel extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: theme.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -899,10 +907,10 @@ class _PendingPanel extends StatelessWidget {
                   const SizedBox(width: 10),
                   Text(
                     'Pending Reports (${records.length})',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: kTextDark,
+                      color: theme.surfaceText,
                     ),
                   ),
                   const Spacer(),
@@ -911,10 +919,11 @@ class _PendingPanel extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF4F4F8),
+                        color: theme.metricCardBackground,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.close, size: 16, color: kTextMid),
+                      child:
+                          Icon(Icons.close, size: 16, color: theme.mutedText),
                     ),
                   ),
                 ],
@@ -922,30 +931,31 @@ class _PendingPanel extends StatelessWidget {
             ),
 
             const SizedBox(height: 8),
-            const Divider(height: 1),
+            Divider(height: 1, color: theme.border),
 
             // ── List ────────────────────────────────────────────────────
             Expanded(
               child: records.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle_outline_rounded,
+                          const Icon(Icons.check_circle_outline_rounded,
                               size: 40, color: Color(0xFF22C55E)),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           Text(
                             'All caught up!',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: kTextDark,
+                              color: theme.surfaceText,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             'No pending reports to review.',
-                            style: TextStyle(fontSize: 12, color: kTextMid),
+                            style:
+                                TextStyle(fontSize: 12, color: theme.mutedText),
                           ),
                         ],
                       ),
@@ -984,6 +994,8 @@ class _PendingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
     return InkWell(
       onTap: () => ReviewReportSheet.show(
         context,
@@ -1015,10 +1027,10 @@ class _PendingTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           record.internName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
-                            color: kTextDark,
+                            color: theme.surfaceText,
                           ),
                         ),
                       ),
@@ -1028,7 +1040,7 @@ class _PendingTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     record.formattedDate,
-                    style: const TextStyle(fontSize: 12, color: kTextMid),
+                    style: TextStyle(fontSize: 12, color: theme.mutedText),
                   ),
                   if (record.reportReason != null) ...[
                     const SizedBox(height: 6),
@@ -1058,16 +1070,17 @@ class _PendingTile extends StatelessWidget {
             const SizedBox(width: 8),
 
             // Chevron + "Review" label
-            const Column(
+            Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.rate_review_outlined, size: 18, color: kAccent),
-                SizedBox(height: 2),
+                Icon(Icons.rate_review_outlined,
+                    size: 18, color: theme.sidebarActiveForeground),
+                const SizedBox(height: 2),
                 Text(
                   'Review',
                   style: TextStyle(
                     fontSize: 9,
-                    color: kAccent,
+                    color: theme.sidebarActiveForeground,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
