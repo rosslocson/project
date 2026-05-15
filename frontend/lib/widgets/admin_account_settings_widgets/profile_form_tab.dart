@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import 'status_message_banner.dart';
 
-class ProfileFormTab extends StatelessWidget {
+class ProfileFormTab extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController firstCtrl;
   final TextEditingController lastCtrl;
@@ -31,6 +31,32 @@ class ProfileFormTab extends StatelessWidget {
     required this.onDeptChanged,
     required this.onSave,
   });
+
+  @override
+  State<ProfileFormTab> createState() => _ProfileFormTabState();
+}
+
+class _ProfileFormTabState extends State<ProfileFormTab> {
+  bool _isEditing = false;
+
+  @override
+  void didUpdateWidget(covariant ProfileFormTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Automatically hide the save button again if a save just completed successfully
+    if (oldWidget.savingProfile && !widget.savingProfile && widget.profileSuccess) {
+      setState(() {
+        _isEditing = false;
+      });
+    }
+  }
+
+  void _markAsEdited() {
+    if (!_isEditing) {
+      setState(() {
+        _isEditing = true;
+      });
+    }
+  }
 
   InputDecoration _getFormDecoration(
     BuildContext context,
@@ -76,6 +102,7 @@ class ProfileFormTab extends StatelessWidget {
     required String hint,
     required List<String> items,
     required void Function(String?)? onChanged,
+    VoidCallback? onTap,
   }) {
     final theme = context.internTheme;
 
@@ -99,9 +126,7 @@ class ProfileFormTab extends StatelessWidget {
           Expanded(
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: (value != null && items.contains(value))
-                    ? value
-                    : null, // ← fix here
+                value: (value != null && items.contains(value)) ? value : null,
                 isDense: true,
                 hint: Text(hint,
                     style: TextStyle(
@@ -121,6 +146,7 @@ class ProfileFormTab extends StatelessWidget {
                         child: Text(s, overflow: TextOverflow.ellipsis)))
                     .toList(),
                 onChanged: onChanged,
+                onTap: onTap, // Triggers when the dropdown is clicked
               ),
             ),
           ),
@@ -143,19 +169,22 @@ class ProfileFormTab extends StatelessWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
             child: Form(
-              key: formKey,
+              key: widget.formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (profileMsg != null) ...[
+                  if (widget.profileMsg != null) ...[
                     StatusMessageBanner(
-                        msg: profileMsg!, success: profileSuccess),
+                        msg: widget.profileMsg!,
+                        success: widget.profileSuccess),
                     const SizedBox(height: 16),
                   ],
                   Row(children: [
                     Expanded(
                         child: TextFormField(
-                      controller: firstCtrl,
+                      controller: widget.firstCtrl,
+                      onTap: _markAsEdited,
+                      onChanged: (_) => _markAsEdited(),
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -166,7 +195,9 @@ class ProfileFormTab extends StatelessWidget {
                     const SizedBox(width: 16),
                     Expanded(
                         child: TextFormField(
-                      controller: lastCtrl,
+                      controller: widget.lastCtrl,
+                      onTap: _markAsEdited,
+                      onChanged: (_) => _markAsEdited(),
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -177,7 +208,7 @@ class ProfileFormTab extends StatelessWidget {
                   ]),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: emailCtrl,
+                    controller: widget.emailCtrl,
                     enabled: false,
                     style: TextStyle(
                         fontSize: 14,
@@ -191,45 +222,69 @@ class ProfileFormTab extends StatelessWidget {
                   _dropdownField(
                     context,
                     label: 'Department',
-                    value: selectedDept,
-                    hint: isLoadingDepartments
+                    value: widget.selectedDept,
+                    hint: widget.isLoadingDepartments
                         ? 'Loading departments...'
-                        : (departments.isEmpty ? 'N/A' : 'Select Department'),
-                    items: departments,
-                    onChanged: isLoadingDepartments ? null : onDeptChanged,
+                        : (widget.departments.isEmpty
+                            ? 'N/A'
+                            : 'Select Department'),
+                    items: widget.departments,
+                    onTap: _markAsEdited,
+                    onChanged: widget.isLoadingDepartments
+                        ? null
+                        : (val) {
+                            _markAsEdited();
+                            widget.onDeptChanged(val);
+                          },
                   ),
                 ],
               ),
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: savingProfile ? null : onSave,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: savingProfile
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('SAVE CHANGES',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          letterSpacing: 0.8)),
-            ),
-          ),
+        
+        // Use AnimatedSwitcher to smoothly reveal the button when interacted with
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return SizeTransition(
+              sizeFactor: animation,
+              axisAlignment: -1.0,
+              child: FadeTransition(opacity: animation, child: child),
+            );
+          },
+          // We show the button if they are editing OR if it is actively saving
+          child: (_isEditing || widget.savingProfile)
+              ? Padding(
+                  key: const ValueKey('save_button'),
+                  padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+                  child: SizedBox(
+                    height: 48,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: widget.savingProfile ? null : widget.onSave,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: widget.savingProfile
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                          : const Text('SAVE CHANGES',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  letterSpacing: 0.8)),
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(key: ValueKey('empty_space')),
         ),
       ],
     );

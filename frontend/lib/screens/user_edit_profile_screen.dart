@@ -566,12 +566,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                         ],
                                       ),
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          40, 0, 40, 28),
-                                      child: Row(
-                                        children: [
-                                          if (_hasUnsavedChanges) ...[
+                                    // Modified Buttons Block
+                                    if (_hasUnsavedChanges)
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            40, 0, 40, 28),
+                                        child: Row(
+                                          children: [
                                             Expanded(
                                               child: SizedBox(
                                                 height: 48,
@@ -607,46 +608,47 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                               ),
                                             ),
                                             const SizedBox(width: 12),
-                                          ],
-                                          Expanded(
-                                            child: SizedBox(
-                                              height: 48,
-                                              child: ElevatedButton(
-                                                onPressed:
-                                                    _saving ? null : _save,
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: kCrimsonDeep,
-                                                  foregroundColor: Colors.white,
-                                                  shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12)),
-                                                  elevation: 0,
+                                            Expanded(
+                                              child: SizedBox(
+                                                height: 48,
+                                                child: ElevatedButton(
+                                                  onPressed:
+                                                      _saving ? null : _save,
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: kCrimsonDeep,
+                                                    foregroundColor: Colors.white,
+                                                    shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                                12)),
+                                                    elevation: 0,
+                                                  ),
+                                                  child: _saving
+                                                      ? const SizedBox(
+                                                          height: 20,
+                                                          width: 20,
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  strokeWidth: 2),
+                                                        )
+                                                      : const Text(
+                                                          'SAVE CHANGES',
+                                                          style: TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight.w800,
+                                                              fontSize: 15,
+                                                              letterSpacing: 0.8),
+                                                        ),
                                                 ),
-                                                child: _saving
-                                                    ? const SizedBox(
-                                                        height: 20,
-                                                        width: 20,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                                color: Colors
-                                                                    .white,
-                                                                strokeWidth: 2),
-                                                      )
-                                                    : const Text(
-                                                        'SAVE CHANGES',
-                                                        style: TextStyle(
-                                                            fontWeight:
-                                                                FontWeight.w800,
-                                                            fontSize: 15,
-                                                            letterSpacing: 0.8),
-                                                      ),
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                          ],
+                                        ),
+                                      )
+                                    else
+                                      const SizedBox(height: 28), // Retains bottom spacing for the tab view
                                   ],
                                 ),
                         ),

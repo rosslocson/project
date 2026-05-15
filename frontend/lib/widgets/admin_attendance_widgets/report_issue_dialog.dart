@@ -6,7 +6,6 @@
 
 import 'package:flutter/material.dart';
 import '../../models/attendance_record.dart';
-import '../../models/attendance_constants.dart';
 import '../../services/attendance_service.dart';
 
 // ── Theme constants matching MyProfileScreen / ProfileLeftPanel dark blue ──

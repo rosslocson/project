@@ -24,7 +24,7 @@ class AvatarActionDialog extends StatelessWidget {
     final Color subtitleColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
     
     final Color primaryBtnColor = isDark ? _kDarkPurple : _kBlue;
-    final Color primaryBtnTextColor = Colors.white;
+    const Color primaryBtnTextColor = Colors.white;
     
     final Color outlineBtnBorderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade300;
     final Color outlineBtnTextColor = isDark ? Colors.white : Colors.black87;

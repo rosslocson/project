@@ -6,14 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/sidebar_provider.dart';
 import '../widgets/app_background.dart';
 import '../services/api_service.dart';
 import '../widgets/avatar_action_dialog.dart';
-import 'package:image/image.dart' as img;
 
 import '../widgets/user_layout.dart';
 import '../widgets/app_theme.dart';

@@ -149,10 +149,10 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
         children: [
           // ── Header ────────────────────────────────────────────────────
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: _kNavy,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+                  BorderRadius.vertical(top: Radius.circular(16)),
             ),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             child: Row(
@@ -565,7 +565,7 @@ class _AttendanceRow extends StatelessWidget {
                         record.timeIn != null
                             ? _fmtTime(record.timeIn!)
                             : '--',
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 12, color: _kTextSub),
                       ),
                       const SizedBox(width: 10),
@@ -958,9 +958,9 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: _kNavy,
-                borderRadius: const BorderRadius.vertical(
+                borderRadius: BorderRadius.vertical(
                     top: Radius.circular(20)),
               ),
               child: Row(
@@ -992,13 +992,13 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
                   children: [
                     Text(
                       _bodyText,
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 13,
                           color: _kTextSub,
                           height: 1.5),
                     ),
                     const SizedBox(height: 14),
-                    Text(
+                    const Text(
                       'Reason',
                       style: TextStyle(
                         fontSize: 12,

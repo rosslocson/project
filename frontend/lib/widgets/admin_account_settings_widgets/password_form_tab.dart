@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import 'status_message_banner.dart';
 
-class PasswordFormTab extends StatelessWidget {
+class PasswordFormTab extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController curPassCtrl;
   final TextEditingController newPassCtrl;
@@ -36,6 +36,32 @@ class PasswordFormTab extends StatelessWidget {
     required this.onSave,
   });
 
+  @override
+  State<PasswordFormTab> createState() => _PasswordFormTabState();
+}
+
+class _PasswordFormTabState extends State<PasswordFormTab> {
+  bool _isEditing = false;
+
+  @override
+  void didUpdateWidget(covariant PasswordFormTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Automatically hide the save button again if a save just completed successfully
+    if (oldWidget.savingPass && !widget.savingPass && widget.passSuccess) {
+      setState(() {
+        _isEditing = false;
+      });
+    }
+  }
+
+  void _markAsEdited() {
+    if (!_isEditing) {
+      setState(() {
+        _isEditing = true;
+      });
+    }
+  }
+
   InputDecoration _getFormDecoration(
     BuildContext context,
     String label, {
@@ -60,11 +86,22 @@ class PasswordFormTab extends StatelessWidget {
     );
   }
 
-  Widget _passField(BuildContext context, {required TextEditingController controller, required String label, required bool obscure, required VoidCallback onToggle, required String? Function(String?) validator}) =>
+  Widget _passField(
+    BuildContext context, {
+    required TextEditingController controller,
+    required String label,
+    required bool obscure,
+    required VoidCallback onToggle,
+    required String? Function(String?) validator,
+    VoidCallback? onTap,
+    void Function(String)? onChanged,
+  }) =>
       TextFormField(
         controller: controller,
         obscureText: obscure,
         validator: validator,
+        onTap: onTap,
+        onChanged: onChanged,
         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: context.internTheme.surfaceText),
         decoration: _getFormDecoration(context, label, prefixIcon: Icons.lock_outline).copyWith(
           suffixIcon: IconButton(
@@ -86,29 +123,33 @@ class PasswordFormTab extends StatelessWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
             child: Form(
-              key: formKey,
+              key: widget.formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (passMsg != null) ...[
-                    StatusMessageBanner(msg: passMsg!, success: passSuccess),
+                  if (widget.passMsg != null) ...[
+                    StatusMessageBanner(msg: widget.passMsg!, success: widget.passSuccess),
                     const SizedBox(height: 16),
                   ],
                   _passField(
                     context,
-                    controller: curPassCtrl,
+                    controller: widget.curPassCtrl,
                     label: 'Current Password',
-                    obscure: obscureCur,
-                    onToggle: onToggleCur,
+                    obscure: widget.obscureCur,
+                    onToggle: widget.onToggleCur,
+                    onTap: _markAsEdited,
+                    onChanged: (_) => _markAsEdited(),
                     validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
                   const SizedBox(height: 20),
                   _passField(
                     context,
-                    controller: newPassCtrl,
+                    controller: widget.newPassCtrl,
                     label: 'New Password',
-                    obscure: obscureNew,
-                    onToggle: onToggleNew,
+                    obscure: widget.obscureNew,
+                    onToggle: widget.onToggleNew,
+                    onTap: _markAsEdited,
+                    onChanged: (_) => _markAsEdited(),
                     validator: (v) {
                       if (v == null || v.length < 8) return 'Min 8 characters';
                       if (!v.contains(RegExp(r'[A-Z]'))) return 'Need one uppercase letter';
@@ -120,13 +161,15 @@ class PasswordFormTab extends StatelessWidget {
                   const SizedBox(height: 20),
                   _passField(
                     context,
-                    controller: confirmPassCtrl,
+                    controller: widget.confirmPassCtrl,
                     label: 'Confirm New Password',
-                    obscure: obscureConf,
-                    onToggle: onToggleConf,
+                    obscure: widget.obscureConf,
+                    onToggle: widget.onToggleConf,
+                    onTap: _markAsEdited,
+                    onChanged: (_) => _markAsEdited(),
                     validator: (v) {
                       if (v!.isEmpty) return 'Required';
-                      if (v != newPassCtrl.text) return 'Passwords do not match';
+                      if (v != widget.newPassCtrl.text) return 'Passwords do not match';
                       return null;
                     },
                   ),
@@ -135,24 +178,40 @@ class PasswordFormTab extends StatelessWidget {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: savingPass ? null : onSave,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: savingPass
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5)),
-            ),
-          ),
+        
+        // Use AnimatedSwitcher to smoothly reveal the button when interacted with
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return SizeTransition(
+              sizeFactor: animation,
+              axisAlignment: -1.0,
+              child: FadeTransition(opacity: animation, child: child),
+            );
+          },
+          // Show the button if they are editing OR if it is actively saving
+          child: (_isEditing || widget.savingPass)
+              ? Padding(
+                  key: const ValueKey('save_button'),
+                  padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+                  child: SizedBox(
+                    height: 48,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: widget.savingPass ? null : widget.onSave,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: widget.savingPass
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5)),
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(key: ValueKey('empty_space')),
         ),
       ],
     );
