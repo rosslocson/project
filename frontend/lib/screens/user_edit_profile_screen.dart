@@ -394,18 +394,22 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(
-                          left: 100, right: 100, bottom: 28),
+                          left: 96, right: 96, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: context.internTheme.metricCardBackground,
+                          color: context.isDarkInternTheme
+                              ? context.internTheme.surface
+                              : context.internTheme.sidebarBackground,
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: context.internTheme.shadowColor,
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                          boxShadow: context.isDarkInternTheme
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: context.internTheme.shadowColor,
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
@@ -444,7 +448,10 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                             context.internTheme.surfaceText,
                                         unselectedLabelColor:
                                             context.internTheme.mutedText,
-                                        indicatorColor: kCrimsonDeep,
+                                        indicatorColor:
+                                            context.isDarkInternTheme
+                                                ? const Color(0xFF7367F0)
+                                                : kCrimsonDeep,
                                         indicatorWeight: 3,
                                         dividerColor: Colors.transparent,
                                         tabs: [
@@ -615,7 +622,10 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                 onPressed:
                                                     _saving ? null : _save,
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: kCrimsonDeep,
+                                                  backgroundColor: context
+                                                          .isDarkInternTheme
+                                                      ? const Color(0xFF7367F0)
+                                                      : kCrimsonDeep,
                                                   foregroundColor: Colors.white,
                                                   shape: RoundedRectangleBorder(
                                                       borderRadius:

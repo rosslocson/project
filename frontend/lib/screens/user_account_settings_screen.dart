@@ -268,9 +268,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   Future<void> _showAvatarActions() async {
     final user = context.read<AuthProvider>().user;
     final rawAvatarUrl = user?['avatar_url'] as String? ?? '';
-    final fullAvatarUrl = rawAvatarUrl.isEmpty || rawAvatarUrl.startsWith('http')
-        ? rawAvatarUrl
-        : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
+    final fullAvatarUrl =
+        rawAvatarUrl.isEmpty || rawAvatarUrl.startsWith('http')
+            ? rawAvatarUrl
+            : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
 
     final action = await showDialog<String>(
       context: context,
@@ -372,6 +373,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
 
   Widget _buildSettingsContent(BuildContext context) {
     final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+    final primaryColor = isDark ? const Color(0xFF7367F0) : _kBlue;
     final user = context.watch<AuthProvider>().user;
     final sidebar = context.watch<SidebarProvider>();
 
@@ -403,7 +406,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               showWelcome: false,
               user: user,
               isSidebarOpen: sidebar.isUserSidebarOpen,
-              onToggleSidebar: () => sidebar.setUserSidebarOpen(!sidebar.isUserSidebarOpen),
+              onToggleSidebar: () =>
+                  sidebar.setUserSidebarOpen(!sidebar.isUserSidebarOpen),
             ),
           ),
           const SizedBox(height: 15),
@@ -414,17 +418,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
               padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
               child: Container(
                 decoration: BoxDecoration(
-                  color: context.isDarkInternTheme
-                      ? theme.surface
-                      : theme.sidebarBackground,
+                  color: isDark ? theme.surface : theme.sidebarBackground,
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.shadowColor,
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+                  boxShadow: isDark
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: theme.shadowColor,
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
@@ -437,8 +441,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                             horizontal: 32, vertical: 20),
                         decoration: BoxDecoration(
                             border: Border(
-                                bottom:
-                                    BorderSide(color: theme.border))),
+                                bottom: BorderSide(color: theme.border))),
                         child: Row(
                           children: [
                             Stack(
@@ -446,18 +449,19 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                               children: [
                                 CircleAvatar(
                                   radius: 40,
-                                  backgroundColor: _kBlue.withOpacity(0.1),
+                                  backgroundColor:
+                                      primaryColor.withOpacity(0.1),
                                   backgroundImage: avatarImage,
                                   child: _isUploadingAvatar
-                                      ? const CircularProgressIndicator(
-                                          color: _kBlue, strokeWidth: 3)
+                                      ? CircularProgressIndicator(
+                                          color: primaryColor, strokeWidth: 3)
                                       : avatarImage == null
                                           ? Text(
                                               '${(user?['first_name'] as String? ?? ' ')[0]}${(user?['last_name'] as String? ?? ' ')[0]}',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                   fontSize: 28,
                                                   fontWeight: FontWeight.bold,
-                                                  color: _kBlue),
+                                                  color: primaryColor),
                                             )
                                           : null,
                                 ),
@@ -474,7 +478,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
-                                          color: _kBlue,
+                                          color: primaryColor,
                                           shape: BoxShape.circle,
                                           border: Border.all(
                                               color: Colors.white, width: 2),
@@ -524,13 +528,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: _kBlue.withOpacity(0.08),
+                                      color: isDark
+                                          ? Colors.grey.withValues(alpha: 0.3)
+                                          : primaryColor.withOpacity(0.08),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'USER',
                                       style: TextStyle(
-                                          color: _kBlue,
+                                          color: isDark
+                                              ? Colors.white
+                                              : primaryColor,
                                           fontSize: 11,
                                           fontWeight: FontWeight.w800,
                                           letterSpacing: 1.0),
@@ -547,12 +555,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
                       Container(
                         decoration: BoxDecoration(
                             border: Border(
-                                bottom:
-                                    BorderSide(color: theme.border))),
+                                bottom: BorderSide(color: theme.border))),
                         child: TabBar(
                           controller: _tabs,
                           labelColor: theme.surfaceText,
-                          indicatorColor: _kBlue,
+                          indicatorColor: primaryColor,
                           indicatorWeight: 3,
                           unselectedLabelColor: theme.mutedText,
                           labelStyle: const TextStyle(

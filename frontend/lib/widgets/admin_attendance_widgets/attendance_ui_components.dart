@@ -11,7 +11,7 @@ class ExportButton extends StatelessWidget {
     final isDark = context.isDarkInternTheme;
 
     return Material(
-      color: const Color(0xFF6C63FF),
+      color: isDark ? const Color(0xFF6C63FF) : const Color(0xFF00022E),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,

@@ -47,7 +47,10 @@ class AttendanceSearchField extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kAccent, width: 1.5),
+            borderSide: BorderSide(
+              color: isDark ? kAccent : const Color(0xFF00022E),
+              width: 1.5,
+            ),
           ),
           contentPadding:
               const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
@@ -90,7 +93,9 @@ class _AttendanceStatusDropdownState extends State<AttendanceStatusDropdown> {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: _hovering
-              ? Colors.white.withValues(alpha: 0.08)
+              ? (context.isDarkInternTheme
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.06))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -154,9 +159,13 @@ class _PeriodChipState extends State<PeriodChip> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
             color: widget.selected
-                ? kAccent
+                ? (context.isDarkInternTheme
+                    ? kAccent
+                    : const Color(0xFF00022E))
                 : _hovering
-                    ? Colors.white.withValues(alpha: 0.08)
+                    ? (context.isDarkInternTheme
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.06))
                     : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
           ),

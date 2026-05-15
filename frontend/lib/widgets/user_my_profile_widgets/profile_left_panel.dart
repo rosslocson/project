@@ -186,7 +186,9 @@ class ProfileLeftPanel extends StatelessWidget {
                     style:
                         TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00022E),
+                  backgroundColor: context.isDarkInternTheme
+                      ? const Color(0xFF7367F0)
+                      : const Color(0xFF00022E),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

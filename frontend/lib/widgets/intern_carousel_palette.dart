@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class InternCarouselPalette {
@@ -8,73 +9,94 @@ class InternCarouselPalette {
   static const Color cardText = Colors.white;
   static const Color cardMutedText = Color(0xB3FFFFFF);
   static const Color shadow = Color(0x660F172A);
+
+  // Light mode card gradient
   static const Color _lightCardStart = Color(0xFF5B74FF);
   static const Color _lightCardEnd = Color(0xFF8EA3FF);
   static const Color _lightCardText = Colors.white;
   static const Color _lightCardMutedText = Color(0xE6FFFFFF);
-  static const Color _lightArrowBackground = Color(0xFF5E69E8);
-  static const Color _lightArrowHoverBackground = Color(0xFF5262F4);
-  static const Color _lightArrowBorder = Color(0xFF8EA3FF);
-  static const Color _lightArrowIcon = Colors.white;
 
   const InternCarouselPalette._();
 
   static bool _isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
 
-  static List<Color> cardGradient(BuildContext context) {
-    if (_isDark(context)) {
-      return const [cardStart, cardEnd];
-    }
+  // ─── Card ────────────────────────────────────────────────────────────────
 
+  static List<Color> cardGradient(BuildContext context) {
+    if (_isDark(context)) return const [cardStart, cardEnd];
     return const [_lightCardStart, _lightCardEnd];
   }
 
-  static Color cardForeground(BuildContext context) {
-    return _isDark(context) ? cardText : _lightCardText;
-  }
+  static Color cardForeground(BuildContext context) =>
+      _isDark(context) ? cardText : _lightCardText;
 
-  static Color cardForegroundMuted(BuildContext context) {
-    return _isDark(context) ? cardMutedText : _lightCardMutedText;
-  }
+  static Color cardForegroundMuted(BuildContext context) =>
+      _isDark(context) ? cardMutedText : _lightCardMutedText;
 
   static List<BoxShadow> cardShadows(BuildContext context) {
-    if (!_isDark(context)) {
-      return const [];
-    }
-
-    return [
-      const BoxShadow(
-        color: shadow,
-        blurRadius: 32,
-        offset: Offset(0, 16),
-      ),
+    if (!_isDark(context)) return const [];
+    return const [
+      BoxShadow(color: shadow, blurRadius: 32, offset: Offset(0, 16)),
     ];
   }
 
+  // ─── Arrow buttons (glass) ────────────────────────────────────────────────
+
+  /// Fill color of the circular arrow button.
   static Color arrowBackground(BuildContext context, {required bool hovered}) {
     if (_isDark(context)) {
-      return cardStart.withValues(alpha: hovered ? 0.9 : 0.78);
+      // Dark: deep indigo glass, darkens slightly on hover
+      return cardStart.withValues(alpha: hovered ? 0.90 : 0.78);
     }
-
-    return hovered ? _lightArrowHoverBackground : _lightArrowBackground;
+    // Light: translucent indigo tint, brightens on hover
+    return accent.withValues(alpha: hovered ? 0.28 : 0.18);
   }
 
+  /// Border color of the circular arrow button.
   static Color arrowBorder(BuildContext context, {required bool hovered}) {
     if (_isDark(context)) {
-      return accent.withValues(alpha: hovered ? 0.6 : 0.35);
+      return accent.withValues(alpha: hovered ? 0.60 : 0.35);
     }
-
-    return _lightArrowBorder.withValues(alpha: hovered ? 0.95 : 0.72);
+    return accent.withValues(alpha: hovered ? 0.55 : 0.35);
   }
 
+  /// Icon / chevron color inside the arrow button.
   static Color arrowIcon(BuildContext context, {required bool hovered}) {
     if (_isDark(context)) {
-      return cardText.withValues(alpha: hovered ? 1.0 : 0.9);
+      return cardText.withValues(alpha: hovered ? 1.0 : 0.90);
     }
+    // Light: accent-colored icon so it reads on the translucent bg
+    return accent.withValues(alpha: hovered ? 1.0 : 0.95);
+  }
 
-    return _lightArrowIcon.withValues(alpha: hovered ? 1.0 : 0.96);
+  /// Blur sigma for the BackdropFilter on the arrow button.
+  /// Both modes get a frosted-glass blur.
+  static double arrowBlurSigma(BuildContext context) => 8.0;
+
+  // ─── Dot indicators ───────────────────────────────────────────────────────
+
+  /// Fill of an inactive dot.
+  static Color dotInactiveFill(BuildContext context) {
+    if (_isDark(context)) return accent.withValues(alpha: 0.22);
+    return accent.withValues(alpha: 0.15);
+  }
+
+  /// Border of an inactive dot.
+  static Color dotInactiveBorder(BuildContext context) {
+    if (_isDark(context)) return accent.withValues(alpha: 0.30);
+    return accent.withValues(alpha: 0.30);
+  }
+
+  /// Fill of the active (pill-shaped) dot.
+  static Color dotActiveFill(BuildContext context) {
+    if (_isDark(context)) return accent.withValues(alpha: 0.85);
+    return accent.withValues(alpha: 0.55);
+  }
+
+  /// Border of the active dot.
+  static Color dotActiveBorder(BuildContext context) {
+    if (_isDark(context)) return accent.withValues(alpha: 0.60);
+    return accent.withValues(alpha: 0.45);
   }
 }
-
-

@@ -424,13 +424,15 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                               ? theme.surface
                               : theme.sidebarBackground,
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.shadowColor,
-                              blurRadius: 24,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                          boxShadow: isDark
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: theme.shadowColor,
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),

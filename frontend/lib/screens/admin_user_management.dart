@@ -31,7 +31,7 @@ class _UsersScreenState extends State<UsersScreen> {
   bool _isSidebarOpen = true;
   String _filterStatus = 'All';
 
-// Cache per tab
+  // Cache per tab
   final Map<String, List<dynamic>> _cache = {};
 
   Map<String, int> _counts = {
@@ -53,12 +53,9 @@ class _UsersScreenState extends State<UsersScreen> {
     super.dispose();
   }
 
-  // We removed the search parameter so the API just fetches the category list,
-  // allowing the frontend to handle the robust search logic.
   Future<void> _loadUsers({String? status, bool silent = false}) async {
     if (!mounted) return;
 
-    // Show cached data instantly if available
     final cacheKey = status ?? 'all';
     if (_cache.containsKey(cacheKey)) {
       setState(() => _users = _cache[cacheKey]!);
@@ -71,7 +68,7 @@ class _UsersScreenState extends State<UsersScreen> {
       if (!mounted) return;
 
       final fetched = res['ok'] == true ? (res['users'] ?? []) : [];
-      _cache[cacheKey] = fetched; // store in cache
+      _cache[cacheKey] = fetched;
 
       setState(() {
         _users = fetched;
@@ -104,10 +101,9 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Future<void> _silentReload() async {
-    _cache.clear(); // bust cache so next tab switch re-fetches fresh data
+    _cache.clear();
     try {
       final res = await ApiService.getUsers(status: 'all');
-
       if (!mounted) return;
 
       setState(() {
@@ -263,10 +259,7 @@ class _UsersScreenState extends State<UsersScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: theme.surfaceText),
-            ),
+            child: Text('Cancel', style: TextStyle(color: theme.surfaceText)),
           ),
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(ctx, true),
@@ -334,8 +327,6 @@ class _UsersScreenState extends State<UsersScreen> {
       _filterStatus = status;
       _searchCtrl.clear();
     });
-    // Also clear cache for this tab so toggles/archives stay fresh
-    // but keep other tabs cached
 
     String? apiStatus;
     if (status == 'Active') {
@@ -372,22 +363,17 @@ class _UsersScreenState extends State<UsersScreen> {
       },
     ];
 
-    // 2. Client-Side Search Logic (Fixes the naming/spacing bugs)
     final query = _searchCtrl.text.trim().toLowerCase();
 
     final searchedUsers = _users.where((u) {
       if (query.isEmpty) return true;
-
       final firstName = (u['first_name'] ?? '').toString().toLowerCase();
       final lastName = (u['last_name'] ?? '').toString().toLowerCase();
       final fullName = '$firstName $lastName'.trim();
       final email = (u['email'] ?? '').toString().toLowerCase();
-
-      // This easily matches spaces correctly (e.g., "Lizard Boreas")
       return fullName.contains(query) || email.contains(query);
     }).toList();
 
-    // 3. Separation by Roles
     final admins = searchedUsers.where((u) => u['role'] == 'admin').toList();
     final internUsers =
         searchedUsers.where((u) => u['role'] != 'admin').toList();
@@ -443,54 +429,60 @@ class _UsersScreenState extends State<UsersScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TextField(
-                              controller: _searchCtrl,
-                              style: TextStyle(
-                                  color: theme.surfaceText, fontSize: 13),
-                              decoration: InputDecoration(
-                                hintText: 'Search by name or email...',
-                                hintStyle: TextStyle(
-                                    color: theme.mutedText, fontSize: 13),
-                                prefixIcon:
-                                    Icon(Icons.search, color: theme.mutedText),
-                                suffixIcon: _searchCtrl.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: Icon(Icons.clear,
-                                            color: theme.mutedText),
-                                        onPressed: () {
-                                          _searchCtrl.clear();
-                                          // Triggers a UI rebuild to show all users
-                                          setState(() {});
-                                        },
-                                      )
-                                    : null,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                      color:
-                                          theme.border.withValues(alpha: 0.15),
-                                      width: 1),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                      color:
-                                          theme.border.withValues(alpha: 0.15),
-                                      width: 1),
-                                ),
-                                filled: true,
-                                fillColor: isDark
+                            // Search Bar
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark
                                     ? theme.surface
                                     : theme.sidebarBackground,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              // Live search as you type
-                              onChanged: (v) {
-                                setState(() {});
-                              },
+                              child: TextField(
+                                controller: _searchCtrl,
+                                style: TextStyle(
+                                    color: theme.surfaceText, fontSize: 13),
+                                decoration: InputDecoration(
+                                  hintText: 'Search by name or email...',
+                                  hintStyle: TextStyle(
+                                      color: theme.mutedText, fontSize: 13),
+                                  prefixIcon: Icon(Icons.search,
+                                      color: theme.mutedText),
+                                  suffixIcon: _searchCtrl.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: Icon(Icons.clear,
+                                              color: theme.mutedText),
+                                          onPressed: () {
+                                            _searchCtrl.clear();
+                                            setState(() {});
+                                          },
+                                        )
+                                      : null,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? theme.surface
+                                      : theme.sidebarBackground,
+                                ),
+                                onChanged: (v) => setState(() {}),
+                              ),
                             ),
                             const SizedBox(height: 24),
                             FilterPillGroup(
@@ -511,11 +503,18 @@ class _UsersScreenState extends State<UsersScreen> {
                             else if (admins.isEmpty && internUsers.isEmpty)
                               Container(
                                 decoration: BoxDecoration(
-                                  color: context.isDarkInternTheme
+                                  color: isDark
                                       ? theme.surface
                                       : theme.sidebarBackground,
                                   borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: theme.border),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.04),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 padding: const EdgeInsets.all(48),
                                 child: Center(
@@ -539,24 +538,32 @@ class _UsersScreenState extends State<UsersScreen> {
                               )
                             else ...[
                               if (admins.isNotEmpty)
-                                UserListSection(
-                                  title: 'Administrators',
-                                  users: admins,
-                                  currentUserId: currentUserId,
-                                  onToggleActive: _toggleActive,
-                                  onArchive: _archiveUser,
-                                  onRestore: _restoreUser,
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  child: UserListSection(
+                                    title: 'Administrators',
+                                    users: admins,
+                                    currentUserId: currentUserId,
+                                    onToggleActive: _toggleActive,
+                                    onArchive: _archiveUser,
+                                    onRestore: _restoreUser,
+                                  ),
                                 ),
                               if (admins.isNotEmpty && internUsers.isNotEmpty)
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 24),
                               if (internUsers.isNotEmpty)
-                                UserListSection(
-                                  title: 'Interns',
-                                  users: internUsers,
-                                  currentUserId: currentUserId,
-                                  onToggleActive: _toggleActive,
-                                  onArchive: _archiveUser,
-                                  onRestore: _restoreUser,
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  child: UserListSection(
+                                    title: 'Interns',
+                                    users: internUsers,
+                                    currentUserId: currentUserId,
+                                    onToggleActive: _toggleActive,
+                                    onArchive: _archiveUser,
+                                    onRestore: _restoreUser,
+                                  ),
                                 ),
                             ],
                           ],

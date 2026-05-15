@@ -251,7 +251,16 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         decoration: BoxDecoration(
           color: isDark ? theme.surface : theme.sidebarBackground,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: theme.border.withValues(alpha: 0.15)),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: theme.shadowColor,
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
@@ -284,7 +293,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final isDark = context.isDarkInternTheme;
 
     final primaryColor =
-        isDark ? const Color(0xFF1A1F5A) : const Color(0xFF00022E);
+        isDark ? const Color(0xFF6C63FF) : const Color(0xFF00022E);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(28, 22, 28, 18),
@@ -789,7 +798,11 @@ class _PendingBellState extends State<_PendingBell>
           child: child,
         ),
         child: Material(
-          color: hasReports ? const Color(0xFFFFFBEB) : const Color(0xFF6C63FF),
+          color: hasReports
+              ? const Color(0xFFFFFBEB)
+              : (context.isDarkInternTheme
+                  ? const Color(0xFF6C63FF)
+                  : const Color(0xFF00022E)),
           borderRadius: BorderRadius.circular(12),
           child: InkWell(
             onTap: hasReports ? () => _openPanel(context) : null,

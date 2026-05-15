@@ -46,11 +46,20 @@ class UserListSection extends StatelessWidget {
         ),
         Container(
           decoration: BoxDecoration(
-            color: sectionBackground,
+            color: context.isDarkInternTheme
+                ? theme.surface
+                : theme.sidebarBackground,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-                color:
-                    theme.border.withValues(alpha: 0.15)), // ← reduce opacity
+            boxShadow: context.isDarkInternTheme
+                ? []
+                : [
+                    BoxShadow(
+                      color: theme.shadowColor,
+                      blurRadius: 24,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),

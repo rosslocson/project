@@ -63,7 +63,10 @@ class UserProfileTab extends StatelessWidget {
           borderSide: BorderSide(color: theme.border, width: 1)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _kBlue, width: 1.5)),
+          borderSide: BorderSide(
+              color:
+                  context.isDarkInternTheme ? const Color(0xFF7367F0) : _kBlue,
+              width: 1.5)),
       errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.red.shade300, width: 1)),
@@ -88,10 +91,13 @@ class UserProfileTab extends StatelessWidget {
                   color: theme.mutedText,
                   fontWeight: FontWeight.w500)),
           const Spacer(),
-          const SizedBox(
+          SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _kBlue)),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color:
+                      context.isDarkInternTheme ? Color(0xFF7367F0) : _kBlue)),
         ],
       ),
     );
@@ -255,7 +261,9 @@ class UserProfileTab extends StatelessWidget {
             child: ElevatedButton(
               onPressed: savingProfile ? null : onSave,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kBlue,
+                backgroundColor: context.isDarkInternTheme
+                    ? const Color(0xFF7367F0)
+                    : _kBlue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),

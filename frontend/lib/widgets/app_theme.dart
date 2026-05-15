@@ -5,7 +5,7 @@ const kCosmicBlue = Color(0xFF00022E);
 const kCrimsonDeep = Color(0xFF00022E);
 const kNavyDeep = Color(0xFF1A1F5A);
 const kGlowBlue = Color(0xFF4C6FFF);
-const kAccentPurple = Color(0xFF7367F0);
+const kAccentPurple = Color(0xFF00022E);
 const kBgLight = Color(0xFFF5F7FF);
 const kBgGradientEnd = Color(0xFFEDEFFF);
 const kTextSecondary = Color(0xFFA0A3BD);
@@ -143,7 +143,7 @@ class InternSpaceThemeColors extends ThemeExtension<InternSpaceThemeColors> {
     adminBadgeBackground: Color(0x33DC2626),
     formFill: Color(0xFF14141D),
     dialogBackground: Color(0xFF0B0B13),
-    shadowColor: Color(0x00000000),
+    shadowColor: Color(0x1AFFFFFF),
   );
 
   @override
