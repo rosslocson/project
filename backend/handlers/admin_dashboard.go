@@ -30,25 +30,20 @@ func (h *Handler) AdminDashboard(c *gin.Context) {
 	// ── Today's attendance stats ──────────────────────────────────────────
 	today := time.Now().Format("2006-01-02")
 
-	// Present: clocked in at or before 8:15 AM today
+	// Present: anyone who clocked in today (on-time + late)
 	var presentCount int64
 	h.DB.Model(&models.Attendance{}).
-		Where("date = ? AND time_in IS NOT NULL AND EXTRACT(HOUR FROM time_in AT TIME ZONE 'Asia/Manila') * 60 + EXTRACT(MINUTE FROM time_in AT TIME ZONE 'Asia/Manila') <= 495", today).
+		Where("date = ? AND time_in IS NOT NULL", today).
 		Count(&presentCount)
 
-	// Late: clocked in after 8:15 AM today (8:16 AM onwards)
+	// Late: clocked in after 8:15 AM today (subset of present)
 	var lateCount int64
 	h.DB.Model(&models.Attendance{}).
 		Where("date = ? AND time_in IS NOT NULL AND EXTRACT(HOUR FROM time_in AT TIME ZONE 'Asia/Manila') * 60 + EXTRACT(MINUTE FROM time_in AT TIME ZONE 'Asia/Manila') > 495", today).
 		Count(&lateCount)
 
-	// Absent: total interns minus those who clocked in at all today
-	var clockedInToday int64
-	h.DB.Model(&models.Attendance{}).
-		Where("date = ? AND time_in IS NOT NULL", today).
-		Count(&clockedInToday)
-	absentCount := totalInterns - clockedInToday
-
+	// Absent: interns with no clock-in at all today
+	absentCount := totalInterns - presentCount
 	// ── Paginated recent users ────────────────────────────────────────────
 	var recentUsers []models.User
 	h.DB.Order("created_at desc").Limit(limit).Offset(offset).Find(&recentUsers)
