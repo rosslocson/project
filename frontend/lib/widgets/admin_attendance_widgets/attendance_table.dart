@@ -177,23 +177,6 @@ class AttendanceTable extends StatelessWidget {
                               : const Color(0xFF22C55E),
                         ),
                       ),
-<<<<<<< HEAD
-                    ),
-                    Text(
-                      r.timeIn!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: r.isOnTime
-                            ? const Color(0xFF22C55E)
-                            : const Color(0xFFEF4444),
-                      ),
-                    ),
-                  ],
-                )
-              : Text('--',
-                  style: TextStyle(fontSize: 13, color: theme.mutedText)),
-=======
                       Text(
                         r.timeIn!,
                         style: TextStyle(
@@ -207,7 +190,6 @@ class AttendanceTable extends StatelessWidget {
                 })
               : const Text('--',
                   style: TextStyle(fontSize: 13, color: kTextMid)),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
         ),
 
         _cell(context, r.timeOut ?? '--'),

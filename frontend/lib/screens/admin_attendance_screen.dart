@@ -19,7 +19,6 @@ import '../widgets/admin_attendance_widgets/attendance_table.dart';
 import '../widgets/admin_attendance_widgets/attendance_ui_components.dart';
 import '../widgets/admin_attendance_widgets/custom_date_picker_dialog.dart';
 import '../widgets/admin_attendance_widgets/review_report_sheet.dart';
-import '../widgets/admin_attendance_widgets/attendance_ui_components.dart';
 import '../widgets/app_theme.dart';
 import '../widgets/app_background.dart';
 import 'export_attendance.dart';
@@ -640,6 +639,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       ),
     );
   }
+
   // ── Pagination ────────────────────────────────────────────────────────────
 
   Widget _buildPagination() {
@@ -777,148 +777,103 @@ class _PendingBellState extends State<_PendingBell>
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.internTheme;
+  // ── Replace only the build() method inside _PendingBellState ──────────────
 
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8),
-        child: SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
+@override
+Widget build(BuildContext context) {
+  final isDark = context.isDarkInternTheme;
 
-    final count = _pending.length;
-    final hasReports = count > 0;
+  if (_loading) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8),
+      child: SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
 
-    return Tooltip(
-      message: hasReports
-          ? '$count pending ${count == 1 ? 'report' : 'reports'}'
-          : 'No pending reports',
-<<<<<<< HEAD
+  final count = _pending.length;
+  final hasReports = count > 0;
+
+  // Navy in light mode, purple in dark mode
+  final idleColor =
+      isDark ? const Color(0xFF6C63FF) : const Color(0xFF00022E);
+
+  return Tooltip(
+    message: hasReports
+        ? '$count pending ${count == 1 ? 'report' : 'reports'}'
+        : 'No pending reports',
+    child: GestureDetector(
+      onTap: () => _openPanel(context),
       child: AnimatedBuilder(
         animation: _shakeAnim,
         builder: (_, child) => Transform.translate(
           offset: Offset(_shakeAnim.value, 0),
           child: child,
         ),
-        child: Material(
-          color: hasReports
-              ? const Color(0xFFFFFBEB)
-              : (context.isDarkInternTheme
-                  ? const Color(0xFF6C63FF)
-                  : const Color(0xFF00022E)),
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            onTap: hasReports ? () => _openPanel(context) : null,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            // AFTER
+color: hasReports
+    ? const Color(0xFFFFFBEB)
+    : idleColor,
             borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: hasReports
-                  ? BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFFFCD34D),
-                        width: 1.5,
-=======
-      child: GestureDetector(
-        // Pass context (Scaffold-level) as root context.
-        onTap: () => _openPanel(context),
-        child: AnimatedBuilder(
-          animation: _shakeAnim,
-          builder: (_, child) => Transform.translate(
-            offset: Offset(_shakeAnim.value, 0),
-            child: child,
-          ),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
+            border: Border.all(
               color: hasReports
-                  ? const Color(0xFFFFFBEB)
-                  : const Color(0xFFF4F4F8),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: hasReports ? const Color(0xFFFCD34D) : kBorder,
-                width: 1.5,
-              ),
+    ? const Color(0xFFFCD34D)
+    : idleColor,
+              width: 1.5,
             ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  hasReports
-                      ? Icons.notifications_active_rounded
-                      : Icons.notifications_outlined,
-                  size: 20,
-                  color: hasReports ? const Color(0xFF92400E) : kTextMid,
-                ),
-                if (hasReports)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      constraints:
-                          const BoxConstraints(minWidth: 17, minHeight: 17),
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        shape: BoxShape.circle,
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
-                      ),
-                    )
-                  : null,
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    hasReports
-                        ? Icons.notifications_active_rounded
-                        : Icons.notifications_outlined,
-                    size: 20,
-                    color: hasReports ? const Color(0xFF92400E) : Colors.white,
-                  ),
-                  if (hasReports)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        constraints:
-                            const BoxConstraints(minWidth: 17, minHeight: 17),
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFEF4444),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          count > 99 ? '99+' : '$count',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            height: 1.7,
-                          ),
-                        ),
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                hasReports
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_outlined,
+                size: 20,
+                color: hasReports
+    ? const Color(0xFF92400E)
+    : Colors.white,
+              ),
+              if (hasReports)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    constraints:
+                        const BoxConstraints(minWidth: 17, minHeight: 17),
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEF4444),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      count > 99 ? '99+' : '$count',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        height: 1.7,
                       ),
                     ),
-                ],
-              ),
-            ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
-
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // _PendingPanel — draggable bottom sheet listing all pending reports.
 // StatefulWidget so it can refresh its own list in-place after each resolve
@@ -933,6 +888,7 @@ class _PendingBellState extends State<_PendingBell>
 class _PendingPanel extends StatefulWidget {
   final List<AdminAttendanceRecord> initialRecords;
   final VoidCallback? onRecordResolved;
+
   /// A context rooted at the Scaffold / root navigator — used by tiles to
   /// open ReviewReportSheet on top of this bottom sheet.
   final BuildContext rootContext;
@@ -983,6 +939,7 @@ class _PendingPanelState extends State<_PendingPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
     final screenHeight = MediaQuery.of(context).size.height;
     return Center(
       child: Container(
@@ -1129,6 +1086,7 @@ class _PendingPanelState extends State<_PendingPanel> {
 class _PendingTile extends StatelessWidget {
   final AdminAttendanceRecord record;
   final VoidCallback? onResolved;
+
   /// Root-level context for opening ReviewReportSheet above the bottom sheet.
   final BuildContext rootContext;
 
@@ -1140,13 +1098,9 @@ class _PendingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     final theme = context.internTheme;
 
-    return InkWell(
-=======
     return GestureDetector(
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       onTap: () => ReviewReportSheet.show(
         rootContext,
         record,
@@ -1220,13 +1174,8 @@ class _PendingTile extends StatelessWidget {
 
             const SizedBox(width: 8),
 
-<<<<<<< HEAD
-            // Chevron + "Review" label
-            Column(
-=======
             // Review label + icon
-            const Column(
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
+            Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.rate_review_outlined,

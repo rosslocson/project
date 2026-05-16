@@ -269,7 +269,7 @@ class UserAboutScreen extends StatelessWidget {
               color: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.info_outline_rounded,
               color: Colors.white,
               size: 20,

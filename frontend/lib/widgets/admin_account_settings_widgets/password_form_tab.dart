@@ -94,14 +94,6 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _passField(BuildContext context,
-          {required TextEditingController controller,
-          required String label,
-          required bool obscure,
-          required VoidCallback onToggle,
-          required String? Function(String?) validator}) =>
-=======
   Widget _passField(
     BuildContext context, {
     required TextEditingController controller,
@@ -110,7 +102,6 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
     required VoidCallback onToggle,
     required String? Function(String?) validator,
   }) =>
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       TextFormField(
         controller: controller,
         obscureText: obscure,
@@ -258,13 +249,7 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
                     onToggle: widget.onToggleConf,
                     validator: (v) {
                       if (v!.isEmpty) return 'Required';
-<<<<<<< HEAD
-                      if (v != newPassCtrl.text) {
-                        return 'Passwords do not match';
-                      }
-=======
                       if (v != widget.newPassCtrl.text) return 'Passwords do not match';
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
                       return null;
                     },
                   ),
@@ -273,38 +258,7 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
             ),
           ),
         ),
-<<<<<<< HEAD
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: savingPass ? null : onSave,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: savingPass
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('CHANGE PASSWORD',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          letterSpacing: 0.8)),
-            ),
-          ),
-        ),
-=======
         _buildActionButtons(context, primaryColor),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ],
     );
   }

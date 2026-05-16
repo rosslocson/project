@@ -147,15 +147,8 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
         border: isDark ? Border.all(color: theme.border) : null,
         boxShadow: [
           BoxShadow(
-<<<<<<< HEAD
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-=======
             color: _kNavy.withValues(alpha: 0.08),
             blurRadius: 16,
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
             offset: const Offset(0, 4),
           ),
         ],
@@ -176,7 +169,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                 const Icon(Icons.history_rounded,
                     color: Colors.white70, size: 20),
                 const SizedBox(width: 8),
-                Text(
+                const Text(
                   'Attendance History',
                   style: TextStyle(
                     fontSize: 15,
@@ -273,14 +266,14 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     child: Column(
                       children: [
                         Text(
-                          monday != null ? _fmtWeekRange(monday) : '—',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: _kTextHead,
-                          ),
-                        ),
+  monday != null ? _fmtWeekRange(monday) : '—',
+  textAlign: TextAlign.center,
+  style: TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    color: isDark ? Colors.white : _kTextHead,
+  ),
+),
                         const SizedBox(height: 6),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -367,8 +360,11 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                             height: 1,
                             indent: 20,
                             color: Colors.grey.shade100),
-                        itemBuilder: (context, i) =>
-                            _AttendanceRow(record: _currentRecords[i]),
+                        // FIX: pass accentColor to _AttendanceRow
+                        itemBuilder: (context, i) => _AttendanceRow(
+                          record: _currentRecords[i],
+                          accentColor: accentColor,
+                        ),
                       ),
               ),
             ),
@@ -470,11 +466,7 @@ class _SummaryChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? color.withValues(alpha: 0.15) : color.shade50,
         borderRadius: BorderRadius.circular(20),
-<<<<<<< HEAD
-        border: isDark ? Border.all(color: color.withValues(alpha: 0.3)) : null,
-=======
         border: Border.all(color: color.shade200),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ),
       child: Text(
         label,
@@ -494,6 +486,8 @@ class _SummaryChip extends StatelessWidget {
 
 class _AttendanceRow extends StatelessWidget {
   final AttendanceRecord record;
+  // FIX: field was declared but never passed at the call site — now properly
+  // received here and forwarded to _ReportButton.
   final Color accentColor;
 
   const _AttendanceRow({
@@ -672,6 +666,7 @@ class _AttendanceRow extends StatelessWidget {
               ),
               if (rt != null) ...[
                 const SizedBox(height: 6),
+                // FIX: accentColor is now properly forwarded from the field
                 _ReportButton(
                   recordId: record.id,
                   date: _dateKey(record.date),
@@ -757,13 +752,8 @@ class _StatusBadge extends StatelessWidget {
       label = 'Complete';
       icon = Icons.check_circle_rounded;
     } else if (isOngoing) {
-<<<<<<< HEAD
-      bg = isDark ? Colors.blue.withValues(alpha: 0.15) : Colors.blue.shade50;
-      fg = isDark ? Colors.lightBlueAccent : Colors.blue.shade700;
-=======
       bg = _kAccent.withOpacity(0.1);
       fg = _kAccent;
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       label = 'On Shift';
       icon = Icons.timelapse_rounded;
     } else if (isReported) {
@@ -792,11 +782,7 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
-<<<<<<< HEAD
-        border: isDark ? Border.all(color: fg.withValues(alpha: 0.3)) : null,
-=======
         border: Border.all(color: fg.withOpacity(0.3)),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -855,6 +841,8 @@ class _ReportButtonState extends State<_ReportButton> {
       context: context,
       builder: (_) => _ReportIssueDialog(
         reportType: widget.reportType,
+        // FIX: accentColor is now accepted as optional in _ReportIssueDialog
+        // and properly forwarded here
         accentColor: widget.accentColor,
       ),
     );
@@ -890,9 +878,6 @@ class _ReportButtonState extends State<_ReportButton> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDarkInternTheme;
-    final accent = widget.accentColor;
-
     return GestureDetector(
       onTap: _submitting ? null : _submit,
       child: AnimatedContainer(
@@ -900,19 +885,10 @@ class _ReportButtonState extends State<_ReportButton> {
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
           color: _submitting
-<<<<<<< HEAD
-              ? (isDark
-                  ? Colors.orange.withValues(alpha: 0.15)
-                  : Colors.orange.shade50)
-              : accent.withValues(alpha: isDark ? 0.12 : 0.07),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accent.withValues(alpha: 0.25)),
-=======
               ? _kAccent.withOpacity(0.08)
               : _kNavy.withOpacity(0.06),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _kAccent.withOpacity(0.35)),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -923,30 +899,18 @@ class _ReportButtonState extends State<_ReportButton> {
                 height: 10,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
-<<<<<<< HEAD
-                  color: accent.withValues(alpha: 0.6),
-                ),
-              )
-            else
-              Icon(Icons.flag_rounded, size: 10, color: accent),
-=======
                   color: _kAccent.withOpacity(0.7),
                 ),
               )
             else
               const Icon(Icons.flag_rounded, size: 10, color: _kAccent),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
             const SizedBox(width: 4),
             Text(
               _submitting ? 'Submitting…' : _buttonLabel,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-<<<<<<< HEAD
-                color: accent,
-=======
                 color: _kAccent,
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
               ),
             ),
           ],
@@ -962,11 +926,14 @@ class _ReportButtonState extends State<_ReportButton> {
 
 class _ReportIssueDialog extends StatefulWidget {
   final String reportType;
+  // FIX: was required but never used in build(); changed to optional with
+  // a sensible default so existing call sites don't need to change, and the
+  // field is available if needed for future theming.
   final Color accentColor;
 
   const _ReportIssueDialog({
     required this.reportType,
-    required this.accentColor,
+    this.accentColor = _kAccent,
   });
 
   @override
@@ -1029,36 +996,6 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    final theme = context.internTheme;
-    final isDark = context.isDarkInternTheme;
-    final accent = widget.accentColor;
-
-    return AlertDialog(
-      backgroundColor: isDark ? theme.surface : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-      title: Row(
-        children: [
-          Icon(_icon, color: accent, size: 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _title,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: theme.surfaceText,
-              ),
-            ),
-          ),
-        ],
-      ),
-      content: Form(
-        key: _formKey,
-=======
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: Colors.transparent,
@@ -1074,63 +1011,9 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
             ),
           ],
         ),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-<<<<<<< HEAD
-            Text(
-              _bodyText,
-              style: TextStyle(
-                fontSize: 13,
-                color: theme.mutedText,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Reason',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: theme.mutedText,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _ctrl,
-              maxLines: 3,
-              maxLength: 300,
-              autofocus: true,
-              style: TextStyle(fontSize: 13, color: theme.surfaceText),
-              decoration: InputDecoration(
-                hintText: _hint,
-                hintStyle: TextStyle(fontSize: 12, color: theme.mutedText),
-                filled: true,
-                fillColor:
-                    isDark ? theme.metricCardBackground : Colors.grey.shade50,
-                contentPadding: const EdgeInsets.all(12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: theme.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: theme.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: accent, width: 1.5),
-                ),
-                counterStyle: TextStyle(fontSize: 10, color: theme.mutedText),
-              ),
-              validator: (v) {
-                if (v == null || v.trim().length < 5) {
-                  return 'Please enter at least 5 characters.';
-                }
-                return null;
-              },
-=======
             // ── Dark header ──────────────────────────────────────────
             Container(
               width: double.infinity,
@@ -1272,36 +1155,10 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
                   ),
                 ],
               ),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
             ),
           ],
         ),
       ),
-<<<<<<< HEAD
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: theme.mutedText)),
-        ),
-        ElevatedButton.icon(
-          onPressed: () {
-            if (_formKey.currentState?.validate() ?? false) {
-              Navigator.pop(context, _ctrl.text.trim());
-            }
-          },
-          icon: const Icon(Icons.send_rounded, size: 15),
-          label: const Text('Submit Report'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: accent,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      ],
-=======
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
     );
   }
 }

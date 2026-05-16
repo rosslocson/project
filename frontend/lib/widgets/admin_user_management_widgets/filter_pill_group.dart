@@ -41,13 +41,17 @@ class FilterPillGroup extends StatelessWidget {
         color: trackColor,
         borderRadius: BorderRadius.circular(40),
         border: Border.all(color: trackBorderColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor,
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: isDark
+    ? []
+    : [
+        BoxShadow(
+          color: theme.shadowColor,
+          blurRadius: 24,
+          offset: const Offset(0, 8),
+        ),
+      ],
+
+
       ),
       padding: const EdgeInsets.all(5),
       child: Row(

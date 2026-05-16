@@ -284,38 +284,7 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
             ),
           ),
         ),
-<<<<<<< HEAD
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: savingProfile ? null : onSave,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: savingProfile
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('SAVE CHANGES',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          letterSpacing: 0.8)),
-            ),
-          ),
-        ),
-=======
         _buildActionButtons(context, primaryColor),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ],
     );
   }

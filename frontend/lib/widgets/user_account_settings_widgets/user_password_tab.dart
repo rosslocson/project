@@ -155,7 +155,9 @@ class UserPasswordTab extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: savingPass ? null : onSave,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kBlue,
+                      backgroundColor: context.isDarkInternTheme
+    ? const Color(0xFF7367F0)
+    : _kBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -252,41 +254,8 @@ class UserPasswordTab extends StatelessWidget {
             ),
           ),
         ),
-<<<<<<< HEAD
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
-          child: SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: savingPass ? null : onSave,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.isDarkInternTheme
-                    ? const Color(0xFF7367F0)
-                    : _kBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: savingPass
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('CHANGE PASSWORD',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          letterSpacing: 0.8)),
-            ),
-          ),
-        ),
-=======
         // Replace the single button with the separated logic method
         _buildActionButtons(context),
->>>>>>> 400aec418a988be81da5438b220ff093c6f39d35
       ],
     );
   }

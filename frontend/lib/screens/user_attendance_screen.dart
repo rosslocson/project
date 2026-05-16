@@ -232,7 +232,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               color: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.fact_check_outlined,
               color: Colors.white,
               size: 20,

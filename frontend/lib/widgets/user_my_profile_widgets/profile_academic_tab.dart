@@ -33,22 +33,40 @@ class ProfileAcademicTab extends StatelessWidget {
           ),
           if (computedEndDate.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue.shade100)),
-              child: Row(
-                children: [
-                  Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.blue.shade700),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Estimated completion by $computedEndDate (based on $requiredHours hrs @ 8 hrs/day, Mon–Fri)',
-                      style: TextStyle(fontSize: 12, color: Colors.blue.shade800, fontWeight: FontWeight.w500),
-                    ),
+            Builder(builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.blue.shade100,
                   ),
-                ],
-              ),
-            ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome_rounded, size: 16,
+                        color: isDark ? Colors.white.withValues(alpha: 0.7) : Colors.blue.shade700),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Estimated completion by $computedEndDate (based on $requiredHours hrs @ 8 hrs/day, Mon–Fri)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white.withValues(alpha: 0.75) : Colors.blue.shade800,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
           const SizedBox(height: 24),
           const ProfileSectionTitle(title: 'Placement Details', icon: Icons.work_rounded),
@@ -56,8 +74,6 @@ class ProfileAcademicTab extends StatelessWidget {
           Row(
             children: [
               Expanded(child: CleanInfoCard(label: 'Department', value: getProfileVal(user, 'department'))),
-              const SizedBox(width: 12),
-              Expanded(child: CleanInfoCard(label: 'Position', value: getProfileVal(user, 'position'))),
               const SizedBox(width: 12),
               Expanded(child: CleanInfoCard(label: 'Intern Number', value: getProfileVal(user, 'intern_number'), icon: Icons.badge_rounded)),
             ],

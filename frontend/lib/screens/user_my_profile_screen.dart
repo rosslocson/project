@@ -141,8 +141,7 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                   const SizedBox(height: 15),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 96, right: 96, bottom: 28),
+                      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
                           color: context.isDarkInternTheme

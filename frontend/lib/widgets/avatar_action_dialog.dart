@@ -152,7 +152,7 @@ class AvatarActionDialog extends StatelessWidget {
                     ),
                     elevation: 2,
                   ),
-                  child: Text(
+                  child: const Text(
                     'Upload from device',
                     style: TextStyle(
                       fontSize: 16,
