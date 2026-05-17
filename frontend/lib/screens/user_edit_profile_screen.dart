@@ -147,7 +147,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
     _tabs.addListener(_handleTabChange);
-    
+
     _academicScrollController = ScrollController();
     _skillsScrollController = ScrollController();
 
@@ -420,17 +420,23 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                         padding: const EdgeInsets.only(
                             left: 100, right: 100, bottom: 28),
                         child: Container(
-                          decoration: BoxDecoration(
-                            color: context.internTheme.metricCardBackground,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: context.internTheme.shadowColor,
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
+                          // AFTER
+// AFTER
+decoration: BoxDecoration(
+  color: context.isDarkInternTheme
+      ? context.internTheme.surface
+      : context.internTheme.sidebarBackground,
+  borderRadius: BorderRadius.circular(24),
+  boxShadow: context.isDarkInternTheme
+      ? []
+      : [
+          BoxShadow(
+            color: context.internTheme.shadowColor,
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(24),
                             child: _initialLoading
@@ -464,12 +470,13 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                         ),
                                         child: TabBar(
                                           controller: _tabs,
-                                          labelColor: context
-                                              .internTheme.surfaceText,
+                                          labelColor:
+                                              context.internTheme.surfaceText,
                                           unselectedLabelColor:
                                               context.internTheme.mutedText,
-                                          indicatorColor: kCrimsonDeep,
-                                          indicatorWeight: 3,
+indicatorColor: context.isDarkInternTheme
+    ? const Color(0xFF7367F0)
+    : const Color(0xFF00022E),                                       indicatorWeight: 3,
                                           dividerColor: Colors.transparent,
                                           tabs: [
                                             Tab(
@@ -489,8 +496,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                       height: 18,
                                                       decoration:
                                                           const BoxDecoration(
-                                                        color:
-                                                            Colors.redAccent,
+                                                        color: Colors.redAccent,
                                                         shape: BoxShape.circle,
                                                       ),
                                                       alignment:
@@ -527,8 +533,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                       height: 18,
                                                       decoration:
                                                           const BoxDecoration(
-                                                        color:
-                                                            Colors.redAccent,
+                                                        color: Colors.redAccent,
                                                         shape: BoxShape.circle,
                                                       ),
                                                       alignment:
@@ -554,13 +559,15 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                       Expanded(
                                         child: ScrollConfiguration(
                                           // Strips away native internal card scrollbars
-                                          behavior: ScrollConfiguration.of(context)
+                                          behavior: ScrollConfiguration.of(
+                                                  context)
                                               .copyWith(scrollbars: false),
                                           child: TabBarView(
                                             controller: _tabs,
                                             children: [
                                               PrimaryScrollController(
-                                                controller: _academicScrollController,
+                                                controller:
+                                                    _academicScrollController,
                                                 child: AcademicInfoTab(
                                                   key: ValueKey(
                                                       'academic-$_formResetVersion'),
@@ -591,7 +598,8 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                 ),
                                               ),
                                               PrimaryScrollController(
-                                                controller: _skillsScrollController,
+                                                controller:
+                                                    _skillsScrollController,
                                                 child: SkillsProfileTab(
                                                   key: ValueKey(
                                                       'skills-$_formResetVersion'),
@@ -611,7 +619,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                           ),
                                         ),
                                       ),
-                                      // Modified Buttons Block
                                       if (_hasUnsavedChanges)
                                         Padding(
                                           padding: const EdgeInsets.fromLTRB(
@@ -657,21 +664,20 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                                                 child: SizedBox(
                                                   height: 48,
                                                   child: ElevatedButton(
-                                                    onPressed: _saving
-                                                        ? null
-                                                        : _save,
+                                                    onPressed:
+                                                        _saving ? null : _save,
                                                     style: ElevatedButton
                                                         .styleFrom(
-                                                      backgroundColor:
-                                                          kCrimsonDeep,
+                                                      backgroundColor: context.isDarkInternTheme
+    ? const Color(0xFF7367F0)
+    : const Color(0xFF00022E),
                                                       foregroundColor:
                                                           Colors.white,
-                                                      shape:
-                                                          RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          12)),
+                                                      shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      12)),
                                                       elevation: 0,
                                                     ),
                                                     child: _saving

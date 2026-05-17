@@ -81,7 +81,7 @@ class ProfileLeftPanel extends StatelessWidget {
                           ),
                         ),
                       ),
-                      GestureDetector(
+                      /* GestureDetector(
                         onTap: () => context.go('/edit-profile'),
                         child: Container(
                           width: 36,
@@ -99,7 +99,7 @@ class ProfileLeftPanel extends StatelessWidget {
                           child: Icon(Icons.edit_rounded,
                               color: theme.surfaceText, size: 18),
                         ),
-                      ),
+                      ), */
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -163,11 +163,6 @@ class ProfileLeftPanel extends StatelessWidget {
                       value: getProfileVal(user, 'department')),
                   const SizedBox(height: 16),
                   QuickInfoTile(
-                      icon: Icons.work_outline_rounded,
-                      label: 'Position',
-                      value: getProfileVal(user, 'position')),
-                  const SizedBox(height: 16),
-                  QuickInfoTile(
                       icon: Icons.school_rounded,
                       label: 'School',
                       value: getProfileVal(user, 'school')),
@@ -186,7 +181,9 @@ class ProfileLeftPanel extends StatelessWidget {
                     style:
                         TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00022E),
+                  backgroundColor: context.isDarkInternTheme
+                      ? const Color(0xFF7367F0)
+                      : const Color(0xFF00022E),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

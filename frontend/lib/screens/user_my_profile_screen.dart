@@ -141,19 +141,22 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                   const SizedBox(height: 15),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 100, right: 100, bottom: 28),
+                      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: theme.metricCardBackground,
+                          color: context.isDarkInternTheme
+                              ? theme.surface
+                              : theme.sidebarBackground,
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.shadowColor,
-                              blurRadius: 40,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                          boxShadow: context.isDarkInternTheme
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: theme.shadowColor,
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
@@ -198,7 +201,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                               unselectedLabelColor:
                                                   theme.mutedText,
                                               indicatorColor:
-                                                  const Color(0xFF00022E),
+                                                  context.isDarkInternTheme
+                                                      ? const Color(0xFF7367F0)
+                                                      : const Color(0xFF00022E),
                                               indicatorWeight: 3,
                                               dividerColor: Colors.transparent,
                                               labelStyle: const TextStyle(
@@ -229,7 +234,9 @@ class _MyProfileScreenState extends State<MyProfileScreen>
                                           ),
                                           Expanded(
                                             child: Container(
-                                              color: theme.metricCardBackground,
+                                              color: context.isDarkInternTheme
+                                                  ? theme.surface
+                                                  : theme.sidebarBackground,
                                               child: TabBarView(
                                                 controller: _tabs,
                                                 children: [

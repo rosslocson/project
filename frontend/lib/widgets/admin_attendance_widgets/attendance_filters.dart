@@ -36,14 +36,21 @@ class AttendanceSearchField extends StatelessWidget {
                 )
               : null,
           filled: true,
-          fillColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF4F5F8),
+          fillColor: isDark ? theme.surface : theme.sidebarBackground,
           border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kAccent, width: 1.5),
+            borderSide: BorderSide(
+              color: isDark ? kAccent : const Color(0xFF00022E),
+              width: 1.5,
+            ),
           ),
           contentPadding:
               const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
@@ -53,7 +60,7 @@ class AttendanceSearchField extends StatelessWidget {
   }
 }
 
-class AttendanceStatusDropdown extends StatelessWidget {
+class AttendanceStatusDropdown extends StatefulWidget {
   final String value;
   final ValueChanged<String?> onChanged;
 
@@ -64,41 +71,59 @@ class AttendanceStatusDropdown extends StatelessWidget {
   });
 
   @override
+  State<AttendanceStatusDropdown> createState() =>
+      _AttendanceStatusDropdownState();
+}
+
+class _AttendanceStatusDropdownState extends State<AttendanceStatusDropdown> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
 
-    return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF4F5F8),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          onChanged: onChanged,
-          isDense: true,
-          style: TextStyle(fontSize: 13, color: theme.surfaceText),
-          dropdownColor: isDark ? const Color(0xFF0B0F2F) : Colors.white,
-          icon: Icon(Icons.keyboard_arrow_down_rounded,
-              size: 18, color: theme.mutedText),
-          items: kAttendanceStatuses
-              .map((s) => DropdownMenuItem<String>(
-                    value: s,
-                    child: Text(s,
-                        style:
-                            TextStyle(fontSize: 13, color: theme.surfaceText)),
-                  ))
-              .toList(),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: _hovering
+              ? (context.isDarkInternTheme
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.06))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: widget.value,
+            onChanged: widget.onChanged,
+            isDense: true,
+            style: TextStyle(fontSize: 13, color: theme.surfaceText),
+            dropdownColor: isDark ? const Color(0xFF0B0F2F) : Colors.white,
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                size: 18, color: theme.mutedText),
+            items: kAttendanceStatuses
+                .map((s) => DropdownMenuItem<String>(
+                      value: s,
+                      child: Text(s,
+                          style: TextStyle(
+                              fontSize: 13, color: theme.surfaceText)),
+                    ))
+                .toList(),
+          ),
         ),
       ),
     );
   }
 }
 
-class PeriodChip extends StatelessWidget {
+class PeriodChip extends StatefulWidget {
   final String label;
   final bool selected;
   final IconData? icon;
@@ -113,43 +138,56 @@ class PeriodChip extends StatelessWidget {
   });
 
   @override
+  State<PeriodChip> createState() => _PeriodChipState();
+}
+
+class _PeriodChipState extends State<PeriodChip> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
-    final isDark = context.isDarkInternTheme;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected
-              ? kButtonDark
-              : isDark
-                  ? const Color(0xFF1A1A2E)
-                  : const Color(0xFFF4F5F8),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? kButtonDark : Colors.transparent,
-            width: 1.5,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? (context.isDarkInternTheme
+                    ? kAccent
+                    : const Color(0xFF00022E))
+                : _hovering
+                    ? (context.isDarkInternTheme
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.06))
+                    : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon,
-                  size: 13, color: selected ? Colors.white : theme.mutedText),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : theme.mutedText,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.icon != null) ...[
+                Icon(widget.icon,
+                    size: 13,
+                    color: widget.selected ? Colors.white : theme.mutedText),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: widget.selected ? Colors.white : theme.mutedText,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

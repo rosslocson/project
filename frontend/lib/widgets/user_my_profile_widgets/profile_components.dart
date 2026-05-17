@@ -173,20 +173,30 @@ class CleanSkillChips extends StatelessWidget {
       runSpacing: 8,
       children: skills
           .map(
-            (s) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                s,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: accentColor,
-                ),
-              ),
+            (s) => Builder(
+              builder: (context) {
+                final isDark = context.isDarkInternTheme;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF6C63FF).withValues(alpha: 0.15)
+                        : bgColor,
+                    borderRadius: BorderRadius.circular(8),
+                    border: isDark
+                        ? Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.4))
+                        : null,
+                  ),
+                  child: Text(
+                    s,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? const Color(0xFF818CF8) : accentColor,
+                    ),
+                  ),
+                );
+              },
             ),
           )
           .toList(),

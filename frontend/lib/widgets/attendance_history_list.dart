@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
 import '../services/attendance_service.dart';
+import 'app_theme.dart';
 
 // ── Theme constants matching MyProfileScreen dark blue palette ────────────
 const _kNavy      = Color(0xFF0B132B);   // card dark blue — primary bg
@@ -122,6 +123,9 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     final totalWeeks = _weeks.length;
     final monday = _weeks.isNotEmpty ? _weeks[_weekIndex] : null;
     final isNewestWeek = _weekIndex == 0;
@@ -132,10 +136,15 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
     final isCurrentWeek =
         monday != null && _weekKey(monday) == _weekKey(thisWeekMonday);
 
+    // Accent color: maroon in light, purple/indigo in dark (matches Departments)
+    final accentColor =
+        isDark ? theme.sidebarActiveForeground : const Color(0xFF460A14);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? theme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: isDark ? Border.all(color: theme.border) : null,
         boxShadow: [
           BoxShadow(
             color: _kNavy.withValues(alpha: 0.08),
@@ -229,11 +238,11 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                 child: Column(
                   children: [
                     Icon(Icons.event_busy_rounded,
-                        size: 48, color: Colors.grey.shade300),
+                        size: 48, color: theme.mutedText),
                     const SizedBox(height: 8),
                     Text(
                       'No attendance records yet',
-                      style: TextStyle(color: Colors.grey.shade400),
+                      style: TextStyle(color: theme.mutedText),
                     ),
                   ],
                 ),
@@ -250,20 +259,21 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     enabled: !isOldestWeek,
                     onTap: () => _goTo(_weekIndex + 1),
                     tooltip: 'Previous week',
+                    accentColor: accentColor,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       children: [
                         Text(
-                          monday != null ? _fmtWeekRange(monday) : '—',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: _kTextHead,
-                          ),
-                        ),
+  monday != null ? _fmtWeekRange(monday) : '—',
+  textAlign: TextAlign.center,
+  style: TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    color: isDark ? Colors.white : _kTextHead,
+  ),
+),
                         const SizedBox(height: 6),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -271,12 +281,14 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                             _SummaryChip(
                               label: '$_presentCount Present',
                               color: Colors.green,
+                              isDark: isDark,
                             ),
                             if (_lateCount > 0) ...[
                               const SizedBox(width: 6),
                               _SummaryChip(
                                 label: '$_lateCount Late',
                                 color: Colors.orange,
+                                isDark: isDark,
                               ),
                             ],
                             if (_absentCount > 0) ...[
@@ -284,6 +296,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                               _SummaryChip(
                                 label: '$_absentCount Absent',
                                 color: Colors.grey,
+                                isDark: isDark,
                               ),
                             ],
                           ],
@@ -297,6 +310,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     enabled: !isNewestWeek,
                     onTap: () => _goTo(_weekIndex - 1),
                     tooltip: 'Next week',
+                    accentColor: accentColor,
                   ),
                 ],
               ),
@@ -306,7 +320,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
             Divider(height: 1, indent: 20, endIndent: 20,
                 color: Colors.grey.shade100),
 
-            // ── Day rows ──────────────────────────────────────────────
+            // ── Day rows ──────────────────────────────────────────────────
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
               switchInCurve: Curves.easeOutCubic,
@@ -346,13 +360,16 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                             height: 1,
                             indent: 20,
                             color: Colors.grey.shade100),
-                        itemBuilder: (context, i) =>
-                            _AttendanceRow(record: _currentRecords[i]),
+                        // FIX: pass accentColor to _AttendanceRow
+                        itemBuilder: (context, i) => _AttendanceRow(
+                          record: _currentRecords[i],
+                          accentColor: accentColor,
+                        ),
                       ),
               ),
             ),
 
-            // ── Week dot indicators ────────────────────────────────────
+            // ── Week dot indicators ──────────────────────────────────────
             if (totalWeeks > 1)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -392,12 +409,14 @@ class _NavArrow extends StatelessWidget {
   final bool enabled;
   final VoidCallback onTap;
   final String tooltip;
+  final Color accentColor;
 
   const _NavArrow({
     required this.icon,
     required this.enabled,
     required this.onTap,
     required this.tooltip,
+    required this.accentColor,
   });
 
   @override
@@ -432,15 +451,20 @@ class _NavArrow extends StatelessWidget {
 class _SummaryChip extends StatelessWidget {
   final String label;
   final MaterialColor color;
+  final bool isDark;
 
-  const _SummaryChip({required this.label, required this.color});
+  const _SummaryChip({
+    required this.label,
+    required this.color,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.shade50,
+        color: isDark ? color.withValues(alpha: 0.15) : color.shade50,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.shade200),
       ),
@@ -449,7 +473,7 @@ class _SummaryChip extends StatelessWidget {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: color.shade700,
+          color: isDark ? color.shade200 : color.shade700,
         ),
       ),
     );
@@ -462,7 +486,14 @@ class _SummaryChip extends StatelessWidget {
 
 class _AttendanceRow extends StatelessWidget {
   final AttendanceRecord record;
-  const _AttendanceRow({required this.record});
+  // FIX: field was declared but never passed at the call site — now properly
+  // received here and forwarded to _ReportButton.
+  final Color accentColor;
+
+  const _AttendanceRow({
+    required this.record,
+    required this.accentColor,
+  });
 
   bool get _isMissedClockOut {
     final today = DateTime.now();
@@ -493,6 +524,9 @@ class _AttendanceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.internTheme;
+    final isDark = context.isDarkInternTheme;
+
     final isComplete = record.isComplete;
     final isOngoing =
         record.hasTimedIn && !record.hasTimedOut && !_isMissedClockOut;
@@ -559,7 +593,7 @@ class _AttendanceRow extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.login_rounded,
-                          size: 12, color: Colors.grey.shade400),
+                          size: 12, color: theme.mutedText),
                       const SizedBox(width: 4),
                       Text(
                         record.timeIn != null
@@ -574,7 +608,7 @@ class _AttendanceRow extends StatelessWidget {
                         size: 12,
                         color: _isMissedClockOut
                             ? Colors.red.shade300
-                            : Colors.grey.shade400,
+                            : theme.mutedText,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -628,13 +662,16 @@ class _AttendanceRow extends StatelessWidget {
                 isMissedClockOut: _isMissedClockOut,
                 isLate: _isLate,
                 isReported: record.isReported,
+                isDark: isDark,
               ),
               if (rt != null) ...[
                 const SizedBox(height: 6),
+                // FIX: accentColor is now properly forwarded from the field
                 _ReportButton(
                   recordId: record.id,
                   date: _dateKey(record.date),
                   reportType: rt,
+                  accentColor: accentColor,
                 ),
               ],
             ],
@@ -678,6 +715,7 @@ class _StatusBadge extends StatelessWidget {
   final bool isMissedClockOut;
   final bool isLate;
   final bool isReported;
+  final bool isDark;
 
   const _StatusBadge({
     this.isAbsent = false,
@@ -686,6 +724,7 @@ class _StatusBadge extends StatelessWidget {
     this.isMissedClockOut = false,
     this.isLate = false,
     this.isReported = false,
+    required this.isDark,
   });
 
   @override
@@ -696,18 +735,20 @@ class _StatusBadge extends StatelessWidget {
     final IconData icon;
 
     if (isAbsent) {
-      bg = Colors.grey.shade100;
-      fg = Colors.grey.shade500;
+      bg = isDark ? Colors.grey.withValues(alpha: 0.15) : Colors.grey.shade100;
+      fg = isDark ? Colors.grey.shade400 : Colors.grey.shade500;
       label = 'Absent';
       icon = Icons.person_off_rounded;
     } else if (isComplete && isLate) {
-      bg = Colors.orange.shade50;
-      fg = Colors.orange.shade700;
+      bg = isDark
+          ? Colors.orange.withValues(alpha: 0.15)
+          : Colors.orange.shade50;
+      fg = isDark ? Colors.orange.shade300 : Colors.orange.shade700;
       label = 'Late';
       icon = Icons.schedule_rounded;
     } else if (isComplete) {
-      bg = Colors.green.shade50;
-      fg = Colors.green.shade700;
+      bg = isDark ? Colors.green.withValues(alpha: 0.15) : Colors.green.shade50;
+      fg = isDark ? Colors.greenAccent : Colors.green.shade700;
       label = 'Complete';
       icon = Icons.check_circle_rounded;
     } else if (isOngoing) {
@@ -716,18 +757,22 @@ class _StatusBadge extends StatelessWidget {
       label = 'On Shift';
       icon = Icons.timelapse_rounded;
     } else if (isReported) {
-      bg = Colors.purple.shade50;
-      fg = Colors.purple.shade700;
+      bg = isDark
+          ? Colors.purple.withValues(alpha: 0.15)
+          : Colors.purple.shade50;
+      fg = isDark ? Colors.purpleAccent : Colors.purple.shade700;
       label = 'Reported';
       icon = Icons.flag_rounded;
     } else if (isMissedClockOut) {
-      bg = Colors.red.shade50;
-      fg = Colors.red.shade700;
+      bg = isDark ? Colors.red.withValues(alpha: 0.15) : Colors.red.shade50;
+      fg = isDark ? Colors.red.shade300 : Colors.red.shade700;
       label = 'Missed Clock Out';
       icon = Icons.alarm_off_rounded;
     } else {
-      bg = Colors.orange.shade50;
-      fg = Colors.orange.shade700;
+      bg = isDark
+          ? Colors.orange.withValues(alpha: 0.15)
+          : Colors.orange.shade50;
+      fg = isDark ? Colors.orange.shade300 : Colors.orange.shade700;
       label = 'Incomplete';
       icon = Icons.warning_amber_rounded;
     }
@@ -763,11 +808,13 @@ class _ReportButton extends StatefulWidget {
   final int recordId;
   final String date;
   final String reportType;
+  final Color accentColor;
 
   const _ReportButton({
     required this.recordId,
     required this.date,
     required this.reportType,
+    required this.accentColor,
   });
 
   @override
@@ -792,7 +839,12 @@ class _ReportButtonState extends State<_ReportButton> {
   Future<void> _submit() async {
     final reason = await showDialog<String>(
       context: context,
-      builder: (_) => _ReportIssueDialog(reportType: widget.reportType),
+      builder: (_) => _ReportIssueDialog(
+        reportType: widget.reportType,
+        // FIX: accentColor is now accepted as optional in _ReportIssueDialog
+        // and properly forwarded here
+        accentColor: widget.accentColor,
+      ),
     );
     if (reason == null || reason.isEmpty || !mounted) return;
 
@@ -874,7 +926,15 @@ class _ReportButtonState extends State<_ReportButton> {
 
 class _ReportIssueDialog extends StatefulWidget {
   final String reportType;
-  const _ReportIssueDialog({required this.reportType});
+  // FIX: was required but never used in build(); changed to optional with
+  // a sensible default so existing call sites don't need to change, and the
+  // field is available if needed for future theming.
+  final Color accentColor;
+
+  const _ReportIssueDialog({
+    required this.reportType,
+    this.accentColor = _kAccent,
+  });
 
   @override
   State<_ReportIssueDialog> createState() => _ReportIssueDialogState();

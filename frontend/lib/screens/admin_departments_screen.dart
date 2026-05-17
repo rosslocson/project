@@ -156,7 +156,16 @@ class _ConfigScreenState extends State<ConfigScreen>
                           color:
                               isDark ? theme.surface : theme.sidebarBackground,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: theme.border),
+                          boxShadow: isDark
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: theme.shadowColor,
+                                    blurRadius: 24,
+                                    spreadRadius: 2,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),

@@ -591,24 +591,20 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 
 		// ── Today's attendance stats (derived from actual data) ───────────────
 		// Present: clocked in today (time_in is not null)
-		// Present: clocked in at or before 8:15 AM today
+		// Present: anyone who clocked in today (on-time + late)
 	var presentCount int64
 	h.DB.Model(&models.Attendance{}).
-		Where("date = ? AND time_in IS NOT NULL AND EXTRACT(HOUR FROM time_in AT TIME ZONE 'Asia/Manila') * 60 + EXTRACT(MINUTE FROM time_in AT TIME ZONE 'Asia/Manila') <= 495", today).
+		Where("date = ? AND time_in IS NOT NULL", today).
 		Count(&presentCount)
 
-	// Late: clocked in after 8:15 AM today (8:16 AM onwards)
+	// Late: clocked in after 8:15 AM today (subset of present)
 	var lateCount int64
 	h.DB.Model(&models.Attendance{}).
 		Where("date = ? AND time_in IS NOT NULL AND EXTRACT(HOUR FROM time_in AT TIME ZONE 'Asia/Manila') * 60 + EXTRACT(MINUTE FROM time_in AT TIME ZONE 'Asia/Manila') > 495", today).
 		Count(&lateCount)
 
-	// Absent: total interns minus those who clocked in at all today
-	var clockedInToday int64
-	h.DB.Model(&models.Attendance{}).
-		Where("date = ? AND time_in IS NOT NULL", today).
-		Count(&clockedInToday)
-	absentCount := totalInterns - clockedInToday
+	// Absent: interns with no clock-in at all today
+	absentCount := totalInterns - presentCount
 
 	// ── Pagination params ─────────────────────────────────────────────────
 	pageStr := c.DefaultQuery("page", "1")

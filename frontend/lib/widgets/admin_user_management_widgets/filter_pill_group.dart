@@ -19,19 +19,21 @@ class FilterPillGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
-    
+
     // Dynamic Active Color based on your palette:
     // Dark Mode: Accent Purple (#7367F0) | Light Mode: Cosmic Blue (#00022E)
-    final activeColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
-    
+    final activeColor =
+        isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+
     // Track Background (The long pill container)
-    final trackColor = isDark 
+    final trackColor = isDark
         ? const Color(0xFF00022E).withValues(alpha: 0.6) // Deep cosmic pocket
-        : const Color(0xFF6B7280).withValues(alpha: 0.1); // Soft wash of Secondary Text
-        
+        : const Color(0xFF6B7280)
+            .withValues(alpha: 0.1); // Soft wash of Secondary Text
+
     // Border Color
-    final trackBorderColor = isDark 
-        ? const Color(0xFF7367F0).withValues(alpha: 0.15) 
+    final trackBorderColor = isDark
+        ? theme.border.withValues(alpha: 0.15)
         : const Color(0xFF6B7280).withValues(alpha: 0.2);
 
     return Container(
@@ -39,8 +41,19 @@ class FilterPillGroup extends StatelessWidget {
         color: trackColor,
         borderRadius: BorderRadius.circular(40),
         border: Border.all(color: trackBorderColor, width: 1),
+        boxShadow: isDark
+    ? []
+    : [
+        BoxShadow(
+          color: theme.shadowColor,
+          blurRadius: 24,
+          offset: const Offset(0, 8),
+        ),
+      ],
+
+
       ),
-      padding: const EdgeInsets.all(5), 
+      padding: const EdgeInsets.all(5),
       child: Row(
         children: tabs.map((tab) {
           final id = tab['id'] as String;
@@ -56,7 +69,11 @@ class FilterPillGroup extends StatelessWidget {
                 curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: isSelected ? activeColor : Colors.transparent,
+                  color: isSelected
+                      ? activeColor
+                      : isDark
+                          ? const Color(0xFF00001A).withValues(alpha: 0.0)
+                          : Colors.transparent,
                   borderRadius: BorderRadius.circular(36),
                   boxShadow: isSelected
                       ? [
@@ -66,7 +83,13 @@ class FilterPillGroup extends StatelessWidget {
                             offset: const Offset(0, 2),
                           )
                         ]
-                      : [],
+                      : [
+                          BoxShadow(
+                            color: activeColor.withValues(alpha: 0.0),
+                            blurRadius: 0,
+                            offset: Offset.zero,
+                          )
+                        ],
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -74,11 +97,11 @@ class FilterPillGroup extends StatelessWidget {
                   style: TextStyle(
                     // Text color: White when selected
                     // When unselected: White opacity for Dark | Secondary Gray for Light
-                    color: isSelected 
-                        ? Colors.white 
-                        : (isDark 
-                            ? Colors.white.withValues(alpha: 0.7) 
-                            : const Color(0xFF6B7280)), 
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark
+                            ? Colors.white.withValues(alpha: 0.7)
+                            : const Color(0xFF6B7280)),
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                     fontSize: 13,
                     letterSpacing: 0.3,

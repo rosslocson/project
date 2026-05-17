@@ -67,10 +67,10 @@ class _DepartmentListContentState extends State<DepartmentListContent> {
         isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
 
     final barColor = isDark
-        ? const Color(0xFF00022E).withValues(alpha: 0.6)
-        : const Color(0xFFEEF2F5);
+        ? theme.surface // ← was Color(0xFF00022E).withValues(alpha: 0.6)
+        : theme.sidebarBackground;
 
-    final inputFillColor = isDark ? const Color(0xFF1A1A3A) : Colors.white;
+    final inputFillColor = isDark ? theme.surface : theme.sidebarBackground;
 
     final inputTextColor = isDark ? Colors.white : Colors.black87;
 
@@ -144,6 +144,16 @@ class _DepartmentListContentState extends State<DepartmentListContent> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                        color: theme.border.withValues(alpha: 0.15), width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                        color: theme.border.withValues(alpha: 0.15), width: 1),
                   ),
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

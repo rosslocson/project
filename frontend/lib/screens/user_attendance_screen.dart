@@ -138,24 +138,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
               child: Container(
                 decoration: BoxDecoration(
-                  // Glass dark surface — mirrors admin card style
-                  color: isDark ? theme.surface : theme.metricCardBackground,
+                  color: isDark ? theme.surface : theme.sidebarBackground,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : theme.border,
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDark
-                          ? Colors.black.withValues(alpha: 0.4)
-                          : theme.shadowColor,
-                      blurRadius: 32,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+                  boxShadow: isDark
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: theme.shadowColor,
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
@@ -236,18 +229,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : const Color(0xFF00022E),
+              color: isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
               borderRadius: BorderRadius.circular(12),
-              border: isDark
-                  ? Border.all(
-                      color: Colors.white.withValues(alpha: 0.12), width: 1)
-                  : null,
             ),
-            child: Icon(
+            child: const Icon(
               Icons.fact_check_outlined,
-              color: isDark ? Colors.white70 : Colors.white,
+              color: Colors.white,
               size: 20,
             ),
           ),

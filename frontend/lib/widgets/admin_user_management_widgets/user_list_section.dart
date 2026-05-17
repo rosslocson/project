@@ -46,34 +46,49 @@ class UserListSection extends StatelessWidget {
         ),
         Container(
           decoration: BoxDecoration(
-            color: sectionBackground,
+            color: context.isDarkInternTheme
+                ? theme.surface
+                : theme.sidebarBackground,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: theme.border),
+            boxShadow: context.isDarkInternTheme
+                ? []
+                : [
+                    BoxShadow(
+                      color: theme.shadowColor,
+                      blurRadius: 24,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: users.length,
-              separatorBuilder: (_, __) => Divider(height: 1, indent: 20, color: theme.border),
-              itemBuilder: (context, i) {
-                final u = users[i];
-                return UserTile(
-                  key: ValueKey(toInt(u['id'])),
-                  user: u,
-                  isArchivedView: isArchived(u),
-                  isCurrentUser: toInt(u['id']) == currentUserId,
-                  onToggle: () => onToggleActive(u),
-                  onArchive: () => onArchive(u),
-                  onRestore: () => onRestore(u),
-                );
-              },
+            child: ColoredBox(
+              // ← add this
+              color: sectionBackground, // ← matches your container
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: users.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, indent: 20, color: theme.border),
+                itemBuilder: (context, i) {
+                  final u = users[i];
+                  return UserTile(
+                    key: ValueKey(toInt(u['id'])),
+                    user: u,
+                    isArchivedView: isArchived(u),
+                    isCurrentUser: toInt(u['id']) == currentUserId,
+                    onToggle: () => onToggleActive(u),
+                    onArchive: () => onArchive(u),
+                    onRestore: () => onRestore(u),
+                  );
+                },
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 24),
       ],
     );
   }

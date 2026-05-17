@@ -9,11 +9,11 @@ class UserPasswordTab extends StatelessWidget {
   final TextEditingController curPassCtrl;
   final TextEditingController newPassCtrl;
   final TextEditingController confirmPassCtrl;
-  
+
   final bool obscureCur;
   final bool obscureNew;
   final bool obscureConf;
-  
+
   final String? passMsg;
   final bool passSuccess;
   final bool savingPass;
@@ -50,27 +50,51 @@ class UserPasswordTab extends StatelessWidget {
 
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: theme.mutedText, size: 18) : null,
+      labelStyle: TextStyle(
+          fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: theme.mutedText, size: 18)
+          : null,
       filled: true,
       fillColor: theme.formFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.border, width: 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kBlue, width: 1.5)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.red.shade300, width: 1)),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.border, width: 1)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color:
+                  context.isDarkInternTheme ? const Color(0xFF7367F0) : _kBlue,
+              width: 1.5)),
+      errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade300, width: 1)),
     );
   }
 
-  Widget _passField(BuildContext context, {required TextEditingController controller, required String label, required bool obscure, required VoidCallback onToggle, required String? Function(String?) validator}) =>
+  Widget _passField(BuildContext context,
+          {required TextEditingController controller,
+          required String label,
+          required bool obscure,
+          required VoidCallback onToggle,
+          required String? Function(String?) validator}) =>
       TextFormField(
         controller: controller,
         obscureText: obscure,
         validator: validator,
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: context.internTheme.surfaceText),
-        decoration: _getFormDecoration(context, label, prefixIcon: Icons.lock_outline).copyWith(
+        style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: context.internTheme.surfaceText),
+        decoration:
+            _getFormDecoration(context, label, prefixIcon: Icons.lock_outline)
+                .copyWith(
           suffixIcon: IconButton(
-            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, size: 18, color: context.internTheme.mutedText),
+            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
+                size: 18, color: context.internTheme.mutedText),
             onPressed: onToggle,
           ),
         ),
@@ -131,7 +155,9 @@ class UserPasswordTab extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: savingPass ? null : onSave,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kBlue,
+                      backgroundColor: context.isDarkInternTheme
+    ? const Color(0xFF7367F0)
+    : _kBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -175,7 +201,8 @@ class UserPasswordTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (passMsg != null) ...[
-                    UserAccountStatusBanner(msg: passMsg!, success: passSuccess),
+                    UserAccountStatusBanner(
+                        msg: passMsg!, success: passSuccess),
                     const SizedBox(height: 16),
                   ],
                   _passField(
@@ -195,9 +222,15 @@ class UserPasswordTab extends StatelessWidget {
                     onToggle: onToggleNew,
                     validator: (v) {
                       if (v == null || v.length < 8) return 'Min 8 characters';
-                      if (!v.contains(RegExp(r'[A-Z]'))) return 'Need one uppercase letter';
-                      if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
-                      if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) return 'Need one special character';
+                      if (!v.contains(RegExp(r'[A-Z]'))) {
+                        return 'Need one uppercase letter';
+                      }
+                      if (!v.contains(RegExp(r'[0-9]'))) {
+                        return 'Need one number';
+                      }
+                      if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+                        return 'Need one special character';
+                      }
                       return null;
                     },
                   ),
@@ -210,7 +243,9 @@ class UserPasswordTab extends StatelessWidget {
                     onToggle: onToggleConf,
                     validator: (v) {
                       if (v!.isEmpty) return 'Required';
-                      if (v != newPassCtrl.text) return 'Passwords do not match';
+                      if (v != newPassCtrl.text) {
+                        return 'Passwords do not match';
+                      }
                       return null;
                     },
                   ),

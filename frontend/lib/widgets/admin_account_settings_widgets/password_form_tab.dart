@@ -64,20 +64,33 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
   }) {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
-    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
-    final errorColor = isDark ? const Color(0xFF7367F0).withOpacity(0.6) : const Color(0xFF00022E).withOpacity(0.6);
+    final primaryColor =
+        isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final errorColor = isDark
+        ? const Color(0xFF7367F0).withOpacity(0.6)
+        : const Color(0xFF00022E).withOpacity(0.6);
 
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: theme.mutedText, size: 18) : null,
+      labelStyle: TextStyle(
+          fontSize: 13, color: theme.mutedText, fontWeight: FontWeight.w500),
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: theme.mutedText, size: 18)
+          : null,
       filled: true,
       fillColor: theme.formFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.border, width: 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 1.5)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: errorColor, width: 1)),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.border, width: 1)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor, width: 1.5)),
+      errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: errorColor, width: 1)),
     );
   }
 
@@ -93,10 +106,16 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
         controller: controller,
         obscureText: obscure,
         validator: validator,
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: context.internTheme.surfaceText),
-        decoration: _getFormDecoration(context, label, prefixIcon: Icons.lock_outline).copyWith(
+        style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: context.internTheme.surfaceText),
+        decoration:
+            _getFormDecoration(context, label, prefixIcon: Icons.lock_outline)
+                .copyWith(
           suffixIcon: IconButton(
-            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, size: 18, color: context.internTheme.mutedText),
+            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
+                size: 18, color: context.internTheme.mutedText),
             onPressed: onToggle,
           ),
         ),
@@ -174,7 +193,8 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDarkInternTheme;
-    final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
+    final primaryColor =
+        isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -208,9 +228,15 @@ class _PasswordFormTabState extends State<PasswordFormTab> {
                     onToggle: widget.onToggleNew,
                     validator: (v) {
                       if (v == null || v.length < 8) return 'Min 8 characters';
-                      if (!v.contains(RegExp(r'[A-Z]'))) return 'Need one uppercase letter';
-                      if (!v.contains(RegExp(r'[0-9]'))) return 'Need one number';
-                      if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) return 'Need one special character';
+                      if (!v.contains(RegExp(r'[A-Z]'))) {
+                        return 'Need one uppercase letter';
+                      }
+                      if (!v.contains(RegExp(r'[0-9]'))) {
+                        return 'Need one number';
+                      }
+                      if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+                        return 'Need one special character';
+                      }
                       return null;
                     },
                   ),
