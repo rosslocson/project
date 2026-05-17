@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../intern_carousel_palette.dart';
 import '../../screens/intern_cards.dart';
-import '../../screens/intern_ross_profile_page.dart';
+import '../../screens/intern_cards/intern_ross_profile_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UserInternCard

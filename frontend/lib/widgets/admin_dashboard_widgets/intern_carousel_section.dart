@@ -6,7 +6,7 @@ import '../intern_carousel_palette.dart';
 // Intern profile & detail page models
 import '../../screens/intern_cards.dart';
 import '../../screens/intern_directory_screen.dart';
-import '../../screens/intern_ross_profile_page.dart';
+import '../../screens/intern_cards/intern_ross_profile_page.dart';
 
 class InternCarouselSection extends StatefulWidget {
   final List<InternProfile> interns;

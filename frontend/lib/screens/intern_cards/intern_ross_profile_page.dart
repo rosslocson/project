@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui' as ui;
-import 'intern_cards.dart';
-import '../widgets/app_background.dart';
+import '../intern_cards.dart';
+import '../../widgets/app_background.dart';
 
 // ── Rosalyn Locson Special Profile Page ──────────────────────────────────────
 //

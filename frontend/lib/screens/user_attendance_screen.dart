@@ -28,11 +28,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _historyLoading = true;
   bool _actionLoading = false;
 
+  final ScrollController _scrollController = ScrollController();
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     _loadAll();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   // ── Data loading ───────────────────────────────────────────────────────────
@@ -134,74 +142,81 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
           // ── Main content container ────────────────────────────
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? theme.surface : theme.sidebarBackground,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: isDark
-                      ? []
-                      : [
-                          BoxShadow(
-                            color: theme.shadowColor,
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // ── Card header ───────────────────────────
-                      _buildCardHeader(theme, isDark),
+            child: Scrollbar(
+              controller: _scrollController,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? theme.surface : theme.sidebarBackground,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: isDark
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: theme.shadowColor,
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── Card header ───────────────────────────
+                        _buildCardHeader(theme, isDark),
 
-                      // ── Scrollable body ───────────────────────
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(28, 20, 28, 32),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // ── Clock card ──────────────────
-                              AttendanceClockCard(
-                                summary: _summary,
-                                isLoading: _actionLoading || _summaryLoading,
-                                onTimeIn: _handleTimeIn,
-                                onTimeOut: _handleTimeOut,
-                                isOjtComplete: _summary?.isComplete ?? false,
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              // ── OJT progress ────────────────
-                              if (_summaryLoading)
-                                Center(
-                                  child: CircularProgressIndicator(
-                                    color: isDark
-                                        ? const Color(0xFF7367F0)
-                                        : const Color(0xFF00022E),
+                        // ── Scrollable body ───────────────────────
+                        Expanded(
+                          child: ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                            child: SingleChildScrollView(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.fromLTRB(28, 20, 28, 32),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // ── Clock card ──────────────────
+                                  AttendanceClockCard(
+                                    summary: _summary,
+                                    isLoading: _actionLoading || _summaryLoading,
+                                    onTimeIn: _handleTimeIn,
+                                    onTimeOut: _handleTimeOut,
+                                    isOjtComplete: _summary?.isComplete ?? false,
                                   ),
-                                )
-                              else if (_summary != null)
-                                OjtProgressCard(summary: _summary!),
 
-                              const SizedBox(height: 20),
+                                  const SizedBox(height: 20),
 
-                              // ── History ──────────────────────
-                              AttendanceHistoryList(
-                                records: _history,
-                                isLoading: _historyLoading,
+                                  // ── OJT progress ────────────────
+                                  if (_summaryLoading)
+                                    Center(
+                                      child: CircularProgressIndicator(
+                                        color: isDark
+                                            ? const Color(0xFF7367F0)
+                                            : const Color(0xFF00022E),
+                                      ),
+                                    )
+                                  else if (_summary != null)
+                                    OjtProgressCard(summary: _summary!),
+
+                                  const SizedBox(height: 20),
+
+                                  // ── History ──────────────────────
+                                  AttendanceHistoryList(
+                                    records: _history,
+                                    isLoading: _historyLoading,
+                                  ),
+
+                                  const SizedBox(height: 12),
+                                ],
                               ),
-
-                              const SizedBox(height: 12),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

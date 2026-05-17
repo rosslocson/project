@@ -8,8 +8,21 @@ import '../widgets/app_theme.dart';
 import '../widgets/user_layout.dart';
 import 'user_glass_topbar.dart';
 
-class UserAboutScreen extends StatelessWidget {
+class UserAboutScreen extends StatefulWidget {
   const UserAboutScreen({super.key});
+
+  @override
+  State<UserAboutScreen> createState() => _UserAboutScreenState();
+}
+
+class _UserAboutScreenState extends State<UserAboutScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,201 +57,208 @@ class UserAboutScreen extends StatelessWidget {
 
           // ── Main content container ────────────────────────────
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? theme.surface : theme.sidebarBackground,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: isDark
-                      ? []
-                      : [
-                          BoxShadow(
-                            color: theme.shadowColor,
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // ── Card header ───────────────────────────
-                      _buildCardHeader(theme, isDark),
+            child: Scrollbar(
+              controller: _scrollController,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? theme.surface : theme.sidebarBackground,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: isDark
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: theme.shadowColor,
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── Card header ───────────────────────────
+                        _buildCardHeader(theme, isDark),
 
-                      // ── Scrollable body ───────────────────────
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(28, 20, 28, 32),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // ── About Card ───────────────────
-                              _SectionCard(
-                                isDark: isDark,
-                                theme: theme,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                        // ── Scrollable body ───────────────────────
+                        Expanded(
+                          child: ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                            child: SingleChildScrollView(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.fromLTRB(28, 20, 28, 32),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // ── About Card ───────────────────
+                                  _SectionCard(
+                                    isDark: isDark,
+                                    theme: theme,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Container(
-                                          height: 40,
-                                          width: 40,
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? const Color(0xFF7367F0)
-                                                : const Color(0xFF0B0F2F),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          padding: const EdgeInsets.all(1),
-                                          child: Image.asset(
-                                            'assets/images/logo_file.png',
-                                            fit: BoxFit.contain,
-                                            errorBuilder:
-                                                (context, error, stackTrace) {
-                                              return Icon(Icons.public,
-                                                  color: isDark
-                                                      ? Colors.white70
-                                                      : const Color(0xFF3B4FE4),
-                                                  size: 24);
-                                            },
-                                          ),
+                                        Row(
+                                          children: [
+                                            Container(
+                                              height: 40,
+                                              width: 40,
+                                              decoration: BoxDecoration(
+                                                color: isDark
+                                                    ? const Color(0xFF7367F0)
+                                                    : const Color(0xFF0B0F2F),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              padding: const EdgeInsets.all(1),
+                                              child: Image.asset(
+                                                'assets/images/logo_file.png',
+                                                fit: BoxFit.contain,
+                                                errorBuilder:
+                                                    (context, error, stackTrace) {
+                                                  return Icon(Icons.public,
+                                                      color: isDark
+                                                          ? Colors.white70
+                                                          : const Color(0xFF3B4FE4),
+                                                      size: 24);
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 14),
+                                            Text(
+                                              'InternSpace',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.surfaceText,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 14),
-                                        Text(
-                                          'InternSpace',
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.surfaceText,
-                                          ),
+                                        const SizedBox(height: 20),
+                                        _SectionTitle(
+                                            text: 'What is InternSpace?',
+                                            theme: theme),
+                                        const SizedBox(height: 8),
+                                        _BodyText(
+                                          text:
+                                              'InternSpace is an internship management platform designed to streamline the On-the-Job Training (OJT) experience for students and administrators. It provides tools for tracking attendance, managing intern profiles, and monitoring OJT progress — all in one place.',
+                                          theme: theme,
+                                        ),
+                                        const SizedBox(height: 20),
+                                        _SectionTitle(
+                                            text: 'Our Mission', theme: theme),
+                                        const SizedBox(height: 8),
+                                        _BodyText(
+                                          text:
+                                              'We aim to bridge the gap between academic learning and professional work experience by providing a seamless, modern platform that keeps interns, supervisors, and institutions connected throughout the OJT journey.',
+                                          theme: theme,
+                                        ),
+                                        const SizedBox(height: 20),
+                                        _SectionTitle(
+                                            text: 'Key Features', theme: theme),
+                                        const SizedBox(height: 12),
+                                        _FeatureItem(
+                                          icon: Icons.access_time_rounded,
+                                          label: 'Attendance Tracking',
+                                          description:
+                                              'Clock in/out with real-time OJT hour monitoring.',
+                                          isDark: isDark,
+                                          theme: theme,
+                                        ),
+                                        _FeatureItem(
+                                          icon: Icons.person_outline_rounded,
+                                          label: 'Intern Profiles',
+                                          description:
+                                              'Manage academic info, skills, and department details.',
+                                          isDark: isDark,
+                                          theme: theme,
+                                        ),
+                                        _FeatureItem(
+                                          icon: Icons.bar_chart_rounded,
+                                          label: 'OJT Progress Dashboard',
+                                          description:
+                                              'Visualize completed hours and milestones at a glance.',
+                                          isDark: isDark,
+                                          theme: theme,
+                                        ),
+                                        _FeatureItem(
+                                          icon: Icons.admin_panel_settings_outlined,
+                                          label: 'Admin Management',
+                                          description:
+                                              'Full administrative control over interns and departments.',
+                                          isDark: isDark,
+                                          theme: theme,
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 20),
-                                    _SectionTitle(
-                                        text: 'What is InternSpace?',
-                                        theme: theme),
-                                    const SizedBox(height: 8),
-                                    _BodyText(
-                                      text:
-                                          'InternSpace is an internship management platform designed to streamline the On-the-Job Training (OJT) experience for students and administrators. It provides tools for tracking attendance, managing intern profiles, and monitoring OJT progress — all in one place.',
-                                      theme: theme,
+                                  ),
+
+                                  const SizedBox(height: 20),
+
+                                  // ── Contact Card ─────────────────
+                                  _SectionCard(
+                                    isDark: isDark,
+                                    theme: theme,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _SectionTitle(
+                                            text: 'Get in Touch', theme: theme),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Have questions, concerns, or feedback? We\'d love to hear from you.',
+                                          style: TextStyle(
+                                              fontSize: 13, color: theme.mutedText),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        _ContactItem(
+                                          icon: Icons.email_outlined,
+                                          label: 'Email',
+                                          value: 'internspace123@gmail.com',
+                                          isDark: isDark,
+                                          theme: theme,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _ContactItem(
+                                          icon: Icons.phone_outlined,
+                                          label: 'Phone',
+                                          value: '0930-123-4567',
+                                          isDark: isDark,
+                                          theme: theme,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _ContactItem(
+                                          icon: Icons.location_on_outlined,
+                                          label: 'Address',
+                                          value:
+                                              'San Pablo City, Laguna, Philippines',
+                                          isDark: isDark,
+                                          theme: theme,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _ContactItem(
+                                          icon: Icons.schedule_outlined,
+                                          label: 'Support Hours',
+                                          value:
+                                              'Monday – Friday, 8:00 AM – 5:00 PM (PHT)',
+                                          isDark: isDark,
+                                          theme: theme,
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 20),
-                                    _SectionTitle(
-                                        text: 'Our Mission', theme: theme),
-                                    const SizedBox(height: 8),
-                                    _BodyText(
-                                      text:
-                                          'We aim to bridge the gap between academic learning and professional work experience by providing a seamless, modern platform that keeps interns, supervisors, and institutions connected throughout the OJT journey.',
-                                      theme: theme,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _SectionTitle(
-                                        text: 'Key Features', theme: theme),
-                                    const SizedBox(height: 12),
-                                    _FeatureItem(
-                                      icon: Icons.access_time_rounded,
-                                      label: 'Attendance Tracking',
-                                      description:
-                                          'Clock in/out with real-time OJT hour monitoring.',
-                                      isDark: isDark,
-                                      theme: theme,
-                                    ),
-                                    _FeatureItem(
-                                      icon: Icons.person_outline_rounded,
-                                      label: 'Intern Profiles',
-                                      description:
-                                          'Manage academic info, skills, and department details.',
-                                      isDark: isDark,
-                                      theme: theme,
-                                    ),
-                                    _FeatureItem(
-                                      icon: Icons.bar_chart_rounded,
-                                      label: 'OJT Progress Dashboard',
-                                      description:
-                                          'Visualize completed hours and milestones at a glance.',
-                                      isDark: isDark,
-                                      theme: theme,
-                                    ),
-                                    _FeatureItem(
-                                      icon: Icons.admin_panel_settings_outlined,
-                                      label: 'Admin Management',
-                                      description:
-                                          'Full administrative control over interns and departments.',
-                                      isDark: isDark,
-                                      theme: theme,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+
+                                  const SizedBox(height: 12),
+                                ],
                               ),
-
-                              const SizedBox(height: 20),
-
-                              // ── Contact Card ─────────────────
-                              _SectionCard(
-                                isDark: isDark,
-                                theme: theme,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _SectionTitle(
-                                        text: 'Get in Touch', theme: theme),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'Have questions, concerns, or feedback? We\'d love to hear from you.',
-                                      style: TextStyle(
-                                          fontSize: 13, color: theme.mutedText),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    _ContactItem(
-                                      icon: Icons.email_outlined,
-                                      label: 'Email',
-                                      value: 'internspace123@gmail.com',
-                                      isDark: isDark,
-                                      theme: theme,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _ContactItem(
-                                      icon: Icons.phone_outlined,
-                                      label: 'Phone',
-                                      value: '0930-123-4567',
-                                      isDark: isDark,
-                                      theme: theme,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _ContactItem(
-                                      icon: Icons.location_on_outlined,
-                                      label: 'Address',
-                                      value:
-                                          'San Pablo City, Laguna, Philippines',
-                                      isDark: isDark,
-                                      theme: theme,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _ContactItem(
-                                      icon: Icons.schedule_outlined,
-                                      label: 'Support Hours',
-                                      value:
-                                          'Monday – Friday, 8:00 AM – 5:00 PM (PHT)',
-                                      isDark: isDark,
-                                      theme: theme,
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

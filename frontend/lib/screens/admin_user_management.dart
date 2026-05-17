@@ -27,6 +27,7 @@ class _UsersScreenState extends State<UsersScreen> {
   bool _loading = true;
 
   final _searchCtrl = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   bool _isSidebarOpen = true;
   String _filterStatus = 'All';
@@ -50,6 +51,7 @@ class _UsersScreenState extends State<UsersScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -422,151 +424,161 @@ class _UsersScreenState extends State<UsersScreen> {
                   ),
                   const SizedBox(height: 15),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 100, right: 100, bottom: 28),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Search Bar
-                            Container(
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? theme.surface
-                                    : theme.sidebarBackground,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: _searchCtrl,
-                                style: TextStyle(
-                                    color: theme.surfaceText, fontSize: 13),
-                                decoration: InputDecoration(
-                                  hintText: 'Search by name or email...',
-                                  hintStyle: TextStyle(
-                                      color: theme.mutedText, fontSize: 13),
-                                  prefixIcon: Icon(Icons.search,
-                                      color: theme.mutedText),
-                                  suffixIcon: _searchCtrl.text.isNotEmpty
-                                      ? IconButton(
-                                          icon: Icon(Icons.clear,
-                                              color: theme.mutedText),
-                                          onPressed: () {
-                                            _searchCtrl.clear();
-                                            setState(() {});
-                                          },
-                                        )
-                                      : null,
-                                  border: OutlineInputBorder(
+                    child: Scrollbar(
+                      controller: _scrollController,
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                            left: 100, right: 100, bottom: 28),
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context)
+                              .copyWith(scrollbars: false),
+                          child: SingleChildScrollView(
+                            controller: _scrollController,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Search Bar
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? theme.surface
+                                        : theme.sidebarBackground,
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: isDark
-                                      ? theme.surface
-                                      : theme.sidebarBackground,
-                                ),
-                                onChanged: (v) => setState(() {}),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            FilterPillGroup(
-                              tabs: tabs,
-                              filterStatus: _filterStatus,
-                              onTabChanged: _onTabChanged,
-                            ),
-                            const SizedBox(height: 24),
-                            if (_loading)
-                              Padding(
-                                padding: const EdgeInsets.all(48),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    color: theme.topbarText,
-                                  ),
-                                ),
-                              )
-                            else if (admins.isEmpty && internUsers.isEmpty)
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? theme.surface
-                                      : theme.sidebarBackground,
-                                  borderRadius: BorderRadius.circular(24),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.04),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                padding: const EdgeInsets.all(48),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.people_outline,
-                                        size: 56,
-                                        color: theme.listMutedText,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'No users found in this category.',
-                                        style:
-                                            TextStyle(color: theme.mutedText),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.04),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
                                       ),
                                     ],
                                   ),
-                                ),
-                              )
-                            else ...[
-                              if (admins.isNotEmpty)
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 4),
-                                  child: UserListSection(
-                                    title: 'Administrators',
-                                    users: admins,
-                                    currentUserId: currentUserId,
-                                    onToggleActive: _toggleActive,
-                                    onArchive: _archiveUser,
-                                    onRestore: _restoreUser,
+                                  child: TextField(
+                                    controller: _searchCtrl,
+                                    style: TextStyle(
+                                        color: theme.surfaceText, fontSize: 13),
+                                    decoration: InputDecoration(
+                                      hintText: 'Search by name or email...',
+                                      hintStyle: TextStyle(
+                                          color: theme.mutedText, fontSize: 13),
+                                      prefixIcon: Icon(Icons.search,
+                                          color: theme.mutedText),
+                                      suffixIcon: _searchCtrl.text.isNotEmpty
+                                          ? IconButton(
+                                              icon: Icon(Icons.clear,
+                                                  color: theme.mutedText),
+                                              onPressed: () {
+                                                _searchCtrl.clear();
+                                                setState(() {});
+                                              },
+                                            )
+                                          : null,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      filled: true,
+                                      fillColor: isDark
+                                          ? theme.surface
+                                          : theme.sidebarBackground,
+                                    ),
+                                    onChanged: (v) => setState(() {}),
                                   ),
                                 ),
-                              if (admins.isNotEmpty && internUsers.isNotEmpty)
                                 const SizedBox(height: 24),
-                              if (internUsers.isNotEmpty)
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 4),
-                                  child: UserListSection(
-                                    title: 'Interns',
-                                    users: internUsers,
-                                    currentUserId: currentUserId,
-                                    onToggleActive: _toggleActive,
-                                    onArchive: _archiveUser,
-                                    onRestore: _restoreUser,
-                                  ),
+                                FilterPillGroup(
+                                  tabs: tabs,
+                                  filterStatus: _filterStatus,
+                                  onTabChanged: _onTabChanged,
                                 ),
-                            ],
-                          ],
+                                const SizedBox(height: 24),
+                                if (_loading)
+                                  Padding(
+                                    padding: const EdgeInsets.all(48),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        color: theme.topbarText,
+                                      ),
+                                    ),
+                                  )
+                                else if (admins.isEmpty && internUsers.isEmpty)
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? theme.surface
+                                          : theme.sidebarBackground,
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.04),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.all(48),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.people_outline,
+                                            size: 56,
+                                            color: theme.listMutedText,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            'No users found in this category.',
+                                            style: TextStyle(
+                                                color: theme.mutedText),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                else ...[
+                                  if (admins.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      child: UserListSection(
+                                        title: 'Administrators',
+                                        users: admins,
+                                        currentUserId: currentUserId,
+                                        onToggleActive: _toggleActive,
+                                        onArchive: _archiveUser,
+                                        onRestore: _restoreUser,
+                                      ),
+                                    ),
+                                  if (admins.isNotEmpty &&
+                                      internUsers.isNotEmpty)
+                                    const SizedBox(height: 24),
+                                  if (internUsers.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      child: UserListSection(
+                                        title: 'Interns',
+                                        users: internUsers,
+                                        currentUserId: currentUserId,
+                                        onToggleActive: _toggleActive,
+                                        onArchive: _archiveUser,
+                                        onRestore: _restoreUser,
+                                      ),
+                                    ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
