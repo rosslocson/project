@@ -135,7 +135,7 @@ class AttendanceTable extends StatelessWidget {
                     fontSize: 13,
                     color: theme.surfaceText,
                   ),
-                  overflow: TextOverflow.ellipsis,
+                  softWrap: true, // Ensure full name wraps instead of getting cut off
                 ),
               ),
             ],
