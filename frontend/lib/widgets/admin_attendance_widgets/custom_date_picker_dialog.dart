@@ -94,7 +94,7 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
           colorScheme: const ColorScheme.dark(
             primary: kAccent,
             onPrimary: Colors.white,
-            surface: Color(0xFF1A1F3A),
+            surface: Color(0xFF0E0E12), // Updated from 0xFF1A1F3A
             onSurface: Colors.white,
           ),
         ),
@@ -108,7 +108,7 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
     final theme = Theme.of(context).extension<InternSpaceThemeColors>() ??
         InternSpaceThemeColors.dark;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0D0D2B) : theme.dialogBackground;
+    final bgColor = isDark ? const Color(0xFF0E0E12) : theme.dialogBackground; // Updated from 0xFF0D0D2B
 
     // Accent: purple in dark mode, navy in light mode
     final accentColor = isDark ? kAccent : const Color(0xFF00022E);
@@ -188,7 +188,7 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
   Widget _buildModeToggle(bool isDark, Color accentColor) => Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF070A1F) : const Color(0xFFF4F5F8),
+          color: isDark ? const Color(0xFF18181E) : const Color(0xFFF4F5F8), // Updated from 0xFF070A1F
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -409,7 +409,7 @@ class _DatePickerTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF070A1F) : const Color(0xFFF4F5F8),
+          color: isDark ? const Color(0xFF18181E) : const Color(0xFFF4F5F8), // Updated from 0xFF070A1F
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark ? Colors.white.withValues(alpha: 0.08) : kBorder,
