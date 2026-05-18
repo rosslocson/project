@@ -329,7 +329,31 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
             ),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
+
+        // ── NEW BIO SECTION ──────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Text(
+            // NOTE: Make sure `bio` exists in your InternProfile model. 
+            // If the intern object doesn't have one set, this personalized fallback will show.
+            (widget.intern.bio != null && widget.intern.bio!.isNotEmpty) 
+                ? widget.intern.bio! 
+                : 'Information Systems student at CMDI and intern at FDS Asya Philippines Inc. Passionate about Flutter, UI/UX design, and crafting space-themed digital experiences.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.6,
+              letterSpacing: 0.3,
+              color: isLightMode 
+                  ? const Color(0xFF4B5563) 
+                  : Colors.white.withValues(alpha: 0.75),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        // ─────────────────────────────────────────────────────────────────────
+
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -579,7 +603,6 @@ class _DetailItem extends StatelessWidget {
   }
 }
 
-
 class _SocialButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -638,7 +661,6 @@ class _SocialButtonState extends State<_SocialButton> {
     );
   }
 }
-
 
 class _CosmicBadge extends StatefulWidget {
   final String label;
