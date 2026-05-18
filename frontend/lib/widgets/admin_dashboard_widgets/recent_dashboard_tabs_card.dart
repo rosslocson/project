@@ -102,7 +102,7 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
         ),
         const SizedBox(height: 16),
         Container(
-          height: 500,
+          height: 550,
           decoration: BoxDecoration(
             color: isDark
                 ? theme.listBackground.withValues(alpha: 0.98)

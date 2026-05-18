@@ -3,7 +3,6 @@ import '../../models/attendance_record.dart' show AdminAttendanceRecord;
 import '../../services/admin_attendance_service.dart';
 import '../../widgets/app_theme.dart';
 import 'attendance_table.dart';
-import 'attendance_ui_components.dart';
 import 'review_report_sheet.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
