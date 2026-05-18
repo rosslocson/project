@@ -335,14 +335,19 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to encrypt password"})
 		return
 	}
-	user.Password = string(hashedPassword)
 
-	user.ResetOTP = ""
-	user.ResetOTPExpiry = nil
-	user.FailedAttempts = 0
-	user.LockedUntil = nil
-
-	h.DB.Save(&user)
+	// FIX: Use Updates with a map to explicitly target only the fields that need changing, 
+	// preventing GORM from overwriting the rest of the profile with blank data.
+	if err := h.DB.Model(&user).Updates(map[string]interface{}{
+		"password":           string(hashedPassword),
+		"reset_token":        "",
+		"reset_token_expiry": nil,
+		"failed_attempts":    0,
+		"locked_until":       nil,
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Could not update password"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "Password reset successful"})
 }

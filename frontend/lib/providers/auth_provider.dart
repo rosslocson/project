@@ -19,7 +19,9 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _user != null && _user!.isNotEmpty;
-  bool get isAdmin => (_user?['role'] ?? '') == 'admin';
+  
+  // 🛠️ FIX APPLIED: Case-insensitive admin check
+  bool get isAdmin => (_user?['role']?.toString().toLowerCase() ?? '') == 'admin';
 
   AuthProvider() {
     // Restore token + cached user, then validate/fetch profile.
@@ -28,7 +30,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━
-  // 🛠️ NEW: Centralized Data Extractor
+  // Centralized Data Extractor
   // ━━━━━━━━━━━━━━━━━━━━━━
   Map<String, dynamic> _extractUserFromResponse(Map<String, dynamic> res) {
     if (res['id'] != null) {
@@ -163,9 +165,14 @@ class AuthProvider extends ChangeNotifier {
       if (res['ok'] == true) {
         await ApiService.saveToken(res['token']);
 
-        // Fix applied here: extracting properly instead of hardcoding res['user']
+        // 🛠️ FIX APPLIED: Utilize centralized extractor instead of hardcoding res['user']
         final extractedUser = _extractUserFromResponse(res);
-        _user = _normalizeCachedUser(extractedUser);
+        if (extractedUser.isNotEmpty) {
+          _user = _normalizeCachedUser(extractedUser);
+        } else {
+          _user = null;
+        }
+        
         await _persistUser();
         notifyListeners();
 
@@ -226,7 +233,7 @@ class AuthProvider extends ChangeNotifier {
       try {
         final res = await ApiService.getProfile();
         
-        // Fix applied here: utilize centralized extractor
+        // Use centralized extractor
         final profile = _extractUserFromResponse(res);
         if (profile.isEmpty) {
           debugPrint('⚠️ refreshProfile: no profile data found — skipping merge.');
@@ -299,7 +306,7 @@ class AuthProvider extends ChangeNotifier {
       if (res['ok'] == true) {
         await ApiService.saveToken(res['token']);
         
-        // Fix applied here: use extractor instead of hardcoding
+        // Use extractor instead of hardcoding
         final extractedUser = _extractUserFromResponse(res);
         _user = _normalizeCachedUser(extractedUser);
         
