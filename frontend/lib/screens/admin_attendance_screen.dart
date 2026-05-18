@@ -1,6 +1,4 @@
 // lib/screens/admin_attendance_screen.dart
-// Admin attendance monitoring screen.
-// Layout + state only — all widgets are in admin_attendance_widgets/.
 
 import 'dart:async';
 
@@ -64,7 +62,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   // ── Pending reports bell key ──────────────────────────────────────────────
   final GlobalKey<PendingBellState> _bellKey = GlobalKey<PendingBellState>();
 
-  // ── Scroll Controller for Edge Scrollbar ──────────────────────────────────
+  // ── Scroll controller ─────────────────────────────────────────────────────
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -236,9 +234,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     _load();
   }
 
-  // ── Responsive helpers ────────────────────────────────────────────────────
-
-  /// Horizontal card padding — shrinks on narrow viewports.
   double _cardPadding(double width) {
     if (width >= 1400) return 100;
     if (width >= 900) return 40;
@@ -320,8 +315,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       builder: (context, constraints) {
         final hPad = _cardPadding(constraints.maxWidth);
         return Padding(
-          padding:
-              EdgeInsets.only(left: hPad, right: hPad, bottom: 28),
+          padding: EdgeInsets.only(left: hPad, right: hPad, bottom: 28),
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? theme.surface : theme.sidebarBackground,
@@ -345,13 +339,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   _buildCardHeader(),
                   _buildToolbar(),
                   _buildPeriodRow(),
-                  if (!_loading && _pendingReportCount > 0) _buildPendingBanner(),
+                  if (!_loading && _pendingReportCount > 0)
+                    _buildPendingBanner(),
                   if (!_loading && _pendingReportCount > 0)
                     const SizedBox(height: 12),
                   Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: theme.border.withValues(alpha: 0.15)),
+                    height: 1,
+                    thickness: 1,
+                    color: theme.border.withValues(alpha: 0.15),
+                  ),
                   _buildBody(),
                   if (_total > _limit) _buildPagination(),
                 ],
@@ -394,7 +390,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 color: Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
-          // ── Title + subtitle — takes all available space ──────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,7 +404,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                // Wrap so date label can drop to next line if needed
                 Wrap(
                   spacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -450,7 +444,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               ],
             ),
           ),
-          // ── Actions — fixed-size, will not squish the title ───────────
           PendingBell(
             key: _bellKey,
             onResolved: _onReportResolved,
@@ -492,7 +485,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         builder: (context, constraints) {
           final isNarrow = constraints.maxWidth < 500;
           if (isNarrow) {
-            // Stack search on top, controls below
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -534,7 +526,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             );
           }
 
-          // Wide layout — single row
           return Row(
             children: [
               Expanded(
@@ -593,7 +584,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 4, 28, 16),
-      // Wrap replaces Row — chips flow to next line instead of overflowing
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -663,7 +653,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // "Show Flagged" button — shrink-wraps, won't push out of bounds
           GestureDetector(
             onTap: () {
               setState(() => _selectedStatus = 'All');
@@ -729,8 +718,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               ),
               const SizedBox(height: 12),
               Text(_error!,
-                  style: TextStyle(
-                      color: Colors.red.shade600, fontSize: 13)),
+                  style:
+                      TextStyle(color: Colors.red.shade600, fontSize: 13)),
               const SizedBox(height: 16),
               TextButton.icon(
                 onPressed: () => _load(page: _page),
@@ -779,26 +768,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final tableWidth =
-            constraints.maxWidth > 1200 ? constraints.maxWidth : 1200.0;
-
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: tableWidth,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 12),
-              child: AttendanceTable(
-                records: _records,
-                isAdmin: true,
-                onRefresh: _onReportResolved,
-              ),
-            ),
-          ),
-        );
-      },
+    // ── Table — padded to match toolbar/period row (28 px each side) ─────
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 8, 28, 12),
+      child: AttendanceTable(
+        records: _records,
+        isAdmin: true,
+        onRefresh: _onReportResolved,
+      ),
     );
   }
 
