@@ -22,10 +22,10 @@ class UserSidebar extends StatelessWidget {
     return Container(
       width: 270,
       decoration: BoxDecoration(
-        color: theme.sidebarBackground.withOpacity(isDarkMode ? 0.4 : 0.8),
+        color: theme.sidebarBackground.withValues(alpha: isDarkMode ? 0.4 : 0.8),
         border: Border(
           right: BorderSide(
-            color: theme.border.withOpacity(0.15),
+            color: theme.border.withValues(alpha: 0.15),
             width: 1,
           ),
         ),
@@ -137,7 +137,7 @@ class UserSidebar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Divider(
-                    color: theme.border.withOpacity(0.15),
+                    color: theme.border.withValues(alpha: 0.15),
                     height: 1,
                     thickness: 3,
                   ),
@@ -198,7 +198,7 @@ class _NavItemState extends State<_NavItem> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          theme.sidebarActiveBackground.withOpacity(0.15),
+                          theme.sidebarActiveBackground.withValues(alpha: 0.15),
                           Colors.transparent,
                         ],
                         begin: Alignment.centerLeft,
@@ -223,7 +223,7 @@ class _NavItemState extends State<_NavItem> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: theme.sidebarActiveBackground.withOpacity(0.6),
+                          color: theme.sidebarActiveBackground.withValues(alpha: 0.6),
                           blurRadius: 8,
                           spreadRadius: 1,
                         )
@@ -246,7 +246,7 @@ class _NavItemState extends State<_NavItem> {
                       size: 20,
                       color: active 
                           ? theme.sidebarActiveForeground 
-                          : theme.sidebarText.withOpacity(_isHovered ? 0.9 : 0.5),
+                          : theme.sidebarText.withValues(alpha: _isHovered ? 0.9 : 0.5),
                     ),
                     const SizedBox(width: 16),
                     Text(
@@ -256,7 +256,7 @@ class _NavItemState extends State<_NavItem> {
                         fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                         color: active 
                             ? theme.sidebarActiveForeground 
-                            : theme.sidebarText.withOpacity(_isHovered ? 0.9 : 0.5),
+                            : theme.sidebarText.withValues(alpha: _isHovered ? 0.9 : 0.5),
                         letterSpacing: 0.6, 
                       ),
                     ),
@@ -286,7 +286,7 @@ class _SectionLabel extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: theme.sidebarMutedText.withOpacity(0.7),
+          color: theme.sidebarMutedText.withValues(alpha: 0.7),
           letterSpacing: 2.0, 
         ),
       ),
@@ -320,6 +320,10 @@ class _SignOutButtonState extends State<_SignOutButton> {
             barrierDismissible: true,
             builder: (context) => const LogoutConfirmationDialog(),
           );
+          
+          // GUARD: Check if context is mounted before executing further logic
+          if (!context.mounted) return;
+
           if (confirmed == true) {
             context.read<AuthProvider>().logout();
             context.go('/login');
@@ -341,14 +345,14 @@ class _SignOutButtonState extends State<_SignOutButton> {
                   children: [
                     Icon(
                       Icons.logout_rounded, 
-                      color: _isHovered ? Colors.redAccent : theme.sidebarText.withOpacity(0.5), 
+                      color: _isHovered ? Colors.redAccent : theme.sidebarText.withValues(alpha: 0.5), 
                       size: 20
                     ),
                     const SizedBox(width: 16),
                     Text(
                       'Log Out',
                       style: TextStyle(
-                        color: _isHovered ? Colors.redAccent : theme.sidebarText.withOpacity(0.5),
+                        color: _isHovered ? Colors.redAccent : theme.sidebarText.withValues(alpha: 0.5),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.6, 
@@ -391,12 +395,12 @@ class _CloseButtonState extends State<_CloseButton> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(6.0),
           decoration: BoxDecoration(
-            color: _isHovered ? theme.sidebarText.withOpacity(0.08) : Colors.transparent,
+            color: _isHovered ? theme.sidebarText.withValues(alpha: 0.08) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             Icons.menu_open_rounded, 
-            color: theme.sidebarText.withOpacity(_isHovered ? 1.0 : 0.5),
+            color: theme.sidebarText.withValues(alpha: _isHovered ? 1.0 : 0.5),
             size: 22,
           ),
         ),

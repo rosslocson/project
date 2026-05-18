@@ -58,7 +58,7 @@ class ProfileLeftPanel extends StatelessWidget {
                               width: 4),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black.withOpacity(0.25),
+                                color: Colors.black.withValues(alpha: 0.25),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10)),
                           ],
@@ -91,7 +91,7 @@ class ProfileLeftPanel extends StatelessWidget {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
+                                  color: Colors.black.withValues(alpha: 0.15),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4)),
                             ],
@@ -138,10 +138,10 @@ class ProfileLeftPanel extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.blueAccent.withOpacity(0.15),
+                      color: Colors.blueAccent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                       border:
-                          Border.all(color: Colors.blueAccent.withOpacity(0.3)),
+                          Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
                     ),
                     child: const Text('INTERN',
                         style: TextStyle(
@@ -154,7 +154,7 @@ class ProfileLeftPanel extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Divider(
-                        color: Colors.white.withOpacity(0.10), height: 1),
+                        color: Colors.white.withValues(alpha: 0.10), height: 1),
                   ),
                   const SizedBox(height: 24),
                   QuickInfoTile(
@@ -189,7 +189,7 @@ class ProfileLeftPanel extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   elevation: 4,
-                  shadowColor: Colors.black.withOpacity(0.2),
+                  shadowColor: Colors.black.withValues(alpha: 0.2),
                 ),
               ),
             ),

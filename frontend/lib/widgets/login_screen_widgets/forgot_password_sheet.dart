@@ -6,9 +6,14 @@ import 'package:flutter/services.dart';
 import '../../services/api_service.dart';
 import '../app_theme.dart';
 
+// --- Global Brand Colors ---
 const kCosmicBlue = Color(0xFF00022E);
 const kAccentPurple = Color(0xFF7367F0);
 
+/// A bottom sheet widget that handles the 3-step "Forgot Password" flow:
+/// 1. Request OTP via email.
+/// 2. Verify the 6-digit OTP.
+/// 3. Create and confirm a new password.
 class ForgotPasswordSheet extends StatefulWidget {
   final String initialEmail;
   final VoidCallback onResetSuccess;
@@ -24,29 +29,42 @@ class ForgotPasswordSheet extends StatefulWidget {
 }
 
 class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
+  // --- Controllers & Focus Nodes ---
+  // Controls the email input field
   late final TextEditingController _resetEmailCtrl;
+  
+  // Controllers and FocusNodes for the 6 separate OTP digit boxes
   final List<TextEditingController> _otpDigitCtrls =
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
+  
+  // Controllers for the new password and confirmation fields
   final _newPassCtrl = TextEditingController();
   final _confPassCtrl = TextEditingController();
 
-  String? stepMsg;
-  bool stepLoading = false;
-  int step = 1;
-  Timer? _otpTimer;
-  int _otpSecondsLeft = 0;
+  // --- State Variables ---
+  String? stepMsg;          // Displays success/error messages to the user
+  bool stepLoading = false; // Tracks if an API call is currently in progress
+  int step = 1;             // Tracks the current step (1 = Email, 2 = OTP, 3 = New Password)
+  
+  // --- OTP Timer State ---
+  Timer? _otpTimer;         // Background timer counting down the OTP validity
+  int _otpSecondsLeft = 0;  // Remaining seconds before the OTP expires
+  
+  // --- Password Visibility State ---
   bool obscureNewPass = true;
   bool obscureConfPass = true;
 
   @override
   void initState() {
     super.initState();
+    // Pre-fill the email field if the user already typed it in the login screen
     _resetEmailCtrl = TextEditingController(text: widget.initialEmail);
   }
 
   @override
   void dispose() {
+    // Clean up memory to prevent leaks when the sheet is closed
     _otpTimer?.cancel();
     _resetEmailCtrl.dispose();
     for (final controller in _otpDigitCtrls) {
@@ -60,6 +78,11 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     super.dispose();
   }
 
+  // ==========================================
+  // API & LOGIC METHODS
+  // ==========================================
+
+  /// STEP 1: Sends the password reset request to the server.
   Future<void> requestReset() async {
     if (_resetEmailCtrl.text.isEmpty) return;
 
@@ -68,31 +91,36 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       stepMsg = null;
     });
 
+    // Call API to send OTP to the provided email
     final res = await ApiService.forgotPassword(_resetEmailCtrl.text.trim());
     setState(() => stepLoading = false);
 
     if (res['ok'] == true) {
+      // Determine how long the OTP is valid from the server response (fallback to 120s)
       final expirySeconds = res['expires_in_secs'] is int
           ? res['expires_in_secs'] as int
           : int.tryParse('${res['expires_in_secs']}') ?? 120;
 
       setState(() {
-        step = 2;
-        // SECURITY UPDATE: Avoid email enumeration with a generic response
+        step = 2; // Move to OTP verification step
+        // SECURITY: Use a generic message so we don't reveal if an email exists in our DB
         stepMsg = 'If an account exists for this email, a reset code has been sent.';
         _clearOtpBoxes();
         _newPassCtrl.clear();
         _confPassCtrl.clear();
       });
+      
+      // Start the countdown timer and focus the first OTP box
       _startOtpTimer(expirySeconds);
       _otpFocusNodes.first.requestFocus();
     } else {
-      // Even on a server error we do not reveal if the email exists
       setState(() => stepMsg = res['error'] ?? 'Request failed');
     }
   }
 
+  /// STEP 2: Verifies if the entered 6-digit OTP is correct.
   Future<void> verifyOtpStep() async {
+    // Basic local validation
     if (_otpSecondsLeft <= 0) {
       setState(() => stepMsg = 'OTP has expired. Please request a new code.');
       return;
@@ -107,6 +135,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       stepMsg = null;
     });
 
+    // Call API to verify the OTP code
     final res = await ApiService.verifyResetOtp(_otpCode);
     setState(() => stepLoading = false);
 
@@ -115,13 +144,16 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       return;
     }
 
+    // Success! Move to the final "Set New Password" step
     setState(() {
-      step = 3;
+      step = 3; 
       stepMsg = null;
     });
   }
 
+  /// STEP 3: Submits the new password using the validated OTP.
   Future<void> doReset() async {
+    // Local validations
     if (_otpSecondsLeft <= 0) {
       setState(() => stepMsg = 'OTP has expired. Please request a new code.');
       return;
@@ -137,17 +169,26 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       stepMsg = null;
     });
 
+    // Call API to finalize the password reset
     final res = await ApiService.resetPassword(
       _otpCode,
       _newPassCtrl.text,
       _confPassCtrl.text,
     );
+    
     setState(() => stepLoading = false);
 
     if (res['ok'] == true) {
       _otpTimer?.cancel();
-      if (mounted) Navigator.pop(context);
+      
+      // GUARD: Ensure the widget is still in the tree before using context after an async gap
+      if (!mounted) return; 
+      
+      // Close the bottom sheet and trigger the success callback
+      Navigator.pop(context);
       widget.onResetSuccess();
+      
+      // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Password reset! You can now log in.'),
@@ -161,11 +202,17 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     }
   }
 
+  // ==========================================
+  // HELPER & UI LOGIC METHODS
+  // ==========================================
+
+  /// Initializes and handles the OTP countdown timer.
   void _startOtpTimer([int seconds = 120]) {
     _otpTimer?.cancel();
     setState(() => _otpSecondsLeft = seconds.clamp(0, 9999));
 
     _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // If widget is removed from tree, kill the timer
       if (!mounted) {
         timer.cancel();
         return;
@@ -184,28 +231,35 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     });
   }
 
+  /// Formats the remaining seconds into a MM:SS string.
   String get _otpTimeText {
     final minutes = (_otpSecondsLeft ~/ 60).toString().padLeft(2, '0');
     final seconds = (_otpSecondsLeft % 60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
   }
 
+  /// Combines the 6 individual OTP text fields into a single string.
   String get _otpCode =>
       _otpDigitCtrls.map((controller) => controller.text).join();
 
+  /// Returns the subtitle based on the current step.
   String get _stepSubtitle {
     if (step == 1) return 'Step 1 of 3 - Enter your email';
     if (step == 2) return 'Step 2 of 3 - Verify OTP';
     return 'Step 3 of 3 - Set new password';
   }
 
+  /// Clears all 6 OTP input fields.
   void _clearOtpBoxes() {
     for (final controller in _otpDigitCtrls) {
       controller.clear();
     }
   }
 
+  /// Handles OTP text input. Automatically advances focus to the next box,
+  /// and supports pasting a full 6-digit code.
   void _handleOtpChanged(String value, int index) {
+    // Handle pasting multiple numbers into a single box
     if (value.length > 1) {
       final digits = value.replaceAll(RegExp(r'\D'), '').split('');
       for (var i = index; i < _otpDigitCtrls.length; i++) {
@@ -213,12 +267,14 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
         _otpDigitCtrls[i].text =
             digitIndex < digits.length ? digits[digitIndex] : '';
       }
+      // Jump focus to the end of the pasted string
       final focusIndex = (index + digits.length).clamp(0, 5);
       _otpFocusNodes[focusIndex].requestFocus();
       setState(() => stepMsg = null);
       return;
     }
 
+    // Auto-advance to next text box when a single digit is entered
     if (value.isNotEmpty && index < _otpFocusNodes.length - 1) {
       _otpFocusNodes[index + 1].requestFocus();
     }
@@ -226,10 +282,13 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     setState(() => stepMsg = null);
   }
 
+  /// Handles keyboard events for OTP boxes, specifically allowing the user 
+  /// to use backspace to delete and move back to the previous box.
   KeyEventResult _handleOtpKey(KeyEvent event, int index) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     if (event.logicalKey == LogicalKeyboardKey.backspace) {
+      // If current box is empty and backspace is pressed, delete previous box and move focus back
       if (_otpDigitCtrls[index].text.isEmpty && index > 0) {
         _otpDigitCtrls[index - 1].clear();
         _otpFocusNodes[index - 1].requestFocus();
@@ -248,6 +307,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     return KeyEventResult.ignored;
   }
 
+  /// Returns the user to Step 1 and resets the OTP state.
   void _backToEmail() {
     _otpTimer?.cancel();
     setState(() {
@@ -257,19 +317,25 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     });
   }
 
+  // ==========================================
+  // WIDGET BUILDERS
+  // ==========================================
+
+  /// Builds a colored banner indicating how much time is left for the OTP.
+  /// Turns red when expired.
   Widget _timerCard(bool isDark) {
     final active = _otpSecondsLeft > 0;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: active
-            ? (isDark ? Colors.green.withOpacity(0.1) : Colors.green.shade50)
-            : (isDark ? Colors.red.withOpacity(0.1) : Colors.red.shade50),
+            ? (isDark ? Colors.green.withValues(alpha: 0.1) : Colors.green.shade50)
+            : (isDark ? Colors.red.withValues(alpha: 0.1) : Colors.red.shade50),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: active
-              ? (isDark ? Colors.green.withOpacity(0.3) : Colors.green.shade100)
-              : (isDark ? Colors.red.withOpacity(0.3) : Colors.red.shade100),
+              ? (isDark ? Colors.green.withValues(alpha: 0.3) : Colors.green.shade100)
+              : (isDark ? Colors.red.withValues(alpha: 0.3) : Colors.red.shade100),
         ),
       ),
       child: Row(
@@ -297,6 +363,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     );
   }
 
+  /// Builds the 6 individual OTP input squares.
   Widget _otpBoxes(bool isDark) {
     return Row(
       children: List.generate(6, (index) {
@@ -322,7 +389,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                   cursorColor: kAccentPurple,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
-                    counterText: '',
+                    counterText: '', // Hide default character counter
                     contentPadding: EdgeInsets.zero,
                     filled: true,
                     fillColor: isDark ? const Color(0xFF14141D) : Colors.white,
@@ -350,6 +417,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     );
   }
 
+  /// Builds the primary action button for each step. 
+  /// Shows a circular progress indicator when `loading` is true.
   Widget _buildActionButton({
     required String label,
     required VoidCallback? onPressed,
@@ -364,7 +433,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
           style: ElevatedButton.styleFrom(
             backgroundColor: kAccentPurple,
             foregroundColor: Colors.white,
-            disabledBackgroundColor: kAccentPurple.withOpacity(0.5),
+            disabledBackgroundColor: kAccentPurple.withValues(alpha: 0.5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -390,6 +459,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
         ),
       );
     }
+    
     // Assumes BlueButton is defined in your existing widget/theme collection
     return BlueButton(
       label: label,
@@ -400,7 +470,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final dec = pillInputDecoration();
+    // --- Shared Styling Elements ---
+    final dec = pillInputDecoration(); 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final labelStyle = TextStyle(
@@ -435,6 +506,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
         color: isDark ? const Color(0xFF0F0F16) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
       ),
+      // Padding pushes the sheet up when the keyboard is active
       padding: EdgeInsets.only(
         left: 32,
         right: 32,
@@ -446,6 +518,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Handlebar indicator for bottom sheet
             Center(
               child: Container(
                 width: 48,
@@ -457,14 +530,16 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
               ),
             ),
             const SizedBox(height: 28),
+            
+            // Header Title Area
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? kAccentPurple.withOpacity(0.15)
-                        : kCosmicBlue.withOpacity(0.1),
+                        ? kAccentPurple.withValues(alpha: 0.15)
+                        : kCosmicBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.lock_reset,
@@ -494,17 +569,19 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
               ],
             ),
             const SizedBox(height: 20),
+            
+            // Shared Error / Success Message Banner
             if (stepMsg != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.blue.withOpacity(0.1)
+                      ? Colors.blue.withValues(alpha: 0.1)
                       : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark
-                        ? Colors.blue.withOpacity(0.3)
+                        ? Colors.blue.withValues(alpha: 0.3)
                         : Colors.blue.shade100,
                   ),
                 ),
@@ -519,6 +596,10 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
               ),
               const SizedBox(height: 14),
             ],
+            
+            // =========================
+            // STEP 1: EMAIL INPUT UI
+            // =========================
             if (step == 1) ...[
               Text('Email Address', style: labelStyle),
               const SizedBox(height: 8),
@@ -546,6 +627,10 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 loading: stepLoading,
                 isDark: isDark,
               ),
+              
+            // =========================
+            // STEP 2: OTP INPUT UI
+            // =========================
             ] else if (step == 2) ...[
               _timerCard(isDark),
               const SizedBox(height: 14),
@@ -568,6 +653,10 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                       color: isDark ? Colors.white70 : Colors.grey.shade600),
                 ),
               ),
+              
+            // =========================
+            // STEP 3: NEW PASSWORD UI
+            // =========================
             ] else ...[
               _timerCard(isDark),
               const SizedBox(height: 14),
@@ -648,7 +737,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
               const SizedBox(height: 10),
               TextButton(
                 onPressed: () => setState(() {
-                  step = 2;
+                  step = 2; // Allows user to go back to correct a typo in OTP
                   stepMsg = null;
                 }),
                 child: Text(
