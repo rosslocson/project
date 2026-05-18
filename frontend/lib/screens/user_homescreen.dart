@@ -64,7 +64,29 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+
+    // Gate rendering until auth token restore + profile fetch finishes.
+    if (!auth.isAuthInitialized) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+
+
+    // Redirect to login if not authenticated.
+    if (!auth.isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushNamed('/login');
+      });
+      return const SizedBox.shrink();
+    }
+
     final user = auth.user;
+
 
     return UserLayout(
       currentRoute: '/home',

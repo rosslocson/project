@@ -108,7 +108,8 @@ const (
 )
 
 type User struct {
-	ID        uint           `json:"id"         gorm:"primarykey;autoIncrement"`
+	ID uint `json:"id"         gorm:"primarykey;autoIncrement"`
+
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
@@ -124,6 +125,7 @@ type User struct {
 	Role        Role       `json:"role"               gorm:"default:'user'"`
 	IsActive    bool       `json:"is_active"          gorm:"default:true"`
 	IsArchived  bool       `json:"is_archived"        gorm:"default:false"`
+	IsVerified  bool       `json:"is_verified"        gorm:"default:false"`
 	LastLoginAt *time.Time `json:"last_login_at"`
 	Bio         string     `json:"bio"`
 
@@ -136,7 +138,12 @@ type User struct {
 	ResetOTP       string     `json:"-" gorm:"column:reset_token"`
 	ResetOTPExpiry *time.Time `json:"-" gorm:"column:reset_token_expiry"`
 
-	RequiredOjtHours int    `gorm:"default:400"        json:"required_ojt_hours"`
+	// Registration email verification (OTP)
+	VerificationOTP       string     `json:"-" gorm:"column:verification_token"`
+	VerificationOTPExpiry *time.Time `json:"-" gorm:"column:verification_token_expiry"`
+
+	RequiredOjtHours int `gorm:"default:400"        json:"required_ojt_hours"`
+
 	School           string `json:"school"`
 	Program          string `json:"program"`
 	Specialization   string `json:"specialization"`

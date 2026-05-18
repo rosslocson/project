@@ -12,6 +12,10 @@ class AuthProvider extends ChangeNotifier {
   /// Prevent race conditions between storage restore + refresh.
   Future<void>? _refreshFuture;
 
+  bool _isAuthInitialized = false;
+  bool get isAuthInitialized => _isAuthInitialized;
+
+
   Map<String, dynamic>? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -26,6 +30,9 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final userStr = prefs.getString('user');
     final token = prefs.getString('token');
+
+    final hadToken = token != null && token.isNotEmpty;
+    debugPrint('🔐 Auth init: token present = $hadToken');
 
     if (userStr != null) {
       try {
@@ -44,8 +51,42 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
-    if (token != null && token.isNotEmpty) {
-      await refreshProfile();
+    await validateTokenAndFetchProfile();
+
+    _isAuthInitialized = true;
+    notifyListeners();
+    debugPrint('✅ Auth init finished. isLoggedIn=${isLoggedIn}');
+  }
+
+
+  Future<void> validateTokenAndFetchProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null || token.isEmpty) {
+      _user = null;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final res = await ApiService.getProfile();
+
+
+      if (res['ok'] == true) {
+        _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
+        _user = _normalizeCachedUser(_user!);
+        await _persistUser();
+        notifyListeners();
+      } else {
+        _user = null;
+        await prefs.remove('token');
+        notifyListeners();
+      }
+    } catch (e) {
+      _user = null;
+      await prefs.remove('token');
+      notifyListeners();
     }
   }
 
@@ -148,14 +189,12 @@ class AuthProvider extends ChangeNotifier {
       final res = await ApiService.register(data);
 
       if (res['ok'] == true) {
-        await ApiService.saveToken(res['token']);
-        _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
-        _user = _normalizeCachedUser(_user!);
-        await _persistUser();
-        notifyListeners();
-
-        await refreshProfile();
-
+        // NEW FLOW: Registration just validates and sends OTP.
+        // No user/token yet - user is only created after OTP verification.
+        // Clear any previous user state
+        _user = null;
+        await ApiService.clearToken();
+        
         _isLoading = false;
         notifyListeners();
         return true;
@@ -257,6 +296,42 @@ class AuthProvider extends ChangeNotifier {
     _user = _normalizeCachedUser(_user!);
     await _persistUser();
     notifyListeners();
+  }
+
+  Future<bool> verifyRegistrationOTP(String otp) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final res = await ApiService.verifyRegistrationOtp(otp);
+
+      if (res['ok'] == true) {
+        // Account created and verified - save token and user
+        await ApiService.saveToken(res['token']);
+        _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
+        _user = _normalizeCachedUser(_user!);
+        await _persistUser();
+        notifyListeners();
+
+        // Fetch full profile to ensure everything is up-to-date
+        await refreshProfile();
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = res['error'] ?? 'OTP verification failed';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Connection error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<void> logout() async {

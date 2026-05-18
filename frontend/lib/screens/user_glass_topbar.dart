@@ -87,10 +87,16 @@ class GlassTopBar extends StatelessWidget {
     final sidebar = context.watch<SidebarProvider>();
     final bool sidebarClosed = !sidebar.isUserSidebarOpen;
 
-    final String firstName = user?['first_name'] ?? 'User';
-    final String lastName = user?['last_name'] ?? '';
+    // No default fallback like "User"; we only show real profile fields.
+    final String? firstNameRaw = user?['first_name'] as String?;
+    final String? lastNameRaw = user?['last_name'] as String?;
+
+    final String firstName = (firstNameRaw ?? '').trim();
+    final String lastName = (lastNameRaw ?? '').trim();
+
     final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
     final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
+
 
     // User specific API logic for Avatar
     String rawAvatarUrl = user?['avatar_url'] as String? ?? '';

@@ -11,6 +11,10 @@ import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/app_background.dart';
 import '../widgets/register_widgets/register_form.dart';
+import 'email_verification_screen.dart';
+
+// TODO.md note: keep left-side galaxy/background persistent while swapping OTP step on the right.
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -21,6 +25,12 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
+  // Split-screen step state
+  bool showOtpScreen = false;
+  bool _registerLoading = false;
+  // NOTE: On successful registration, this screen swaps to the OTP verification step.
+
+  String? _pendingVerificationEmail;
   final _formKey = GlobalKey<FormState>();
   final _firstCtrl = TextEditingController();
   final _lastCtrl = TextEditingController();
@@ -139,12 +149,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       return;
     }
 
+    final email = _emailCtrl.text.trim();
+    setState(() => _registerLoading = true);
+
     final auth = context.read<AuthProvider>();
 
+    // Assumes valid inputs when called.
     final ok = await auth.register({
       'first_name': _firstCtrl.text.trim(),
       'last_name': _lastCtrl.text.trim(),
-      'email': _emailCtrl.text.trim(),
+      'email': email,
       'password': _passCtrl.text,
       'confirm_password': _confirmCtrl.text,
       'department': _selectedDept ?? '',
@@ -152,7 +166,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       'required_ojt_hours': int.tryParse(_ojtHoursCtrl.text.trim()) ?? 400,
     });
 
-    if (mounted && ok) context.go('/home');
+    if (!mounted) return;
+
+    if (ok) {
+      setState(() {
+        _pendingVerificationEmail = email;
+        showOtpScreen = true;
+      });
+    }
+
+    setState(() => _registerLoading = false);
   }
 
   @override
@@ -303,10 +326,20 @@ class _RegisterScreenState extends State<RegisterScreen>
                         ),
                         child: Center(
                           child: SingleChildScrollView(
-                            child: formWidget.buildForm(
-                              isMobile: false,
-                              context: context,
-                            ),
+                            child: showOtpScreen
+                                ? EmailVerificationScreen(
+                                    email: _pendingVerificationEmail ??
+                                        _emailCtrl.text.trim(),
+                                    onBack: () =>
+                                        setState(() => showOtpScreen = false),
+                                    onSuccess: () {
+                                      if (mounted) context.go('/home');
+                                    },
+                                  )
+                                : formWidget.buildForm(
+                                    isMobile: false,
+                                    context: context,
+                                  ),
                           ),
                         ),
                       ),
@@ -336,7 +369,17 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: SingleChildScrollView(
-                child: formWidget.buildForm(isMobile: true, context: context),
+                child: showOtpScreen
+                    ? EmailVerificationScreen(
+                        email: _pendingVerificationEmail ??
+                            _emailCtrl.text.trim(),
+                        onBack: () =>
+                            setState(() => showOtpScreen = false),
+                        onSuccess: () {
+                          if (mounted) context.go('/home');
+                        },
+                      )
+                    : formWidget.buildForm(isMobile: true, context: context),
               ),
             ),
           );

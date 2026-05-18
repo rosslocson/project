@@ -233,6 +233,8 @@ func main() {
 		auth.POST("/login", h.Login)
 		auth.POST("/forgot-password", h.ForgotPassword)
 		auth.POST("/verify-reset-otp", h.VerifyResetOTP)
+		auth.POST("/verify-otp", h.VerifyRegistrationOTP)
+		auth.POST("/resend-otp", h.ResendRegistrationOTP)
 		auth.POST("/reset-password", h.ResetPassword)
 
 		r.GET("/api/departments", h.ListDepartments)

@@ -131,6 +131,32 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> resendRegistrationOtp(String email) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/resend-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyRegistrationOtp(String otp) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/auth/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'otp': otp}),
+      );
+      return _parse(res);
+    } catch (e) {
+      return {'ok': false, 'error': 'Connection error'};
+    }
+  }
+
   static Future<Map<String, dynamic>> getProfile() async {
     try {
       final res = await http.get(
