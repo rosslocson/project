@@ -1,12 +1,4 @@
 // backend/handlers/admin_attendance.go
-//
-// Admin endpoint – returns all interns' attendance records,
-// joined with user profile data, with optional date/period filtering,
-// search by name, status filtering, and pagination.
-//
-// Routes (register in your router):
-//   GET /api/admin/attendance
-//   GET /api/admin/attendance/export   (CSV download)
 
 package handlers
 
@@ -30,11 +22,11 @@ type AdminAttendanceRow struct {
 	UserID        uint     `json:"user_id"`
 	InternName    string   `json:"intern_name"`
 	AvatarURL     string   `json:"avatar_url"`
-	Date          string   `json:"date"`           // "YYYY-MM-DD"
-	TimeIn        *string  `json:"time_in"`        // nullable "HH:MI AM"
-	TimeOut       *string  `json:"time_out"`       // nullable "HH:MI AM"
-	HoursRendered *float64 `json:"hours_rendered"` // nullable
-	Status        string   `json:"status"`         // Present | Late | Absent | On Shift | Missed Clock Out
+	Date          string   `json:"date"`
+	TimeIn        *string  `json:"time_in"`
+	TimeOut       *string  `json:"time_out"`
+	HoursRendered *float64 `json:"hours_rendered"`
+	Status        string   `json:"status"`
 	IsReported    bool     `json:"is_reported"`
 	ReportReason  string   `json:"report_reason"`
 	ReportType    string   `json:"report_type"`
@@ -56,7 +48,6 @@ func manilaLoc() *time.Location {
 
 const lateThresholdHour = 8
 const lateThresholdMin = 15
-
 const adminAttendanceHoursExpr = `NULL`
 
 func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
@@ -71,7 +62,6 @@ func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
 		return "Missed Clock Out"
 	}
 
-	// Try both padded and unpadded formats
 	var t time.Time
 	for _, layout := range []string{"03:04 PM", "3:04 PM"} {
 		if parsed, err := time.Parse(layout, *timeIn); err == nil {
@@ -93,25 +83,21 @@ func deriveStatus(timeIn *string, timeOut *string, recordDate string) string {
 // ── Hours computation ─────────────────────────────────────────────────────────
 
 func computeHours(timeIn *string, timeOut *string, recordDate string) *float64 {
-	// If either time is missing, we can't compute anything.
 	if timeIn == nil || timeOut == nil {
 		return nil
 	}
 
 	loc := manilaLoc()
 
-	// Postgres TO_CHAR with HH12 can produce "8:30 AM" (no leading zero) or
-	// lowercase "am"/"pm" depending on locale. Normalize before parsing.
 	normalize := func(t string) string {
 		return strings.ToUpper(strings.TrimSpace(t))
 	}
 
-	// Try padded (03) then unpadded (3) 12-hour format.
 	tryParse := func(dateStr, timeStr string) (time.Time, error) {
 		timeStr = normalize(timeStr)
 		for _, layout := range []string{
-			"2006-01-02 03:04 PM", // e.g. "2025-05-06 08:30 AM"
-			"2006-01-02 3:04 PM",  // e.g. "2025-05-06 8:30 AM"
+			"2006-01-02 03:04 PM",
+			"2006-01-02 3:04 PM",
 		} {
 			if t, err := time.ParseInLocation(layout, dateStr+" "+timeStr, loc); err == nil {
 				return t, nil
@@ -123,68 +109,43 @@ func computeHours(timeIn *string, timeOut *string, recordDate string) *float64 {
 	tIn, err1 := tryParse(recordDate, *timeIn)
 	tOut, err2 := tryParse(recordDate, *timeOut)
 	if err1 != nil || err2 != nil {
-		// Log so you can see the exact raw string coming from Postgres.
 		fmt.Printf("[computeHours] parse error — timeIn=%q err=%v | timeOut=%q err=%v\n",
 			*timeIn, err1, *timeOut, err2)
 		return nil
 	}
 
-	// ── Step 1: Cap clock-out at 5:00 PM ─────────────────────────────────────
-	// We don't count any time worked past 5 PM.
 	cutoff := time.Date(tIn.Year(), tIn.Month(), tIn.Day(), 17, 0, 0, 0, loc)
 	if tOut.After(cutoff) {
 		tOut = cutoff
 	}
 
-	// ── Step 2: Guard — clock-out must be after clock-in ─────────────────────
 	if !tOut.After(tIn) {
 		zero := 0.0
 		return &zero
 	}
 
-	// ── Step 3: Raw elapsed hours (before lunch deduction) ───────────────────
-	// Example: 8:00 AM → 5:00 PM = 9.0 hours raw
 	elapsed := tOut.Sub(tIn).Hours()
 
-	// ── Step 4: Deduct lunch break (12:00 PM – 1:00 PM) ─────────────────────
-	// We only deduct the portion of the lunch window the intern was actually
-	// clocked in for. This handles edge cases like:
-	//   - Clocked in after lunch (1:30 PM) → no deduction
-	//   - Clocked out before lunch (11:00 AM) → no deduction
-	//   - Clocked in during lunch (12:30 PM) → deduct only 30 min
 	lunchStart := time.Date(tIn.Year(), tIn.Month(), tIn.Day(), 12, 0, 0, 0, loc)
 	lunchEnd := time.Date(tIn.Year(), tIn.Month(), tIn.Day(), 13, 0, 0, 0, loc)
 
-	// Overlap start = latest of (clock-in, lunch start)
 	overlapStart := tIn
 	if lunchStart.After(overlapStart) {
 		overlapStart = lunchStart
 	}
 
-	// Overlap end = earliest of (effective clock-out, lunch end)
 	overlapEnd := tOut
 	if lunchEnd.Before(overlapEnd) {
 		overlapEnd = lunchEnd
 	}
 
-	// Only deduct if there's a real overlap (overlap end is after overlap start).
-	// Example: 8 AM–5 PM → overlap is 12:00–13:00 → deduct 1.0 hour
-	// Example: 8 AM–11 AM → overlapEnd (11AM) is NOT after overlapStart (12PM) → no deduction
 	if overlapEnd.After(overlapStart) {
 		elapsed -= overlapEnd.Sub(overlapStart).Hours()
 	}
 
-	// ── Step 5: Clamp to zero (should never go negative, but just in case) ───
 	if elapsed < 0 {
 		elapsed = 0
 	}
-
-	// ── Examples ──────────────────────────────────────────────────────────────
-	// 8:00 AM → 5:00 PM  = 9h raw − 1h lunch = 8.0h
-	// 8:00 AM → 12:00 PM = 4h raw − 0h lunch = 4.0h  (left before lunch)
-	// 1:00 PM → 5:00 PM  = 4h raw − 0h lunch = 4.0h  (arrived after lunch)
-	// 8:00 AM → 6:00 PM  = 9h raw − 1h lunch = 8.0h  (capped at 5 PM first)
-	// 12:30 PM → 5:00 PM = 4.5h raw − 0.5h lunch overlap = 4.0h
 
 	return &elapsed
 }
@@ -230,8 +191,27 @@ func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
 	return out
 }
 
-// ── SQL select fragments ──────────────────────────────────────────────────────
+// ── SQL select fragment (used by all multi-date queries) ──────────────────────
 
+// internSelectMultiDate uses the cross-join spine of (users × date_series)
+// so every intern appears on every date, even with no attendance row.
+const internSelectMultiDate = `
+	COALESCE(a.id, 0)                                                                            AS id,
+	u.id                                                                                         AS user_id,
+	COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
+	COALESCE(u.avatar_url, '')                                                                   AS avatar_url,
+	TO_CHAR(d.day::date, 'YYYY-MM-DD')                                                          AS date,
+	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
+	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
+	NULL                                                                                         AS hours_rendered,
+	COALESCE(a.is_reported, false)                                                               AS is_reported,
+	COALESCE(a.report_reason, '')                                                                AS report_reason,
+	COALESCE(a.report_type, '')                                                                  AS report_type,
+	TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM')                 AS reported_at,
+	a.admin_note
+`
+
+// internSelectSingleDate is unchanged — users table is already the spine.
 const internSelectSingleDate = `
 	COALESCE(a.id, 0)                                                                            AS id,
 	u.id                                                                                         AS user_id,
@@ -240,23 +220,7 @@ const internSelectSingleDate = `
 	CAST(? AS TEXT)                                                                              AS date,
 	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
 	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
-	` + adminAttendanceHoursExpr + `                                                             AS hours_rendered,
-	COALESCE(a.is_reported, false)                                                               AS is_reported,
-	COALESCE(a.report_reason, '')                                                                AS report_reason,
-	COALESCE(a.report_type, '')                                                                  AS report_type,
-	TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM')                 AS reported_at,
-	a.admin_note
-`
-
-const internSelectAllDates = `
-	a.id                                                                                         AS id,
-	a.user_id                                                                                    AS user_id,
-	COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
-	COALESCE(u.avatar_url, '')                                                                   AS avatar_url,
-	TO_CHAR(a.date::date, 'YYYY-MM-DD')                                                         AS date,
-	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
-	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
-	` + adminAttendanceHoursExpr + `                                                             AS hours_rendered,
+	NULL                                                                                         AS hours_rendered,
 	COALESCE(a.is_reported, false)                                                               AS is_reported,
 	COALESCE(a.report_reason, '')                                                                AS report_reason,
 	COALESCE(a.report_type, '')                                                                  AS report_type,
@@ -287,30 +251,70 @@ func periodDateRange(period string, now time.Time) (start, end string) {
 	return "", ""
 }
 
-// isValidDate returns true if s is a parseable YYYY-MM-DD string.
 func isValidDate(s string) bool {
 	_, err := time.Parse("2006-01-02", s)
 	return err == nil
 }
 
-// ── GET /api/admin/attendance ─────────────────────────────────────────────────
+// ── multiDateQuery builds the cross-join query for any date range ─────────────
 //
-// Query params:
-//   date        – YYYY-MM-DD; used for a single-day query (shows all interns)
-//   date_from   – YYYY-MM-DD; start of a custom range (use with date_to)
-//   date_to     – YYYY-MM-DD; end of a custom range (use with date_from)
-//   period      – today | week | month | year  (overrides date/date_from/date_to)
-//   all_dates   – "true" to return every date on record (overrides everything)
-//   search      – partial case-insensitive intern name match
-//   status      – Present | Late | On Shift | Missed Clock Out | Absent
-//   page        – 1-based; default = 1
-//   limit       – rows per page 1-100; default = 20
-//   user_id     – (optional) filter to one intern
+// The spine is: generate_series(start, end, '1 day') × active interns
+// Then LEFT JOIN attendance so absent days get a NULL attendance row.
+// This is the same pattern already used for single-date queries, extended
+// to cover arbitrary date ranges.
+
+func (h *Handler) multiDateQuery(
+	start, end, search, filterUID string,
+	weekdaysOnly bool, // true = skip Saturday/Sunday
+) *gorm.DB {
+	// generate_series produces one row per calendar day in [start, end].
+	// We CROSS JOIN with the intern list so every intern appears on every day.
+	// Then LEFT JOIN attendance to pick up actual clock-in/out rows.
+	fromClause := `
+		(SELECT generate_series(
+			?::date,
+			?::date,
+			'1 day'::interval
+		)::date AS day) d
+		CROSS JOIN (
+			SELECT id, first_name, last_name, avatar_url
+			FROM users
+			WHERE deleted_at IS NULL
+			  AND is_archived = false
+			  AND role = 'user'
+			  AND position = 'Intern'
+		) u
+		LEFT JOIN attendance a
+			ON a.user_id = u.id
+			AND a.date = d.day
+	`
+
+	q := h.DB.Table(fromClause, start, end).
+		Select(internSelectMultiDate)
+
+	// Skip weekends (Saturday=6, Sunday=0 in PostgreSQL's dow)
+	if weekdaysOnly {
+		q = q.Where("EXTRACT(DOW FROM d.day) NOT IN (0, 6)")
+	}
+
+	if filterUID != "" {
+		q = q.Where("u.id = ?", filterUID)
+	}
+	if search != "" {
+		q = q.Where(
+			"LOWER(TRIM(CONCAT(u.first_name, ' ', u.last_name))) LIKE ?",
+			"%"+strings.ToLower(search)+"%",
+		)
+	}
+
+	return q
+}
+
+// ── GET /api/admin/attendance ─────────────────────────────────────────────────
 
 func (h *Handler) AdminGetAttendance(c *gin.Context) {
 	now := time.Now().In(manilaLoc())
 
-	// ── parse params ──────────────────────────────────────────────────────────
 	allDates := c.DefaultQuery("all_dates", "false") == "true"
 	period := strings.TrimSpace(c.DefaultQuery("period", ""))
 	dateStr := strings.TrimSpace(c.DefaultQuery("date", now.Format("2006-01-02")))
@@ -329,72 +333,46 @@ func (h *Handler) AdminGetAttendance(c *gin.Context) {
 		limit = 20
 	}
 
-	// ── build query ───────────────────────────────────────────────────────────
 	var allRows []attendanceRaw
-
-	// Helper: apply optional name search + user_id filter to any query.
-	applyCommon := func(q *gorm.DB) *gorm.DB {
-		if filterUID != "" {
-			q = q.Where("a.user_id = ?", filterUID)
-		}
-		if search != "" {
-			q = q.Where(
-				"LOWER(TRIM(CONCAT(u.first_name, ' ', u.last_name))) LIKE ?",
-				"%"+strings.ToLower(search)+"%",
-			)
-		}
-		return q
-	}
 
 	switch {
 
-	// ── (1) all_dates ─────────────────────────────────────────────────────────
+	// ── (1) all_dates — from earliest attendance record to today ──────────────
 	case allDates:
-		q := h.DB.Table("attendance a").
-			Select(internSelectAllDates).
-			Joins("LEFT JOIN users u ON u.id = a.user_id")
-		q = applyCommon(q)
-		q.Order("a.date DESC, intern_name ASC").Scan(&allRows)
+		// Find the earliest date we have any record for, so we don't generate
+		// thousands of rows if the app has been running a long time.
+		var earliest string
+		h.DB.Table("attendance").Select("TO_CHAR(MIN(date), 'YYYY-MM-DD')").Scan(&earliest)
+		if earliest == "" {
+			earliest = now.Format("2006-01-02") // no records yet
+		}
+		end := now.Format("2006-01-02")
+		q := h.multiDateQuery(earliest, end, search, filterUID, true)
+		q.Order("d.day DESC, intern_name ASC").Scan(&allRows)
 
-	// ── (2) named period ──────────────────────────────────────────────────────
+	// ── (2) named period (week / month / year) ────────────────────────────────
 	case period != "" && period != "today":
 		start, end := periodDateRange(period, now)
 		if start == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "invalid period"})
 			return
 		}
-		q := h.DB.Table("attendance a").
-			Select(internSelectAllDates).
-			Joins("LEFT JOIN users u ON u.id = a.user_id").
-			Where("a.date BETWEEN ? AND ?", start, end)
-		q = applyCommon(q)
-		q.Order("a.date DESC, intern_name ASC").Scan(&allRows)
+		q := h.multiDateQuery(start, end, search, filterUID, true)
+		q.Order("d.day DESC, intern_name ASC").Scan(&allRows)
 
-	// ── (3) custom date range (date_from + date_to) ───────────────────────────
-	//
-	// Unlike single-date mode, we query attendance rows directly (not joined
-	// to the users table as the "spine") so that only days with actual records
-	// are returned — matching the multi-date behaviour of periods and all_dates.
+	// ── (3) custom date range ─────────────────────────────────────────────────
 	case dateFrom != "" && dateTo != "":
 		if !isValidDate(dateFrom) || !isValidDate(dateTo) {
 			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "invalid date_from or date_to"})
 			return
 		}
-		// Swap if caller passed them backwards.
 		if dateFrom > dateTo {
 			dateFrom, dateTo = dateTo, dateFrom
 		}
-		q := h.DB.Table("attendance a").
-			Select(internSelectAllDates).
-			Joins("LEFT JOIN users u ON u.id = a.user_id").
-			Where("a.date BETWEEN ? AND ?", dateFrom, dateTo)
-		q = applyCommon(q)
-		q.Order("a.date DESC, intern_name ASC").Scan(&allRows)
+		q := h.multiDateQuery(dateFrom, dateTo, search, filterUID, false)
+		q.Order("d.day DESC, intern_name ASC").Scan(&allRows)
 
-	// ── (4) single date (today shorthand or explicit date param) ──────────────
-	//
-	// Queries from the users table as the spine so that every intern appears
-	// even if they have no attendance record for that day (shown as Absent).
+	// ── (4) single date / today ───────────────────────────────────────────────
 	default:
 		if period == "today" {
 			dateStr = now.Format("2006-01-02")
@@ -455,9 +433,6 @@ func (h *Handler) AdminGetAttendance(c *gin.Context) {
 }
 
 // ── GET /api/admin/attendance/export ─────────────────────────────────────────
-//
-// Accepts the same filter params as AdminGetAttendance (except page/limit).
-// Streams a CSV file directly to the response.
 
 func (h *Handler) AdminExportAttendance(c *gin.Context) {
 	now := time.Now().In(manilaLoc())
@@ -470,25 +445,18 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 	search := strings.TrimSpace(c.DefaultQuery("search", ""))
 	statusFilter := strings.TrimSpace(c.DefaultQuery("status", ""))
 
-	applySearchFilter := func(q *gorm.DB) *gorm.DB {
-		if search != "" {
-			q = q.Where(
-				"LOWER(TRIM(CONCAT(u.first_name, ' ', u.last_name))) LIKE ?",
-				"%"+strings.ToLower(search)+"%",
-			)
-		}
-		return q
-	}
-
 	var allRows []attendanceRaw
 
 	switch {
 	case allDates:
-		q := h.DB.Table("attendance a").
-			Select(internSelectAllDates).
-			Joins("LEFT JOIN users u ON u.id = a.user_id")
-		q = applySearchFilter(q)
-		q.Order("a.date DESC, intern_name ASC").Scan(&allRows)
+		var earliest string
+		h.DB.Table("attendance").Select("TO_CHAR(MIN(date), 'YYYY-MM-DD')").Scan(&earliest)
+		if earliest == "" {
+			earliest = now.Format("2006-01-02")
+		}
+		end := now.Format("2006-01-02")
+		q := h.multiDateQuery(earliest, end, search, "", true)
+		q.Order("d.day DESC, intern_name ASC").Scan(&allRows)
 
 	case period != "" && period != "today":
 		start, end := periodDateRange(period, now)
@@ -496,14 +464,9 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "invalid period"})
 			return
 		}
-		q := h.DB.Table("attendance a").
-			Select(internSelectAllDates).
-			Joins("LEFT JOIN users u ON u.id = a.user_id").
-			Where("a.date BETWEEN ? AND ?", start, end)
-		q = applySearchFilter(q)
-		q.Order("a.date DESC, intern_name ASC").Scan(&allRows)
+		q := h.multiDateQuery(start, end, search, "", true)
+		q.Order("d.day DESC, intern_name ASC").Scan(&allRows)
 
-	// ── custom date range ─────────────────────────────────────────────────────
 	case dateFrom != "" && dateTo != "":
 		if !isValidDate(dateFrom) || !isValidDate(dateTo) {
 			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "invalid date_from or date_to"})
@@ -512,12 +475,8 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 		if dateFrom > dateTo {
 			dateFrom, dateTo = dateTo, dateFrom
 		}
-		q := h.DB.Table("attendance a").
-			Select(internSelectAllDates).
-			Joins("LEFT JOIN users u ON u.id = a.user_id").
-			Where("a.date BETWEEN ? AND ?", dateFrom, dateTo)
-		q = applySearchFilter(q)
-		q.Order("a.date DESC, intern_name ASC").Scan(&allRows)
+		q := h.multiDateQuery(dateFrom, dateTo, search, "", false)
+		q.Order("d.day DESC, intern_name ASC").Scan(&allRows)
 
 	default:
 		if period == "today" {
@@ -530,7 +489,12 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 			Where("u.is_archived = ?", false).
 			Where("u.role = ?", "user").
 			Where("u.position = ?", "Intern")
-		q = applySearchFilter(q)
+		if search != "" {
+			q = q.Where(
+				"LOWER(TRIM(CONCAT(u.first_name, ' ', u.last_name))) LIKE ?",
+				"%"+strings.ToLower(search)+"%",
+			)
+		}
 		q.Order("intern_name ASC").Scan(&allRows)
 	}
 
@@ -545,7 +509,6 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 		rows = filtered
 	}
 
-	// Use a descriptive filename for the range export.
 	filename := fmt.Sprintf("attendance_%s.csv", dateStr)
 	if dateFrom != "" && dateTo != "" {
 		filename = fmt.Sprintf("attendance_%s_to_%s.csv", dateFrom, dateTo)
@@ -584,30 +547,20 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 		})
 	}
 	w.Flush()
-
 }
 
-// ── PATCH /api/admin/attendance/:id/resolve ───────────────────────────────
-//
-// Admin manually resolves/dismisses a report without setting timeout.
+// ── PATCH /api/admin/attendance/:id/resolve ───────────────────────────────────
 
 func (h *Handler) ResolveAttendanceReport(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"ok":    false,
-			"error": "Invalid record ID",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid record ID"})
 		return
 	}
 
 	var rec models.Attendance
-
 	if err := h.DB.First(&rec, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"ok":    false,
-			"error": "Record not found",
-		})
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": "Record not found"})
 		return
 	}
 
@@ -616,42 +569,18 @@ func (h *Handler) ResolveAttendanceReport(c *gin.Context) {
 		"reported_at": nil,
 		"resolution":  "dismissed",
 	}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"ok":    false,
-			"error": "Failed to resolve report",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to resolve report"})
 		return
 	}
 
 	adminID, _ := getUserIDFromCtx(c)
+	h.logActivity(adminID, "RESOLVE_REPORT",
+		fmt.Sprintf("Admin resolved attendance report %d", rec.ID), c.ClientIP())
 
-	h.logActivity(
-		adminID,
-		"RESOLVE_REPORT",
-		fmt.Sprintf("Admin resolved attendance report %d", rec.ID),
-		c.ClientIP(),
-	)
-
-	c.JSON(http.StatusOK, gin.H{
-		"ok": true,
-	})
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 // ── POST /api/admin/attendance/:id/resolve ────────────────────────────────────
-//
-// Body (JSON):
-//   resolution        string  – set_timeout | excuse | mark_present | adjust_timein | no_action
-//   time_out          string? – "HH:MM" (24-h) – required when resolution=set_timeout
-//   adjusted_time_in  string? – "HH:MM" (24-h) – required when resolution=adjust_timein
-//   note              string? – admin note / reason
-
-// ── POST /api/admin/attendance/:id/resolve ─────────────────────────────────
-//
-// Body (JSON):
-//   resolution        string  – set_timeout | excuse | mark_present | adjust_timein | no_action
-//   time_out          string? – "HH:MM" 24-h, required when resolution = set_timeout
-//   adjusted_time_in  string? – "HH:MM" 24-h, required when resolution = adjust_timein
-//   note              string? – admin note / reason
 
 func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -679,7 +608,6 @@ func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 
 	loc := manilaLoc()
 
-	// Always clear the report and set resolution
 	baseUpdates := map[string]interface{}{
 		"is_reported": false,
 		"resolution":  body.Resolution,
@@ -699,7 +627,7 @@ func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid time_out, expected HH:MM"})
 			return
 		}
-		baseUpdates["time_out"] = &t // pointer so GORM doesn't skip
+		baseUpdates["time_out"] = &t
 
 	case "mark_present":
 		if rec.TimeIn == nil {
@@ -707,7 +635,7 @@ func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 			baseUpdates["time_in"] = &tIn
 		}
 		tOut, _ := parseAdminTime(rec.Date, "17:00", loc)
-		baseUpdates["time_out"] = &tOut // pointer
+		baseUpdates["time_out"] = &tOut
 
 	case "adjust_timein":
 		if body.AdjustedTimeIn == nil {
@@ -719,18 +647,16 @@ func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid adjusted_time_in, expected HH:MM"})
 			return
 		}
-		baseUpdates["time_in"] = &t // pointer
+		baseUpdates["time_in"] = &t
 
 	case "excuse", "no_action":
-		// no extra fields needed
+		// no extra fields
 
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Unknown resolution: " + body.Resolution})
 		return
 	}
 
-	// KEY FIX: Use Select to force GORM to write zero-value bool fields.
-	// Build the list of columns to update explicitly.
 	columns := make([]string, 0, len(baseUpdates))
 	for k := range baseUpdates {
 		columns = append(columns, k)
@@ -742,18 +668,13 @@ func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 	}
 
 	adminID, _ := getUserIDFromCtx(c)
-	h.logActivity(
-		adminID,
-		"RESOLVE_ATTENDANCE",
+	h.logActivity(adminID, "RESOLVE_ATTENDANCE",
 		fmt.Sprintf("Admin resolved attendance record #%d via '%s'", rec.ID, body.Resolution),
-		c.ClientIP(),
-	)
+		c.ClientIP())
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// parseAdminTime combines the record's date with an admin-supplied "HH:MM"
-// string into a time.Time stamped in Manila time, ready to store as timestamptz.
 func parseAdminTime(recordDate time.Time, hhmm string, loc *time.Location) (time.Time, error) {
 	parts := strings.Split(strings.TrimSpace(hhmm), ":")
 	if len(parts) != 2 {
@@ -770,19 +691,45 @@ func parseAdminTime(recordDate time.Time, hhmm string, loc *time.Location) (time
 	), nil
 }
 
-// GET /api/admin/attendance/reports
-// Returns all attendance rows where is_reported = true and resolution IS NULL.
+// ── GET /api/admin/attendance/reports ────────────────────────────────────────
+
 func (h *Handler) GetPendingReports(c *gin.Context) {
 	var rows []attendanceRaw
 
 	h.DB.Table("attendance a").
-		Select(internSelectAllDates).
+		Select(internSelectMultiDate).
+		Joins("CROSS JOIN (SELECT generate_series(?::date, ?::date, '1 day'::interval)::date AS day) d",
+			"1970-01-01", time.Now().Format("2006-01-02")).
 		Joins("LEFT JOIN users u ON u.id = a.user_id").
 		Where("a.is_reported = true AND a.resolution IS NULL").
 		Order("a.date DESC").
 		Scan(&rows)
 
-	response := toResponseRows(rows)
+	// Simpler — pending reports always have an actual attendance row,
+	// so the original query is fine here.
+	var simpleRows []attendanceRaw
+	h.DB.Raw(`
+		SELECT
+			a.id,
+			a.user_id,
+			COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown') AS intern_name,
+			COALESCE(u.avatar_url, '') AS avatar_url,
+			TO_CHAR(a.date::date, 'YYYY-MM-DD') AS date,
+			TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
+			TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out,
+			NULL AS hours_rendered,
+			COALESCE(a.is_reported, false) AS is_reported,
+			COALESCE(a.report_reason, '') AS report_reason,
+			COALESCE(a.report_type, '') AS report_type,
+			TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM') AS reported_at,
+			a.admin_note
+		FROM attendance a
+		LEFT JOIN users u ON u.id = a.user_id
+		WHERE a.is_reported = true AND a.resolution IS NULL
+		ORDER BY a.date DESC
+	`).Scan(&simpleRows)
+
+	response := toResponseRows(simpleRows)
 
 	c.JSON(http.StatusOK, gin.H{
 		"ok":      true,
@@ -791,7 +738,8 @@ func (h *Handler) GetPendingReports(c *gin.Context) {
 	})
 }
 
-// PATCH /api/admin/attendance/:id/remark
+// ── PATCH /api/admin/attendance/:id/remark ────────────────────────────────────
+
 func (h *Handler) UpdateAttendanceRemark(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
