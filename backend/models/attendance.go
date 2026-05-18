@@ -18,6 +18,8 @@ type Attendance struct {
 	AdminNote     *string    `gorm:"type:text"                json:"admin_note"`
 	CreatedAt     time.Time  `                                json:"created_at"`
 	UpdatedAt     time.Time  `                                json:"updated_at"`
+	Status        *string    `gorm:"column:status"    json:"status"`
+	IsAbsent      bool       `gorm:"column:is_absent" json:"is_absent"`
 
 	User *User `gorm:"foreignKey:UserID" json:"-"`
 }

@@ -24,8 +24,7 @@ class ReviewReportSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          ReviewReportSheet(record: record, onResolved: onResolved),
+      builder: (_) => ReviewReportSheet(record: record, onResolved: onResolved),
     );
   }
 
@@ -49,6 +48,8 @@ class _ResolutionOption {
 }
 
 class _ReviewReportSheetState extends State<ReviewReportSheet> {
+  // Resolution options — labels match the canonical status strings used
+  // in attendance_constants.dart and StatusBadge so everything stays in sync.
   static const _options = [
     _ResolutionOption(
       value: 'set_timeout',
@@ -63,16 +64,16 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
       icon: Icons.check_circle_outline_rounded,
     ),
     _ResolutionOption(
-      value: 'adjust_timein',
-      label: 'Adjust Time In',
-      hint: 'Correct an erroneous clock-in time',
-      icon: Icons.login_rounded,
+      value: 'excused_credited',
+      label: 'Excused – Credited',
+      hint: 'Excuse the issue; day counts toward required hours',
+      icon: Icons.verified_rounded,
     ),
     _ResolutionOption(
-      value: 'excuse',
-      label: 'Excuse',
-      hint: 'Accept the report with a note, no time change',
-      icon: Icons.thumb_up_alt_outlined,
+      value: 'excused_uncredited',
+      label: 'Excused – Uncredited',
+      hint: 'Excuse the issue; day does not count toward hours',
+      icon: Icons.remove_circle_outline_rounded,
     ),
     _ResolutionOption(
       value: 'no_action',
@@ -88,7 +89,6 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
 
   // Pre-populate the note field with the existing remark so the admin
   // can see and edit whatever was already there.
-  late final TextEditingController _noteCtrl;
 
   bool _submitting = false;
   String? _error;
@@ -97,16 +97,16 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
   void initState() {
     super.initState();
     // Pre-fill note with existing remark (if any) so admin keeps context
-    _noteCtrl = TextEditingController(text: widget.record.remark ?? '');
 
     // Default resolution based on status
-    _selectedResolution =
-        widget.record.status == 'Missed Clock Out' ? 'set_timeout' : 'excuse';
+    _selectedResolution = widget.record.status == 'Missed Clock Out'
+        ? 'set_timeout'
+        : 'excused_credited';
   }
 
   @override
   void dispose() {
-    _noteCtrl.dispose();
+   
     super.dispose();
   }
 
@@ -136,36 +136,14 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
       _error = null;
     });
 
-    final noteText = _noteCtrl.text.trim();
-
-    // 1. Resolve the report (sets status, time adjustments, closes the report)
     final result = await AdminAttendanceService.resolveAttendanceIssue(
       recordId: widget.record.id,
       resolution: _selectedResolution,
       timeOut: _selectedResolution == 'set_timeout' ? _timeOut : null,
       adjustedTimeIn:
           _selectedResolution == 'adjust_timein' ? _adjustedTimeIn : null,
-      note: noteText.isEmpty ? null : noteText,
+      note: null,
     );
-
-    if (!mounted) return;
-
-    if (result['ok'] != true) {
-      setState(() {
-        _submitting = false;
-        _error = result['error'] as String? ?? 'Failed to resolve';
-      });
-      return;
-    }
-
-    // 2. If the admin typed a note, persist it as the visible remark so it
-    //    appears in the table's Remark column immediately after refresh.
-    if (noteText.isNotEmpty) {
-      await AdminAttendanceService.updateRemark(
-        widget.record.id,
-        noteText,
-      );
-    }
 
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -199,6 +177,31 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
     );
     if (picked != null && mounted) setState(() => _adjustedTimeIn = picked);
   }
+
+  // ── Excused callout colours ────────────────────────────────────────────────
+
+  bool get _isExcusedCredited => _selectedResolution == 'excused_credited';
+  bool get _isExcusedUncredited => _selectedResolution == 'excused_uncredited';
+  bool get _isExcused => _isExcusedCredited || _isExcusedUncredited;
+
+  Color get _excusedBg =>
+      _isExcusedCredited ? const Color(0xFFECFDF5) : const Color(0xFFF5F3FF);
+
+  Color get _excusedBorder =>
+      _isExcusedCredited ? const Color(0xFF6EE7B7) : const Color(0xFFC4B5FD);
+
+  Color get _excusedFg =>
+      _isExcusedCredited ? const Color(0xFF047857) : const Color(0xFF6D28D9);
+
+  IconData get _excusedIcon => _isExcusedCredited
+      ? Icons.verified_rounded
+      : Icons.remove_circle_outline_rounded;
+
+  String get _excusedCallout => _isExcusedCredited
+      ? 'This day will count toward the intern\'s required hours. '
+          'Their status will show as "Excused – Credited".'
+      : 'The absence is excused but this day will not count toward '
+          'required hours. Status will show as "Excused – Uncredited".';
 
   // ── Build ──────────────────────────────────────────────────────────────────
 
@@ -262,7 +265,6 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             const SizedBox(height: 20),
 
             // ── Intern's report reason ────────────────────────────────
-            // Always shown when present — this is what the intern filed.
             if (r.reportReason != null && r.reportReason!.isNotEmpty) ...[
               const _Label('Intern\'s Reported Reason'),
               Container(
@@ -326,8 +328,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             const _Label('Current Status'),
             Container(
               margin: const EdgeInsets.only(bottom: 20),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFFF4F4F8),
                 borderRadius: BorderRadius.circular(8),
@@ -352,6 +353,41 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                     _error = null;
                   }),
                 ))),
+
+            // ── Excused callout ───────────────────────────────────────
+            // Appears when either excused option is active; explains to the
+            // admin exactly what credited vs uncredited means for the intern.
+            if (_isExcused) ...[
+              const SizedBox(height: 10),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _excusedBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _excusedBorder),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(_excusedIcon, size: 14, color: _excusedFg),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _excusedCallout,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.45,
+                          color: _excusedFg,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 20),
 
             // ── Time-out picker ───────────────────────────────────────
@@ -377,46 +413,6 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
               ),
               const SizedBox(height: 20),
             ],
-
-            // ── Admin note / remark ───────────────────────────────────
-            // This note is saved both as the resolve note AND as the
-            // visible remark in the attendance table.
-            const _Label('Admin Note / Remark'),
-            const _FieldHint(
-              'This will appear in the Remark column of the attendance table.',
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _noteCtrl,
-              maxLines: 3,
-              maxLength: 300,
-              decoration: InputDecoration(
-                hintText:
-                    'e.g. Confirmed with supervisor — clock-out recorded manually',
-                hintStyle:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                errorText: _error,
-                filled: true,
-                fillColor: const Color(0xFFF9F9FB),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: kAccent, width: 1.5),
-                ),
-                contentPadding: const EdgeInsets.all(14),
-                counterStyle:
-                    TextStyle(fontSize: 10, color: Colors.grey.shade400),
-              ),
-              style: const TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 20),
 
             // ── Action buttons ────────────────────────────────────────
             Row(
@@ -495,9 +491,7 @@ class _ResolutionTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: selected
-              ? kAccent.withOpacity(0.07)
-              : const Color(0xFFF9F9FB),
+          color: selected ? kAccent.withOpacity(0.07) : const Color(0xFFF9F9FB),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: selected ? kAccent : Colors.grey.shade200,
@@ -506,8 +500,7 @@ class _ResolutionTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(option.icon,
-                size: 18, color: selected ? kAccent : kTextMid),
+            Icon(option.icon, size: 18, color: selected ? kAccent : kTextMid),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -529,8 +522,7 @@ class _ResolutionTile extends StatelessWidget {
               ),
             ),
             if (selected)
-              const Icon(Icons.check_circle_rounded,
-                  size: 18, color: kAccent),
+              const Icon(Icons.check_circle_rounded, size: 18, color: kAccent),
           ],
         ),
       ),
@@ -569,8 +561,7 @@ class _TimePicker extends StatelessWidget {
         child: Row(
           children: [
             Icon(Icons.access_time_rounded,
-                size: 18,
-                color: hasError ? Colors.red : kTextMid),
+                size: 18, color: hasError ? Colors.red : kTextMid),
             const SizedBox(width: 10),
             Text(
               time != null ? time!.format(context) : placeholder,
@@ -618,8 +609,7 @@ class _FieldHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          const Icon(Icons.info_outline_rounded,
-              size: 12, color: kTextLight),
+          const Icon(Icons.info_outline_rounded, size: 12, color: kTextLight),
           const SizedBox(width: 5),
           Flexible(
             child: Text(

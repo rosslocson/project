@@ -35,6 +35,8 @@ const kAttendanceStatuses = [
   'On Shift',
   'Missed Clock Out',
   'Absent',
+  'Excused – Credited',    
+  'Excused – Uncredited',  
 ];
 
 // ── Design tokens ─────────────────────────────────────────────────────────────

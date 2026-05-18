@@ -11,6 +11,7 @@ class AttendanceRecord {
   final double? hoursRendered;
   final bool isReported;
   final bool isAbsent;
+   final String? status; 
 
   const AttendanceRecord({
     required this.id,
@@ -21,6 +22,7 @@ class AttendanceRecord {
     this.hoursRendered,
     this.isReported = false,
     this.isAbsent = false,
+    this.status,   
   });
 
   bool get hasTimedIn => timeIn != null;
@@ -74,7 +76,8 @@ class AttendanceRecord {
       userId: _toInt(json['user_id']),
       date: DateTime.parse(json['date'] as String),
       isReported: json['is_reported'] == true,
-      isAbsent: json['is_absent'] == true, // ← new
+      isAbsent: json['is_absent'] == true, 
+      status: json['status'] as String?, 
       timeIn: _parseTime(json['time_in'], json['date'] as String?),
       timeOut: _parseTime(json['time_out'], json['date'] as String?),
       hoursRendered: json['hours_rendered'] != null
@@ -90,6 +93,7 @@ class AttendanceRecord {
         if (timeIn != null) 'time_in': timeIn!.toUtc().toIso8601String(),
         if (timeOut != null) 'time_out': timeOut!.toUtc().toIso8601String(),
         'hours_rendered': hoursRendered,
+         if (status != null) 'status': status,   
       };
 }
 
