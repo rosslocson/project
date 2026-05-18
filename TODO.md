@@ -1,26 +1,13 @@
-# TODO - Avatar Upload Performance Audit & Optimization
+# TODO - Auth/Profile boot sequence fixes
 
-## Step 1: Frontend crop screen + pre-downscale
-- [ ] Add isolate-based downscale before opening `AvatarCropScreen`
-- [ ] Ensure crop UI decodes smaller pixels and opens instantly
+## Completed
+- [x] Repo inspected: AuthProvider + UserHomeScreen + GlassTopBar.
 
-## Step 2: Frontend upload optimization (no temp files)
-- [ ] Upload multipart from bytes for native and web
-- [ ] Remove temp file creation + redundant file writes
-
-## Step 3: Frontend logging reduction
-- [ ] Gate debugPrint in avatar upload flow behind kDebugMode
-- [ ] Remove excessive logging in release builds
-
-## Step 4: Backend endpoint payload reduction
-- [ ] Remove extra `First(&user)` query after avatar update
-- [ ] Return only `{ ok, avatar_url }` (and minimal fields)
-
-## Step 5: Backend CPU/memory/logging improvements
-- [ ] Remove heavy debug prints in upload path
-- [ ] Tighten early validation and avoid extra copies where safe
-
-## Step 6: Finish wiring
-- [ ] Ensure Flutter expects new backend response shape
-- [ ] Update optimistic avatar update locally
+## Next steps (to implement)
+- [ ] Fix splash/initialization gating so /home never renders until AuthProvider finishes storage restore + profile fetch.
+- [ ] Add `isAuthInitialized` (and optional loading/error states) to AuthProvider.
+- [ ] In main.dart, wrap routes (or provide redirect) based on auth initialization.
+- [ ] In UserHomeScreen, stop relying on fallback 'User' while profile is still being restored.
+- [ ] Remove/avoid 'User' default fallback in GlassTopBar; instead show loading/skeleton or hide welcome until first_name is real.
+- [ ] Add debug logs: token restore, profile fetch start/end, and notifyListeners triggers.
 

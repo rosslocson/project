@@ -12,14 +12,39 @@ class AuthProvider extends ChangeNotifier {
   /// Prevent race conditions between storage restore + refresh.
   Future<void>? _refreshFuture;
 
+  bool _isAuthInitialized = false;
+  bool get isAuthInitialized => _isAuthInitialized;
+
   Map<String, dynamic>? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isLoggedIn => _user != null;
-  bool get isAdmin => (_user?['role'] ?? '') == 'admin';
+  bool get isLoggedIn => _user != null && _user!.isNotEmpty;
+  
+  // 🛠️ FIX APPLIED: Case-insensitive admin check
+  bool get isAdmin => (_user?['role']?.toString().toLowerCase() ?? '') == 'admin';
 
   AuthProvider() {
+    // Restore token + cached user, then validate/fetch profile.
+    // This must happen on every app start / hot restart / refresh.
     _loadFromStorage();
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━
+  // Centralized Data Extractor
+  // ━━━━━━━━━━━━━━━━━━━━━━
+  Map<String, dynamic> _extractUserFromResponse(Map<String, dynamic> res) {
+    if (res['id'] != null) {
+      return Map<String, dynamic>.from(res);
+    } else if (res['data'] is Map && (res['data'] as Map)['id'] != null) {
+      return Map<String, dynamic>.from(res['data'] as Map);
+    } else if (res['user'] is Map && (res['user'] as Map)['id'] != null) {
+      return Map<String, dynamic>.from(res['user'] as Map);
+    }
+    // Fallback if no ID is found but data exists
+    if (res['data'] is Map) return Map<String, dynamic>.from(res['data'] as Map);
+    if (res['user'] is Map) return Map<String, dynamic>.from(res['user'] as Map);
+    
+    return {};
   }
 
   Future<void> _loadFromStorage() async {
@@ -27,25 +52,66 @@ class AuthProvider extends ChangeNotifier {
     final userStr = prefs.getString('user');
     final token = prefs.getString('token');
 
+    final hadToken = token != null && token.isNotEmpty;
+    debugPrint('🔐 Auth init: token present = $hadToken');
+
+    // Restore cached user ASAP so topbar/home can render immediately.
     if (userStr != null) {
       try {
         final decoded = jsonDecode(userStr);
-        if (decoded is Map<String, dynamic>) {
+        if (decoded is Map<String, dynamic> && decoded.isNotEmpty) {
           _user = _normalizeCachedUser(decoded);
-          notifyListeners();
           debugPrint('📦 _loadFromStorage: restored ${_user!.keys.length} keys from cache');
         } else {
           await prefs.remove('user');
-          debugPrint('📥 _loadFromStorage: cache corrupted, cleared (not a map)');
+          debugPrint('📥 _loadFromStorage: cache empty or invalid, cleared');
         }
       } catch (_) {
         await prefs.remove('user');
         debugPrint('💥 _loadFromStorage: cache corrupted, cleared');
       }
+    } else {
+      debugPrint('📦 _loadFromStorage: no cached user found');
     }
 
-    if (token != null && token.isNotEmpty) {
-      await refreshProfile();
+    // Mark initialized right after we read token+user from storage,
+    // but do NOT wait for the server refresh.
+    _isAuthInitialized = true;
+    notifyListeners();
+    debugPrint('✅ Auth init: cached ready. isLoggedIn=$isLoggedIn');
+
+    // Validate token + refresh profile in background for latest data.
+    validateTokenAndFetchProfile();
+  }
+
+  Future<void> validateTokenAndFetchProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null || token.isEmpty) {
+      _user = null;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final res = await ApiService.getProfile();
+
+      if (res['ok'] == true || res['id'] != null || res['data'] != null || res['user'] != null) {
+        final extractedUser = _extractUserFromResponse(res);
+        if (extractedUser.isNotEmpty) {
+          _user = _normalizeCachedUser(extractedUser);
+          await _persistUser();
+          notifyListeners();
+        }
+      } else {
+        _user = null;
+        await prefs.remove('token');
+        notifyListeners();
+      }
+    } catch (e) {
+      // Do NOT log out on network error; rely on cache if offline
+      debugPrint('⚠️ validateTokenAndFetchProfile network error: $e');
     }
   }
 
@@ -59,34 +125,23 @@ class AuthProvider extends ChangeNotifier {
         final s = v.trim();
         if (s.isEmpty) return null;
         if (s.toLowerCase() == 'null') return null;
-        // Common placeholder for empty dates.
         if (s.startsWith('0001-01-01')) return null;
         return s;
       }
       return v;
     }
 
-    // Normalize known date-ish placeholders that can appear as strings.
     for (final k in [
-      'locked_until',
-      'updated_at',
-      'created_at',
-      'start_date',
-      'end_date',
-      'estimated_end_date',
-      'last_login_at',
+      'locked_until', 'updated_at', 'created_at', 'start_date',
+      'end_date', 'estimated_end_date', 'last_login_at',
     ]) {
-      if (out.containsKey(k)) {
-        out[k] = normalizeNullableString(out[k]);
-      }
+      if (out.containsKey(k)) out[k] = normalizeNullableString(out[k]);
     }
 
-    // Normalize role (empty strings -> null).
     if (out.containsKey('role')) {
       out['role'] = normalizeNullableString(out['role']);
     }
 
-    // For numeric fields that might be cached as strings, only trim; don't force defaults.
     for (final k in ['required_ojt_hours', 'failed_attempts']) {
       if (!out.containsKey(k)) continue;
       final v = out[k];
@@ -99,8 +154,7 @@ class AuthProvider extends ChangeNotifier {
     return out;
   }
 
-  Future<Map<String, dynamic>> loginWithDetails(
-      String email, String password) async {
+  Future<Map<String, dynamic>> loginWithDetails(String email, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -109,15 +163,19 @@ class AuthProvider extends ChangeNotifier {
       final res = await ApiService.login(email, password);
 
       if (res['ok'] == true) {
-        // Save token FIRST so refreshProfile() is authenticated
         await ApiService.saveToken(res['token']);
 
-        _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
-        _user = _normalizeCachedUser(_user!);
+        // 🛠️ FIX APPLIED: Utilize centralized extractor instead of hardcoding res['user']
+        final extractedUser = _extractUserFromResponse(res);
+        if (extractedUser.isNotEmpty) {
+          _user = _normalizeCachedUser(extractedUser);
+        } else {
+          _user = null;
+        }
+        
         await _persistUser();
         notifyListeners();
 
-        // Fetch the full profile now that the token is saved
         await refreshProfile();
       } else {
         _error = res['error'] ?? 'Login failed';
@@ -148,14 +206,9 @@ class AuthProvider extends ChangeNotifier {
       final res = await ApiService.register(data);
 
       if (res['ok'] == true) {
-        await ApiService.saveToken(res['token']);
-        _user = Map<String, dynamic>.from(res['user'] as Map? ?? {});
-        _user = _normalizeCachedUser(_user!);
-        await _persistUser();
-        notifyListeners();
-
-        await refreshProfile();
-
+        _user = null;
+        await ApiService.clearToken();
+        
         _isLoading = false;
         notifyListeners();
         return true;
@@ -174,28 +227,21 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> refreshProfile() async {
-    // Ensure deterministic final state under concurrent calls.
     if (_refreshFuture != null) return _refreshFuture!;
 
     _refreshFuture = () async {
       try {
         final res = await ApiService.getProfile();
-
-        Map<String, dynamic> profile;
-        if (res['id'] != null) {
-          profile = res;
-        } else if (res['data'] is Map && (res['data'] as Map)['id'] != null) {
-          profile = Map<String, dynamic>.from(res['data'] as Map);
-        } else if (res['user'] is Map && (res['user'] as Map)['id'] != null) {
-          profile = Map<String, dynamic>.from(res['user'] as Map);
-        } else {
-          debugPrint('⚠️ refreshProfile: no id found — skipping merge.');
+        
+        // Use centralized extractor
+        final profile = _extractUserFromResponse(res);
+        if (profile.isEmpty) {
+          debugPrint('⚠️ refreshProfile: no profile data found — skipping merge.');
           return;
         }
 
         final cached = Map<String, dynamic>.from(_user ?? {});
         final merged = Map<String, dynamic>.from(cached);
-
         final overwritten = <String, Map<String, dynamic>>{};
 
         bool isServerValid(dynamic v) {
@@ -214,20 +260,11 @@ class AuthProvider extends ChangeNotifier {
           final serverVal = entry.value;
           final cachedVal = merged[key];
 
-          // Priority rules:
-          // 1) Server value only when it's valid (non-null, non-empty, non-placeholder)
-          // 2) Otherwise keep cached value as-is
-          if (!isServerValid(serverVal)) {
-            continue;
-          }
+          if (!isServerValid(serverVal)) continue;
 
           if (cachedVal != serverVal) {
-            overwritten[key] = {
-              'cached': cachedVal,
-              'server': serverVal,
-            };
+            overwritten[key] = {'cached': cachedVal, 'server': serverVal};
           }
-
           merged[key] = serverVal;
         }
 
@@ -237,8 +274,7 @@ class AuthProvider extends ChangeNotifier {
 
         if (overwritten.isNotEmpty) {
           final keys = overwritten.keys.take(8).toList();
-          debugPrint(
-              '🔄 refreshProfile: merged ${overwritten.length} updated fields (sample: $keys)');
+          debugPrint('🔄 refreshProfile: merged ${overwritten.length} updated fields (sample: $keys)');
         } else {
           debugPrint('✅ refreshProfile complete: no meaningful changes');
         }
@@ -259,6 +295,43 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> verifyRegistrationOTP(String otp) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final res = await ApiService.verifyRegistrationOtp(otp);
+
+      if (res['ok'] == true) {
+        await ApiService.saveToken(res['token']);
+        
+        // Use extractor instead of hardcoding
+        final extractedUser = _extractUserFromResponse(res);
+        _user = _normalizeCachedUser(extractedUser);
+        
+        await _persistUser();
+        notifyListeners();
+
+        await refreshProfile();
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = res['error'] ?? 'OTP verification failed';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Connection error. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     await ApiService.clearToken();
     _user = null;
@@ -274,13 +347,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _persistUser() async {
-    if (_user == null) return;
+    if (_user == null || _user!.isEmpty) return; // Prevent saving empty map!
     final prefs = await SharedPreferences.getInstance();
     try {
       await prefs.setString('user', jsonEncode(_user));
+      debugPrint('💾 _persistUser: saved ${_user!.keys.length} fields to storage');
     } catch (e) {
       debugPrint('⚠️ _persistUser encode error: $e');
     }
   }
 }
-

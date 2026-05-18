@@ -3,6 +3,7 @@ package services
 import (
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"log"
 	"math/big"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
+	"project/backend/email"
 	"project/backend/models"
 	"project/backend/repositories"
 )
@@ -34,6 +36,32 @@ var (
 	ipTracker   = make(map[string]*IPLock)
 )
 
+// PendingRegistration stores temporary registration data during OTP verification
+type PendingRegistration struct {
+	FirstName        string
+	LastName         string
+	Email            string
+	HashedPassword   string
+	Phone            string
+	Department       string
+	Position         string
+	Role             models.Role
+	IsActive         bool
+	RequiredOjtHours int
+	OTP              string
+	OTPExpiry        time.Time
+	CreatedAt        time.Time
+}
+
+var (
+	pendingRegMu      sync.RWMutex
+	pendingReg        = make(map[string]*PendingRegistration) // keyed by email
+	lastResendAttempt = make(map[string]time.Time)            // rate limiting for resend
+	lastResendMu      sync.RWMutex                            // mutex for lastResendAttempt
+)
+
+const resendCooldownSeconds = 60
+
 type AuthService struct {
 	userRepo *repositories.UserRepository
 }
@@ -42,40 +70,68 @@ func NewAuthService(userRepo *repositories.UserRepository) *AuthService {
 	return &AuthService{userRepo: userRepo}
 }
 
-func (s *AuthService) Register(firstName, lastName, email, password, phone, department, position string, role models.Role, requiredOjtHours int) (*models.User, string, error) {
+func (s *AuthService) Register(firstName, lastName, rawEmail, password, phone, department, position string, role models.Role, requiredOjtHours int) (*models.User, string, error) {
 	if role == models.RoleAdmin {
 		return nil, "", errors.New("admin role cannot be registered. Contact administrator.")
 	}
 
-	if _, err := s.userRepo.GetByEmail(email); err == nil {
-		return nil, "", errors.New("email already registered")
+	// Normalize email for consistent uniqueness checks.
+	normalizedEmail := strings.ToLower(strings.TrimSpace(rawEmail))
+
+	// Pre-check for VERIFIED users only - pending users can re-register
+	existing, err := s.userRepo.GetByEmail(normalizedEmail)
+	if err == nil && existing.IsVerified {
+		// Block verified users from re-registering.
+		return nil, "", errors.New("email already in use")
 	}
 
+	// Hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("❌ Password hashing failed: %v", err)
 		return nil, "", err
 	}
-	log.Printf("✅ Password hashed successfully for registration - Hash: %.20s...", string(hashed))
+	log.Printf("✅ Password hashed successfully for registration")
 
-	user := &models.User{
-		FirstName:        firstName,
-		LastName:         lastName,
-		Email:            strings.ToLower(email),
-		Password:         string(hashed),
-		Phone:            phone,
-		Department:       department,
-		Position:         position,
-		Role:             models.RoleUser,
-		IsActive:         true,
-		RequiredOjtHours: requiredOjtHours,
-	}
-	if err := s.userRepo.Create(user); err != nil {
+	// Generate OTP
+	otp, err := GenerateOTP()
+	if err != nil {
+		log.Printf("❌ Failed to generate OTP: %v", err)
 		return nil, "", err
 	}
 
-	token, err := s.generateToken(user.ID, user.Role)
-	return user, token, err
+	// Store pending registration (overwrite if re-registering)
+	pendingRegMu.Lock()
+	pendingReg[normalizedEmail] = &PendingRegistration{
+		FirstName:        firstName,
+		LastName:         lastName,
+		Email:            normalizedEmail,
+		HashedPassword:   string(hashed),
+		Phone:            phone,
+		Department:       department,
+		Position:         position,
+		Role:             role,
+		IsActive:         true,
+		RequiredOjtHours: requiredOjtHours,
+		OTP:              otp,
+		OTPExpiry:        time.Now().Add(5 * time.Minute),
+		CreatedAt:        time.Now(),
+	}
+	pendingRegMu.Unlock()
+
+	log.Printf("📝 Pending registration stored for %s, OTP: %s (5 min expiry)", normalizedEmail, otp)
+
+	// Send OTP email
+	if err := email.SendRegistrationEmail(normalizedEmail, otp); err != nil {
+		log.Printf("⚠️ Failed to send registration email to %s: %v", normalizedEmail, err)
+		// Don't fail the request - let user try to resend
+		return nil, "", errors.New("could not send OTP email. Please try again or contact support")
+	}
+
+	log.Printf("✅ Registration OTP email sent to %s", normalizedEmail)
+
+	// Return success WITHOUT user or token - verification is required first
+	return nil, "", nil
 }
 
 type LoginResult struct {
@@ -145,6 +201,16 @@ func (s *AuthService) Login(email, password, ip string) (*LoginResult, error) {
 	if !user.IsActive || user.IsArchived {
 		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 		return s.handleFailedAttempt(ip, genericErr)
+	}
+
+	// 4b. Enforce email verification
+	if !user.IsVerified {
+		// Per requirement: deny login for unverified accounts.
+		loginErr := errors.New("Please verify your email first")
+		return &LoginResult{
+			Error:        loginErr,
+			AttemptsLeft: maxLoginAttempts,
+		}, loginErr
 	}
 
 	// 5. Verify Password
@@ -277,4 +343,132 @@ func GenerateOTP() (string, error) {
 		otp[i] = otpChars[num.Int64()]
 	}
 	return string(otp), nil
+}
+
+// VerifyRegistrationOTP verifies the OTP and creates the user account
+func (s *AuthService) VerifyRegistrationOTP(otp string) (*models.User, string, error) {
+	otp = strings.TrimSpace(otp)
+
+	pendingRegMu.RLock()
+	var email string
+	var pending *PendingRegistration
+	for e, p := range pendingReg {
+		if p.OTP == otp {
+			email = e
+			pending = p
+			break
+		}
+	}
+	pendingRegMu.RUnlock()
+
+	if pending == nil {
+		log.Printf("❌ Invalid OTP verification attempt: %s", otp)
+		return nil, "", errors.New("Invalid or expired OTP")
+	}
+
+	// Check if OTP has expired
+	if time.Now().After(pending.OTPExpiry) {
+		log.Printf("⚠️ OTP expired for %s", email)
+		pendingRegMu.Lock()
+		delete(pendingReg, email)
+		pendingRegMu.Unlock()
+		return nil, "", errors.New("OTP has expired. Please register again")
+	}
+
+	// Create the user account now
+	user := &models.User{
+		FirstName:        pending.FirstName,
+		LastName:         pending.LastName,
+		Email:            email,
+		Password:         pending.HashedPassword,
+		Phone:            pending.Phone,
+		Department:       pending.Department,
+		Position:         pending.Position,
+		Role:             models.RoleUser,
+		IsActive:         pending.IsActive,
+		IsVerified:       true, // Mark as verified since OTP was verified
+		RequiredOjtHours: pending.RequiredOjtHours,
+	}
+
+	if err := s.userRepo.Create(user); err != nil {
+		// If duplicate constraint, user might have registered in parallel
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "23505") {
+			log.Printf("⚠️ Email already registered during verification: %s", email)
+			return nil, "", errors.New("This email has already been registered")
+		}
+		log.Printf("❌ Failed to create user: %v", err)
+		return nil, "", errors.New("Failed to create account. Please try again")
+	}
+
+	log.Printf("✅ User account created and verified for %s", email)
+
+	// Clear pending registration
+	pendingRegMu.Lock()
+	delete(pendingReg, email)
+	pendingRegMu.Unlock()
+
+	// Generate token
+	token, err := s.generateToken(user.ID, user.Role)
+	if err != nil {
+		log.Printf("❌ Failed to generate token: %v", err)
+		return nil, "", err
+	}
+
+	return user, token, nil
+}
+
+// ResendRegistrationOTP generates and sends a new OTP for registration
+func (s *AuthService) ResendRegistrationOTP(emailAddr string) error {
+	emailAddr = strings.ToLower(strings.TrimSpace(emailAddr))
+
+	// Check rate limit
+	lastResendMu.RLock()
+	lastAttempt, exists := lastResendAttempt[emailAddr]
+	lastResendMu.RUnlock()
+
+	if exists && time.Since(lastAttempt) < time.Duration(resendCooldownSeconds)*time.Second {
+		elapsed := time.Since(lastAttempt).Seconds()
+		retryAfter := resendCooldownSeconds - int(elapsed)
+		log.Printf("⚠️ Rate limited resend for %s. Retry after %d seconds", emailAddr, retryAfter)
+		return fmt.Errorf("Please wait %d seconds before requesting a new code", retryAfter)
+	}
+
+	// Check if there's a pending registration
+	pendingRegMu.RLock()
+	pending, exists := pendingReg[emailAddr]
+	pendingRegMu.RUnlock()
+
+	if !exists {
+		// Generic response to prevent email enumeration
+		log.Printf("⚠️ Resend OTP attempt for non-existent pending email: %s", emailAddr)
+		return nil // Return success to prevent enumeration
+	}
+
+	// Generate new OTP
+	otp, err := GenerateOTP()
+	if err != nil {
+		log.Printf("❌ Failed to generate OTP: %v", err)
+		return errors.New("Could not generate OTP. Please try again")
+	}
+
+	// Update pending registration with new OTP
+	pendingRegMu.Lock()
+	pending.OTP = otp
+	pending.OTPExpiry = time.Now().Add(5 * time.Minute)
+	pendingReg[emailAddr] = pending
+	pendingRegMu.Unlock()
+
+	// Send OTP email using email package SendRegistrationEmail function
+	if err := email.SendRegistrationEmail(emailAddr, otp); err != nil {
+		log.Printf("⚠️ Failed to send resend OTP email to %s: %v", emailAddr, err)
+		return errors.New("Could not send OTP email. Please try again")
+	}
+
+	// Update last resend attempt
+	lastResendMu.Lock()
+	lastResendAttempt[emailAddr] = time.Now()
+	lastResendMu.Unlock()
+
+	log.Printf("✅ Resent registration OTP to %s", emailAddr)
+	return nil
 }

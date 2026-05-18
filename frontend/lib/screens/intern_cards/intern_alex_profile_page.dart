@@ -58,15 +58,18 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 900;
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Let the AppBackground show through behind the card
+      backgroundColor: Colors.transparent, 
       body: GestureDetector(
-        onTap: () => Navigator.of(context).pop(), // Click outside to close
+        onTap: () => Navigator.of(context).pop(), 
         behavior: HitTestBehavior.opaque,
         child: AppBackground(
           child: Container(
-            color: Colors.black.withValues(alpha: 0.3), // Darken the outside world slightly
+            color: isLightMode 
+                ? Colors.black.withValues(alpha: 0.15) 
+                : Colors.black.withValues(alpha: 0.3),
             child: SafeArea(
               child: Center(
                 child: SingleChildScrollView(
@@ -85,10 +88,9 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                         transform: Matrix4.identity()
                           ..setEntry(3, 2, 0.001)
                           ..rotateY(angle),
-                        // The whole card is clickable to flip
                         child: GestureDetector(
                           onTap: _toggleCardFlip,
-                          child: _buildCosmicCard(isDesktop, isFrontSide),
+                          child: _buildCosmicCard(isDesktop, isFrontSide, isLightMode),
                         ),
                       );
                     },
@@ -103,38 +105,47 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
   }
 
   // ── CORE CARD STRUCTURE ────────────────────────────────────────────────────
-  Widget _buildCosmicCard(bool isDesktop, bool isFrontSide) {
+  Widget _buildCosmicCard(bool isDesktop, bool isFrontSide, bool isLightMode) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 1150, minHeight: 600),
       decoration: BoxDecoration(
+        color: isLightMode ? Colors.white : null,
         borderRadius: BorderRadius.circular(32),
-        // alex_blue.jpg as the specific background of the card
-        image: const DecorationImage(
-          image: AssetImage('images/alex_blue.jpg'),
-          fit: BoxFit.cover,
+        image: isLightMode 
+            ? null 
+            : const DecorationImage(
+                image: AssetImage('images/alex_blue.jpg'),
+                fit: BoxFit.cover,
+              ),
+        border: Border.all(
+          color: isLightMode 
+              ? Colors.grey.withValues(alpha: 0.2)
+              : const Color(0xFF3B82F6).withValues(alpha: 0.3), 
+          width: 1.5
         ),
-        // A subtle blue/purple glowing border around the whole card
-        border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
+            color: isLightMode 
+                ? Colors.black.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.5),
             blurRadius: 40,
             spreadRadius: 5,
             offset: const Offset(0, 20),
           ),
-          // Deep cosmic glow behind the card (Blue/Purple)
-          BoxShadow(
-            color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
-            blurRadius: 80,
-            spreadRadius: -10,
-          ),
+          if (!isLightMode)
+            BoxShadow(
+              color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+              blurRadius: 80,
+              spreadRadius: -10,
+            ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(32),
         child: Container(
-          // Dark navy overlay so the text is still readable over the alex_blue.jpg image
-          color: const Color(0xFF0B0E14).withValues(alpha: 0.65),
+          color: isLightMode 
+              ? Colors.transparent 
+              : const Color(0xFF0B0E14).withValues(alpha: 0.65),
           child: Stack(
             children: [
               // Reverse the content mirror effect from the card flip
@@ -143,7 +154,8 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                 transform: isFrontSide ? Matrix4.identity() : Matrix4.rotationY(pi),
                 child: Padding(
                   padding: const EdgeInsets.all(40.0),
-                  child: isFrontSide ? _buildFrontLayout(isDesktop) : _buildBackLayout(isDesktop),
+                  // UNIFIED LAYOUT: Ensures the avatar never moves
+                  child: _buildCardContent(isDesktop, isFrontSide, isLightMode),
                 ),
               ),
               
@@ -159,7 +171,9 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                       Text(
                         "Tap anywhere to flip",
                         style: TextStyle(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.6),
+                          color: isLightMode 
+                              ? const Color(0xFF6B21A8).withValues(alpha: 0.7) 
+                              : const Color(0xFF8B5CF6).withValues(alpha: 0.6),
                           fontSize: 10,
                           fontStyle: FontStyle.italic,
                           letterSpacing: 1.2,
@@ -168,7 +182,9 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                       const SizedBox(width: 8),
                       Icon(
                         Icons.change_circle_outlined,
-                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.6),
+                        color: isLightMode 
+                            ? const Color(0xFF6B21A8).withValues(alpha: 0.7)
+                            : const Color(0xFF8B5CF6).withValues(alpha: 0.6),
                         size: 16,
                       )
                     ],
@@ -182,58 +198,60 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
     );
   }
 
-  // ── FRONT VIEW: IDENTITY + DATA ────────────────────────────────────────────
-  Widget _buildFrontLayout(bool isDesktop) {
+  // ── UNIFIED LAYOUT: AVATAR + PANELS STACK ──────────────────────────────────
+  Widget _buildCardContent(bool isDesktop, bool isFrontSide, bool isLightMode) {
     if (isDesktop) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(flex: 4, child: _buildAvatarIdentity()),
+          Expanded(flex: 4, child: _buildAvatarIdentity(isLightMode)),
           const SizedBox(width: 40),
-          Expanded(flex: 6, child: _buildDataPanels()),
+          Expanded(flex: 6, child: _buildPanelsStack(isFrontSide, isLightMode)),
         ],
       );
     }
 
     return Column(
       children: [
-        _buildAvatarIdentity(),
+        _buildAvatarIdentity(isLightMode),
         const SizedBox(height: 40),
-        _buildDataPanels(),
+        _buildPanelsStack(isFrontSide, isLightMode),
       ],
     );
   }
 
-  // ── BACK VIEW: COMPETENCIES ────────────────────────────────────────────────
-  Widget _buildBackLayout(bool isDesktop) {
-    if (isDesktop) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(flex: 4, child: Center(child: _buildAvatarIdentity())),
-          const SizedBox(width: 40),
-          Expanded(flex: 6, child: _buildSkillsPanels()),
-        ],
-      );
-    }
-
-    return Column(
+  // ── PANELS STACK: PREVENTS JUMPING BY LOCKING TO MAX HEIGHT ────────────────
+  Widget _buildPanelsStack(bool isFrontSide, bool isLightMode) {
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        _buildAvatarIdentity(),
-        const SizedBox(height: 40),
-        _buildSkillsPanels(),
+        // BACK SIDE (Skills)
+        Visibility(
+          visible: !isFrontSide,
+          maintainSize: true, 
+          maintainAnimation: true,
+          maintainState: true,
+          child: _buildSkillsPanels(isLightMode),
+        ),
+        // FRONT SIDE (Data)
+        Visibility(
+          visible: isFrontSide,
+          maintainSize: true, 
+          maintainAnimation: true,
+          maintainState: true,
+          child: _buildDataPanels(isLightMode),
+        ),
       ],
     );
   }
 
   // ── CREATIVE AVATAR SECTION ────────────────────────────────────────────────
-  Widget _buildAvatarIdentity() {
+  Widget _buildAvatarIdentity(bool isLightMode) {
     const double avatarSize = 210;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Perfect Circle Glowing Avatar - Cyan/Purple/Blue
         Container(
           width: avatarSize + 16,
           height: avatarSize + 16,
@@ -261,9 +279,9 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
           child: Padding(
             padding: const EdgeInsets.all(5.0),
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF0B0E14), 
+                color: isLightMode ? Colors.white : const Color(0xFF0B0E14), 
               ),
               child: ClipOval(
                 child: InternAvatar(
@@ -280,10 +298,10 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
         Text(
           widget.intern.name,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w900,
-            color: Colors.white,
+            color: isLightMode ? const Color(0xFF111827) : Colors.white,
             letterSpacing: -0.5,
           ),
         ),
@@ -291,25 +309,54 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+            color: isLightMode 
+                ? const Color(0xFFF3E8FF) 
+                : const Color(0xFF8B5CF6).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
+            border: Border.all(
+              color: isLightMode 
+                  ? const Color(0xFFD8B4FE) 
+                  : const Color(0xFF8B5CF6).withValues(alpha: 0.4)
+            ),
           ),
           child: Text(
             widget.intern.internNumber != 'N/A' ? 'ID: #${widget.intern.internNumber}' : 'SYSTEM APPRENTICE',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w900,
               letterSpacing: 2.5,
-              color: Color(0xFFC4B5FD), // Soft light purple
+              color: isLightMode ? const Color(0xFF6B21A8) : const Color(0xFFC4B5FD), 
             ),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
+
+        // ── NEW BIO SECTION ──────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Text(
+            // NOTE: Make sure `bio` exists in your InternProfile model. 
+            // If the intern object doesn't have one set, this personalized fallback will show.
+            (widget.intern.bio != null && widget.intern.bio!.isNotEmpty) 
+                ? widget.intern.bio! 
+                : 'Information Systems student at CMDI and intern at FDS Asya Philippines Inc. Passionate about Flutter, UI/UX design, and crafting space-themed digital experiences.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.6,
+              letterSpacing: 0.3,
+              color: isLightMode 
+                  ? const Color(0xFF4B5563) 
+                  : Colors.white.withValues(alpha: 0.75),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        // ─────────────────────────────────────────────────────────────────────
+
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Reduced to exactly two links as requested
             _SocialButton(icon: Icons.terminal_rounded, onTap: () => _launch(widget.intern.githubUrl)),
             const SizedBox(width: 16),
             _SocialButton(icon: Icons.link_rounded, onTap: () => _launch(widget.intern.linkedInUrl)),
@@ -320,11 +367,12 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
   }
 
   // ── FROSTED GLASS DATA PANELS (FRONT) ──────────────────────────────────────
-  Widget _buildDataPanels() {
+  Widget _buildDataPanels(bool isLightMode) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildUniqueGlassCard(
+          isLightMode: isLightMode,
           title: "Academic Profile",
           child: Column(
             children: [
@@ -334,7 +382,7 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                 label2: 'PROGRAM',
                 value2: widget.intern.program.isNotEmpty ? widget.intern.program : 'Bachelor of Science in Information Systems',
               ),
-              const SizedBox(height: 36), // Maximized internal spacing
+              const SizedBox(height: 36),
               _DetailGridRow(
                 label1: 'SPECIALIZATION',
                 value1: widget.intern.specialization?.isNotEmpty == true ? widget.intern.specialization! : 'N/A',
@@ -344,8 +392,9 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
             ],
           ),
         ),
-        const SizedBox(height: 32), // Maximized external spacing between sections
+        const SizedBox(height: 32), 
         _buildUniqueGlassCard(
+          isLightMode: isLightMode,
           title: "Deployment Data",
           child: Column(
             children: [
@@ -355,7 +404,7 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                 label2: 'DESIGNATION',
                 value2: widget.intern.position?.isNotEmpty == true ? widget.intern.position! : 'Intern',
               ),
-              const SizedBox(height: 36), // Maximized internal spacing
+              const SizedBox(height: 36), 
               const _DetailGridRow(
                 label1: 'START DATE',
                 value1: 'Feb 18, 2026',
@@ -370,15 +419,16 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
   }
 
   // ── FROSTED GLASS SKILL PANELS (BACK) ──────────────────────────────────────
-  Widget _buildSkillsPanels() {
+  Widget _buildSkillsPanels(bool isLightMode) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildUniqueGlassCard(
+          isLightMode: isLightMode,
           title: "Competencies",
           child: Container(
-            constraints: const BoxConstraints(minHeight: 60), // Forces the box to take up more space
+            constraints: const BoxConstraints(minHeight: 60), 
             alignment: Alignment.topLeft,
             child: widget.intern.technicalSkills.isNotEmpty
                 ? Wrap(
@@ -392,15 +442,20 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                   )
                 : Text(
                     'No structural technical skills configured.',
-                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5), fontStyle: FontStyle.italic),
+                    style: TextStyle(
+                      fontSize: 12, 
+                      color: isLightMode ? Colors.black54 : Colors.white.withValues(alpha: 0.5), 
+                      fontStyle: FontStyle.italic
+                    ),
                   ),
           ),
         ),
-        const SizedBox(height: 32), // Maximized external spacing
+        const SizedBox(height: 32), 
         _buildUniqueGlassCard(
+          isLightMode: isLightMode,
           title: "Interpersonal Skills",
           child: Container(
-            constraints: const BoxConstraints(minHeight: 60), // Forces the box to take up more space
+            constraints: const BoxConstraints(minHeight: 60), 
             alignment: Alignment.topLeft,
             child: widget.intern.softSkills.isNotEmpty
                 ? Wrap(
@@ -414,7 +469,11 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                   )
                 : Text(
                     'No baseline interactive soft competencies configured.',
-                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5), fontStyle: FontStyle.italic),
+                    style: TextStyle(
+                      fontSize: 12, 
+                      color: isLightMode ? Colors.black54 : Colors.white.withValues(alpha: 0.5), 
+                      fontStyle: FontStyle.italic
+                    ),
                   ),
           ),
         ),
@@ -423,20 +482,25 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
   }
 
   // ── UNIQUE SCIFI GLASSMORPHISM CARD ────────────────────────────────────────
-  Widget _buildUniqueGlassCard({required String title, IconData? icon, required Widget child}) {
+  Widget _buildUniqueGlassCard({required String title, IconData? icon, required Widget child, required bool isLightMode}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16), 
       child: BackdropFilter(
-        // The frosted glass effect is applied here so the alex_blue.jpg blurs beautifully
         filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           width: double.infinity,
-          // Maximized the padding inside the glass cards to expand their area
           padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 36), 
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: isLightMode 
+                ? const Color(0xFFF8FAFC).withValues(alpha: 0.8) 
+                : Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
+            border: Border.all(
+              color: isLightMode 
+                  ? Colors.grey.withValues(alpha: 0.2) 
+                  : Colors.white.withValues(alpha: 0.1), 
+              width: 1.0
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,24 +508,23 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
               Row(
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, color: Colors.white, size: 22),
+                    Icon(icon, color: isLightMode ? const Color(0xFF111827) : Colors.white, size: 22),
                     const SizedBox(width: 12),
                   ],
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14, 
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
-                      color: Colors.white, 
+                      color: isLightMode ? const Color(0xFF111827) : Colors.white, 
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              // Purple underline mapped from the screenshot
               Container(width: 48, height: 3, color: const Color(0xFF8B5CF6)),
-              const SizedBox(height: 28), // Space between header line and content
+              const SizedBox(height: 28), 
               child,
             ],
           ),
@@ -473,7 +536,6 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
 
 // ── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
-// New Grid Row implementation for specific detailed layouts
 class _DetailGridRow extends StatelessWidget {
   final String label1;
   final String value1;
@@ -495,7 +557,7 @@ class _DetailGridRow extends StatelessWidget {
         Expanded(
           child: _DetailItem(label: label1, value: value1),
         ),
-        const SizedBox(width: 16), // Gutter between columns
+        const SizedBox(width: 16), 
         Expanded(
           child: _DetailItem(label: label2, value: value2),
         ),
@@ -512,27 +574,27 @@ class _DetailItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Grey small subheader mapped from screenshot
         Text(
           label.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 9, 
             fontWeight: FontWeight.bold, 
             letterSpacing: 1.5, 
-            color: Color(0xFF9CA3AF)
+            color: isLightMode ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF)
           ),
         ),
         const SizedBox(height: 8), 
-        // Bright white main value text
         Text(
           value, 
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13, 
             fontWeight: FontWeight.w500, 
-            color: Colors.white,
+            color: isLightMode ? const Color(0xFF111827) : Colors.white,
             height: 1.3,
           ),
         ),
@@ -541,8 +603,6 @@ class _DetailItem extends StatelessWidget {
   }
 }
 
-
-// Interactive Hover Social Button (Subtle Version)
 class _SocialButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -557,34 +617,44 @@ class _SocialButtonState extends State<_SocialButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150), // Faster, snappier duration
-          width: 48,  // Fixed size, no more layout shifting
+          duration: const Duration(milliseconds: 150), 
+          width: 48,  
           height: 48,
           decoration: BoxDecoration(
             color: _isHovered 
-                ? Colors.white.withValues(alpha: 0.1) // Subtle background lighten
-                : Colors.white.withValues(alpha: 0.05),
+                ? (isLightMode ? const Color(0xFFF3E8FF) : Colors.white.withValues(alpha: 0.1)) 
+                : (isLightMode ? Colors.transparent : Colors.white.withValues(alpha: 0.05)),
             shape: BoxShape.circle,
             border: Border.all(
               color: _isHovered 
                   ? const Color(0xFF8B5CF6).withValues(alpha: 0.8) 
-                  : Colors.white.withValues(alpha: 0.3),
-              width: 1, // Constant width
+                  : (isLightMode ? Colors.grey.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.3)),
+              width: 1, 
             ),
             boxShadow: _isHovered 
-                ? [BoxShadow(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3), blurRadius: 8, spreadRadius: 1)]
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.3), 
+                      blurRadius: 8, 
+                      spreadRadius: 1
+                    )
+                  ]
                 : [],
           ),
           child: Icon(
             widget.icon, 
-            size: 22, // Fixed icon size
-            color: _isHovered ? Colors.white : Colors.white.withValues(alpha: 0.8)
+            size: 22, 
+            color: _isHovered 
+                ? (isLightMode ? const Color(0xFF6B21A8) : Colors.white)
+                : (isLightMode ? const Color(0xFF4B5563) : Colors.white.withValues(alpha: 0.8))
           ),
         ),
       ),
@@ -592,7 +662,6 @@ class _SocialButtonState extends State<_SocialButton> {
   }
 }
 
-// Badges mapping the exact dark purple/light text from the reference image
 class _CosmicBadge extends StatefulWidget {
   final String label;
 
@@ -607,6 +676,8 @@ class _CosmicBadgeState extends State<_CosmicBadge> {
 
   @override
   Widget build(BuildContext context) {
+    final isLightMode = Theme.of(context).brightness == Brightness.light;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -615,16 +686,21 @@ class _CosmicBadgeState extends State<_CosmicBadge> {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         transform: Matrix4.identity()..scale(_isHovered ? 1.05 : 1.0),
         decoration: BoxDecoration(
-          // Dark purple background matching the reference
-          color: const Color(0xFF1E1133).withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(24), // Pill shaped
+          color: isLightMode 
+              ? (_isHovered ? const Color(0xFFE9D5FF) : const Color(0xFFF3E8FF))
+              : const Color(0xFF1E1133).withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(24), 
           border: Border.all(
-            color: const Color(0xFF8B5CF6).withValues(alpha: _isHovered ? 0.9 : 0.3), 
+            color: isLightMode
+                ? const Color(0xFFD8B4FE).withValues(alpha: _isHovered ? 0.9 : 0.6)
+                : const Color(0xFF8B5CF6).withValues(alpha: _isHovered ? 0.9 : 0.3), 
             width: 1.5
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF8B5CF6).withValues(alpha: _isHovered ? 0.4 : 0.0),
+              color: isLightMode 
+                  ? const Color(0xFFC084FC).withValues(alpha: _isHovered ? 0.2 : 0.0)
+                  : const Color(0xFF8B5CF6).withValues(alpha: _isHovered ? 0.4 : 0.0),
               blurRadius: _isHovered ? 12 : 0,
               spreadRadius: _isHovered ? 2 : 0,
             )
@@ -632,10 +708,10 @@ class _CosmicBadgeState extends State<_CosmicBadge> {
         ),
         child: Text(
           widget.label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: Color(0xFFD8B4FE), // Light purple text
+            color: isLightMode ? const Color(0xFF581C87) : const Color(0xFFD8B4FE),
             letterSpacing: 0.5,
           ),
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart'; // ── Added for safe navigation ──
 
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
@@ -38,8 +39,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     });
 
     final res = await ApiService.getInterns();
-    // Avoid noisy logs; intern parsing is handled by InternProfile.fromJson.
-
 
     if (!mounted) return;
 
@@ -64,6 +63,17 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+
+    // ── FIXED REDIRECT LOGIC ──
+    // Wait until auth is fully initialized before making routing decisions.
+    if (auth.isAuthInitialized && !auth.isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.go('/login'); // Replaced Navigator.pushNamed with go_router
+      });
+      return const SizedBox.shrink();
+    }
+
     final user = auth.user;
 
     return UserLayout(
@@ -76,7 +86,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               isSidebarOpen: _isSidebarOpen,
               onToggleSidebar: () =>
                   setState(() => _isSidebarOpen = !_isSidebarOpen),
-              user: user,
+              user: user, // Topbar will automatically show skeleton if still initializing
             ),
             Expanded(
               child: Padding(

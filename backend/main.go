@@ -40,9 +40,10 @@ func seedAdminAccount(db *gorm.DB) {
 
 			log.Println("⚠️ Admin account was soft-deleted. Restoring...")
 			if err := db.Unscoped().Model(&existingAdmin).Updates(map[string]interface{}{
-				"deleted_at": nil,
-				"password":   string(hashedPassword),
-				"is_active":  true,
+				"deleted_at":  nil,
+				"password":    string(hashedPassword),
+				"is_active":   true,
+				"is_verified": true,
 			}).Error; err != nil {
 				log.Printf("❌ Failed to restore admin account: %v", err)
 				return
@@ -53,7 +54,10 @@ func seedAdminAccount(db *gorm.DB) {
 
 		if !strings.HasPrefix(existingAdmin.Password, "$2a$") && !strings.HasPrefix(existingAdmin.Password, "$2b$") {
 			log.Printf("⚠️ Admin password is not bcrypt hashed. Updating...")
-			if err := db.Model(&existingAdmin).Update("password", string(hashedPassword)).Error; err != nil {
+			if err := db.Model(&existingAdmin).Updates(map[string]interface{}{
+				"password":    string(hashedPassword),
+				"is_verified": true,
+			}).Error; err != nil {
 				log.Printf("❌ Failed to update admin password: %v", err)
 				return
 			}
@@ -65,12 +69,13 @@ func seedAdminAccount(db *gorm.DB) {
 	}
 
 	adminUser := models.User{
-		FirstName: "Admin",
-		LastName:  "User",
-		Email:     adminEmail,
-		Password:  string(hashedPassword),
-		Role:      models.RoleAdmin,
-		IsActive:  true,
+		FirstName:  "Admin",
+		LastName:   "User",
+		Email:      adminEmail,
+		Password:   string(hashedPassword),
+		Role:       models.RoleAdmin,
+		IsActive:   true,
+		IsVerified: true,
 	}
 
 	if err := db.Create(&adminUser).Error; err != nil {
@@ -81,6 +86,16 @@ func seedAdminAccount(db *gorm.DB) {
 	log.Println("✅ Admin account created successfully")
 	log.Println("📧 Email: admin@example.com")
 	log.Println("🔑 Password: admin123")
+}
+
+func ensureAdminAccountsVerified(db *gorm.DB) {
+	if err := db.Model(&models.User{}).
+		Where("role = ? AND is_verified = ?", models.RoleAdmin, false).
+		Updates(map[string]interface{}{"is_verified": true}).Error; err != nil {
+		log.Printf("⚠️ Failed to verify existing admin accounts: %v", err)
+		return
+	}
+	log.Println("✅ Existing admin accounts verified if needed")
 }
 
 func fixPlaintextPasswords(db *gorm.DB) {
@@ -197,6 +212,7 @@ func main() {
 	)
 	log.Println("Database migrated successfully")
 
+	ensureAdminAccountsVerified(DB)
 	seedAdminAccount(DB)
 	fixPlaintextPasswords(DB)
 
@@ -233,6 +249,8 @@ func main() {
 		auth.POST("/login", h.Login)
 		auth.POST("/forgot-password", h.ForgotPassword)
 		auth.POST("/verify-reset-otp", h.VerifyResetOTP)
+		auth.POST("/verify-otp", h.VerifyRegistrationOTP)
+		auth.POST("/resend-otp", h.ResendRegistrationOTP)
 		auth.POST("/reset-password", h.ResetPassword)
 
 		r.GET("/api/departments", h.ListDepartments)

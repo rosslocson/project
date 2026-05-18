@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,6 +10,10 @@ import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/app_background.dart';
 import '../widgets/register_widgets/register_form.dart';
+import 'email_verification_screen.dart';
+import 'user_homescreen.dart';
+
+// TODO.md note: keep left-side galaxy/background persistent while swapping OTP step on the right.
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -21,6 +24,12 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
+  // Split-screen step state
+  bool showOtpScreen = false;
+  bool _registerLoading = false;
+  // NOTE: On successful registration, this screen swaps to the OTP verification step.
+
+  String? _pendingVerificationEmail;
   final _formKey = GlobalKey<FormState>();
   final _firstCtrl = TextEditingController();
   final _lastCtrl = TextEditingController();
@@ -63,12 +72,10 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _fetchDepartments() async {
     try {
-      final res = await http
-          .get(
-            Uri.parse('${ApiService.baseUrl}/departments'),
-            headers: {'Content-Type': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 10));
+      final res = await http.get(
+        Uri.parse('${ApiService.baseUrl}/departments'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -103,7 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     setState(() {
       if (score <= 2) {
         _passStrength = 'Weak';
-        _passColor = const Color(0xFF00022E);
+        _passColor = const Color.fromARGB(255, 86, 91, 190);
         _passValue = 0.25;
       } else if (score == 3) {
         _passStrength = 'Fair';
@@ -120,7 +127,8 @@ class _RegisterScreenState extends State<RegisterScreen>
       }
 
       if (_confirmCtrl.text.isNotEmpty) {
-        _confirmError = _confirmCtrl.text != pass ? 'Passwords do not match' : null;
+        _confirmError =
+            _confirmCtrl.text != pass ? 'Passwords do not match' : null;
       }
     });
   }
@@ -139,12 +147,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       return;
     }
 
+    final email = _emailCtrl.text.trim();
+    setState(() => _registerLoading = true);
+
     final auth = context.read<AuthProvider>();
 
+    // Assumes valid inputs when called.
     final ok = await auth.register({
       'first_name': _firstCtrl.text.trim(),
       'last_name': _lastCtrl.text.trim(),
-      'email': _emailCtrl.text.trim(),
+      'email': email,
       'password': _passCtrl.text,
       'confirm_password': _confirmCtrl.text,
       'department': _selectedDept ?? '',
@@ -152,7 +164,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       'required_ojt_hours': int.tryParse(_ojtHoursCtrl.text.trim()) ?? 400,
     });
 
-    if (mounted && ok) context.go('/home');
+    if (!mounted) return;
+
+    if (ok) {
+      setState(() {
+        _pendingVerificationEmail = email;
+        showOtpScreen = true;
+      });
+    }
+
+    setState(() => _registerLoading = false);
   }
 
   @override
@@ -244,7 +265,8 @@ class _RegisterScreenState extends State<RegisterScreen>
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(width: 36, height: 36),
           splashRadius: 18,
-          hoverColor: isDark ? Colors.white24 : Colors.black12, // Added hover color
+          hoverColor:
+              isDark ? Colors.white24 : Colors.black12, // Added hover color
           icon: Icon(
             isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round_outlined,
             color: (Theme.of(context).brightness == Brightness.light)
@@ -272,14 +294,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                     Expanded(
                       child: isDark
                           ? AppBackground(
-                              backgroundAsset: 'assets/images/star_background.png',
+                              backgroundAsset:
+                                  'assets/images/star_background.png',
                               child: leftSideContent,
                             )
                           : Container(
                               decoration: const BoxDecoration(
                                 color: Color(0xFF050510),
                                 image: DecorationImage(
-                                  image: AssetImage('assets/images/star_background.png'),
+                                  image: AssetImage(
+                                      'assets/images/star_background.png'),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -303,10 +327,26 @@ class _RegisterScreenState extends State<RegisterScreen>
                         ),
                         child: Center(
                           child: SingleChildScrollView(
-                            child: formWidget.buildForm(
-                              isMobile: false,
-                              context: context,
-                            ),
+                            child: showOtpScreen
+                                ? EmailVerificationScreen(
+                                    email: _pendingVerificationEmail ??
+                                        _emailCtrl.text.trim(),
+                                    onBack: () =>
+                                        setState(() => showOtpScreen = false),
+                                    onSuccess: () {
+                                      if (!mounted) return;
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const UserHomeScreen(),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : formWidget.buildForm(
+                                    isMobile: false,
+                                    context: context,
+                                  ),
                           ),
                         ),
                       ),
@@ -336,7 +376,21 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: SingleChildScrollView(
-                child: formWidget.buildForm(isMobile: true, context: context),
+                child: showOtpScreen
+                    ? EmailVerificationScreen(
+                        email:
+                            _pendingVerificationEmail ?? _emailCtrl.text.trim(),
+                        onBack: () => setState(() => showOtpScreen = false),
+                        onSuccess: () {
+                          if (!mounted) return;
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const UserHomeScreen(),
+                            ),
+                          );
+                        },
+                      )
+                    : formWidget.buildForm(isMobile: true, context: context),
               ),
             ),
           );
@@ -352,7 +406,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                       decoration: const BoxDecoration(
                         color: Color(0xFF050510),
                         image: DecorationImage(
-                          image: AssetImage('assets/images/star_background.png'),
+                          image:
+                              AssetImage('assets/images/star_background.png'),
                           fit: BoxFit.cover,
                         ),
                       ),

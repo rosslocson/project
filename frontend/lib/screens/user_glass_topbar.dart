@@ -87,18 +87,40 @@ class GlassTopBar extends StatelessWidget {
     final sidebar = context.watch<SidebarProvider>();
     final bool sidebarClosed = !sidebar.isUserSidebarOpen;
 
-    final String firstName = user?['first_name'] ?? 'User';
-    final String lastName = user?['last_name'] ?? '';
-    final String fullName = lastName.isEmpty ? firstName : '$firstName $lastName';
+    final auth = context.watch<AuthProvider>();
+    final bool isInitialized = auth.isAuthInitialized;
+    final userMap = auth.user;
+
+    // Use provider user as the source of truth to avoid hot-restart stale widget props.
+    final String firstName = (userMap?['first_name']?.toString() ?? '').trim();
+    final String lastName = (userMap?['last_name']?.toString() ?? '').trim();
+
+    final String fullName = lastName.isEmpty ? (firstName.isEmpty ? 'User' : firstName) : '$firstName $lastName';
     final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
     // User specific API logic for Avatar
-    String rawAvatarUrl = user?['avatar_url'] as String? ?? '';
+    final String rawAvatarUrl = (userMap?['avatar_url']?.toString() ?? '');
     final String finalAvatarUrl = rawAvatarUrl.isEmpty
         ? ''
         : rawAvatarUrl.startsWith('http')
             ? rawAvatarUrl
             : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
+
+    debugPrint('🧩 Topbar rebuild: isAuthInitialized=${auth.isAuthInitialized} isLoggedIn=${auth.isLoggedIn} authUserKeys=${auth.user?.keys.length}');
+    debugPrint('🧩 Topbar rebuild: widgetUserKeys=${user?.keys.length} widgetUserId=${user?['id']} widgetUserEmail=${user?['email']} widgetUserFirstName=${user?['first_name']}');
+
+    // Helper for skeleton loading state
+    Widget buildSkeleton(double width, double height, {bool isCircle = false}) {
+      return Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08),
+          shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: isCircle ? null : BorderRadius.circular(4),
+        ),
+      );
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -140,14 +162,20 @@ class GlassTopBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 2), 
                   if (showWelcome)
-                    Text(
-                      'Welcome, $firstName',
-                      style: TextStyle(
-                        fontSize: 14, 
-                        fontWeight: FontWeight.w500,
-                        color: theme.topbarMutedText,
+                    if (!isInitialized)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: buildSkeleton(120, 14),
+                      )
+                    else
+                      Text(
+                        'Welcome, ${firstName.isEmpty ? '...' : firstName}',
+                        style: TextStyle(
+                          fontSize: 14, 
+                          fontWeight: FontWeight.w500,
+                          color: theme.topbarMutedText,
+                        ),
                       ),
-                    ),
                 ],
               ),
               const Spacer(),
@@ -200,48 +228,54 @@ class GlassTopBar extends StatelessWidget {
                   cursor: SystemMouseCursors.click,
                   child: Row(
                     children: [
-                      Text(
-                        fullName,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: theme.topbarText.withValues(alpha: 0.9),
+                      if (!isInitialized)
+                        buildSkeleton(80, 16)
+                      else
+                        Text(
+                          fullName,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: theme.topbarText.withValues(alpha: 0.9),
+                          ),
                         ),
-                      ),
                       const SizedBox(width: 14),
-                      CircleAvatar(
-                        radius: 20, 
-                        backgroundColor: isDark 
-                            ? const Color(0xFFCDD2FB).withValues(alpha: 0.1)
-                            : _kAccentIndigo.withValues(alpha: 0.1),
-                        backgroundImage: finalAvatarUrl.isNotEmpty
-                            ? NetworkImage(finalAvatarUrl)
-                            : null,
-                        child: finalAvatarUrl.isEmpty
-                            ? Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: isDark
-                                        ? const [Color(0xFF7474D4), Color(0xFF10134A)]
-                                        : const [_kAccentIndigo, _kLightAvatarEnd],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    initials,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                      if (!isInitialized)
+                        buildSkeleton(40, 40, isCircle: true)
+                      else
+                        CircleAvatar(
+                          radius: 20, 
+                          backgroundColor: isDark 
+                              ? const Color(0xFFCDD2FB).withValues(alpha: 0.1)
+                              : _kAccentIndigo.withValues(alpha: 0.1),
+                          backgroundImage: finalAvatarUrl.isNotEmpty
+                              ? NetworkImage(finalAvatarUrl)
+                              : null,
+                          child: finalAvatarUrl.isEmpty
+                              ? Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      colors: isDark
+                                          ? const [Color(0xFF7474D4), Color(0xFF10134A)]
+                                          : const [_kAccentIndigo, _kLightAvatarEnd],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
                                   ),
-                                ),
-                              )
-                            : null,
-                      ),
+                                  child: Center(
+                                    child: Text(
+                                      initials,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
                     ],
                   ),
                 ),

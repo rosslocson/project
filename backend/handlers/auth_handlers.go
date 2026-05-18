@@ -39,6 +39,10 @@ type VerifyResetOTPRequest struct {
 	OTP string `json:"otp"`
 }
 
+type VerifyRegistrationOTPRequest struct {
+	OTP string `json:"otp"`
+}
+
 type ResetPasswordRequest struct {
 	OTP             string `json:"otp"`
 	NewPassword     string `json:"new_password"`
@@ -76,14 +80,17 @@ func (h *Handler) Register(c *gin.Context) {
 		ojtHours = 400
 	}
 
-	user, token, err := authService.Register(
+	// Register now returns (nil, "", error) - no user or token created yet
+	// User is only created after OTP verification
+	_, _, err := authService.Register(
 		req.FirstName, req.LastName, strings.TrimSpace(req.Email), req.Password,
 		req.Phone, req.Department, enforcedPosition, models.RoleUser, ojtHours,
 	)
+
 	if err != nil {
 		if strings.Contains(err.Error(), "admin role") {
 			c.JSON(http.StatusForbidden, gin.H{"ok": false, "error": err.Error()})
-		} else if strings.Contains(err.Error(), "email already") {
+		} else if strings.Contains(err.Error(), "already in use") {
 			c.JSON(http.StatusConflict, gin.H{"ok": false, "error": err.Error()})
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
@@ -91,8 +98,10 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	h.logActivity(user.ID, "REGISTER", "New user registered", c.ClientIP())
-	c.JSON(http.StatusCreated, gin.H{"ok": true, "message": "Registration successful", "token": token, "user": user})
+	c.JSON(http.StatusOK, gin.H{
+		"ok":      true,
+		"message": "Registration code sent to your email. Please verify to complete registration.",
+	})
 }
 
 func (h *Handler) Login(c *gin.Context) {
@@ -202,8 +211,72 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	})
 }
 
+func (h *Handler) VerifyRegistrationOTP(c *gin.Context) {
+	var req VerifyRegistrationOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	userRepo := repositories.NewUserRepository(h.DB)
+	authService := services.NewAuthService(userRepo)
+
+	// Verify OTP and create user account
+	user, token, err := authService.VerifyRegistrationOTP(req.OTP)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	h.logActivity(user.ID, "VERIFY_REGISTRATION_OTP", "User verified email and account created", c.ClientIP())
+	c.JSON(http.StatusCreated, gin.H{
+		"ok":      true,
+		"message": "Email verified! Account created successfully.",
+		"token":   token,
+		"user":    user,
+	})
+}
+
+func (h *Handler) ResendRegistrationOTP(c *gin.Context) {
+	type ResendOTPRequest struct {
+		Email string `json:"email"`
+	}
+
+	var req ResendOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid request"})
+		return
+	}
+
+	email := strings.TrimSpace(req.Email)
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Email is required"})
+		return
+	}
+
+	userRepo := repositories.NewUserRepository(h.DB)
+	authService := services.NewAuthService(userRepo)
+
+	// Resend OTP
+	err := authService.ResendRegistrationOTP(email)
+	if err != nil {
+		// Still return 200 OK to prevent email enumeration
+		c.JSON(http.StatusOK, gin.H{
+			"ok":      true,
+			"message": "If a pending registration exists, a new code has been sent.",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":      true,
+		"message": "If a pending registration exists, a new code has been sent.",
+	})
+}
+
 func (h *Handler) VerifyResetOTP(c *gin.Context) {
 	var req VerifyResetOTPRequest
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
 		return
@@ -262,14 +335,19 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to encrypt password"})
 		return
 	}
-	user.Password = string(hashedPassword)
 
-	user.ResetOTP = ""
-	user.ResetOTPExpiry = nil
-	user.FailedAttempts = 0
-	user.LockedUntil = nil
-
-	h.DB.Save(&user)
+	// FIX: Use Updates with a map to explicitly target only the fields that need changing, 
+	// preventing GORM from overwriting the rest of the profile with blank data.
+	if err := h.DB.Model(&user).Updates(map[string]interface{}{
+		"password":           string(hashedPassword),
+		"reset_token":        "",
+		"reset_token_expiry": nil,
+		"failed_attempts":    0,
+		"locked_until":       nil,
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Could not update password"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "Password reset successful"})
 }

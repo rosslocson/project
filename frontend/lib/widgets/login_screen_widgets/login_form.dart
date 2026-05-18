@@ -91,7 +91,6 @@ class LoginForm extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 40),
-
               if (isLocked) ...[
                 LockedBanner(
                   lockSecsLeft: lockSecsLeft,
@@ -99,13 +98,20 @@ class LoginForm extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
               ] else if (auth.error != null) ...[
-                // Custom banner matching image_71b702.png
+                // Visible red error banner for both light and dark mode
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF4E5),
+                    color: isDark
+                        ? const Color(0xFF4F1B1B).withOpacity(0.28)
+                        : const Color(0xFFFFEBEE),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFFB74D), width: 1),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFFF28B82).withOpacity(0.8)
+                          : const Color(0xFFEF9A9A),
+                      width: 1,
+                    ),
                   ),
                   child: Stack(
                     children: [
@@ -114,14 +120,22 @@ class LoginForm extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100), size: 20),
+                              Icon(Icons.error_outline,
+                                  color: isDark
+                                      ? const Color(0xFFFFCDD2)
+                                      : const Color(0xFFD32F2F),
+                                  size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                auth.error?.toLowerCase() == "The email or password you entered is incorrect."
+                                auth.error?.toLowerCase() ==
+                                        "The email or password you entered is incorrect."
                                     ? "The email or password you entered is incorrect."
-                                    : (auth.error ?? "The email or password you entered is incorrect."),
-                                style: const TextStyle(
-                                  color: Color(0xFFE65100),
+                                    : (auth.error ??
+                                        "The email or password you entered is incorrect."),
+                                style: TextStyle(
+                                  color: isDark
+                                      ? const Color(0xFFFFE4E1)
+                                      : const Color(0xFFB71C1C),
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -131,16 +145,24 @@ class LoginForm extends StatelessWidget {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              const Text(
+                              Text(
                                 "Attempts left: ",
-                                style: TextStyle(color: Color(0xFFE65100), fontSize: 13),
+                                style: TextStyle(
+                                    color: isDark
+                                        ? const Color(0xFFFFCDD2)
+                                        : const Color(0xFFD32F2F),
+                                    fontSize: 13),
                               ),
                               Row(
                                 children: List.generate(
                                   attemptsLeft > 0 ? attemptsLeft : 0,
-                                  (index) => const Padding(
-                                    padding: EdgeInsets.only(right: 4.0),
-                                    child: Icon(Icons.circle, size: 10, color: Color(0xFFFFA000)),
+                                  (index) => Padding(
+                                    padding: const EdgeInsets.only(right: 4.0),
+                                    child: Icon(Icons.circle,
+                                        size: 10,
+                                        color: isDark
+                                            ? const Color(0xFFF28B82)
+                                            : const Color(0xFFFF8A65)),
                                   ),
                                 ),
                               ),
@@ -149,10 +171,12 @@ class LoginForm extends StatelessWidget {
                           const SizedBox(height: 12),
                           GestureDetector(
                             onTap: onForgotPassword,
-                            child: const Text(
+                            child: Text(
                               "Forgot password? Reset it →",
                               style: TextStyle(
-                                color: Color(0xFFE65100),
+                                color: isDark
+                                    ? const Color(0xFFFFCDD2)
+                                    : const Color(0xFFD32F2F),
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -166,7 +190,11 @@ class LoginForm extends StatelessWidget {
                         child: IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          icon: const Icon(Icons.close, color: Color(0xFFFFA000), size: 20),
+                          icon: Icon(Icons.close,
+                              color: isDark
+                                  ? const Color(0xFFFFCDD2)
+                                  : const Color(0xFFD32F2F),
+                              size: 20),
                           onPressed: () => auth.clearError(),
                         ),
                       ),
@@ -175,7 +203,6 @@ class LoginForm extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
               ],
-
               Text('Email Address', style: labelStyle),
               const SizedBox(height: 6),
               TextFormField(
@@ -204,9 +231,7 @@ class LoginForm extends StatelessWidget {
                   return null;
                 },
               ),
-
               const SizedBox(height: 20),
-
               Text('Password', style: labelStyle),
               const SizedBox(height: 6),
               TextFormField(
@@ -245,16 +270,15 @@ class LoginForm extends StatelessWidget {
                 validator: (v) =>
                     (v == null || v.isEmpty) ? 'Password is required' : null,
               ),
-
               const SizedBox(height: 12),
-
               Row(
                 children: [
                   const Spacer(),
                   TextButton(
                     onPressed: onForgotPassword,
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       foregroundColor: isDark ? kAccentPurple : kCosmicBlue,
@@ -272,9 +296,7 @@ class LoginForm extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 36),
-
               SizedBox(
                 height: 50,
                 child: isDark
@@ -284,7 +306,8 @@ class LoginForm extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kAccentPurple,
                           foregroundColor: Colors.white,
-                          disabledBackgroundColor: kAccentPurple.withOpacity(0.5),
+                          disabledBackgroundColor:
+                              kAccentPurple.withOpacity(0.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
@@ -314,13 +337,12 @@ class LoginForm extends StatelessWidget {
                         label: isLocked
                             ? 'LOCKED — WAIT ${lockSecsLeft}s'
                             : 'LOG IN',
-                        onPressed: (auth.isLoading || isLocked) ? null : onLogin,
+                        onPressed:
+                            (auth.isLoading || isLocked) ? null : onLogin,
                         loading: auth.isLoading,
                       ),
               ),
-
               const SizedBox(height: 28),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -334,7 +356,8 @@ class LoginForm extends StatelessWidget {
                   TextButton(
                     onPressed: () => context.go('/register'),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       foregroundColor: isDark ? kAccentPurple : kCosmicBlue,

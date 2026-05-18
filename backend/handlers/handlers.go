@@ -787,6 +787,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		Position:   req.Position,
 		Role:       role,
 		IsActive:   true,
+		IsVerified: role == models.RoleAdmin,
 	}
 
 	if err := h.DB.Create(&user).Error; err != nil {

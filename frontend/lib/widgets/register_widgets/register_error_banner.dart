@@ -14,22 +14,29 @@ class RegisterErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor =
+        isDark ? Colors.red.shade900.withOpacity(0.2) : Colors.red.shade50;
+    final borderColor = isDark ? Colors.red.shade700 : Colors.red.shade200;
+    final iconColor = isDark ? Colors.red.shade200 : Colors.red.shade700;
+    final textColor = isDark ? Colors.red.shade100 : Colors.red.shade900;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: kCosmicBlue.withValues(alpha: 0.08),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kCosmicBlue.withValues(alpha: 0.2)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: kCosmicBlue, size: 20),
+          Icon(Icons.error_outline, color: iconColor, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               error,
-              style: const TextStyle(
-                color: kCosmicBlue,
+              style: TextStyle(
+                color: textColor,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -37,7 +44,7 @@ class RegisterErrorBanner extends StatelessWidget {
           ),
           GestureDetector(
             onTap: onClear,
-            child: const Icon(Icons.close, size: 20, color: kCosmicBlue),
+            child: Icon(Icons.close, size: 20, color: iconColor),
           ),
         ],
       ),

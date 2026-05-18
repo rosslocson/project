@@ -185,6 +185,7 @@ class _NavItemState extends State<_NavItem> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque, // ADDED: Makes the entire area clickable
         onTap: active ? null : () => context.go(widget.route),
         child: Container(
           height: 48,
@@ -312,6 +313,7 @@ class _SignOutButtonState extends State<_SignOutButton> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque, // ADDED: Makes the entire area clickable
         onTap: () async {
           final confirmed = await showDialog<bool>(
             context: context,
@@ -383,6 +385,7 @@ class _CloseButtonState extends State<_CloseButton> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque, // ADDED: Makes the entire area clickable
         onTap: widget.onClose,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
