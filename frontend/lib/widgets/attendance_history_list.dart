@@ -91,8 +91,15 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
   }
 
   void _rebuild() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
     final grouped = <String, List<AttendanceRecord>>{};
     for (final r in widget.records) {
+      // Never show records dated after today.
+    final recordDate = DateTime(r.date.year, r.date.month, r.date.day);
+    if (recordDate.isAfter(today)) continue;
+    
       final monday = _weekStart(r.date);
       final key = _weekKey(monday);
       grouped.putIfAbsent(key, () => []).add(r);
@@ -112,7 +119,23 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
 
   List<AttendanceRecord> get _currentRecords {
     if (_weeks.isEmpty) return [];
-    return _grouped[_weekKey(_weeks[_weekIndex])] ?? [];
+    final records = _grouped[_weekKey(_weeks[_weekIndex])] ?? [];
+
+    // For the current week, exclude any records dated after today.
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final thisWeekMonday = _weekStart(now);
+    final isCurrentWeek = _weeks.isNotEmpty &&
+        _weekKey(_weeks[_weekIndex]) == _weekKey(thisWeekMonday);
+
+    if (isCurrentWeek) {
+      return records
+          .where((r) =>
+              !DateTime(r.date.year, r.date.month, r.date.day).isAfter(today))
+          .toList();
+    }
+
+    return records;
   }
 
   void _goTo(int index) {
