@@ -11,7 +11,6 @@ import 'app_theme.dart';
 
 // ── Theme constants matching MyProfileScreen dark blue palette ────────────
 const _kNavy = Color(0xFF0B132B); // card dark blue — primary bg
-const _kDeep = Color(0xFF060A17); // card darker blue — accents / fills
 const _kAccent = Color(0xFF4F8EF7); // bright blue — active states
 const _kBorder = Color(0xFF1E2D50); // subtle border
 const _kTextHead = Color(0xFF0B132B); // dark headings (on white surface)
@@ -192,10 +191,10 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
+                      color: Colors.green.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.green.shade300.withOpacity(0.4)),
+                          color: Colors.green.shade300.withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -438,9 +437,9 @@ class _NavArrow extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: _kAccent.withOpacity(0.08),
+              color: _kAccent.withValues(alpha: 0.08),
               shape: BoxShape.circle,
-              border: Border.all(color: _kAccent.withOpacity(0.25)),
+              border: Border.all(color: _kAccent.withValues(alpha: 0.25)),
             ),
             child: Icon(icon, size: 18, color: _kAccent),
           ),
@@ -566,11 +565,11 @@ class _AttendanceRow extends StatelessWidget {
             width: 44,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: greyDate ? Colors.grey.shade100 : _kNavy.withOpacity(0.07),
+              color: greyDate ? Colors.grey.shade100 : _kNavy.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color:
-                    greyDate ? Colors.grey.shade200 : _kBorder.withOpacity(0.4),
+                    greyDate ? Colors.grey.shade200 : _kBorder.withValues(alpha: 0.4),
               ),
             ),
             child: Column(
@@ -817,7 +816,7 @@ class _StatusBadge extends StatelessWidget {
     }
     // ── On Shift ──────────────────────────────────────────────────────────
     else if (isOngoing) {
-      bg = _kAccent.withOpacity(0.1);
+      bg = _kAccent.withValues(alpha: 0.1);
       fg = _kAccent;
       label = 'On Shift';
       icon = Icons.timelapse_rounded;
@@ -853,7 +852,7 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fg.withOpacity(0.3)),
+        border: Border.all(color: fg.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -952,10 +951,10 @@ class _ReportButtonState extends State<_ReportButton> {
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
           color: _submitting
-              ? _kAccent.withOpacity(0.08)
-              : _kNavy.withOpacity(0.06),
+              ? _kAccent.withValues(alpha: 0.08)
+              : _kNavy.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _kAccent.withOpacity(0.35)),
+          border: Border.all(color: _kAccent.withValues(alpha: 0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -966,7 +965,7 @@ class _ReportButtonState extends State<_ReportButton> {
                 height: 10,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
-                  color: _kAccent.withOpacity(0.7),
+                  color: _kAccent.withValues(alpha: 0.7),
                 ),
               )
             else
@@ -1069,7 +1068,7 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: _kNavy.withOpacity(0.15),
+              color: _kNavy.withValues(alpha: 0.15),
               blurRadius: 24,
               offset: const Offset(0, 8),
             ),
@@ -1195,7 +1194,7 @@ class _ReportIssueDialogState extends State<_ReportIssueDialog> {
                     style: ButtonStyle(
                       backgroundColor: WidgetStateProperty.resolveWith(
                           (states) => states.contains(WidgetState.disabled)
-                              ? _kAccent.withOpacity(0.4)
+                              ? _kAccent.withValues(alpha: 0.4)
                               : _kAccent),
                       foregroundColor: WidgetStateProperty.all(Colors.white),
                       elevation: WidgetStateProperty.all(0),
