@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class OtpInputWidget extends StatefulWidget {
   final Function(String) onOtpCompleted;
 
-  const OtpInputWidget({Key? key, required this.onOtpCompleted}) : super(key: key);
+  const OtpInputWidget({super.key, required this.onOtpCompleted});
 
   @override
   _OtpInputWidgetState createState() => _OtpInputWidgetState();

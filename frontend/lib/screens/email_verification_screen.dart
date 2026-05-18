@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
-
 
 const kCosmicBlue = Color(0xFF00022E);
 const kAccentPurple = Color(0xFF7C4DFF);
@@ -22,15 +23,15 @@ class EmailVerificationScreen extends StatefulWidget {
   });
 
   @override
-  State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   // Match ForgotPasswordSheet OTP behavior
   final List<TextEditingController> _otpDigitCtrls =
       List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _otpFocusNodes =
-      List.generate(6, (_) => FocusNode());
+  final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
 
   String? stepMsg;
   bool stepLoading = false;
@@ -179,29 +180,21 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
 
     try {
-      final res = await ApiService.verifyRegistrationOtp(_otpCode);
+      final auth = context.read<AuthProvider>();
+      final ok = await auth.verifyRegistrationOTP(_otpCode);
 
       if (!mounted) return;
 
-      if (res['ok'] == true && res['token'] != null) {
-        // Save token securely
-        await ApiService.saveToken(res['token']);
-
-        // ApiService reads the token from SharedPreferences for authenticated requests.
-        // No extra global header attachment is needed.
-
-
+      if (ok) {
         setState(() {
           stepLoading = false;
           stepMsg = null;
         });
-
-        // Trigger success callback
         widget.onSuccess();
       } else {
         setState(() {
           stepLoading = false;
-          stepMsg = (res['error'] ?? 'Invalid OTP. Please try again.').toString();
+          stepMsg = auth.error ?? 'Invalid OTP. Please try again.';
         });
       }
     } catch (e) {
@@ -231,10 +224,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           _isResending = false;
           stepMsg = 'New verification code sent to your email!';
         });
-        
+
         // Restart OTP timer (5 minutes)
         _startOtpTimer(300);
-        
+
         // Start resend cooldown (60 seconds)
         _startResendCooldown(60);
       } else {
@@ -284,7 +277,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   Widget _resendButton(bool isDark) {
     final canResend = _resendCooldownSeconds == 0;
-    
+
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
@@ -413,10 +406,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.red.withOpacity(0.1) : Colors.red.shade50,
+                  color:
+                      isDark ? Colors.red.withOpacity(0.1) : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: isDark ? Colors.red.withOpacity(0.3) : Colors.red.shade200,
+                    color: isDark
+                        ? Colors.red.withOpacity(0.3)
+                        : Colors.red.shade200,
                   ),
                 ),
                 child: Row(
@@ -425,7 +421,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       child: Text(
                         stepMsg!,
                         style: TextStyle(
-                          color: isDark ? Colors.redAccent : Colors.red.shade800,
+                          color:
+                              isDark ? Colors.redAccent : Colors.red.shade800,
                           fontSize: 14,
                         ),
                       ),
@@ -488,7 +485,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                onPressed: (_otpSecondsLeft > 0 && _otpCode.length == 6 && !stepLoading)
+                onPressed: (_otpSecondsLeft > 0 &&
+                        _otpCode.length == 6 &&
+                        !stepLoading)
                     ? _verifyOtp
                     : null,
                 child: stepLoading
@@ -533,4 +532,3 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     );
   }
 }
-

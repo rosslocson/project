@@ -203,9 +203,9 @@ class _DepartmentListContentState extends State<DepartmentListContent> {
                     child: compact
                         // Icon-only on very small screens
                         ? const Icon(Icons.add, size: 20)
-                        : Row(
+                        : const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(Icons.add, size: 18),
                               SizedBox(width: 6),
                               Text('Add',

@@ -55,7 +55,7 @@ class AuthProvider extends ChangeNotifier {
 
     _isAuthInitialized = true;
     notifyListeners();
-    debugPrint('✅ Auth init finished. isLoggedIn=${isLoggedIn}');
+    debugPrint('✅ Auth init finished. isLoggedIn=$isLoggedIn');
   }
 
 

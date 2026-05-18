@@ -219,9 +219,9 @@ class _AddDepartmentDialogState extends State<AddDepartmentDialog> {
                                     strokeWidth: 2,
                                     color: Colors.white),
                               )
-                            : Row(
+                            : const Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
+                                children: [
                                   Icon(Icons.add, size: 18),
                                   SizedBox(width: 6),
                                   Flexible(

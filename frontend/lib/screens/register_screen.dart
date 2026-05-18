@@ -12,9 +12,9 @@ import '../services/api_service.dart';
 import '../widgets/app_background.dart';
 import '../widgets/register_widgets/register_form.dart';
 import 'email_verification_screen.dart';
+import 'user_homescreen.dart';
 
 // TODO.md note: keep left-side galaxy/background persistent while swapping OTP step on the right.
-
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -73,12 +73,10 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _fetchDepartments() async {
     try {
-      final res = await http
-          .get(
-            Uri.parse('${ApiService.baseUrl}/departments'),
-            headers: {'Content-Type': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 10));
+      final res = await http.get(
+        Uri.parse('${ApiService.baseUrl}/departments'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -130,7 +128,8 @@ class _RegisterScreenState extends State<RegisterScreen>
       }
 
       if (_confirmCtrl.text.isNotEmpty) {
-        _confirmError = _confirmCtrl.text != pass ? 'Passwords do not match' : null;
+        _confirmError =
+            _confirmCtrl.text != pass ? 'Passwords do not match' : null;
       }
     });
   }
@@ -267,7 +266,8 @@ class _RegisterScreenState extends State<RegisterScreen>
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(width: 36, height: 36),
           splashRadius: 18,
-          hoverColor: isDark ? Colors.white24 : Colors.black12, // Added hover color
+          hoverColor:
+              isDark ? Colors.white24 : Colors.black12, // Added hover color
           icon: Icon(
             isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round_outlined,
             color: (Theme.of(context).brightness == Brightness.light)
@@ -295,14 +295,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                     Expanded(
                       child: isDark
                           ? AppBackground(
-                              backgroundAsset: 'assets/images/star_background.png',
+                              backgroundAsset:
+                                  'assets/images/star_background.png',
                               child: leftSideContent,
                             )
                           : Container(
                               decoration: const BoxDecoration(
                                 color: Color(0xFF050510),
                                 image: DecorationImage(
-                                  image: AssetImage('assets/images/star_background.png'),
+                                  image: AssetImage(
+                                      'assets/images/star_background.png'),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -333,7 +335,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     onBack: () =>
                                         setState(() => showOtpScreen = false),
                                     onSuccess: () {
-                                      if (mounted) context.go('/home');
+                                      if (!mounted) return;
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const UserHomeScreen(),
+                                        ),
+                                      );
                                     },
                                   )
                                 : formWidget.buildForm(
@@ -371,12 +379,16 @@ class _RegisterScreenState extends State<RegisterScreen>
               child: SingleChildScrollView(
                 child: showOtpScreen
                     ? EmailVerificationScreen(
-                        email: _pendingVerificationEmail ??
-                            _emailCtrl.text.trim(),
-                        onBack: () =>
-                            setState(() => showOtpScreen = false),
+                        email:
+                            _pendingVerificationEmail ?? _emailCtrl.text.trim(),
+                        onBack: () => setState(() => showOtpScreen = false),
                         onSuccess: () {
-                          if (mounted) context.go('/home');
+                          if (!mounted) return;
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const UserHomeScreen(),
+                            ),
+                          );
                         },
                       )
                     : formWidget.buildForm(isMobile: true, context: context),
@@ -395,7 +407,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                       decoration: const BoxDecoration(
                         color: Color(0xFF050510),
                         image: DecorationImage(
-                          image: AssetImage('assets/images/star_background.png'),
+                          image:
+                              AssetImage('assets/images/star_background.png'),
                           fit: BoxFit.cover,
                         ),
                       ),
