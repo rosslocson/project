@@ -474,9 +474,11 @@ decoration: BoxDecoration(
                                               context.internTheme.surfaceText,
                                           unselectedLabelColor:
                                               context.internTheme.mutedText,
-indicatorColor: context.isDarkInternTheme
-    ? const Color(0xFF7367F0)
-    : const Color(0xFF00022E),                                       indicatorWeight: 3,
+                                          indicatorSize: TabBarIndicatorSize.tab,
+                                          indicatorColor: context.isDarkInternTheme
+                                              ? const Color(0xFF7367F0)
+                                              : const Color(0xFF00022E),
+                                          indicatorWeight: 3,
                                           dividerColor: Colors.transparent,
                                           tabs: [
                                             Tab(
