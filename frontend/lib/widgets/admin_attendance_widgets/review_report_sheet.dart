@@ -86,9 +86,8 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
   String _selectedResolution = 'set_timeout';
   TimeOfDay? _timeOut;
   TimeOfDay? _adjustedTimeIn;
-
-  // Pre-populate the note field with the existing remark so the admin
-  // can see and edit whatever was already there.
+  TimeOfDay? _creditedTimeIn;
+  TimeOfDay? _creditedTimeOut;
 
   bool _submitting = false;
   String? _error;
@@ -96,17 +95,20 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill note with existing remark (if any) so admin keeps context
 
     // Default resolution based on status
     _selectedResolution = widget.record.status == 'Missed Clock Out'
         ? 'set_timeout'
         : 'excused_credited';
+
+    // Pre-fill credited times with standard 8 AM – 5 PM so the admin
+    // can just confirm without touching the pickers unless they need to override.
+    _creditedTimeIn  = const TimeOfDay(hour: 8, minute: 0);
+    _creditedTimeOut = const TimeOfDay(hour: 17, minute: 0);
   }
 
   @override
   void dispose() {
-   
     super.dispose();
   }
 
@@ -115,6 +117,14 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
   String? get _validationError {
     if (_selectedResolution == 'set_timeout' && _timeOut == null) {
       return 'Please pick a time-out before saving.';
+    }
+    if (_selectedResolution == 'excused_credited') {
+      if (_creditedTimeIn == null) {
+        return 'Please pick a time-in for credited excusal.';
+      }
+      if (_creditedTimeOut == null) {
+        return 'Please pick a time-out for credited excusal.';
+      }
     }
     if (_selectedResolution == 'adjust_timein' && _adjustedTimeIn == null) {
       return 'Please pick the corrected time-in before saving.';
@@ -139,14 +149,25 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
     final result = await AdminAttendanceService.resolveAttendanceIssue(
       recordId: widget.record.id,
       resolution: _selectedResolution,
-      timeOut: _selectedResolution == 'set_timeout' ? _timeOut : null,
+      timeOut: _selectedResolution == 'set_timeout'
+          ? _timeOut
+          : _selectedResolution == 'excused_credited'
+              ? _creditedTimeOut
+              : null,
       adjustedTimeIn:
           _selectedResolution == 'adjust_timein' ? _adjustedTimeIn : null,
+      creditedTimeIn:
+          _selectedResolution == 'excused_credited' ? _creditedTimeIn : null,
       note: null,
     );
 
     if (!mounted) return;
     setState(() => _submitting = false);
+
+    if (result['ok'] != true) {
+      setState(() => _error = result['error'] as String? ?? 'An error occurred.');
+      return;
+    }
 
     Navigator.pop(context);
     widget.onResolved?.call();
@@ -178,11 +199,27 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
     if (picked != null && mounted) setState(() => _adjustedTimeIn = picked);
   }
 
+  Future<void> _pickCreditedTimeIn() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _creditedTimeIn ?? const TimeOfDay(hour: 8, minute: 0),
+    );
+    if (picked != null && mounted) setState(() => _creditedTimeIn = picked);
+  }
+
+  Future<void> _pickCreditedTimeOut() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _creditedTimeOut ?? const TimeOfDay(hour: 17, minute: 0),
+    );
+    if (picked != null && mounted) setState(() => _creditedTimeOut = picked);
+  }
+
   // ── Excused callout colours ────────────────────────────────────────────────
 
-  bool get _isExcusedCredited => _selectedResolution == 'excused_credited';
+  bool get _isExcusedCredited   => _selectedResolution == 'excused_credited';
   bool get _isExcusedUncredited => _selectedResolution == 'excused_uncredited';
-  bool get _isExcused => _isExcusedCredited || _isExcusedUncredited;
+  bool get _isExcused           => _isExcusedCredited || _isExcusedUncredited;
 
   Color get _excusedBg =>
       _isExcusedCredited ? const Color(0xFFECFDF5) : const Color(0xFFF5F3FF);
@@ -355,8 +392,6 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                 ))),
 
             // ── Excused callout ───────────────────────────────────────
-            // Appears when either excused option is active; explains to the
-            // admin exactly what credited vs uncredited means for the intern.
             if (_isExcused) ...[
               const SizedBox(height: 10),
               AnimatedContainer(
@@ -388,9 +423,49 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
               ),
             ],
 
+            // ── Excused – Credited time pickers ───────────────────────
+            // Shown only for credited so hours compute correctly.
+            // Pre-filled with 8 AM / 5 PM — admin can override either.
+            if (_isExcusedCredited) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _Label('Time In'),
+                        _TimePicker(
+                          time: _creditedTimeIn,
+                          placeholder: 'Set time in',
+                          onTap: _pickCreditedTimeIn,
+                          hasError: _error != null && _creditedTimeIn == null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _Label('Time Out'),
+                        _TimePicker(
+                          time: _creditedTimeOut,
+                          placeholder: 'Set time out',
+                          onTap: _pickCreditedTimeOut,
+                          hasError: _error != null && _creditedTimeOut == null,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 20),
 
-            // ── Time-out picker ───────────────────────────────────────
+            // ── Set Time-Out picker ───────────────────────────────────
             if (_selectedResolution == 'set_timeout') ...[
               const _Label('Corrected Time Out'),
               _TimePicker(
@@ -402,7 +477,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
               const SizedBox(height: 20),
             ],
 
-            // ── Adjusted time-in picker ───────────────────────────────
+            // ── Adjust Time-In picker ─────────────────────────────────
             if (_selectedResolution == 'adjust_timein') ...[
               const _Label('Corrected Time In'),
               _TimePicker(
@@ -412,6 +487,37 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                 hasError: _error != null && _adjustedTimeIn == null,
               ),
               const SizedBox(height: 20),
+            ],
+
+            // ── Inline error ──────────────────────────────────────────
+            if (_error != null) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded,
+                        size: 14, color: Colors.red.shade500),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
 
             // ── Action buttons ────────────────────────────────────────

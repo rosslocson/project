@@ -93,8 +93,7 @@ class AdminAttendanceService {
   //      but it caused confusion). The real fix is the correct list cast below.
   static Future<Map<String, dynamic>> fetchPendingReports() async {
     try {
-      final uri =
-          Uri.parse('${ApiService.baseUrl}/admin/attendance/reports');
+      final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance/reports');
       final res = await http.get(uri, headers: await ApiService.authHeaders());
 
       debugPrint('🔔 RAW STATUS: ${res.statusCode}');
@@ -127,6 +126,7 @@ class AdminAttendanceService {
     required String resolution,
     TimeOfDay? timeOut,
     TimeOfDay? adjustedTimeIn,
+    TimeOfDay? creditedTimeIn,
     String? note,
   }) async {
     try {
@@ -140,7 +140,11 @@ class AdminAttendanceService {
           'adjusted_time_in':
               '${adjustedTimeIn.hour.toString().padLeft(2, '0')}:${adjustedTimeIn.minute.toString().padLeft(2, '0')}',
       };
-
+      if (resolution == 'excused_credited') {
+        if (creditedTimeIn != null)
+          body['credited_time_in'] = _fmt(creditedTimeIn);
+        if (timeOut != null) body['time_out'] = _fmt(timeOut);
+      }
       final res = await http.post(
         Uri.parse('${ApiService.baseUrl}/admin/attendance/$recordId/resolve'),
         headers: await ApiService.authHeaders(),
@@ -151,6 +155,9 @@ class AdminAttendanceService {
       return {'ok': false, 'error': e.toString()};
     }
   }
+
+  static String _fmt(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   // ── Update admin remark ────────────────────────────────────────────────────
   // FIX: was sending 'admin_note' but the backend Go struct expects 'remark'.

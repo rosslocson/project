@@ -605,6 +605,7 @@ func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 		Resolution     string  `json:"resolution"`
 		TimeOut        *string `json:"time_out"`
 		AdjustedTimeIn *string `json:"adjusted_time_in"`
+		CreditedTimeIn *string `json:"credited_time_in"`
 		Note           *string `json:"note"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -666,13 +667,29 @@ func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 
 	case "excused_credited":
 		baseUpdates["status"] = "Excused – Credited"
-		// Inject full-day times so hours compute correctly (8h after lunch deduction).
-		// Only set if not already clocked in — preserves actual times when present.
-		if rec.TimeIn == nil {
+
+		// Use admin-supplied time-in if provided, otherwise fall back to 08:00
+		if body.CreditedTimeIn != nil {
+			t, err := parseAdminTime(rec.Date, *body.CreditedTimeIn, loc)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid credited_time_in"})
+				return
+			}
+			baseUpdates["time_in"] = &t
+		} else if rec.TimeIn == nil {
 			tIn, _ := parseAdminTime(rec.Date, "08:00", loc)
 			baseUpdates["time_in"] = &tIn
 		}
-		if rec.TimeOut == nil {
+
+		// Use admin-supplied time-out if provided, otherwise fall back to 17:00
+		if body.TimeOut != nil {
+			t, err := parseAdminTime(rec.Date, *body.TimeOut, loc)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Invalid time_out for credited excusal"})
+				return
+			}
+			baseUpdates["time_out"] = &t
+		} else if rec.TimeOut == nil {
 			tOut, _ := parseAdminTime(rec.Date, "17:00", loc)
 			baseUpdates["time_out"] = &tOut
 		}

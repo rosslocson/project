@@ -221,10 +221,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     };
   }
 
-  int get _activeFilterCount =>
-      (_searchCtrl.text.isNotEmpty ? 1 : 0) +
-      (_selectedStatus != 'All' ? 1 : 0);
-
   int get _pendingReportCount => _records.where((r) => r.hasOpenReport).length;
 
   void _clearAllFilters() {
@@ -411,11 +407,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       _loading
                           ? 'Loading…'
                           : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                      style:
-                          TextStyle(fontSize: 12, color: theme.mutedText),
+                      style: TextStyle(fontSize: 12, color: theme.mutedText),
                     ),
-                    if (!_loading &&
-                        _period != AttendancePeriod.allDates) ...[
+                    if (!_loading && _period != AttendancePeriod.allDates) ...[
                       Container(
                         width: 1,
                         height: 11,
@@ -456,16 +450,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 context,
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
-                  period:
-                      (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+                  period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
                   date: (isCustom && !_isRangeMode)
                       ? toApiDate(_customDate)
                       : null,
                   search: _searchCtrl.text.trim().isEmpty
                       ? null
                       : _searchCtrl.text.trim(),
-                  status:
-                      _selectedStatus == 'All' ? null : _selectedStatus,
+                  status: _selectedStatus == 'All' ? null : _selectedStatus,
                 ),
               );
             },
@@ -512,13 +504,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                       tooltip: 'Refresh',
                       onTap: () => _load(page: _page),
                     ),
-                    if (_activeFilterCount > 0) ...[
-                      const SizedBox(width: 10),
-                      ActiveFiltersBadge(
-                        count: _activeFilterCount,
-                        onClear: _clearAllFilters,
-                      ),
-                    ],
                   ],
                 ),
               ],
@@ -550,13 +535,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 tooltip: 'Refresh',
                 onTap: () => _load(page: _page),
               ),
-              if (_activeFilterCount > 0) ...[
-                const SizedBox(width: 10),
-                ActiveFiltersBadge(
-                  count: _activeFilterCount,
-                  onClear: _clearAllFilters,
-                ),
-              ],
             ],
           );
         },
@@ -658,8 +636,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               _load();
             },
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
                 color: const Color(0xFFB45309),
                 borderRadius: BorderRadius.circular(20),
@@ -717,8 +694,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               ),
               const SizedBox(height: 12),
               Text(_error!,
-                  style:
-                      TextStyle(color: Colors.red.shade600, fontSize: 13)),
+                  style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
               const SizedBox(height: 16),
               TextButton.icon(
                 onPressed: () => _load(page: _page),
