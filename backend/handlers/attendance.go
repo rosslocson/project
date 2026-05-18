@@ -36,6 +36,8 @@ const attendanceSelectWithHours = `
 	report_type,
 	resolution,
 	admin_note,
+	status,
+	is_absent,
 	` + attendanceHoursExpr + ` AS hours_rendered,
 	created_at,
 	updated_at
@@ -317,6 +319,11 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 			}
 			hours := computeHours(timeInStr, timeOutStr, key)
 
+			status := deriveStatus(timeInStr, timeOutStr, key)
+			if rec.Status != nil && *rec.Status != "" {
+				status = *rec.Status
+			}
+
 			result = append(result, HistoryRow{
 				ID:            rec.ID,
 				UserID:        rec.UserID,
@@ -324,7 +331,7 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 				TimeIn:        timeInStr,
 				TimeOut:       timeOutStr,
 				HoursRendered: hours,
-				Status:        deriveStatus(timeInStr, timeOutStr, key),
+				Status:        status,
 				IsReported:    rec.IsReported,
 				IsAbsent:      false,
 			})

@@ -161,6 +161,7 @@ type attendanceRaw struct {
 	TimeIn        *string  `gorm:"column:time_in"`
 	TimeOut       *string  `gorm:"column:time_out"`
 	HoursRendered *float64 `gorm:"column:hours_rendered"`
+	Status        *string  `gorm:"column:status"`
 	IsReported    bool     `gorm:"column:is_reported"`
 	ReportReason  string   `gorm:"column:report_reason"`
 	ReportType    string   `gorm:"column:report_type"`
@@ -168,9 +169,16 @@ type attendanceRaw struct {
 	AdminNote     *string  `gorm:"column:admin_note"`
 }
 
+// AFTER
 func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
 	out := make([]AdminAttendanceRow, 0, len(rows))
 	for _, r := range rows {
+		// Use the admin-persisted status (excused variants) when present;
+		// otherwise fall back to deriving it from clock-in/out times.
+		status := deriveStatus(r.TimeIn, r.TimeOut, r.Date)
+		if r.Status != nil && *r.Status != "" {
+			status = *r.Status
+		}
 		out = append(out, AdminAttendanceRow{
 			ID:            r.ID,
 			UserID:        r.UserID,
@@ -180,7 +188,7 @@ func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
 			TimeIn:        r.TimeIn,
 			TimeOut:       r.TimeOut,
 			HoursRendered: computeHours(r.TimeIn, r.TimeOut, r.Date),
-			Status:        deriveStatus(r.TimeIn, r.TimeOut, r.Date),
+			Status:        status,
 			IsReported:    r.IsReported,
 			ReportReason:  r.ReportReason,
 			ReportType:    r.ReportType,
@@ -195,37 +203,41 @@ func toResponseRows(rows []attendanceRaw) []AdminAttendanceRow {
 
 // internSelectMultiDate uses the cross-join spine of (users × date_series)
 // so every intern appears on every date, even with no attendance row.
+// internSelectMultiDate — add as the last selected column
 const internSelectMultiDate = `
-	COALESCE(a.id, 0)                                                                            AS id,
-	u.id                                                                                         AS user_id,
-	COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
-	COALESCE(u.avatar_url, '')                                                                   AS avatar_url,
-	TO_CHAR(d.day::date, 'YYYY-MM-DD')                                                          AS date,
-	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
-	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
-	NULL                                                                                         AS hours_rendered,
-	COALESCE(a.is_reported, false)                                                               AS is_reported,
-	COALESCE(a.report_reason, '')                                                                AS report_reason,
-	COALESCE(a.report_type, '')                                                                  AS report_type,
-	TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM')                 AS reported_at,
-	a.admin_note
+    COALESCE(a.id, 0)                                                                            AS id,
+    u.id                                                                                         AS user_id,
+    COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
+    COALESCE(u.avatar_url, '')                                                                   AS avatar_url,
+    TO_CHAR(d.day::date, 'YYYY-MM-DD')                                                          AS date,
+    TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
+    TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
+    NULL                                                                                         AS hours_rendered,
+    a.status,                                                                                    -- ← ADD
+    COALESCE(a.is_reported, false)                                                               AS is_reported,
+    COALESCE(a.report_reason, '')                                                                AS report_reason,
+    COALESCE(a.report_type, '')                                                                  AS report_type,
+    TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM')                 AS reported_at,
+    a.admin_note
 `
 
 // internSelectSingleDate is unchanged — users table is already the spine.
+// internSelectSingleDate — same addition
 const internSelectSingleDate = `
-	COALESCE(a.id, 0)                                                                            AS id,
-	u.id                                                                                         AS user_id,
-	COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
-	COALESCE(u.avatar_url, '')                                                                   AS avatar_url,
-	CAST(? AS TEXT)                                                                              AS date,
-	TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
-	TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
-	NULL                                                                                         AS hours_rendered,
-	COALESCE(a.is_reported, false)                                                               AS is_reported,
-	COALESCE(a.report_reason, '')                                                                AS report_reason,
-	COALESCE(a.report_type, '')                                                                  AS report_type,
-	TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM')                 AS reported_at,
-	a.admin_note
+    COALESCE(a.id, 0)                                                                            AS id,
+    u.id                                                                                         AS user_id,
+    COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unknown')               AS intern_name,
+    COALESCE(u.avatar_url, '')                                                                   AS avatar_url,
+    CAST(? AS TEXT)                                                                              AS date,
+    TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_in,
+    TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM')                  AS time_out,
+    NULL                                                                                         AS hours_rendered,
+    a.status,                                                                                    -- ← ADD
+    COALESCE(a.is_reported, false)                                                               AS is_reported,
+    COALESCE(a.report_reason, '')                                                                AS report_reason,
+    COALESCE(a.report_type, '')                                                                  AS report_type,
+    TO_CHAR(a.reported_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM')                 AS reported_at,
+    a.admin_note
 `
 
 // ── date range helper ─────────────────────────────────────────────────────────
@@ -650,7 +662,23 @@ func (h *Handler) ResolveAttendanceIssue(c *gin.Context) {
 		baseUpdates["time_in"] = &t
 
 	case "excuse", "no_action":
-		// no extra fields
+		// no status override needed
+
+	case "excused_credited":
+		baseUpdates["status"] = "Excused – Credited"
+		// Inject full-day times so hours compute correctly (8h after lunch deduction).
+		// Only set if not already clocked in — preserves actual times when present.
+		if rec.TimeIn == nil {
+			tIn, _ := parseAdminTime(rec.Date, "08:00", loc)
+			baseUpdates["time_in"] = &tIn
+		}
+		if rec.TimeOut == nil {
+			tOut, _ := parseAdminTime(rec.Date, "17:00", loc)
+			baseUpdates["time_out"] = &tOut
+		}
+
+	case "excused_uncredited":
+		baseUpdates["status"] = "Excused – Uncredited"
 
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Unknown resolution: " + body.Resolution})
@@ -694,16 +722,6 @@ func parseAdminTime(recordDate time.Time, hhmm string, loc *time.Location) (time
 // ── GET /api/admin/attendance/reports ────────────────────────────────────────
 
 func (h *Handler) GetPendingReports(c *gin.Context) {
-	var rows []attendanceRaw
-
-	h.DB.Table("attendance a").
-		Select(internSelectMultiDate).
-		Joins("CROSS JOIN (SELECT generate_series(?::date, ?::date, '1 day'::interval)::date AS day) d",
-			"1970-01-01", time.Now().Format("2006-01-02")).
-		Joins("LEFT JOIN users u ON u.id = a.user_id").
-		Where("a.is_reported = true AND a.resolution IS NULL").
-		Order("a.date DESC").
-		Scan(&rows)
 
 	// Simpler — pending reports always have an actual attendance row,
 	// so the original query is fine here.
@@ -718,6 +736,7 @@ func (h *Handler) GetPendingReports(c *gin.Context) {
 			TO_CHAR(a.time_in::timestamptz  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
 			TO_CHAR(a.time_out::timestamptz AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out,
 			NULL AS hours_rendered,
+			a.status,       
 			COALESCE(a.is_reported, false) AS is_reported,
 			COALESCE(a.report_reason, '') AS report_reason,
 			COALESCE(a.report_type, '') AS report_type,

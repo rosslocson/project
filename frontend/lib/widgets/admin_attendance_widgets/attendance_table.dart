@@ -57,8 +57,7 @@ class AttendanceTable extends StatelessWidget {
         };
 
         return ScrollConfiguration(
-          behavior:
-              ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const ClampingScrollPhysics(),
@@ -115,8 +114,7 @@ class AttendanceTable extends StatelessWidget {
     );
   }
 
-  TableRow _buildRow(
-      BuildContext context, AdminAttendanceRecord r, int index) {
+  TableRow _buildRow(BuildContext context, AdminAttendanceRecord r, int index) {
     final theme = context.internTheme;
 
     return TableRow(
@@ -157,14 +155,11 @@ class AttendanceTable extends StatelessWidget {
                   try {
                     final raw = r.timeIn!.trim().toUpperCase();
                     final isPm = raw.endsWith('PM');
-                    final digits = raw
-                        .replaceAll('AM', '')
-                        .replaceAll('PM', '')
-                        .trim();
+                    final digits =
+                        raw.replaceAll('AM', '').replaceAll('PM', '').trim();
                     final parts = digits.split(':');
                     int hour = int.parse(parts[0]);
-                    final minute =
-                        parts.length > 1 ? int.parse(parts[1]) : 0;
+                    final minute = parts.length > 1 ? int.parse(parts[1]) : 0;
                     if (isPm && hour != 12) hour += 12;
                     if (!isPm && hour == 12) hour = 0;
                     isLate = hour > 8 || (hour == 8 && minute >= 15);
@@ -191,9 +186,7 @@ class AttendanceTable extends StatelessWidget {
                           r.timeIn!,
                           style: TextStyle(
                             fontSize: 13,
-                            color: isLate
-                                ? const Color(0xFFDC2626)
-                                : kTextMid,
+                            color: isLate ? const Color(0xFFDC2626) : kTextMid,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -508,6 +501,7 @@ class _ActionCell extends StatelessWidget {
     final theme = context.internTheme;
     final r = record;
 
+    // ── Admin branch ──────────────────────────────────────────────────────
     if (isAdmin) {
       if (!r.hasOpenReport) return const SizedBox.shrink();
       return Padding(
@@ -544,14 +538,20 @@ class _ActionCell extends StatelessWidget {
       );
     }
 
+    // ── Intern branch ─────────────────────────────────────────────────────
     if (!r.isReportable) return const SizedBox.shrink();
+
+    // Excused records are already resolved — nothing left to dispute.
+    final isExcused = r.status == 'Excused – Credited' ||
+                      r.status == 'Excused – Uncredited';
+    if (isExcused) return const SizedBox.shrink();
 
     final alreadyReported = r.isReported;
     final String reportHint = switch (r.status) {
-      'Absent' => 'Dispute absence',
-      'Late' => 'Dispute late mark',
-      'Missed Clock Out' => 'Report missed clock-out',
-      _ => 'Report an issue',
+      'Absent'            => 'Dispute absence',
+      'Late'              => 'Dispute late mark',
+      'Missed Clock Out'  => 'Report missed clock-out',
+      _                   => 'Report an issue',
     };
 
     return Padding(
@@ -569,9 +569,7 @@ class _ActionCell extends StatelessWidget {
           child: Icon(
             alreadyReported ? Icons.flag : Icons.flag_outlined,
             size: 20,
-            color: alreadyReported
-                ? const Color(0xFFF59E0B)
-                : theme.mutedText,
+            color: alreadyReported ? const Color(0xFFF59E0B) : theme.mutedText,
           ),
         ),
       ),
@@ -635,6 +633,28 @@ class StatusBadge extends StatelessWidget {
               const Color(0xFFEA580C),
               const Color(0xFFC2410C),
               const Color(0xFFFFF7ED),
+            ),
+      'Excused – Credited' => isDark
+          ? (
+              const Color(0xFF34D399),
+              const Color(0xFF34D399),
+              const Color(0xFF34D399).withValues(alpha: 0.12),
+            )
+          : (
+              const Color(0xFF059669),
+              const Color(0xFF047857),
+              const Color(0xFFECFDF5),
+            ),
+      'Excused – Uncredited' => isDark
+          ? (
+              const Color(0xFFA78BFA),
+              const Color(0xFFA78BFA),
+              const Color(0xFFA78BFA).withValues(alpha: 0.12),
+            )
+          : (
+              const Color(0xFF7C3AED),
+              const Color(0xFF6D28D9),
+              const Color(0xFFF5F3FF),
             ),
       _ => isDark
           ? (
@@ -762,9 +782,8 @@ class _InternAvatarState extends State<InternAvatar> {
           : Text(
               _initials,
               style: TextStyle(
-                color: isDark
-                    ? const Color(0xFF93C5FD)
-                    : const Color(0xFF5B9BD5),
+                color:
+                    isDark ? const Color(0xFF93C5FD) : const Color(0xFF5B9BD5),
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
