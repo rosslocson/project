@@ -110,7 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     setState(() {
       if (score <= 2) {
         _passStrength = 'Weak';
-        _passColor = const Color(0xFF00022E);
+        _passColor = const Color.fromARGB(255, 86, 91, 190);
         _passValue = 0.25;
       } else if (score == 3) {
         _passStrength = 'Fair';
