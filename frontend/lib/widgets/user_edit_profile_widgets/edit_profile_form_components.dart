@@ -118,7 +118,10 @@ class CustomTextField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-              color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
+              color: context.isDarkInternTheme
+                  ? const Color(0xFF7367F0)
+                  : kCrimsonDeep.withValues(alpha: 0.8),
+              width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -183,7 +186,10 @@ class CustomDropdown extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-              color: kCrimsonDeep.withValues(alpha: 0.8), width: 1.5),
+              color: context.isDarkInternTheme
+                  ? const Color(0xFF7367F0)
+                  : kCrimsonDeep.withValues(alpha: 0.8),
+              width: 1.5),
         ),
       ),
       hint: Text(hint,
