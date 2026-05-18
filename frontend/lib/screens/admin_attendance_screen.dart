@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -18,13 +19,12 @@ import '../widgets/admin_attendance_widgets/attendance_filters.dart';
 import '../widgets/admin_attendance_widgets/attendance_table.dart';
 import '../widgets/admin_attendance_widgets/attendance_ui_components.dart';
 import '../widgets/admin_attendance_widgets/custom_date_picker_dialog.dart';
-import '../widgets/admin_attendance_widgets/pending_bell.dart'; // Added Import!
+import '../widgets/admin_attendance_widgets/pending_bell.dart';
 import '../widgets/app_theme.dart';
 import '../widgets/app_background.dart';
 import 'export_attendance.dart';
 import 'admin_glass_topbar.dart' as admin_topbar;
 
-// Re-export HamburgerIcon so other attendance files can reuse it from one place.
 export '../widgets/admin_attendance_widgets/attendance_table.dart'
     show HamburgerIcon;
 
@@ -102,6 +102,25 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final isAllDates = _period == AttendancePeriod.allDates;
     final isCustom = _period == AttendancePeriod.custom;
 
+    // ── DEBUG: log what we're sending to the API ──────────────────────────
+    debugPrint('═══════════════════════════════════════');
+    debugPrint('[AttendanceLoad] period: $_period');
+    debugPrint(
+        '[AttendanceLoad] isAllDates: $isAllDates | isCustom: $isCustom');
+    debugPrint('[AttendanceLoad] status filter: $_selectedStatus');
+    debugPrint('[AttendanceLoad] search: "${_searchCtrl.text.trim()}"');
+    debugPrint('[AttendanceLoad] page: $page | limit: $_limit');
+    if (isCustom) {
+      debugPrint('[AttendanceLoad] isRangeMode: $_isRangeMode');
+      if (_isRangeMode) {
+        debugPrint(
+            '[AttendanceLoad] dateFrom: ${toApiDate(_customRangeStart)} | dateTo: ${toApiDate(_customRangeEnd)}');
+      } else {
+        debugPrint('[AttendanceLoad] date: ${toApiDate(_customDate)}');
+      }
+    }
+    debugPrint('───────────────────────────────────────');
+
     final result = await AdminAttendanceService.fetchAttendance(
       allDates: isAllDates,
       period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
@@ -118,12 +137,40 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     if (!mounted) return;
 
     if (result['ok'] == true) {
+      final all = result['records'] as List<AdminAttendanceRecord>;
+      final absents = all.where((r) => r.status == 'Absent').toList();
+      final present = all.where((r) => r.status != 'Absent').toList();
+      final total = result['total'] as int;
+
+      // ── DEBUG: log what came back ───────────────────────────────────────
+      debugPrint('[AttendanceLoad] ✅ Success — total from server: $total');
+      debugPrint('[AttendanceLoad] Records in this page: ${all.length}');
+      debugPrint('[AttendanceLoad] → Present/clocked-in: ${present.length}');
+      debugPrint(
+          '[AttendanceLoad] → Absent (isAbsent==true): ${absents.length}');
+      if (absents.isNotEmpty) {
+        debugPrint('[AttendanceLoad] First absent record:');
+        debugPrint('    id=${absents.first.id}');
+        debugPrint('    date=${absents.first.date}');
+        debugPrint('    timeIn=${absents.first.timeIn}');
+        debugPrint('    timeOut=${absents.first.timeOut}');
+        debugPrint('    status=${absents.first.status}');
+      } else {
+        debugPrint(
+            '[AttendanceLoad] ⚠️  NO absent records in this page — backend is not returning them');
+      }
+      debugPrint('═══════════════════════════════════════');
+
       setState(() {
-        _records = result['records'] as List<AdminAttendanceRecord>;
-        _total = result['total'] as int;
+        _records = all;
+        _total = total;
         _loading = false;
       });
     } else {
+      // ── DEBUG: log error ────────────────────────────────────────────────
+      debugPrint('[AttendanceLoad] ❌ Error: ${result['error']}');
+      debugPrint('═══════════════════════════════════════');
+
       setState(() {
         _error = result['error'] as String?;
         _loading = false;
@@ -220,10 +267,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 children: [
                   _buildTopBar(),
                   Expanded(
-                    // ── Scrollbar wraps the SingleChildScrollView, effectively putting it at the absolute edge ──
                     child: Scrollbar(
                       controller: _scrollController,
-                      thumbVisibility: false, // Changed to false so it disappears when not scrolling
+                      thumbVisibility: false,
                       thickness: 8,
                       radius: const Radius.circular(8),
                       child: SingleChildScrollView(
@@ -265,7 +311,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final isDark = context.isDarkInternTheme;
 
     return Padding(
-      // The horizontal padding keeps the card away from the screen edge, but the Scrollbar remains at the edge!
       padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
       child: Container(
         decoration: BoxDecoration(
@@ -297,7 +342,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   height: 1,
                   thickness: 1,
                   color: theme.border.withValues(alpha: 0.15)),
-              _buildBody(), 
+              _buildBody(),
               if (_total > _limit) _buildPagination(),
             ],
           ),
@@ -306,7 +351,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── Card header — contains title, record count, bell, and export button ───
+  // ── Card header ───────────────────────────────────────────────────────────
 
   Widget _buildCardHeader() {
     final theme = context.internTheme;
@@ -500,7 +545,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  // ── Pending-reports banner (inline, above table) ──────────────────────────
+  // ── Pending-reports banner ────────────────────────────────────────────────
 
   Widget _buildPendingBanner() {
     final count = _pendingReportCount;
@@ -662,10 +707,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Enforce a minimum width so the "ADMIN NOTE" column is never squeezed tightly
-        final tableWidth = constraints.maxWidth > 1200 ? constraints.maxWidth : 1200.0;
+        final tableWidth =
+            constraints.maxWidth > 1200 ? constraints.maxWidth : 1200.0;
 
-        // No vertical SingleChildScrollView here. Scrolling is natively handled by the parent wrapper!
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: SizedBox(
