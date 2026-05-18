@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
-
 import '../services/api_service.dart';
-
 import '../widgets/admin_sidebar.dart';
 import 'admin_glass_topbar.dart' as admin_topbar;
 import '../widgets/app_theme.dart';
@@ -28,10 +26,25 @@ class _ConfigScreenState extends State<ConfigScreen>
   List<dynamic> _departments = [];
   bool _loadingDept = true;
 
+  static const double _kMobileBreak  = 600;
+  static const double _kTabletBreak  = 1024;
+  static const double _kSidebarWidth = 250;
+
   @override
   void initState() {
     super.initState();
     _loadDepartments();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final width = MediaQuery.of(context).size.width;
+    if (width < _kMobileBreak && _isSidebarOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _isSidebarOpen = false);
+      });
+    }
   }
 
   Future<void> _loadDepartments() async {
@@ -59,11 +72,8 @@ class _ConfigScreenState extends State<ConfigScreen>
       context: context,
       builder: (ctx) => EditDepartmentDialog(currentName: currentName),
     );
-
     if (saved == null || saved == currentName) return;
-
     final res = await ApiService.updateDepartment(id, saved);
-
     if (res['ok'] == true) {
       await _loadDepartments();
       if (mounted) _showSuccess('"$saved" updated.');
@@ -77,11 +87,8 @@ class _ConfigScreenState extends State<ConfigScreen>
       context: context,
       builder: (ctx) => DeleteDepartmentDialog(name: name),
     );
-
     if (confirmed != true) return;
-
     final res = await ApiService.deleteDepartment(id);
-
     if (res['ok'] == true) {
       await _loadDepartments();
       if (mounted) _showSuccess('"$name" deleted.');
@@ -109,85 +116,146 @@ class _ConfigScreenState extends State<ConfigScreen>
     ));
   }
 
+  EdgeInsets _cardPadding(double width) {
+    if (width < _kMobileBreak)  return const EdgeInsets.symmetric(horizontal: 12);
+    if (width < _kTabletBreak)  return const EdgeInsets.symmetric(horizontal: 32);
+    return const EdgeInsets.symmetric(horizontal: 100);
+  }
+
+  bool _useDrawer(double width) => width < _kTabletBreak;
+
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDarkInternTheme;
-    final theme = context.internTheme;
+    final isDark    = context.isDarkInternTheme;
+    final theme     = context.internTheme;
+    final width     = MediaQuery.of(context).size.width;
+    final useDrawer = _useDrawer(width);
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            width: _isSidebarOpen ? 250 : 0,
-            child: _isSidebarOpen
-                ? AdminSidebar(
-                    currentRoute: '/config',
-                    onClose: () => setState(() => _isSidebarOpen = false),
-                  )
-                : null,
-          ),
-          Expanded(
-            child: AppBackground(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    height: 72,
-                    child: admin_topbar.GlassTopBar(
-                      isSidebarOpen: _isSidebarOpen,
-                      onToggleSidebar: () =>
-                          setState(() => _isSidebarOpen = true),
-                      user: context.read<AuthProvider>().user,
-                      isAdmin: true,
-                      title: 'Departments',
-                      showWelcome: false,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 100, right: 100, bottom: 28),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color:
-                              isDark ? theme.surface : theme.sidebarBackground,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: isDark
-                              ? []
-                              : [
-                                  BoxShadow(
-                                    color: theme.shadowColor,
-                                    blurRadius: 24,
-                                    spreadRadius: 2,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: DepartmentListContent(
-                            loading: _loadingDept,
-                            items: _departments,
-                            searchHint: 'Search departments...',
-                            onAdd: _addDepartment,
-                            onEdit: (id, name) =>
-                                _editItem(id: id, currentName: name),
-                            onDelete: (id, name) =>
-                                _deleteItem(id: id, name: name),
-                          ),
+
+      drawer: useDrawer
+          ? Drawer(
+              width: _kSidebarWidth,
+              child: AdminSidebar(
+                currentRoute: '/config',
+                onClose: () => Navigator.of(context).pop(),
+              ),
+            )
+          : null,
+
+      // ─────────────────────────────────────────────────────────────────
+      // FIX: wrap in Builder so scaffoldContext is a child of Scaffold.
+      // Without this, Scaffold.of(context) throws because `context` here
+      // is the parent of the Scaffold, not inside it.
+      // ─────────────────────────────────────────────────────────────────
+      body: Builder(
+        builder: (scaffoldContext) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Desktop: permanent push sidebar ───────────────────────
+              if (!useDrawer)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  width: _isSidebarOpen ? _kSidebarWidth : 0,
+                  // ClipRect + OverflowBox: sidebar content stays at full
+                  // width internally but is clipped to the animated width,
+                  // preventing paint overflow during the collapse animation.
+                  child: ClipRect(
+                    child: OverflowBox(
+                      alignment: Alignment.centerLeft,
+                      maxWidth: _kSidebarWidth,
+                      child: SizedBox(
+                        width: _kSidebarWidth,
+                        child: AdminSidebar(
+                          currentRoute: '/config',
+                          onClose: () =>
+                              setState(() => _isSidebarOpen = false),
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
+
+              // ── Main content area ─────────────────────────────────────
+              Expanded(
+                child: AppBackground(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Top bar ────────────────────────────────────────
+                      SizedBox(
+                        height: 72,
+                        child: admin_topbar.GlassTopBar(
+                          isSidebarOpen: _isSidebarOpen,
+                          onToggleSidebar: () {
+                            if (useDrawer) {
+                              // FIX: scaffoldContext (from Builder) is
+                              // below the Scaffold, so Scaffold.of() works.
+                              Scaffold.of(scaffoldContext).openDrawer();
+                            } else {
+                              setState(
+                                  () => _isSidebarOpen = !_isSidebarOpen);
+                            }
+                          },
+                          user: context.read<AuthProvider>().user,
+                          isAdmin: true,
+                          title: 'Departments',
+                          showWelcome: false,
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // ── Department card ────────────────────────────────
+                      Expanded(
+                        child: Padding(
+                          padding:
+                              _cardPadding(width).copyWith(bottom: 28),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? theme.surface
+                                  : theme.sidebarBackground,
+                              borderRadius: BorderRadius.circular(
+                                  width < _kMobileBreak ? 12 : 24),
+                              boxShadow: isDark
+                                  ? []
+                                  : [
+                                      BoxShadow(
+                                        color: theme.shadowColor,
+                                        blurRadius: 24,
+                                        spreadRadius: 2,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                  width < _kMobileBreak ? 12 : 24),
+                              child: DepartmentListContent(
+                                loading: _loadingDept,
+                                items: _departments,
+                                searchHint: 'Search departments...',
+                                onAdd: _addDepartment,
+                                onEdit: (id, name) =>
+                                    _editItem(id: id, currentName: name),
+                                onDelete: (id, name) =>
+                                    _deleteItem(id: id, name: name),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
