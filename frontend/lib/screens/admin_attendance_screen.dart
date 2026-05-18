@@ -102,7 +102,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final isAllDates = _period == AttendancePeriod.allDates;
     final isCustom = _period == AttendancePeriod.custom;
 
-    // ── DEBUG: log what we're sending to the API ──────────────────────────
     debugPrint('═══════════════════════════════════════');
     debugPrint('[AttendanceLoad] period: $_period');
     debugPrint(
@@ -142,7 +141,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       final present = all.where((r) => r.status != 'Absent').toList();
       final total = result['total'] as int;
 
-      // ── DEBUG: log what came back ───────────────────────────────────────
       debugPrint('[AttendanceLoad] ✅ Success — total from server: $total');
       debugPrint('[AttendanceLoad] Records in this page: ${all.length}');
       debugPrint('[AttendanceLoad] → Present/clocked-in: ${present.length}');
@@ -167,7 +165,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         _loading = false;
       });
     } else {
-      // ── DEBUG: log error ────────────────────────────────────────────────
       debugPrint('[AttendanceLoad] ❌ Error: ${result['error']}');
       debugPrint('═══════════════════════════════════════');
 
@@ -178,7 +175,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     }
   }
 
-  /// Called after any report is resolved (from table row OR bell panel).
   void _onReportResolved() {
     _load(page: _page);
     _bellKey.currentState?.reload();
@@ -238,6 +234,16 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     _searchCtrl.clear();
     setState(() => _selectedStatus = 'All');
     _load();
+  }
+
+  // ── Responsive helpers ────────────────────────────────────────────────────
+
+  /// Horizontal card padding — shrinks on narrow viewports.
+  double _cardPadding(double width) {
+    if (width >= 1400) return 100;
+    if (width >= 900) return 40;
+    if (width >= 600) return 20;
+    return 12;
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -310,44 +316,50 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? theme.surface : theme.sidebarBackground,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: isDark
-              ? []
-              : [
-                  BoxShadow(
-                    color: theme.shadowColor,
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 8),
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final hPad = _cardPadding(constraints.maxWidth);
+        return Padding(
+          padding:
+              EdgeInsets.only(left: hPad, right: hPad, bottom: 28),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? theme.surface : theme.sidebarBackground,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: isDark
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: theme.shadowColor,
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildCardHeader(),
+                  _buildToolbar(),
+                  _buildPeriodRow(),
+                  if (!_loading && _pendingReportCount > 0) _buildPendingBanner(),
+                  if (!_loading && _pendingReportCount > 0)
+                    const SizedBox(height: 12),
+                  Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: theme.border.withValues(alpha: 0.15)),
+                  _buildBody(),
+                  if (_total > _limit) _buildPagination(),
                 ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildCardHeader(),
-              _buildToolbar(),
-              _buildPeriodRow(),
-              if (!_loading && _pendingReportCount > 0) _buildPendingBanner(),
-              if (!_loading && _pendingReportCount > 0)
-                const SizedBox(height: 12),
-              Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: theme.border.withValues(alpha: 0.15)),
-              _buildBody(),
-              if (_total > _limit) _buildPagination(),
-            ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -382,6 +394,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 color: Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
+          // ── Title + subtitle — takes all available space ──────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,33 +409,40 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Row(
+                // Wrap so date label can drop to next line if needed
+                Wrap(
+                  spacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       _loading
                           ? 'Loading…'
                           : '$_total ${_total == 1 ? 'record' : 'records'} found',
-                      style: TextStyle(fontSize: 12, color: theme.mutedText),
+                      style:
+                          TextStyle(fontSize: 12, color: theme.mutedText),
                     ),
-                    if (!_loading && _period != AttendancePeriod.allDates) ...[
-                      const SizedBox(width: 8),
+                    if (!_loading &&
+                        _period != AttendancePeriod.allDates) ...[
                       Container(
                         width: 1,
                         height: 11,
                         color: theme.border.withValues(alpha: 0.15),
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
                       ),
-                      const SizedBox(width: 6),
-                      Icon(Icons.calendar_today_rounded,
-                          size: 11, color: theme.mutedText),
-                      const SizedBox(width: 4),
-                      Text(
-                        _activeDateRangeLabel,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.mutedText,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.calendar_today_rounded,
+                              size: 11, color: theme.mutedText),
+                          const SizedBox(width: 4),
+                          Text(
+                            _activeDateRangeLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.mutedText,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
@@ -430,6 +450,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               ],
             ),
           ),
+          // ── Actions — fixed-size, will not squish the title ───────────
           PendingBell(
             key: _bellKey,
             onResolved: _onReportResolved,
@@ -443,14 +464,16 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 context,
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
-                  period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+                  period:
+                      (!isAllDates && !isCustom) ? _period.apiPeriod : null,
                   date: (isCustom && !_isRangeMode)
                       ? toApiDate(_customDate)
                       : null,
                   search: _searchCtrl.text.trim().isEmpty
                       ? null
                       : _searchCtrl.text.trim(),
-                  status: _selectedStatus == 'All' ? null : _selectedStatus,
+                  status:
+                      _selectedStatus == 'All' ? null : _selectedStatus,
                 ),
               );
             },
@@ -465,39 +488,88 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   Widget _buildToolbar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 18, 28, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: AttendanceSearchField(
-              controller: _searchCtrl,
-              onClear: () {
-                _searchCtrl.clear();
-                _load();
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          AttendanceStatusDropdown(
-            value: _selectedStatus,
-            onChanged: (v) {
-              setState(() => _selectedStatus = v ?? 'All');
-              _load();
-            },
-          ),
-          const SizedBox(width: 10),
-          IconActionButton(
-            icon: Icons.refresh_rounded,
-            tooltip: 'Refresh',
-            onTap: () => _load(page: _page),
-          ),
-          if (_activeFilterCount > 0) ...[
-            const SizedBox(width: 10),
-            ActiveFiltersBadge(
-              count: _activeFilterCount,
-              onClear: _clearAllFilters,
-            ),
-          ],
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 500;
+          if (isNarrow) {
+            // Stack search on top, controls below
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AttendanceSearchField(
+                  controller: _searchCtrl,
+                  onClear: () {
+                    _searchCtrl.clear();
+                    _load();
+                  },
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AttendanceStatusDropdown(
+                        value: _selectedStatus,
+                        onChanged: (v) {
+                          setState(() => _selectedStatus = v ?? 'All');
+                          _load();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconActionButton(
+                      icon: Icons.refresh_rounded,
+                      tooltip: 'Refresh',
+                      onTap: () => _load(page: _page),
+                    ),
+                    if (_activeFilterCount > 0) ...[
+                      const SizedBox(width: 10),
+                      ActiveFiltersBadge(
+                        count: _activeFilterCount,
+                        onClear: _clearAllFilters,
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            );
+          }
+
+          // Wide layout — single row
+          return Row(
+            children: [
+              Expanded(
+                child: AttendanceSearchField(
+                  controller: _searchCtrl,
+                  onClear: () {
+                    _searchCtrl.clear();
+                    _load();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              AttendanceStatusDropdown(
+                value: _selectedStatus,
+                onChanged: (v) {
+                  setState(() => _selectedStatus = v ?? 'All');
+                  _load();
+                },
+              ),
+              const SizedBox(width: 10),
+              IconActionButton(
+                icon: Icons.refresh_rounded,
+                tooltip: 'Refresh',
+                onTap: () => _load(page: _page),
+              ),
+              if (_activeFilterCount > 0) ...[
+                const SizedBox(width: 10),
+                ActiveFiltersBadge(
+                  count: _activeFilterCount,
+                  onClear: _clearAllFilters,
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -521,18 +593,18 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 4, 28, 16),
-      child: Row(
+      // Wrap replaces Row — chips flow to next line instead of overflowing
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
-          ...fixedPeriods.map((p) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: PeriodChip(
-                  label: p.label,
-                  selected: _period == p,
-                  onTap: () {
-                    setState(() => _period = p);
-                    _load();
-                  },
-                ),
+          ...fixedPeriods.map((p) => PeriodChip(
+                label: p.label,
+                selected: _period == p,
+                onTap: () {
+                  setState(() => _period = p);
+                  _load();
+                },
               )),
           PeriodChip(
             label: customLabel,
@@ -558,6 +630,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(6),
@@ -590,13 +663,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             ),
           ),
           const SizedBox(width: 12),
+          // "Show Flagged" button — shrink-wraps, won't push out of bounds
           GestureDetector(
             onTap: () {
               setState(() => _selectedStatus = 'All');
               _load();
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
                 color: const Color(0xFFB45309),
                 borderRadius: BorderRadius.circular(20),
@@ -632,9 +707,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     if (_loading && _records.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 60),
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -656,7 +729,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               ),
               const SizedBox(height: 12),
               Text(_error!,
-                  style: TextStyle(color: Colors.red.shade600, fontSize: 13)),
+                  style: TextStyle(
+                      color: Colors.red.shade600, fontSize: 13)),
               const SizedBox(height: 16),
               TextButton.icon(
                 onPressed: () => _load(page: _page),
@@ -742,23 +816,21 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           top: BorderSide(color: theme.border.withValues(alpha: 0.15)),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+      child: Wrap(
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 4,
+        runSpacing: 8,
         children: [
           Text(
-            'Page $_page of $totalPages',
+            'Page $_page of $totalPages · $_total records total',
             style: TextStyle(
               color: theme.mutedText,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(width: 4),
-          Text(
-            '· $_total records total',
-            style: TextStyle(color: theme.mutedText, fontSize: 12),
-          ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           PageButton(
             icon: Icons.chevron_left_rounded,
             enabled: _page > 1,
