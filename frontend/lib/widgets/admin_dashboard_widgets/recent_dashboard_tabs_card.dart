@@ -84,10 +84,7 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                 ),
                 Text(
                   _subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theme.topbarMutedText,
-                  ),
+                  style: TextStyle(fontSize: 12, color: theme.topbarMutedText),
                 ),
               ],
             ),
@@ -101,64 +98,72 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
           ],
         ),
         const SizedBox(height: 16),
-        Container(
-          height: 550,
-          decoration: BoxDecoration(
-            color: isDark
-                ? theme.listBackground.withValues(alpha: 0.98)
-                : theme.sidebarBackground,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.border),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _SegmentedToggle(
-                    activeTab: _activeTab,
-                    onChanged: (tab) => setState(() => _activeTab = tab),
-                  ),
-                ),
+        // ✅ LayoutBuilder for responsive list height
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final listHeight = constraints.maxWidth < 600 ? 320.0 : 420.0;
+            return Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? theme.listBackground.withValues(alpha: 0.98)
+                    : theme.sidebarBackground,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.border),
               ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 260),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    final offsetAnimation = Tween<Offset>(
-                      begin: const Offset(0.02, 0),
-                      end: Offset.zero,
-                    ).animate(animation);
-
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: offsetAnimation,
-                        child: child,
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // ✅ shrink to content
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _SegmentedToggle(
+                        activeTab: _activeTab,
+                        onChanged: (tab) => setState(() => _activeTab = tab),
                       ),
-                    );
-                  },
-                  child: _activeTab == RecentDashboardTab.users
-                      ? _buildUsersList(
-                          key: ValueKey<String>('users-$safeCurrentPage'),
-                        )
-                      : _buildActivityTimeline(
-                          key: ValueKey<String>('activity-$safeCurrentPage'),
-                          logs: widget.activityLogs,
-                        ),
-                ),
+                    ),
+                  ),
+                  // ✅ SizedBox with responsive height instead of Expanded
+                  SizedBox(
+                    height: listHeight,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 260),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(0.02, 0),
+                          end: Offset.zero,
+                        ).animate(animation);
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: offsetAnimation,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _activeTab == RecentDashboardTab.users
+                          ? _buildUsersList(
+                              key: ValueKey<String>('users-$safeCurrentPage'),
+                            )
+                          : _buildActivityTimeline(
+                              key:
+                                  ValueKey<String>('activity-$safeCurrentPage'),
+                              logs: widget.activityLogs,
+                            ),
+                    ),
+                  ),
+                  PaginationFooter(
+                    currentPage: safeCurrentPage,
+                    totalPages: _totalPages,
+                    onPrev: () => _handlePageChange(safeCurrentPage - 1),
+                    onNext: () => _handlePageChange(safeCurrentPage + 1),
+                  ),
+                ],
               ),
-              PaginationFooter(
-                currentPage: safeCurrentPage,
-                totalPages: _totalPages,
-                onPrev: () => _handlePageChange(safeCurrentPage - 1),
-                onNext: () => _handlePageChange(safeCurrentPage + 1),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ],
     );
@@ -170,23 +175,17 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
     if (users.isEmpty) {
       return Center(
         key: key,
-        child: Text(
-          'No users yet',
-          style: TextStyle(color: theme.listText),
-        ),
+        child: Text('No users yet', style: TextStyle(color: theme.listText)),
       );
     }
 
     return ListView.separated(
       key: key,
       padding: EdgeInsets.zero,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: const ClampingScrollPhysics(), // ✅ changed from NeverScrollable
       itemCount: users.length,
-      separatorBuilder: (_, __) => Divider(
-        height: 1,
-        color: theme.border,
-        indent: 70,
-      ),
+      separatorBuilder: (_, __) =>
+          Divider(height: 1, color: theme.border, indent: 70),
       itemBuilder: (context, i) {
         final u = users[i];
         if (u == null || u is! Map<String, dynamic>) {
@@ -212,18 +211,12 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
             initials = '$firstInitial$lastInitial'.trim();
             if (initials.isEmpty) initials = 'U';
           } else if (name.isNotEmpty) {
-            final trimmedName = name.trim();
-            if (trimmedName.isNotEmpty) {
-              final parts = trimmedName.split(RegExp(r'\s+'));
-              initials = parts.length > 1
-                  ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
-                  : parts[0][0].toUpperCase();
-            }
+            final parts = name.trim().split(RegExp(r'\s+'));
+            initials = parts.length > 1
+                ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+                : parts[0][0].toUpperCase();
           } else if (email.isNotEmpty) {
-            final trimmedEmail = email.trim();
-            if (trimmedEmail.isNotEmpty) {
-              initials = trimmedEmail[0].toUpperCase();
-            }
+            initials = email.trim()[0].toUpperCase();
           }
         } catch (_) {
           initials = 'U';
@@ -270,9 +263,8 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                           ),
                         );
                       },
-                      errorBuilder: (context, error, stackTrace) {
-                        return _InitialsLabel(initials: initials);
-                      },
+                      errorBuilder: (context, error, stackTrace) =>
+                          _InitialsLabel(initials: initials),
                     ),
                   )
                 : _InitialsLabel(initials: initials),
@@ -333,17 +325,15 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
     if (logs.isEmpty) {
       return Center(
         key: key,
-        child: Text(
-          'No activity this week',
-          style: TextStyle(color: theme.listText),
-        ),
+        child: Text('No activity this week',
+            style: TextStyle(color: theme.listText)),
       );
     }
 
     return ListView.builder(
       key: key,
       padding: const EdgeInsets.only(top: 8),
-      physics: const NeverScrollableScrollPhysics(),
+      physics: const ClampingScrollPhysics(), // ✅ changed from NeverScrollable
       itemCount: logs.length,
       itemBuilder: (context, i) {
         final log = logs[i];
@@ -372,10 +362,7 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                         bottom: -16,
                         child: Container(width: 2, color: theme.border),
                       ),
-                    Positioned(
-                      top: 12,
-                      child: _actionIcon(action),
-                    ),
+                    Positioned(top: 12, child: _actionIcon(action)),
                   ],
                 ),
               ),
@@ -413,10 +400,8 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                       const SizedBox(height: 4),
                       Text(
                         userName.isEmpty ? 'System' : userName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.listMutedText,
-                        ),
+                        style:
+                            TextStyle(fontSize: 11, color: theme.listMutedText),
                       ),
                     ],
                   ),
@@ -445,13 +430,10 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
 
   String _formatAdminAction(String rawDetails) {
     if (rawDetails.isEmpty) return 'Unknown action';
-
     final clockIn = RegExp(r'^CLOCK_IN:(.+)$').firstMatch(rawDetails);
     if (clockIn != null) return 'Clocked in at ${clockIn.group(1)!.trim()}';
-
     final clockOut = RegExp(r'^CLOCK_OUT:(.+)$').firstMatch(rawDetails);
     if (clockOut != null) return 'Clocked out at ${clockOut.group(1)!.trim()}';
-
     final adminUpdatePattern = RegExp(
       r'^Admin updated user ([^\s]+) \(active=(true|false),\s*archived=(true|false)\)$',
     );
@@ -470,30 +452,23 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
         return 'Admin activated user $email';
       }
     }
-
     return _cleanDetails(rawDetails);
   }
 
   String _cleanDetails(String details) {
-    String cleaned = details.replaceAll(
-      RegExp(r'\s*\(active=true,\s*archived=false\)'),
-      '',
-    );
+    String cleaned =
+        details.replaceAll(RegExp(r'\s*\(active=true,\s*archived=false\)'), '');
     cleaned = cleaned.replaceAll(
-      RegExp(r'\s*\(active=false,\s*archived=false\)'),
-      ' (Account Deactivated)',
-    );
+        RegExp(r'\s*\(active=false,\s*archived=false\)'),
+        ' (Account Deactivated)');
     cleaned = cleaned.replaceAll(
-      RegExp(r'\s*\(active=false,\s*archived=true\)'),
-      ' (Account Archived)',
-    );
+        RegExp(r'\s*\(active=false,\s*archived=true\)'), ' (Account Archived)');
     return cleaned.trim();
   }
 
   Widget _actionIcon(String? action) {
     IconData icon;
     Color color;
-
     switch (action) {
       case 'CLOCK_IN':
         icon = Icons.login_rounded;
@@ -579,7 +554,6 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
         icon = Icons.info_outline;
         color = Colors.grey;
     }
-
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
@@ -671,10 +645,7 @@ class _SegmentButton extends StatelessWidget {
             ? const LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                colors: [
-                  Color(0xFF6366F1),
-                  Color(0xFF6366F1),
-                ],
+                colors: [Color(0xFF6366F1), Color(0xFF6366F1)],
               )
             : null,
         color: selected ? null : Colors.transparent,
@@ -740,4 +711,3 @@ class _InitialsLabel extends StatelessWidget {
     );
   }
 }
-

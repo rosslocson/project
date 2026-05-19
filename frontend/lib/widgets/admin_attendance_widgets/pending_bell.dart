@@ -109,7 +109,7 @@ class PendingBellState extends State<PendingBell>
     final count = _pending.length;
     final hasReports = count > 0;
 
-    // Navy in light mode, purple in dark mode
+    // Navy in light mode, purple in dark mode — matches Export button
     final idleColor =
         isDark ? const Color(0xFF6C63FF) : const Color(0xFF00022E);
 
@@ -129,10 +129,10 @@ class PendingBellState extends State<PendingBell>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: hasReports ? const Color(0xFFFFFBEB) : idleColor,
+              color: idleColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: hasReports ? const Color(0xFFFCD34D) : idleColor,
+                color: idleColor,
                 width: 1.5,
               ),
             ),
@@ -145,7 +145,7 @@ class PendingBellState extends State<PendingBell>
                       ? Icons.notifications_active_rounded
                       : Icons.notifications_outlined,
                   size: 20,
-                  color: hasReports ? const Color(0xFF92400E) : Colors.white,
+                  color: Colors.white,
                 ),
                 if (hasReports)
                   Positioned(
@@ -179,7 +179,6 @@ class PendingBellState extends State<PendingBell>
     );
   }
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // PendingPanel — draggable bottom sheet listing all pending reports.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -238,14 +237,15 @@ class _PendingPanelState extends State<PendingPanel> {
     final theme = context.internTheme;
     final isDark = context.isDarkInternTheme;
     final screenHeight = MediaQuery.of(context).size.height;
-    
+
     // Fallback constants if kSurface, kTextDark, kTextMid aren't globally defined in app_theme.dart
     final Color surfaceColor = theme.surface;
     final Color textDark = theme.surfaceText;
     final Color textMid = theme.mutedText;
 
     // Adjusted dynamic colors for the header action buttons
-    final Color actionBtnBg = isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF4F4F8);
+    final Color actionBtnBg =
+        isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF4F4F8);
     final Color actionBtnIconColor = isDark ? Colors.white70 : textMid;
 
     return Center(
@@ -328,7 +328,8 @@ class _PendingPanelState extends State<PendingPanel> {
                           color: actionBtnBg,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.close, size: 16, color: actionBtnIconColor),
+                        child: Icon(Icons.close,
+                            size: 16, color: actionBtnIconColor),
                       ),
                     ),
                   ],
@@ -415,10 +416,14 @@ class PendingTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF3B2F00).withOpacity(0.3) : const Color(0xFFFFFBEB),
+          color: isDark
+              ? const Color(0xFF3B2F00).withOpacity(0.3)
+              : const Color(0xFFFFFBEB),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDark ? const Color(0xFFF59E0B).withOpacity(0.5) : const Color(0xFFFCD34D),
+            color: isDark
+                ? const Color(0xFFF59E0B).withOpacity(0.5)
+                : const Color(0xFFFCD34D),
           ),
         ),
         child: Row(
@@ -461,14 +466,18 @@ class PendingTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF78350F).withOpacity(0.4) : const Color(0xFFFEF3C7),
+                        color: isDark
+                            ? const Color(0xFF78350F).withOpacity(0.4)
+                            : const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         record.reportReason!,
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E),
+                          color: isDark
+                              ? const Color(0xFFFCD34D)
+                              : const Color(0xFF92400E),
                           fontStyle: FontStyle.italic,
                         ),
                         maxLines: 2,

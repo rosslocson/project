@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import '../providers/sidebar_provider.dart'; // Removed
 
 class AppScaffold extends StatelessWidget {
   final String title;
@@ -8,6 +7,7 @@ class AppScaffold extends StatelessWidget {
   final Color? appBarColor;
   final bool showBackButton;
   final bool showAppBar;
+  final Widget? sidebar; // pass your sidebar widget here
 
   const AppScaffold({
     super.key,
@@ -17,56 +17,73 @@ class AppScaffold extends StatelessWidget {
     this.appBarColor,
     this.showBackButton = false,
     this.showAppBar = true,
+    this.sidebar,
   });
+
+  static const double _mobileBreakpoint = 768;
 
   @override
   Widget build(BuildContext context) {
-    // final sidebarProvider = context.watch<SidebarProvider>(); // Removed
-    
-    return Scaffold(
-      // drawer: Sidebar(currentRoute: currentRoute), // removed hamburger opens drawer
-      appBar: showAppBar
-          ? AppBar(
-              title: Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              leading: showAppBar
-                  ? IconButton(
-                      icon: const Icon(Icons.menu, color: Color(0xFF7B0D1E)),
-                      onPressed: () {}, // Sidebar removed
-                      tooltip: 'Toggle Menu',
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < _mobileBreakpoint;
+
+        return Scaffold(
+          // On mobile: sidebar becomes a drawer
+          drawer:
+              (isMobile && sidebar != null) ? Drawer(child: sidebar!) : null,
+
+          appBar: showAppBar
+              ? AppBar(
+                  title: Text(
+                    title,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
-                      ),
-                    )
-                  : null,
-              backgroundColor: appBarColor ?? Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              shadowColor: Colors.black26,
-              actions: actions,
-              automaticallyImplyLeading: showBackButton,
-            )
-          : null,
-      body: Row(
-        children: [
-          // Consistent animated sidebar overlay
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            width: 0.0, // Sidebar removed
-            child: const SizedBox(),
+                  ),
+                  leading: isMobile
+                      ? Builder(
+                          builder: (ctx) => IconButton(
+                            icon: const Icon(Icons.menu,
+                                color: Color(0xFF7B0D1E)),
+                            onPressed: () => Scaffold.of(ctx).openDrawer(),
+                            tooltip: 'Toggle Menu',
+                            style: IconButton.styleFrom(
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        )
+                      : showBackButton
+                          ? const BackButton()
+                          : null,
+                  backgroundColor:
+                      appBarColor ?? Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shadowColor: Colors.black26,
+                  actions: actions,
+                  automaticallyImplyLeading: showBackButton,
+                )
+              : null,
+
+          body: Row(
+            children: [
+              // On desktop: sidebar stays visible on the left
+              if (!isMobile && sidebar != null)
+                SizedBox(
+                  width: 240,
+                  child: sidebar!,
+                ),
+              // Main content fills remaining space
+              Expanded(child: child),
+            ],
           ),
-          Expanded(child: child),
-        ],
-      ),
+        );
+      },
     );
   }
 }
-
