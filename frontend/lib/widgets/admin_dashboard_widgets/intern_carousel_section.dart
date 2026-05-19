@@ -8,6 +8,7 @@ import '../../screens/intern_cards.dart';
 import '../../screens/intern_directory_screen.dart';
 import '../../screens/intern_cards/intern_ross_profile_page.dart';
 import '../../screens/intern_cards/intern_alex_profile_page.dart';
+import '../../screens/intern_cards/intern_airra_profile_page.dart';
 
 class InternCarouselSection extends StatefulWidget {
   final List<InternProfile> interns;
@@ -99,6 +100,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
         ? RosalynProfilePage(intern: intern)
         : intern.name == 'Alex Llanza'
             ? AlexProfilePage(intern: intern)
+            : intern.name == 'Airra Lorraine De Castro'
+            ? AirraProfilePage(intern: intern)  
             : InternDetailPage(intern: intern);
 
     Navigator.of(context)

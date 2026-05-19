@@ -372,6 +372,7 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 //   user_id     int     — filter to a single intern
 
 func (h *Handler) GetAdminAttendance(c *gin.Context) {
+
 	// ── pagination ──────────────────────────────────────────────────────────
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
@@ -401,10 +402,9 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			rangeEnd = today.AddDate(0, 0, 1)
 			useRange = true
 		case "week":
-			// Monday of current ISO week
 			weekday := int(now.Weekday())
 			if weekday == 0 {
-				weekday = 7 // Sunday → 7
+				weekday = 7
 			}
 			rangeStart = today.AddDate(0, 0, -(weekday - 1))
 			rangeEnd = rangeStart.AddDate(0, 0, 7)
@@ -418,7 +418,6 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			rangeEnd = rangeStart.AddDate(1, 0, 0)
 			useRange = true
 		default:
-			// Fall back to exact date if provided
 			if dateStr != "" {
 				parsed, err := time.Parse("2006-01-02", dateStr)
 				if err == nil {
@@ -428,6 +427,19 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 				}
 			}
 		}
+
+		// ← ADD THIS: cap rangeEnd so future dates are never included.
+		// Uses tomorrow because the query is `a.date < rangeEnd` (strict less-than),
+		// so tomorrow as the ceiling means today is the last included date.
+		if useRange {
+			tomorrow := today.AddDate(0, 0, 1)
+			if rangeEnd.After(tomorrow) {
+				rangeEnd = tomorrow
+			}
+		}
+
+		fmt.Printf("[DEBUG] allDates=%v useRange=%v rangeStart=%s rangeEnd=%s\n",
+			allDates, useRange, rangeStart.Format("2006-01-02"), rangeEnd.Format("2006-01-02"))
 	}
 
 	// ── optional filters ────────────────────────────────────────────────────
@@ -448,6 +460,212 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 	//   'Present'        — time_out set, time_in before 09:00
 	//   'Late'           — time_out set, time_in at/after 09:00
 	//   'Absent'         — no record (handled at application level or via generated series)
+
+	if allDates {
+		loc := manilaLoc()
+		nowLoc := time.Now().In(loc)
+		todayLocal := time.Date(nowLoc.Year(), nowLoc.Month(), nowLoc.Day(), 0, 0, 0, 0, loc)
+
+		// Fetch all interns (or just the one if user_id provided)
+		type InternMeta struct {
+			ID        int        `gorm:"column:id"`
+			FirstName string     `gorm:"column:first_name"`
+			LastName  string     `gorm:"column:last_name"`
+			AvatarURL string     `gorm:"column:avatar_url"`
+			StartDate *time.Time `gorm:"column:start_date"`
+		}
+
+		var interns []InternMeta
+		q := h.DB.Table("users").
+			Select("id, first_name, last_name, COALESCE(avatar_url, '') as avatar_url, start_date").
+			Where("role = 'user'")
+		if userIDStr != "" {
+			uid, err := strconv.Atoi(userIDStr)
+			if err == nil {
+				q = q.Where("id = ?", uid)
+			}
+		}
+		if search != "" {
+			q = q.Where("CONCAT(first_name, ' ', last_name) ILIKE ?", "%"+search+"%")
+		}
+		q.Find(&interns)
+
+		// ← ADD THIS temporarily
+		fmt.Printf("[DEBUG allDates] found %d interns\n", len(interns))
+		for _, intern := range interns {
+			fmt.Printf("[DEBUG allDates] intern id=%d name=%s %s start_date=%v\n",
+				intern.ID, intern.FirstName, intern.LastName, intern.StartDate)
+		}
+
+		if len(interns) == 0 {
+			c.JSON(http.StatusOK, gin.H{"ok": true, "records": []interface{}{}, "total": 0, "page": 1, "limit": limit})
+			return
+		}
+
+		// Collect all intern IDs
+		internIDs := make([]int, len(interns))
+		for i, intern := range interns {
+			internIDs[i] = intern.ID
+		}
+
+		// Fetch all real attendance rows for these interns
+		type RealRow struct {
+			ID            int      `gorm:"column:id"`
+			UserID        int      `gorm:"column:user_id"`
+			Date          string   `gorm:"column:date"`
+			TimeIn        *string  `gorm:"column:time_in"`
+			TimeOut       *string  `gorm:"column:time_out"`
+			HoursRendered *float64 `gorm:"column:hours_rendered"`
+			Status        string   `gorm:"column:status"`
+			IsReported    bool     `gorm:"column:is_reported"`
+			ReportReason  string   `gorm:"column:report_reason"`
+			ReportType    string   `gorm:"column:report_type"`
+			AdminNote     *string  `gorm:"column:admin_note"`
+		}
+
+		var realRows []RealRow
+		h.DB.Raw(`
+        SELECT
+            a.id,
+            a.user_id,
+            TO_CHAR(a.date, 'YYYY-MM-DD') AS date,
+            TO_CHAR(a.time_in,  'HH12:MI AM') AS time_in,
+            TO_CHAR(a.time_out, 'HH12:MI AM') AS time_out,
+            CASE
+                WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL
+                    THEN EXTRACT(EPOCH FROM (a.time_out - a.time_in)) / 3600.0
+                ELSE NULL
+            END AS hours_rendered,
+            CASE
+                WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date = CURRENT_DATE THEN 'On Shift'
+                WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date < CURRENT_DATE THEN 'Missed Clock Out'
+                WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) < 9           THEN 'Present'
+                WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) >= 9          THEN 'Late'
+                ELSE 'Absent'
+            END AS status,
+            a.is_reported,
+            COALESCE(a.report_reason, '') AS report_reason,
+            COALESCE(a.report_type,  '') AS report_type,
+            a.admin_note
+        FROM attendance a
+        WHERE a.user_id = ANY(?)
+        ORDER BY a.user_id, a.date ASC
+    `, internIDs).Scan(&realRows)
+
+		// Build (userID, date) → row lookup
+		type rowKey struct {
+			UserID int
+			Date   string
+		}
+		byKey := make(map[rowKey]*RealRow, len(realRows))
+		for i := range realRows {
+			byKey[rowKey{realRows[i].UserID, realRows[i].Date}] = &realRows[i]
+		}
+
+		// Build intern metadata lookup
+		internMap := make(map[int]*InternMeta, len(interns))
+		for i := range interns {
+			internMap[interns[i].ID] = &interns[i]
+		}
+
+		type WalkRow struct {
+			ID            int      `json:"id"`
+			UserID        int      `json:"user_id"`
+			InternName    string   `json:"intern_name"`
+			AvatarURL     string   `json:"avatar_url"`
+			Date          string   `json:"date"`
+			TimeIn        *string  `json:"time_in"`
+			TimeOut       *string  `json:"time_out"`
+			HoursRendered *float64 `json:"hours_rendered"`
+			Status        string   `json:"status"`
+			IsReported    bool     `json:"is_reported"`
+			ReportReason  string   `json:"report_reason"`
+			ReportType    string   `json:"report_type"`
+			AdminNote     *string  `json:"admin_note"`
+		}
+
+		var walked []WalkRow
+
+		for _, intern := range interns {
+			var walkStart time.Time
+			if intern.StartDate != nil {
+				walkStart = time.Date(intern.StartDate.Year(), intern.StartDate.Month(), intern.StartDate.Day(), 0, 0, 0, 0, loc)
+			}
+			if walkStart.IsZero() {
+				// No start_date — skip intern unless they have real records
+				continue
+			}
+
+			internName := intern.FirstName + " " + intern.LastName
+
+			for cursor := walkStart; !cursor.After(todayLocal); cursor = cursor.AddDate(0, 0, 1) {
+				wd := cursor.Weekday()
+				if wd == time.Saturday || wd == time.Sunday {
+					continue
+				}
+				key := cursor.Format("2006-01-02")
+				rk := rowKey{intern.ID, key}
+
+				if rec, found := byKey[rk]; found {
+					// Skip status filter mismatch
+					if status != "" && rec.Status != status {
+						continue
+					}
+					walked = append(walked, WalkRow{
+						ID:            rec.ID,
+						UserID:        intern.ID,
+						InternName:    internName,
+						AvatarURL:     intern.AvatarURL,
+						Date:          key,
+						TimeIn:        rec.TimeIn,
+						TimeOut:       rec.TimeOut,
+						HoursRendered: rec.HoursRendered,
+						Status:        rec.Status,
+						IsReported:    rec.IsReported,
+						ReportReason:  rec.ReportReason,
+						ReportType:    rec.ReportType,
+						AdminNote:     rec.AdminNote,
+					})
+				} else {
+					// Absent row — skip if status filter excludes it
+					if status != "" && status != "Absent" {
+						continue
+					}
+					walked = append(walked, WalkRow{
+						UserID:     intern.ID,
+						InternName: internName,
+						AvatarURL:  intern.AvatarURL,
+						Date:       key,
+						Status:     "Absent",
+					})
+				}
+			}
+		}
+
+		// Newest-first
+		for i, j := 0, len(walked)-1; i < j; i, j = i+1, j-1 {
+			walked[i], walked[j] = walked[j], walked[i]
+		}
+
+		total := len(walked)
+		start := (page - 1) * limit
+		if start > total {
+			start = total
+		}
+		end := start + limit
+		if end > total {
+			end = total
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"ok":      true,
+			"records": walked[start:end],
+			"total":   total,
+			"page":    page,
+			"limit":   limit,
+		})
+		return
+	}
 
 	type AdminRow struct {
 		ID            int      `gorm:"column:id"             json:"id"`
@@ -705,6 +923,12 @@ func (h *Handler) GetWeeklyAttendance(c *gin.Context) {
 	)
 
 	weekEnd := weekStart.AddDate(0, 0, 7)
+
+	// Cap to today so future dates are never returned
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	if weekEnd.After(today) {
+		weekEnd = today
+	}
 
 	type WeeklyRow struct {
 		Date  string   `json:"date"`

@@ -20,11 +20,12 @@ class DashboardStatsGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cols = constraints.maxWidth > 800 ? 4 : 2;
+        final ratio = constraints.maxWidth > 800 ? 1.4 : 1.6;
         return GridView.count(
           crossAxisCount: cols,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 24,
+          crossAxisSpacing: 16,
           mainAxisSpacing: 24,
           childAspectRatio: 1.4,
           children: [

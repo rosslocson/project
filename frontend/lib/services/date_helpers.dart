@@ -36,8 +36,8 @@ String toShortDate(DateTime dt) {
       return (monday, sunday.isAfter(now) ? now : sunday);
     case AttendancePeriod.month:
       return (DateTime(now.year, now.month, 1), now);
-    case AttendancePeriod.year:
-      return (DateTime(now.year, 1, 1), now);
+    //case AttendancePeriod.year:
+    //  return (DateTime(now.year, 1, 1), now);
     default:
       return (now, now);
   }

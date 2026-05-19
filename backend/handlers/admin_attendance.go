@@ -351,17 +351,30 @@ func (h *Handler) AdminGetAttendance(c *gin.Context) {
 
 	// ── (1) all_dates — from earliest attendance record to today ──────────────
 	case allDates:
-		// Find the earliest date we have any record for, so we don't generate
-		// thousands of rows if the app has been running a long time.
+		// Use the earliest intern start_date as the floor, so absent rows
+		// are generated from the beginning of their internship — not just
+		// from when they first clocked in.
 		var earliest string
-		h.DB.Table("attendance").Select("TO_CHAR(MIN(date), 'YYYY-MM-DD')").Scan(&earliest)
+		h.DB.Table("users").
+			Select("TO_CHAR(MIN(start_date), 'YYYY-MM-DD')").
+			Where("deleted_at IS NULL AND is_archived = false AND role = 'user' AND position = 'Intern'").
+			Where("start_date IS NOT NULL").
+			Scan(&earliest)
+
+		// Fall back to earliest attendance record if no start_dates are set
 		if earliest == "" {
-			earliest = now.Format("2006-01-02") // no records yet
+			h.DB.Table("attendance").Select("TO_CHAR(MIN(date), 'YYYY-MM-DD')").Scan(&earliest)
 		}
+		// Last resort: today
+		if earliest == "" {
+			earliest = now.Format("2006-01-02")
+		}
+
+		fmt.Printf("[DEBUG allDates] using earliest=%s\n", earliest)
+
 		end := now.Format("2006-01-02")
 		q := h.multiDateQuery(earliest, end, search, filterUID, true)
 		q.Order("d.day DESC, intern_name ASC").Scan(&allRows)
-
 	// ── (2) named period (week / month / year) ────────────────────────────────
 	case period != "" && period != "today":
 		start, end := periodDateRange(period, now)

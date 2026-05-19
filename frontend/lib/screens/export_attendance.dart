@@ -463,7 +463,7 @@ class AttendanceExporter {
         'today' => 'Today — ${_todayStr()}',
         'week'  => 'This Week',
         'month' => 'This Month',
-        'year'  => 'This Year',
+        //'year'  => 'This Year',
         _       => opts.period!,
       };
     }
