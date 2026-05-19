@@ -101,8 +101,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
         : intern.name == 'Alex Llanza'
             ? AlexProfilePage(intern: intern)
             : intern.name == 'Airra Lorraine De Castro'
-            ? AirraProfilePage(intern: intern)  
-            : InternDetailPage(intern: intern);
+                ? AirraProfilePage(intern: intern)
+                : InternDetailPage(intern: intern);
 
     Navigator.of(context)
         .push(PageRouteBuilder(
