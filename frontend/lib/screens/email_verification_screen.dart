@@ -247,15 +247,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   Widget _timerCard(bool isDark) {
     final active = _otpSecondsLeft > 0;
+    
+    // Use darker green/red shades in light mode so it remains clearly visible
+    final activeColor = isDark ? Colors.greenAccent : Colors.green.shade700;
+    final expiredColor = isDark ? Colors.redAccent : Colors.red.shade700;
+    final currentColor = active ? activeColor : expiredColor;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF101828) : const Color(0xFFF3F4FF),
         border: Border.all(
-          color: active
-              ? Colors.greenAccent.withOpacity(0.35)
-              : Colors.redAccent.withOpacity(0.35),
+          color: currentColor.withOpacity(0.35),
         ),
         borderRadius: BorderRadius.circular(8),
       ),
@@ -263,14 +266,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         children: [
           Icon(
             Icons.timer_outlined,
-            color: active ? Colors.greenAccent : Colors.redAccent,
+            color: currentColor,
             size: 20,
           ),
           const SizedBox(width: 8),
           Text(
             active ? 'OTP expires in $_otpTimeText' : 'OTP Expired',
             style: TextStyle(
-              color: active ? Colors.greenAccent : Colors.redAccent,
+              color: currentColor,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -281,15 +284,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   Widget _resendButton(bool isDark) {
     final canResend = _resendCooldownSeconds == 0;
+    
+    // Apply kCosmicBlue for light mode and kAccentPurple for dark mode
+    final activeColor = isDark ? kAccentPurple : kCosmicBlue;
 
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
         onPressed: (canResend && !_isResending) ? _resendOtp : null,
         style: OutlinedButton.styleFrom(
-          foregroundColor: canResend ? kAccentPurple : Colors.grey,
+          foregroundColor: canResend ? activeColor : Colors.grey,
           side: BorderSide(
-            color: canResend ? kAccentPurple : Colors.grey.withOpacity(0.5),
+            color: canResend ? activeColor : Colors.grey.withOpacity(0.5),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
@@ -297,11 +303,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
         child: _isResending
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
-                  color: kAccentPurple,
+                  color: activeColor,
                   strokeWidth: 2,
                 ),
               )
@@ -344,7 +350,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     fontWeight: FontWeight.w800,
                     color: isDark ? Colors.white : kCosmicBlue,
                   ),
-                  cursorColor: kAccentPurple,
+                  // Use dark blue for light mode cursor
+                  cursorColor: isDark ? kAccentPurple : kCosmicBlue,
                   decoration: InputDecoration(
                     counterText: '',
                     contentPadding: EdgeInsets.zero,
@@ -353,16 +360,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
+                        // Base outline color in light mode made slightly blue for consistency
                         color: isDark
                             ? const Color(0xFF2A2A38)
-                            : Colors.grey.shade300,
+                            : kCosmicBlue.withOpacity(0.4),
                         width: 1.5,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
-                        color: kAccentPurple,
+                        // Dark blue active border in light mode
+                        color: isDark ? kAccentPurple : kCosmicBlue,
                         width: 2,
                       ),
                     ),
@@ -479,12 +488,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             _otpBoxes(isDark),
             const SizedBox(height: 40),
 
-            SizedBox(
+SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: kAccentPurple,
+                  // Update the backgroundColor line here:
+                  backgroundColor: isDark ? kAccentPurple : kCosmicBlue, 
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
                   ),
