@@ -25,37 +25,56 @@ class ProfileSkillsTab extends StatelessWidget {
           const SizedBox(height: 24),
           const ProfileSectionTitle(title: 'Expertise', icon: Icons.psychology_rounded),
           const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: SkillPanelClean(
-                  label: 'Technical Skills',
-                  raw: techSkills,
-                  accentColor: Colors.blue.shade600,
-                  bgColor: Colors.blue.shade50,
+          // Wrapped Row in IntrinsicHeight and set alignment to stretch
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: SkillPanelClean(
+                    label: 'Technical Skills',
+                    raw: techSkills,
+                    accentColor: Colors.blue.shade600,
+                    bgColor: Colors.blue.shade50,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SkillPanelClean(
-                  label: 'Soft Skills',
-                  raw: softSkills,
-                  accentColor: Colors.blue.shade600,
-                  bgColor: Colors.blue.shade50,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SkillPanelClean(
+                    label: 'Soft Skills',
+                    raw: softSkills,
+                    accentColor: Colors.blue.shade600,
+                    bgColor: Colors.blue.shade50,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 24),
           const ProfileSectionTitle(title: 'Links & Socials', icon: Icons.link_rounded),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: CleanInfoCard(label: 'LinkedIn URL', value: getProfileVal(user, 'linked_in'), icon: Icons.open_in_new_rounded)),
-              const SizedBox(width: 12),
-              Expanded(child: CleanInfoCard(label: 'GitHub URL', value: getProfileVal(user, 'git_hub'), icon: Icons.code_rounded)),
-            ],
+          // You might also want IntrinsicHeight here if the URLs can wrap to multiple lines
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: CleanInfoCard(
+                    label: 'LinkedIn URL', 
+                    value: getProfileVal(user, 'linked_in'), 
+                    icon: Icons.open_in_new_rounded
+                  )
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CleanInfoCard(
+                    label: 'GitHub URL', 
+                    value: getProfileVal(user, 'git_hub'), 
+                    icon: Icons.code_rounded
+                  )
+                ),
+              ],
+            ),
           ),
         ],
       ),
