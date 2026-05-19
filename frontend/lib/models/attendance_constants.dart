@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 // ── Period enum ───────────────────────────────────────────────────────────────
 
-enum AttendancePeriod { custom, today, week, month, year, allDates }
+enum AttendancePeriod { custom, today, week, month, allDates }
 
 extension AttendancePeriodExt on AttendancePeriod {
   String get label => switch (this) {
@@ -13,7 +13,7 @@ extension AttendancePeriodExt on AttendancePeriod {
         AttendancePeriod.today    => 'Today',
         AttendancePeriod.week     => 'This Week',
         AttendancePeriod.month    => 'This Month',
-        AttendancePeriod.year     => 'This Year',
+        //AttendancePeriod.year     => 'This Year',
         AttendancePeriod.allDates => 'All Dates',
       };
 
@@ -21,7 +21,7 @@ extension AttendancePeriodExt on AttendancePeriod {
         AttendancePeriod.today  => 'today',
         AttendancePeriod.week   => 'week',
         AttendancePeriod.month  => 'month',
-        AttendancePeriod.year   => 'year',
+        //AttendancePeriod.year   => 'year',
         _                       => null,
       };
 }

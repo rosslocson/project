@@ -116,6 +116,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       }
     }
     debugPrint('───────────────────────────────────────');
+    debugPrint('[AttendanceLoad] apiPeriod sent: ${_period.apiPeriod}');
 
     final result = await AdminAttendanceService.fetchAttendance(
       allDates: isAllDates,
@@ -134,6 +135,15 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     if (result['ok'] == true) {
       final all = result['records'] as List<AdminAttendanceRecord>;
+
+      // Filter out any records dated after today (same fix as user-side _rebuild())
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final filtered = all.where((r) {
+        final recordDate = DateTime.parse(r.date); // r.date is "YYYY-MM-DD"
+        return !recordDate.isAfter(todayDate);
+      }).toList();
+
       final absents = all.where((r) => r.status == 'Absent').toList();
       final present = all.where((r) => r.status != 'Absent').toList();
       final total = result['total'] as int;
@@ -157,8 +167,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       debugPrint('═══════════════════════════════════════');
 
       setState(() {
-        _records = all;
-        _total = total;
+        _records = filtered; // ← was `all`
+        _total = filtered.length; // ← use filtered count, not server total
         _loading = false;
       });
     } else {
@@ -549,7 +559,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       AttendancePeriod.today,
       AttendancePeriod.week,
       AttendancePeriod.month,
-      AttendancePeriod.year,
+      //AttendancePeriod.year,
       AttendancePeriod.allDates,
     ];
 

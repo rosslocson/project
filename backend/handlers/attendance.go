@@ -401,10 +401,9 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			rangeEnd = today.AddDate(0, 0, 1)
 			useRange = true
 		case "week":
-			// Monday of current ISO week
 			weekday := int(now.Weekday())
 			if weekday == 0 {
-				weekday = 7 // Sunday → 7
+				weekday = 7
 			}
 			rangeStart = today.AddDate(0, 0, -(weekday - 1))
 			rangeEnd = rangeStart.AddDate(0, 0, 7)
@@ -418,7 +417,6 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			rangeEnd = rangeStart.AddDate(1, 0, 0)
 			useRange = true
 		default:
-			// Fall back to exact date if provided
 			if dateStr != "" {
 				parsed, err := time.Parse("2006-01-02", dateStr)
 				if err == nil {
@@ -426,6 +424,16 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 					rangeEnd = parsed.AddDate(0, 0, 1)
 					useRange = true
 				}
+			}
+		}
+
+		// ← ADD THIS: cap rangeEnd so future dates are never included.
+		// Uses tomorrow because the query is `a.date < rangeEnd` (strict less-than),
+		// so tomorrow as the ceiling means today is the last included date.
+		if useRange {
+			tomorrow := today.AddDate(0, 0, 1)
+			if rangeEnd.After(tomorrow) {
+				rangeEnd = tomorrow
 			}
 		}
 	}
@@ -705,6 +713,12 @@ func (h *Handler) GetWeeklyAttendance(c *gin.Context) {
 	)
 
 	weekEnd := weekStart.AddDate(0, 0, 7)
+
+	// Cap to today so future dates are never returned
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	if weekEnd.After(today) {
+		weekEnd = today
+	}
 
 	type WeeklyRow struct {
 		Date  string   `json:"date"`
