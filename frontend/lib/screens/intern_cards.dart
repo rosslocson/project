@@ -99,7 +99,6 @@ class InternProfile {
       return [];
     }
 
-
     // Defensive date parser with clean formatting (no external packages).
     // - Accepts ISO-8601 timestamps, plain dates (YYYY-MM-DD), or other strings.
     // - Returns formatted 'Mon DD, YYYY' when parsing succeeds.
@@ -109,8 +108,18 @@ class InternProfile {
       // Pass through real DateTime values.
       if (value is DateTime) {
         const months = [
-          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec'
         ];
         final dt = value.toLocal();
         return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
@@ -122,7 +131,10 @@ class InternProfile {
       final normalized = str.trim();
       if (normalized.isEmpty) return null;
       final lower = normalized.toLowerCase();
-      if (lower == 'tba' || lower == 'na' || lower == 'n/a' || lower == 'unknown') {
+      if (lower == 'tba' ||
+          lower == 'na' ||
+          lower == 'n/a' ||
+          lower == 'unknown') {
         return null;
       }
 
@@ -132,10 +144,19 @@ class InternProfile {
       // 1) Try full ISO 8601 parsing first.
       final dt = DateTime.tryParse(normalized);
       if (dt != null) {
-
         const months = [
-          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec'
         ];
         final local = dt.toLocal();
         return '${months[local.month - 1]} ${local.day}, ${local.year}';
@@ -150,8 +171,18 @@ class InternProfile {
         final day = int.tryParse(parts[2]);
         if (year != null && month != null && day != null) {
           const months = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec'
           ];
           final safeMonth = month.clamp(1, 12);
           return '${months[safeMonth - 1]} $day, $year';
@@ -173,7 +204,10 @@ class InternProfile {
         final s = v is String ? v.trim() : null;
         if (s != null) {
           final lower = s.toLowerCase();
-          if (lower == 'tba' || lower == 'null' || lower == 'na' || lower == 'n/a') {
+          if (lower == 'tba' ||
+              lower == 'null' ||
+              lower == 'na' ||
+              lower == 'n/a') {
             continue;
           }
         }
@@ -195,7 +229,6 @@ class InternProfile {
       'end_date_str',
     ]);
 
-
     // Fallbacks (keep null safe)
     final startDateValue = startRaw ?? json['startDate'] ?? json['start_date'];
     final endDateValue = endRaw ?? json['endDate'] ?? json['end_date'];
@@ -206,7 +239,9 @@ class InternProfile {
     final fullName = [firstName, lastName].where((s) => s.isNotEmpty).join(' ');
 
     return InternProfile(
-      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       name: fullName.isNotEmpty ? fullName : 'Unnamed Intern',
       internNumber: parseString(json['intern_number']) ?? 'N/A',
       program: parseString(json['program']) ?? 'N/A',
@@ -226,7 +261,6 @@ class InternProfile {
       githubUrl: parseString(json['git_hub']),
       linkedInUrl: parseString(json['linked_in']),
     );
-
   }
 }
 
@@ -367,7 +401,8 @@ class InternDetailPage extends StatelessWidget {
                             border: Border.all(color: borderColor, width: 1),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
+                                color: Colors.black
+                                    .withValues(alpha: isDark ? 0.4 : 0.1),
                                 blurRadius: 60,
                                 offset: const Offset(0, 30),
                               )
@@ -398,13 +433,13 @@ class InternDetailPage extends StatelessWidget {
         Container(
           width: 420,
           decoration: BoxDecoration(
-            color: isDark 
+            color: isDark
                 ? Colors.white.withValues(alpha: 0.02)
                 : Colors.black.withValues(alpha: 0.02),
             border: Border(
               right: BorderSide(
-                color: isDark 
-                    ? Colors.white.withValues(alpha: 0.05) 
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
                     : Colors.black.withValues(alpha: 0.05),
               ),
             ),
@@ -417,8 +452,8 @@ class InternDetailPage extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 48),
             child: RawScrollbar(
-              thumbColor: isDark 
-                  ? Colors.white.withValues(alpha: 0.1) 
+              thumbColor: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
                   : Colors.black.withValues(alpha: 0.1),
               radius: const Radius.circular(8),
               thickness: 4,
@@ -430,29 +465,53 @@ class InternDetailPage extends StatelessWidget {
                     _buildSectionHeader('Academic Profile', isDark),
                     const SizedBox(height: 24),
                     _buildDataGridRow([
-                      _EditorialDataNode(label: 'Institution', value: intern.school, isDark: isDark),
-                      _EditorialDataNode(label: 'Program', value: intern.program, isDark: isDark),
+                      _EditorialDataNode(
+                          label: 'Institution',
+                          value: intern.school,
+                          isDark: isDark),
+                      _EditorialDataNode(
+                          label: 'Program',
+                          value: intern.program,
+                          isDark: isDark),
                     ]),
                     const SizedBox(height: 20),
                     _buildDataGridRow([
-                      _EditorialDataNode(label: 'Specialization', value: intern.specialization ?? 'N/A', isDark: isDark),
-                      _EditorialDataNode(label: 'Year Level', value: intern.yearLevel ?? 'N/A', isDark: isDark),
+                      _EditorialDataNode(
+                          label: 'Specialization',
+                          value: intern.specialization ?? 'N/A',
+                          isDark: isDark),
+                      _EditorialDataNode(
+                          label: 'Year Level',
+                          value: intern.yearLevel ?? 'N/A',
+                          isDark: isDark),
                     ]),
-                    
+
                     const SizedBox(height: 48),
-                    
+
                     _buildSectionHeader('Deployment Data', isDark),
                     const SizedBox(height: 24),
                     _buildDataGridRow([
-                      _EditorialDataNode(label: 'Department', value: intern.department ?? 'N/A', isDark: isDark),
+                      _EditorialDataNode(
+                          label: 'Department',
+                          value: intern.department ?? 'N/A',
+                          isDark: isDark),
                       // Hardcoded as Intern
-                      _EditorialDataNode(label: 'Designation', value: 'Intern', isDark: isDark),
+                      _EditorialDataNode(
+                          label: 'Designation',
+                          value: 'Intern',
+                          isDark: isDark),
                     ]),
                     const SizedBox(height: 20),
                     // Start and End Dates Explicitly Listed Here
                     _buildDataGridRow([
-                      _EditorialDataNode(label: 'Start Date', value: intern.startDate ?? 'TBA', isDark: isDark),
-                      _EditorialDataNode(label: 'End Date', value: intern.endDate ?? 'TBA', isDark: isDark),
+                      _EditorialDataNode(
+                          label: 'Start Date',
+                          value: intern.startDate ?? 'TBA',
+                          isDark: isDark),
+                      _EditorialDataNode(
+                          label: 'End Date',
+                          value: intern.endDate ?? 'TBA',
+                          isDark: isDark),
                     ]),
 
                     const SizedBox(height: 48),
@@ -473,8 +532,8 @@ class InternDetailPage extends StatelessWidget {
   // ── MOBILE LAYOUT (Vertical Flow) ──
   Widget _buildMobileLayout(InternProfile intern, bool isDark) {
     return RawScrollbar(
-      thumbColor: isDark 
-          ? Colors.white.withValues(alpha: 0.1) 
+      thumbColor: isDark
+          ? Colors.white.withValues(alpha: 0.1)
           : Colors.black.withValues(alpha: 0.1),
       radius: const Radius.circular(8),
       thickness: 4,
@@ -485,8 +544,8 @@ class InternDetailPage extends StatelessWidget {
             _buildIdentityPane(intern, isDark),
             Container(
               height: 1,
-              color: isDark 
-                  ? Colors.white.withValues(alpha: 0.05) 
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
                   : Colors.black.withValues(alpha: 0.05),
             ),
             Padding(
@@ -496,28 +555,44 @@ class InternDetailPage extends StatelessWidget {
                 children: [
                   _buildSectionHeader('Academic Profile', isDark),
                   const SizedBox(height: 20),
-                  _EditorialDataNode(label: 'Institution', value: intern.school, isDark: isDark),
+                  _EditorialDataNode(
+                      label: 'Institution',
+                      value: intern.school,
+                      isDark: isDark),
                   const SizedBox(height: 16),
-                  _EditorialDataNode(label: 'Program', value: intern.program, isDark: isDark),
+                  _EditorialDataNode(
+                      label: 'Program', value: intern.program, isDark: isDark),
                   const SizedBox(height: 16),
-                  _EditorialDataNode(label: 'Specialization', value: intern.specialization ?? 'N/A', isDark: isDark),
+                  _EditorialDataNode(
+                      label: 'Specialization',
+                      value: intern.specialization ?? 'N/A',
+                      isDark: isDark),
                   const SizedBox(height: 16),
-                  _EditorialDataNode(label: 'Year Level', value: intern.yearLevel ?? 'N/A', isDark: isDark),
-                  
+                  _EditorialDataNode(
+                      label: 'Year Level',
+                      value: intern.yearLevel ?? 'N/A',
+                      isDark: isDark),
                   const SizedBox(height: 40),
-                  
                   _buildSectionHeader('Deployment Data', isDark),
                   const SizedBox(height: 20),
-                  _EditorialDataNode(label: 'Department', value: intern.department ?? 'N/A', isDark: isDark),
+                  _EditorialDataNode(
+                      label: 'Department',
+                      value: intern.department ?? 'N/A',
+                      isDark: isDark),
                   const SizedBox(height: 16),
-                  _EditorialDataNode(label: 'Designation', value: 'Intern', isDark: isDark),
+                  _EditorialDataNode(
+                      label: 'Designation', value: 'Intern', isDark: isDark),
                   const SizedBox(height: 16),
-                  _EditorialDataNode(label: 'Start Date', value: intern.startDate ?? 'TBA', isDark: isDark),
+                  _EditorialDataNode(
+                      label: 'Start Date',
+                      value: intern.startDate ?? 'TBA',
+                      isDark: isDark),
                   const SizedBox(height: 16),
-                  _EditorialDataNode(label: 'End Date', value: intern.endDate ?? 'TBA', isDark: isDark),
-                  
+                  _EditorialDataNode(
+                      label: 'End Date',
+                      value: intern.endDate ?? 'TBA',
+                      isDark: isDark),
                   const SizedBox(height: 40),
-                  
                   _buildSectionHeader('Competencies', isDark),
                   const SizedBox(height: 20),
                   _buildSkillsSection(intern, isDark),
@@ -545,15 +620,16 @@ class InternDetailPage extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: isDark 
-                      ? [kSpaceAccent, kBlueLight] 
+                  colors: isDark
+                      ? [kSpaceAccent, kBlueLight]
                       : [kBlue, kSpaceAccent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isDark ? kSpaceAccent : kBlue).withValues(alpha: 0.35),
+                    color:
+                        (isDark ? kSpaceAccent : kBlue).withValues(alpha: 0.35),
                     blurRadius: 35,
                     spreadRadius: 2,
                     offset: const Offset(0, 10),
@@ -564,16 +640,15 @@ class InternDetailPage extends StatelessWidget {
                 // Unique per route subtree; intern.id is non-null and stable.
                 tag: ValueKey('intern-hero-${intern.id}'),
                 child: InternAvatar(
-
                   intern: intern,
                   size: 210, // Adjusted slightly so bio & links fit perfectly
-                  borderRadius: 200, 
+                  borderRadius: 200,
                   fontSize: 70,
                 ),
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Typography Focus: Name
             Text(
               intern.name,
@@ -593,7 +668,8 @@ class InternDetailPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white : const Color(0xFF0F172A),
                     borderRadius: BorderRadius.circular(30),
@@ -610,11 +686,12 @@ class InternDetailPage extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: isDark 
-                          ? Colors.white.withValues(alpha: 0.2) 
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.2)
                           : Colors.black.withValues(alpha: 0.1),
                     ),
                     borderRadius: BorderRadius.circular(30),
@@ -640,8 +717,8 @@ class InternDetailPage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontStyle: FontStyle.italic,
-                  color: isDark 
-                      ? Colors.white.withValues(alpha: 0.6) 
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.6)
                       : const Color(0xFF475569),
                   height: 1.6,
                 ),
@@ -650,17 +727,23 @@ class InternDetailPage extends StatelessWidget {
             ],
 
             // Digital Presence / Social Links
-            if ((intern.linkedInUrl?.isNotEmpty ?? false) || (intern.githubUrl?.isNotEmpty ?? false)) ...[
+            if ((intern.linkedInUrl?.isNotEmpty ?? false) ||
+                (intern.githubUrl?.isNotEmpty ?? false)) ...[
               const SizedBox(height: 28),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (intern.linkedInUrl?.isNotEmpty ?? false)
-                    _SocialChip(icon: Icons.work_outline, label: 'LinkedIn', isDark: isDark),
-                  if ((intern.linkedInUrl?.isNotEmpty ?? false) && (intern.githubUrl?.isNotEmpty ?? false))
+                    _SocialChip(
+                        icon: Icons.work_outline,
+                        label: 'LinkedIn',
+                        isDark: isDark),
+                  if ((intern.linkedInUrl?.isNotEmpty ?? false) &&
+                      (intern.githubUrl?.isNotEmpty ?? false))
                     const SizedBox(width: 12),
                   if (intern.githubUrl?.isNotEmpty ?? false)
-                    _SocialChip(icon: Icons.code, label: 'GitHub', isDark: isDark),
+                    _SocialChip(
+                        icon: Icons.code, label: 'GitHub', isDark: isDark),
                 ],
               ),
             ],
@@ -680,7 +763,7 @@ class InternDetailPage extends StatelessWidget {
           title,
           style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.w300, // Elegant thin font for headers
+            fontWeight: FontWeight.w700, // Elegant thin font for headers
             letterSpacing: 0.5,
             color: isDark ? Colors.white : Colors.black87,
           ),
@@ -768,8 +851,8 @@ class _EditorialDataNode extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.5,
-              color: isDark 
-                  ? Colors.white.withValues(alpha: 0.4) 
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.4)
                   : Colors.black.withValues(alpha: 0.4),
             ),
           ),
@@ -800,15 +883,17 @@ class _SoftChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final techBgDark = kSpaceAccent.withValues(alpha: 0.15);
     final techBgLight = kBlue.withValues(alpha: 0.08);
-    
+
     final softBgDark = Colors.white.withValues(alpha: 0.05);
     final softBgLight = Colors.black.withValues(alpha: 0.04);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: isTech ? (isDark ? techBgDark : techBgLight) : (isDark ? softBgDark : softBgLight),
-        borderRadius: BorderRadius.circular(20), 
+        color: isTech
+            ? (isDark ? techBgDark : techBgLight)
+            : (isDark ? softBgDark : softBgLight),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         skill,
@@ -830,14 +915,17 @@ class _SocialChip extends StatelessWidget {
   final String label;
   final bool isDark;
 
-  const _SocialChip({required this.icon, required this.label, required this.isDark});
+  const _SocialChip(
+      {required this.icon, required this.label, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

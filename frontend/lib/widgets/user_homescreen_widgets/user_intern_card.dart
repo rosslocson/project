@@ -4,6 +4,7 @@ import '../intern_carousel_palette.dart';
 import '../../screens/intern_cards.dart';
 import '../../screens/intern_cards/intern_ross_profile_page.dart';
 import '../../screens/intern_cards/intern_alex_profile_page.dart';
+import '../../screens/intern_cards/intern_airra_profile_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UserInternCard
@@ -25,8 +26,12 @@ class UserInternCard extends StatelessWidget {
           );
         } else if (intern.name == 'Alex Llanza') {
           Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (_) => AlexProfilePage(intern: intern)),
+            MaterialPageRoute(builder: (_) => AlexProfilePage(intern: intern)),
+          );
+        } else if (intern.name == 'Airra Lorraine De Castro') {
+          // 👈 add this block
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => AirraProfilePage(intern: intern)),
           );
         } else {
           Navigator.of(context).push(

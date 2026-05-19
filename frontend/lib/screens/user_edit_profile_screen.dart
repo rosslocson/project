@@ -362,7 +362,6 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
     if (picked != null) {
       ctrl.text =
           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      // The AcademicInfoTab listener handles end-date computation automatically.
       _handleProfileFieldChanged();
       setState(() {});
     }
@@ -420,23 +419,21 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
                         padding: const EdgeInsets.only(
                             left: 100, right: 100, bottom: 28),
                         child: Container(
-                          // AFTER
-// AFTER
-decoration: BoxDecoration(
-  color: context.isDarkInternTheme
-      ? context.internTheme.surface
-      : context.internTheme.sidebarBackground,
-  borderRadius: BorderRadius.circular(24),
-  boxShadow: context.isDarkInternTheme
-      ? []
-      : [
-          BoxShadow(
-            color: context.internTheme.shadowColor,
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-),
+                          decoration: BoxDecoration(
+                            color: context.isDarkInternTheme
+                                ? context.internTheme.surface
+                                : context.internTheme.sidebarBackground,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: context.isDarkInternTheme
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: context.internTheme.shadowColor,
+                                      blurRadius: 24,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                          ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(24),
                             child: _initialLoading
@@ -671,8 +668,8 @@ decoration: BoxDecoration(
                                                     style: ElevatedButton
                                                         .styleFrom(
                                                       backgroundColor: context.isDarkInternTheme
-    ? const Color(0xFF7367F0)
-    : const Color(0xFF00022E),
+                                                          ? const Color(0xFF7367F0)
+                                                          : const Color(0xFF00022E),
                                                       foregroundColor:
                                                           Colors.white,
                                                       shape: RoundedRectangleBorder(
