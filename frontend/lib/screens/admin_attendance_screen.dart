@@ -721,15 +721,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Enforce a minimum width so the "ADMIN NOTE" column is never squeezed tightly
-        final tableWidth =
-            constraints.maxWidth > 1200 ? constraints.maxWidth : 1200.0;
+       
+       
 
         // No vertical SingleChildScrollView here. Scrolling is natively handled by the parent wrapper!
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: SizedBox(
-            width: tableWidth,
+            width: constraints.maxWidth,
             child: Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 12),
               child: AttendanceTable(
