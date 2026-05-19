@@ -144,6 +144,19 @@ func fixPlaintextPasswords(db *gorm.DB) {
 	}
 }
 
+func migrateLegacyAccountFlags(db *gorm.DB) {
+	if err := db.Exec(`
+		UPDATE users
+		SET legacy_account = true
+		WHERE legacy_account = false
+		  AND coalesce(is_verified, false) = false;
+	`).Error; err != nil {
+		log.Printf("⚠️ Failed to migrate legacy account flags: %v", err)
+		return
+	}
+	log.Println("✅ Existing users marked as legacy-compatible where appropriate")
+}
+
 func main() {
 	godotenv.Load()
 
@@ -212,6 +225,7 @@ func main() {
 	)
 	log.Println("Database migrated successfully")
 
+	migrateLegacyAccountFlags(DB)
 	ensureAdminAccountsVerified(DB)
 	seedAdminAccount(DB)
 	fixPlaintextPasswords(DB)
