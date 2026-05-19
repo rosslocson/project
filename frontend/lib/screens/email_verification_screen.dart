@@ -8,7 +8,7 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 
 const kCosmicBlue = Color(0xFF00022E);
-const kAccentPurple = Color(0xFF7C4DFF);
+const kAccentPurple = Color(0xFF7367F0);
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
@@ -251,8 +251,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0E1A14),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
+        color: isDark ? const Color(0xFF101828) : const Color(0xFFF3F4FF),
+        border: Border.all(
+          color: active
+              ? Colors.greenAccent.withOpacity(0.35)
+              : Colors.redAccent.withOpacity(0.35),
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -352,12 +356,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         color: isDark
                             ? const Color(0xFF2A2A38)
                             : Colors.grey.shade300,
+                        width: 1.5,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
-                        color: isDark ? kAccentPurple : kCosmicBlue,
+                        color: kAccentPurple,
                         width: 2,
                       ),
                     ),
@@ -378,7 +383,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-      color: isDark ? const Color(0xFF0D0B1A) : Colors.white,
+      color: Colors.transparent,
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +399,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Step 2 of 2 - Enter OTP',
+              'Enter OTP',
               style: TextStyle(
                 color: isDark ? Colors.white70 : Colors.black54,
                 fontSize: 16,
@@ -406,12 +411,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color:
-                      isDark ? Colors.red.withOpacity(0.1) : Colors.red.shade50,
+                  color: isDark ? const Color(0xFF331B1B) : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isDark
-                        ? Colors.red.withOpacity(0.3)
+                        ? Colors.redAccent.withOpacity(0.35)
                         : Colors.red.shade200,
                   ),
                 ),
@@ -437,11 +441,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF101828) : Colors.blue.shade50,
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF3F4FF),
                 border: Border.all(
                   color: isDark
-                      ? Colors.blueAccent.withOpacity(0.3)
-                      : Colors.blue.shade200,
+                      ? kAccentPurple.withOpacity(0.25)
+                      : kAccentPurple.withOpacity(0.35),
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -451,7 +455,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     child: Text(
                       'A verification code has been sent to ${widget.email}',
                       style: TextStyle(
-                        color: isDark ? Colors.blueGrey : Colors.blue.shade900,
+                        color: isDark ? Colors.white70 : kCosmicBlue,
                         fontSize: 14,
                       ),
                     ),
@@ -520,7 +524,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 child: Text(
                   'Back to Create Account',
                   style: TextStyle(
-                    color: isDark ? Colors.white70 : Colors.grey.shade600,
+                    color: isDark ? Colors.white70 : kCosmicBlue,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

@@ -141,8 +141,9 @@ class AdminAttendanceService {
               '${adjustedTimeIn.hour.toString().padLeft(2, '0')}:${adjustedTimeIn.minute.toString().padLeft(2, '0')}',
       };
       if (resolution == 'excused_credited') {
-        if (creditedTimeIn != null)
+        if (creditedTimeIn != null) {
           body['credited_time_in'] = _fmt(creditedTimeIn);
+        }
         if (timeOut != null) body['time_out'] = _fmt(timeOut);
       }
       final res = await http.post(
