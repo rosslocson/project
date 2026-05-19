@@ -180,19 +180,34 @@ func (h *Handler) GetAttendanceSummary(c *gin.Context) {
 	}
 
 	type Summary struct {
-		TotalHours float64 `gorm:"column:total_hours"`
-		TotalDays  int     `gorm:"column:total_days"`
+		TotalHours float64
+		TotalDays  int
 	}
-	var summary Summary
+
+	// Fetch raw times and compute hours in Go so the lunch-break deduction
+	// (12:00–13:00, same as the admin side) is applied consistently.
+	type SummaryRaw struct {
+		Date    string  `gorm:"column:date"`
+		TimeIn  *string `gorm:"column:time_in"`
+		TimeOut *string `gorm:"column:time_out"`
+	}
+	var summaryRaws []SummaryRaw
 	h.DB.Raw(`
 		SELECT
-			COALESCE(SUM(`+attendanceHoursExpr+`), 0) AS total_hours,
-			COUNT(*) FILTER (
-				WHERE time_in IS NOT NULL AND time_out IS NOT NULL
-			) AS total_days
+			TO_CHAR(date, 'YYYY-MM-DD') AS date,
+			TO_CHAR(time_in  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
+			TO_CHAR(time_out AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out
 		FROM attendance
 		WHERE user_id = ?
-	`, userID).Scan(&summary)
+	`, userID).Scan(&summaryRaws)
+
+	var summary Summary
+	for _, r := range summaryRaws {
+		if hrs := computeHours(r.TimeIn, r.TimeOut, r.Date); hrs != nil {
+			summary.TotalHours += *hrs
+			summary.TotalDays++
+		}
+	}
 
 	today := todayDate()
 	var todayRec *models.Attendance
@@ -216,8 +231,6 @@ func (h *Handler) GetAttendanceSummary(c *gin.Context) {
 
 // ── GET /api/attendance/history ───────────────────────────────────────────────
 
-// ── GET /api/attendance/history ───────────────────────────────────────────────
-
 func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 	userID, ok := getUserIDFromCtx(c)
 	if !ok {
@@ -234,14 +247,10 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 
 	// ── Fetch all real attendance records for this user ───────────────────────
 	var records []models.Attendance
-	// Constrain DB fetch to the date window we actually walk in Go.
-	// End is yesterday (today is handled separately by GetAttendanceSummary).
 	loc := manilaLoc()
 	now := time.Now().In(loc)
 	yesterday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -1)
 
-	// Start is intern's start_date if available; otherwise we will set it later
-	// after we have fetched the available records.
 	var walkStart time.Time
 	if user.StartDate != nil {
 		walkStart = time.Date(user.StartDate.Year(), user.StartDate.Month(), user.StartDate.Day(), 0, 0, 0, 0, loc)
@@ -270,9 +279,6 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 	}
 
 	// ── Determine the walk range ──────────────────────────────────────────────
-	// Start: intern's start_date (or fall back to earliest real record).
-	// End:   already computed above.
-
 	if walkStart.IsZero() {
 		if len(records) > 0 {
 			earliest := records[len(records)-1].Date.In(loc)
@@ -287,13 +293,13 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 	type HistoryRow struct {
 		ID            uint     `json:"id"`
 		UserID        uint     `json:"user_id"`
-		Date          string   `json:"date"`    // "YYYY-MM-DD"
-		TimeIn        *string  `json:"time_in"` // nullable formatted string
+		Date          string   `json:"date"`
+		TimeIn        *string  `json:"time_in"`
 		TimeOut       *string  `json:"time_out"`
 		HoursRendered *float64 `json:"hours_rendered"`
 		Status        string   `json:"status"`
 		IsReported    bool     `json:"is_reported"`
-		IsAbsent      bool     `json:"is_absent"` // ← Flutter uses this
+		IsAbsent      bool     `json:"is_absent"`
 	}
 
 	var result []HistoryRow
@@ -307,7 +313,6 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 		key := cursor.Format("2006-01-02")
 
 		if rec, found := byDate[key]; found {
-			// Real record — format times the same way the admin handler does.
 			var timeInStr, timeOutStr *string
 			if rec.TimeIn != nil {
 				s := rec.TimeIn.In(loc).Format("3:04 PM")
@@ -317,6 +322,8 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 				s := rec.TimeOut.In(loc).Format("3:04 PM")
 				timeOutStr = &s
 			}
+			// Use computeHours so the 12:00–13:00 lunch break is deducted,
+			// matching the admin side exactly.
 			hours := computeHours(timeInStr, timeOutStr, key)
 
 			status := deriveStatus(timeInStr, timeOutStr, key)
@@ -336,7 +343,6 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 				IsAbsent:      false,
 			})
 		} else {
-			// No record for this weekday → absent.
 			result = append(result, HistoryRow{
 				ID:       0,
 				UserID:   userID,
@@ -347,7 +353,7 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 		}
 	}
 
-	// Result is built oldest-first from the walk; reverse to get newest-first.
+	// Reverse to newest-first.
 	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
 		result[i], result[j] = result[j], result[i]
 	}
@@ -362,15 +368,15 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 // ── GET /api/admin/attendance ─────────────────────────────────────────────────
 //
 // Query params:
-//   page        int     (default 1)
-//   limit       int     (default 20, max 100)
-//   date        string  "YYYY-MM-DD"   — exact date filter (ignored when period set)
-//   all_dates   bool    "true"         — skip date filtering entirely
-//   period      string  "today" | "week" | "month" | "year"
-//   search      string  — partial match on intern full name (ILIKE)
-//   status      string  "Present" | "Late" | "On Shift" | "Missed Clock Out" | "Absent"
-//   user_id     int     — filter to a single intern
-
+//
+//	page        int     (default 1)
+//	limit       int     (default 20, max 100)
+//	date        string  "YYYY-MM-DD"   — exact date filter (ignored when period set)
+//	all_dates   bool    "true"         — skip date filtering entirely
+//	period      string  "today" | "week" | "month" | "year"
+//	search      string  — partial match on intern full name (ILIKE)
+//	status      string  "Present" | "Late" | "On Shift" | "Missed Clock Out" | "Absent"
+//	user_id     int     — filter to a single intern
 func (h *Handler) GetAdminAttendance(c *gin.Context) {
 
 	// ── pagination ──────────────────────────────────────────────────────────
@@ -386,8 +392,8 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 
 	// ── date / period range ─────────────────────────────────────────────────
 	allDates := c.Query("all_dates") == "true"
-	period := c.Query("period") // "today" | "week" | "month" | "year"
-	dateStr := c.Query("date")  // "YYYY-MM-DD"
+	period := c.Query("period")
+	dateStr := c.Query("date")
 
 	now := time.Now().UTC()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
@@ -428,9 +434,6 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			}
 		}
 
-		// ← ADD THIS: cap rangeEnd so future dates are never included.
-		// Uses tomorrow because the query is `a.date < rangeEnd` (strict less-than),
-		// so tomorrow as the ceiling means today is the last included date.
 		if useRange {
 			tomorrow := today.AddDate(0, 0, 1)
 			if rangeEnd.After(tomorrow) {
@@ -443,30 +446,15 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 	}
 
 	// ── optional filters ────────────────────────────────────────────────────
-	search := c.Query("search") // intern name partial match
-	status := c.Query("status") // exact status value
+	search := c.Query("search")
+	status := c.Query("status")
 	userIDStr := c.Query("user_id")
-
-	// ── base query joining users for intern name & avatar ───────────────────
-	//
-	// Assumes the admin attendance view / query returns intern_name, avatar_url,
-	// and status (computed or stored). Adjust the JOIN / column names to your
-	// actual schema.  The query below uses a LEFT JOIN on users and derives
-	// status from the attendance columns — adapt as needed.
-	//
-	// status derivation (PostgreSQL):
-	//   'On Shift'    — time_in set, time_out NULL, date = today
-	//   'Missed Clock Out' — time_in set, time_out NULL, date < today
-	//   'Present'        — time_out set, time_in before 09:00
-	//   'Late'           — time_out set, time_in at/after 09:00
-	//   'Absent'         — no record (handled at application level or via generated series)
 
 	if allDates {
 		loc := manilaLoc()
 		nowLoc := time.Now().In(loc)
 		todayLocal := time.Date(nowLoc.Year(), nowLoc.Month(), nowLoc.Day(), 0, 0, 0, 0, loc)
 
-		// Fetch all interns (or just the one if user_id provided)
 		type InternMeta struct {
 			ID        int        `gorm:"column:id"`
 			FirstName string     `gorm:"column:first_name"`
@@ -490,7 +478,6 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 		}
 		q.Find(&interns)
 
-		// ← ADD THIS temporarily
 		fmt.Printf("[DEBUG allDates] found %d interns\n", len(interns))
 		for _, intern := range interns {
 			fmt.Printf("[DEBUG allDates] intern id=%d name=%s %s start_date=%v\n",
@@ -502,57 +489,48 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			return
 		}
 
-		// Collect all intern IDs
 		internIDs := make([]int, len(interns))
 		for i, intern := range interns {
 			internIDs[i] = intern.ID
 		}
 
-		// Fetch all real attendance rows for these interns
 		type RealRow struct {
-			ID            int      `gorm:"column:id"`
-			UserID        int      `gorm:"column:user_id"`
-			Date          string   `gorm:"column:date"`
-			TimeIn        *string  `gorm:"column:time_in"`
-			TimeOut       *string  `gorm:"column:time_out"`
-			HoursRendered *float64 `gorm:"column:hours_rendered"`
-			Status        string   `gorm:"column:status"`
-			IsReported    bool     `gorm:"column:is_reported"`
-			ReportReason  string   `gorm:"column:report_reason"`
-			ReportType    string   `gorm:"column:report_type"`
-			AdminNote     *string  `gorm:"column:admin_note"`
+			ID           int     `gorm:"column:id"`
+			UserID       int     `gorm:"column:user_id"`
+			Date         string  `gorm:"column:date"`
+			TimeIn       *string `gorm:"column:time_in"`
+			TimeOut      *string `gorm:"column:time_out"`
+			Status       string  `gorm:"column:status"`
+			IsReported   bool    `gorm:"column:is_reported"`
+			ReportReason string  `gorm:"column:report_reason"`
+			ReportType   string  `gorm:"column:report_type"`
+			AdminNote    *string `gorm:"column:admin_note"`
 		}
 
 		var realRows []RealRow
 		h.DB.Raw(`
-        SELECT
-            a.id,
-            a.user_id,
-            TO_CHAR(a.date, 'YYYY-MM-DD') AS date,
-            TO_CHAR(a.time_in,  'HH12:MI AM') AS time_in,
-            TO_CHAR(a.time_out, 'HH12:MI AM') AS time_out,
-            CASE
-                WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL
-                    THEN EXTRACT(EPOCH FROM (a.time_out - a.time_in)) / 3600.0
-                ELSE NULL
-            END AS hours_rendered,
-            CASE
-                WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date = CURRENT_DATE THEN 'On Shift'
-                WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date < CURRENT_DATE THEN 'Missed Clock Out'
-                WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) < 9           THEN 'Present'
-                WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) >= 9          THEN 'Late'
-                ELSE 'Absent'
-            END AS status,
-            a.is_reported,
-            COALESCE(a.report_reason, '') AS report_reason,
-            COALESCE(a.report_type,  '') AS report_type,
-            a.admin_note
-        FROM attendance a
-        WHERE a.user_id = ANY(?)
-        ORDER BY a.user_id, a.date ASC
-    `, internIDs).Scan(&realRows)
+			SELECT
+				a.id,
+				a.user_id,
+				TO_CHAR(a.date, 'YYYY-MM-DD') AS date,
+				TO_CHAR(a.time_in  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
+				TO_CHAR(a.time_out AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out,
+				CASE
+					WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date = CURRENT_DATE THEN 'On Shift'
+					WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date < CURRENT_DATE THEN 'Missed Clock Out'
+					WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in AT TIME ZONE 'Asia/Manila') < 9  THEN 'Present'
+					WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in AT TIME ZONE 'Asia/Manila') >= 9 THEN 'Late'
+					ELSE 'Absent'
+				END AS status,
+				a.is_reported,
+				COALESCE(a.report_reason, '') AS report_reason,
+				COALESCE(a.report_type,  '') AS report_type,
+				a.admin_note
+			FROM attendance a
+			WHERE a.user_id = ANY(?)
+			ORDER BY a.user_id, a.date ASC
+		`, internIDs).Scan(&realRows)
 
-		// Build (userID, date) → row lookup
 		type rowKey struct {
 			UserID int
 			Date   string
@@ -562,7 +540,6 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			byKey[rowKey{realRows[i].UserID, realRows[i].Date}] = &realRows[i]
 		}
 
-		// Build intern metadata lookup
 		internMap := make(map[int]*InternMeta, len(interns))
 		for i := range interns {
 			internMap[interns[i].ID] = &interns[i]
@@ -592,7 +569,6 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 				walkStart = time.Date(intern.StartDate.Year(), intern.StartDate.Month(), intern.StartDate.Day(), 0, 0, 0, 0, loc)
 			}
 			if walkStart.IsZero() {
-				// No start_date — skip intern unless they have real records
 				continue
 			}
 
@@ -607,10 +583,11 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 				rk := rowKey{intern.ID, key}
 
 				if rec, found := byKey[rk]; found {
-					// Skip status filter mismatch
 					if status != "" && rec.Status != status {
 						continue
 					}
+					// Use computeHours for lunch-break deduction.
+					hrs := computeHours(rec.TimeIn, rec.TimeOut, key)
 					walked = append(walked, WalkRow{
 						ID:            rec.ID,
 						UserID:        intern.ID,
@@ -619,7 +596,7 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 						Date:          key,
 						TimeIn:        rec.TimeIn,
 						TimeOut:       rec.TimeOut,
-						HoursRendered: rec.HoursRendered,
+						HoursRendered: hrs,
 						Status:        rec.Status,
 						IsReported:    rec.IsReported,
 						ReportReason:  rec.ReportReason,
@@ -627,7 +604,6 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 						AdminNote:     rec.AdminNote,
 					})
 				} else {
-					// Absent row — skip if status filter excludes it
 					if status != "" && status != "Absent" {
 						continue
 					}
@@ -642,7 +618,7 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			}
 		}
 
-		// Newest-first
+		// Newest-first.
 		for i, j := 0, len(walked)-1; i < j; i, j = i+1, j-1 {
 			walked[i], walked[j] = walked[j], walked[i]
 		}
@@ -677,70 +653,66 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 		TimeOut       *string  `gorm:"column:time_out"       json:"time_out"`
 		HoursRendered *float64 `gorm:"column:hours_rendered" json:"hours_rendered"`
 		Status        string   `gorm:"column:status"         json:"status"`
-		IsReported    bool     `gorm:"column:is_reported" json:"is_reported"`
-		ReportedAt    *string  `gorm:"column:reported_at" json:"reported_at"`
-		ReportReason  string   `gorm:"column:report_reason" json:"report_reason"`
-		ReportType    string   `gorm:"column:report_type"   json:"report_type"`
-		AdminNote     *string  `gorm:"column:admin_note"    json:"admin_note"`
+		IsReported    bool     `gorm:"column:is_reported"    json:"is_reported"`
+		ReportedAt    *string  `gorm:"column:reported_at"    json:"reported_at"`
+		ReportReason  string   `gorm:"column:report_reason"  json:"report_reason"`
+		ReportType    string   `gorm:"column:report_type"    json:"report_type"`
+		AdminNote     *string  `gorm:"column:admin_note"     json:"admin_note"`
 	}
 
 	baseSQL := `
-    SELECT
-        a.id,
-        a.user_id,
-        CONCAT(u.first_name, ' ', u.last_name)   AS intern_name,
-        COALESCE(u.avatar_url, '')                AS avatar_url,
-        TO_CHAR(a.date, 'YYYY-MM-DD')            AS date,
-        TO_CHAR(a.time_in,  'HH12:MI AM')        AS time_in,
-        TO_CHAR(a.time_out, 'HH12:MI AM')        AS time_out,
-        CASE
-            WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL
-                THEN EXTRACT(EPOCH FROM (a.time_out - a.time_in)) / 3600.0
-            ELSE NULL
-        END AS hours_rendered,
-        CASE
-            WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date = CURRENT_DATE
-                THEN 'On Shift'
-            WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date < CURRENT_DATE
-                THEN 'Missed Clock Out'
-            WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) < 9
-                THEN 'Present'
-            WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) >= 9
-                THEN 'Late'
-            ELSE 'Absent'
-        END AS status,
-        a.is_reported,
-        TO_CHAR(a.reported_at, 'YYYY-MM-DD HH12:MI AM') AS reported_at,
-        COALESCE(a.report_reason, '')             AS report_reason,
-        COALESCE(a.report_type, '')               AS report_type,
-        a.admin_note
-    FROM attendance a
-    LEFT JOIN users u ON u.id = a.user_id
-    WHERE 1=1
-`
+		SELECT
+			a.id,
+			a.user_id,
+			CONCAT(u.first_name, ' ', u.last_name)          AS intern_name,
+			COALESCE(u.avatar_url, '')                       AS avatar_url,
+			TO_CHAR(a.date, 'YYYY-MM-DD')                   AS date,
+			TO_CHAR(a.time_in,  'HH12:MI AM')               AS time_in,
+			TO_CHAR(a.time_out, 'HH12:MI AM')               AS time_out,
+			CASE
+				WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL
+					THEN EXTRACT(EPOCH FROM (a.time_out - a.time_in)) / 3600.0
+				ELSE NULL
+			END AS hours_rendered,
+			CASE
+				WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date = CURRENT_DATE
+					THEN 'On Shift'
+				WHEN a.time_in IS NOT NULL AND a.time_out IS NULL AND a.date < CURRENT_DATE
+					THEN 'Missed Clock Out'
+				WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) < 9
+					THEN 'Present'
+				WHEN a.time_out IS NOT NULL AND EXTRACT(HOUR FROM a.time_in) >= 9
+					THEN 'Late'
+				ELSE 'Absent'
+			END AS status,
+			a.is_reported,
+			TO_CHAR(a.reported_at, 'YYYY-MM-DD HH12:MI AM') AS reported_at,
+			COALESCE(a.report_reason, '')                    AS report_reason,
+			COALESCE(a.report_type, '')                      AS report_type,
+			a.admin_note
+		FROM attendance a
+		LEFT JOIN users u ON u.id = a.user_id
+		WHERE 1=1
+	`
 
 	args := []interface{}{}
 
-	// Date/period range
 	if useRange {
 		baseSQL += " AND a.date >= ? AND a.date < ?"
 		args = append(args, rangeStart, rangeEnd)
 	}
 
-	// Name search
 	if search != "" {
 		baseSQL += " AND CONCAT(u.first_name, ' ', u.last_name) ILIKE ?"
 		args = append(args, "%"+search+"%")
 	}
 
-	// Status filter (applied as a subquery wrapper so the CASE alias is visible)
 	statusClause := ""
 	if status != "" {
 		statusClause = " AND status = ?"
 		args = append(args, status)
 	}
 
-	// Single user filter
 	if userIDStr != "" {
 		uid, err := strconv.Atoi(userIDStr)
 		if err == nil {
@@ -749,15 +721,12 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 		}
 	}
 
-	// Wrap in a subquery so we can filter on the computed "status" alias
 	wrappedSQL := "SELECT * FROM (" + baseSQL + ") sub WHERE 1=1" + statusClause
 
-	// Count
 	countSQL := "SELECT COUNT(*) FROM (" + wrappedSQL + ") counted"
 	var total int64
 	h.DB.Raw(countSQL, args...).Scan(&total)
 
-	// Paginated fetch
 	finalSQL := wrappedSQL + " ORDER BY date DESC LIMIT ? OFFSET ?"
 	pageArgs := append(args, limit, offset)
 
@@ -773,21 +742,10 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 	})
 }
 
-// ── GET /api/admin/attendance/export ─────────────────────────────────────────
-// Same filters as GetAdminAttendance; returns CSV.
-// (Implementation left to your CSV helper — just reuse the same query above.)
-
 // ── Suppress unused import warning for clause ─────────────────────────────────
 var _ = clause.OnConflict{}
 
 // ── POST /api/attendance/:id/report-missed-clockout ───────────────────────────
-//
-// Intern reports that they forgot to clock out on a past day.
-// Guards:
-//   - Record must belong to the requesting user.
-//   - Record must have a time_in but no time_out.
-//   - Record date must be before today (not an ongoing shift).
-//   - Record must not have already been reported.
 
 func (h *Handler) ReportMissedClockOut(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -796,11 +754,10 @@ func (h *Handler) ReportMissedClockOut(c *gin.Context) {
 		return
 	}
 
-	// Parse optional reason from body
 	var body struct {
 		Reason string `json:"reason"`
 	}
-	_ = c.ShouldBindJSON(&body) // ignore error — reason is optional
+	_ = c.ShouldBindJSON(&body)
 
 	var rec models.Attendance
 	if err := h.DB.First(&rec, id).Error; err != nil {
@@ -816,8 +773,6 @@ func (h *Handler) ReportMissedClockOut(c *gin.Context) {
 		updates["report_reason"] = strings.TrimSpace(body.Reason)
 	}
 
-	// Use Select to force-write is_reported=true (avoids GORM skipping non-zero...
-	// true is fine, but be consistent)
 	if err := h.DB.Model(&rec).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to report"})
 		return
@@ -827,10 +782,6 @@ func (h *Handler) ReportMissedClockOut(c *gin.Context) {
 }
 
 // ── PATCH /api/admin/attendance/:id/set-timeout ───────────────────────────────
-//
-// Admin sets the time-out for a reported missed clock-out record.
-// Expects JSON body: { "time_out": "<RFC3339 or YYYY-MM-DDTHH:MM:SS>" }
-// Clears is_reported once resolved.
 
 func (h *Handler) AdminSetTimeOut(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -847,7 +798,6 @@ func (h *Handler) AdminSetTimeOut(c *gin.Context) {
 		return
 	}
 
-	// Accept RFC3339 with timezone or a bare local timestamp.
 	var timeOut time.Time
 	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05"} {
 		if t, err := time.Parse(layout, body.TimeOut); err == nil {
@@ -866,19 +816,15 @@ func (h *Handler) AdminSetTimeOut(c *gin.Context) {
 		return
 	}
 
-	// time_out must be after time_in.
 	if rec.TimeIn != nil && !timeOut.After(*rec.TimeIn) {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"ok":    false,
-			"error": "time_out must be after time_in",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "time_out must be after time_in"})
 		return
 	}
 
 	adminID, _ := getUserIDFromCtx(c)
 	if err := h.DB.Model(&rec).Updates(map[string]interface{}{
 		"time_out":    timeOut,
-		"is_reported": false, // resolved — clears the reported flag
+		"is_reported": false,
 		"reported_at": nil,
 	}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Failed to update record"})
@@ -895,39 +841,55 @@ func (h *Handler) AdminSetTimeOut(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+// ── GET /api/attendance/weekly ────────────────────────────────────────────────
+
 func (h *Handler) GetWeeklyAttendance(c *gin.Context) {
 	userID, ok := getUserIDFromCtx(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"ok":    false,
-			"error": "Unauthorized",
-		})
+		c.JSON(http.StatusUnauthorized, gin.H{"ok": false, "error": "Unauthorized"})
 		return
 	}
 
 	loc := manilaLoc()
 	now := time.Now().In(loc)
 
-	// Monday start of current week
 	weekday := int(now.Weekday())
 	if weekday == 0 {
 		weekday = 7
 	}
 
-	weekStart := time.Date(
-		now.Year(),
-		now.Month(),
-		now.Day()-(weekday-1),
-		0, 0, 0, 0,
-		loc,
-	)
-
+	weekStart := time.Date(now.Year(), now.Month(), now.Day()-(weekday-1), 0, 0, 0, 0, loc)
 	weekEnd := weekStart.AddDate(0, 0, 7)
 
-	// Cap to today so future dates are never returned
+	// Cap to today so future dates are never returned.
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	if weekEnd.After(today) {
 		weekEnd = today
+	}
+
+	// Fetch raw times and compute hours in Go so the lunch-break deduction
+	// (12:00–13:00) is applied, matching the admin side.
+	type weekRaw struct {
+		Date    string  `gorm:"column:date"`
+		TimeIn  *string `gorm:"column:time_in"`
+		TimeOut *string `gorm:"column:time_out"`
+	}
+	var weekRaws []weekRaw
+	err := h.DB.Raw(`
+		SELECT
+			TO_CHAR(a.date, 'YYYY-MM-DD') AS date,
+			TO_CHAR(a.time_in  AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_in,
+			TO_CHAR(a.time_out AT TIME ZONE 'Asia/Manila', 'HH12:MI AM') AS time_out
+		FROM attendance a
+		WHERE a.user_id = ?
+		  AND a.date >= ?
+		  AND a.date < ?
+		ORDER BY a.date ASC
+	`, userID, weekStart, weekEnd).Scan(&weekRaws).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
+		return
 	}
 
 	type WeeklyRow struct {
@@ -935,29 +897,14 @@ func (h *Handler) GetWeeklyAttendance(c *gin.Context) {
 		Hours *float64 `json:"hours"`
 	}
 
-	var rows []WeeklyRow
-
-	err := h.DB.Raw(`
-		SELECT
-			TO_CHAR(a.date, 'YYYY-MM-DD') AS date,
-			CASE
-				WHEN a.time_in IS NOT NULL AND a.time_out IS NOT NULL
-					THEN EXTRACT(EPOCH FROM (a.time_out - a.time_in)) / 3600.0
-				ELSE 0
-			END AS hours
-		FROM attendance a
-		WHERE a.user_id = ?
-		AND a.date >= ?
-		AND a.date < ?
-		ORDER BY a.date ASC
-	`, userID, weekStart, weekEnd).Scan(&rows).Error
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"ok":    false,
-			"error": err.Error(),
-		})
-		return
+	rows := make([]WeeklyRow, 0, len(weekRaws))
+	for _, r := range weekRaws {
+		hrs := computeHours(r.TimeIn, r.TimeOut, r.Date)
+		var h float64
+		if hrs != nil {
+			h = *hrs
+		}
+		rows = append(rows, WeeklyRow{Date: r.Date, Hours: &h})
 	}
 
 	c.JSON(http.StatusOK, gin.H{

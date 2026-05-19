@@ -1,8 +1,15 @@
 // lib/widgets/ojt_progress_card.dart
+//
+// Hours displayed here come from AttendanceSummary.totalHoursRendered,
+// which is fetched directly from the database.
 
 import 'package:flutter/material.dart';
 import '../models/attendance_model.dart';
 import 'app_theme.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Card widget
+// ─────────────────────────────────────────────────────────────────────────────
 
 class OjtProgressCard extends StatelessWidget {
   final AttendanceSummary summary;
@@ -49,8 +56,7 @@ class OjtProgressCard extends StatelessWidget {
                       : const Color(0xFF460A14).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                   border: isDark
-                      ? Border.all(
-                          color: color.withValues(alpha: 0.3), width: 1)
+                      ? Border.all(color: color.withValues(alpha: 0.3), width: 1)
                       : null,
                 ),
                 child: Icon(
@@ -80,8 +86,7 @@ class OjtProgressCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     border: isDark
                         ? Border.all(
-                            color: Colors.green.withValues(alpha: 0.4),
-                            width: 1)
+                            color: Colors.green.withValues(alpha: 0.4), width: 1)
                         : null,
                   ),
                   child: Text(
@@ -89,8 +94,7 @@ class OjtProgressCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color:
-                          isDark ? Colors.greenAccent : Colors.green.shade700,
+                      color: isDark ? Colors.greenAccent : Colors.green.shade700,
                     ),
                   ),
                 ),
@@ -165,10 +169,7 @@ class OjtProgressCard extends StatelessWidget {
               ),
               Text(
                 '${_fmtHours(summary.totalHoursRendered)} / ${_fmtHours(summary.requiredHours)} hrs',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: theme.mutedText,
-                ),
+                style: TextStyle(fontSize: 12, color: theme.mutedText),
               ),
             ],
           ),
