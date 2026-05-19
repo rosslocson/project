@@ -127,6 +127,22 @@ class RegisterForm {
       ),
     );
 
+    final errorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(
+        color: Colors.redAccent,
+        width: 1.5,
+      ),
+    );
+
+    final focusedErrorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(
+        color: Colors.redAccent,
+        width: 2,
+      ),
+    );
+
     return Container(
       alignment: Alignment.center,
       color: Colors.transparent,
@@ -186,6 +202,8 @@ class RegisterForm {
                                 fillColor: isDark ? const Color(0xFF14141D) : null,
                                 enabledBorder: defaultBorder,
                                 focusedBorder: focusedBorder,
+                                errorBorder: errorBorder,
+                                focusedErrorBorder: focusedErrorBorder,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                               ),
                               validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
@@ -214,6 +232,8 @@ class RegisterForm {
                                 fillColor: isDark ? const Color(0xFF14141D) : null,
                                 enabledBorder: defaultBorder,
                                 focusedBorder: focusedBorder,
+                                errorBorder: errorBorder,
+                                focusedErrorBorder: focusedErrorBorder,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                               ),
                               validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
@@ -242,6 +262,8 @@ class RegisterForm {
                       fillColor: isDark ? const Color(0xFF14141D) : null,
                       enabledBorder: defaultBorder,
                       focusedBorder: focusedBorder,
+                      errorBorder: errorBorder,
+                      focusedErrorBorder: focusedErrorBorder,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     ),
                     validator: (v) {
@@ -279,6 +301,8 @@ class RegisterForm {
                                         fillColor: isDark ? const Color(0xFF14141D) : null,
                                         enabledBorder: defaultBorder,
                                         focusedBorder: focusedBorder,
+                                        errorBorder: errorBorder,
+                                        focusedErrorBorder: focusedErrorBorder,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                       ),
                                       hint: Text(
@@ -345,6 +369,8 @@ class RegisterForm {
                                   fillColor: isDark ? const Color(0xFF14141D) : null,
                                   enabledBorder: defaultBorder,
                                   focusedBorder: focusedBorder,
+                                  errorBorder: errorBorder,
+                                  focusedErrorBorder: focusedErrorBorder,
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                 ),
                                 validator: (v) {
@@ -387,6 +413,8 @@ class RegisterForm {
                       fillColor: isDark ? const Color(0xFF14141D) : null,
                       enabledBorder: defaultBorder,
                       focusedBorder: focusedBorder,
+                      errorBorder: errorBorder,
+                      focusedErrorBorder: focusedErrorBorder,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       suffixIcon: Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -438,6 +466,8 @@ class RegisterForm {
                       fillColor: isDark ? const Color(0xFF14141D) : null,
                       enabledBorder: defaultBorder,
                       focusedBorder: focusedBorder,
+                      errorBorder: errorBorder,
+                      focusedErrorBorder: focusedErrorBorder,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       suffixIcon: Padding(
                         padding: const EdgeInsets.only(right: 8),

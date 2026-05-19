@@ -386,7 +386,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                     fontWeight: FontWeight.w800,
                     color: isDark ? Colors.white : kCosmicBlue,
                   ),
-                  cursorColor: kAccentPurple,
+                  cursorColor: isDark ? kAccentPurple : kCosmicBlue,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
                     counterText: '', // Hide default character counter
@@ -495,8 +495,8 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
     final focusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
-      borderSide: const BorderSide(
-        color: Color(0xFF6366F1), 
+      borderSide: BorderSide(
+        color: isDark ? const Color(0xFF6366F1) : kCosmicBlue, 
         width: 2,
       ),
     );
@@ -607,7 +607,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 controller: _resetEmailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 style: inputTextStyle,
-                cursorColor: kAccentPurple,
+                cursorColor: isDark ? kAccentPurple : kCosmicBlue,
                 decoration: dec.copyWith(
                   hintText: 'Enter your registered email',
                   hintStyle: TextStyle(
@@ -666,7 +666,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 controller: _newPassCtrl,
                 obscureText: obscureNewPass,
                 style: inputTextStyle,
-                cursorColor: kAccentPurple,
+                cursorColor: isDark ? kAccentPurple : kCosmicBlue,
                 decoration: dec.copyWith(
                   hintText: 'Enter new password',
                   hintStyle: TextStyle(
@@ -700,7 +700,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                 controller: _confPassCtrl,
                 obscureText: obscureConfPass,
                 style: inputTextStyle,
-                cursorColor: kAccentPurple,
+                cursorColor: isDark ? kAccentPurple : kCosmicBlue,
                 decoration: dec.copyWith(
                   hintText: 'Confirm new password',
                   hintStyle: TextStyle(
