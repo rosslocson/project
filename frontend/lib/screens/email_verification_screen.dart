@@ -360,18 +360,30 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
-                        // Base outline color in light mode made slightly blue for consistency
                         color: isDark
                             ? const Color(0xFF2A2A38)
-                            : kCosmicBlue.withOpacity(0.4),
+                            : Colors.grey.shade300,
                         width: 1.5,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
-                        // Dark blue active border in light mode
-                        color: isDark ? kAccentPurple : kCosmicBlue,
+                        color: kAccentPurple,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: Colors.redAccent,
+                        width: 2,
+                      ),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: Colors.redAccent,
                         width: 2,
                       ),
                     ),

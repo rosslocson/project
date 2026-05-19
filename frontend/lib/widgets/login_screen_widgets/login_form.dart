@@ -68,6 +68,22 @@ class LoginForm extends StatelessWidget {
       ),
     );
 
+    final errorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(
+        color: Colors.redAccent,
+        width: 1.5,
+      ),
+    );
+
+    final focusedErrorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(
+        color: Colors.redAccent,
+        width: 2,
+      ),
+    );
+
     return Container(
       alignment: Alignment.center,
       color: Colors.transparent,
@@ -220,6 +236,8 @@ class LoginForm extends StatelessWidget {
                   fillColor: isDark ? const Color(0xFF14141D) : null,
                   enabledBorder: defaultBorder,
                   focusedBorder: focusedBorder,
+                  errorBorder: errorBorder,
+                  focusedErrorBorder: focusedErrorBorder,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 14,
@@ -249,6 +267,8 @@ class LoginForm extends StatelessWidget {
                   fillColor: isDark ? const Color(0xFF14141D) : null,
                   enabledBorder: defaultBorder,
                   focusedBorder: focusedBorder,
+                  errorBorder: errorBorder,
+                  focusedErrorBorder: focusedErrorBorder,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 14,
