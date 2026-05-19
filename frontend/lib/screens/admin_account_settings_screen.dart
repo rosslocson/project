@@ -176,6 +176,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
         if (res['ok'] == true) {
           await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Avatar updated successfully!'),
             backgroundColor: Colors.green,
@@ -193,6 +194,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
       final file = File(pickedFile.path);
       if (!await file.exists()) return;
 
+      if (!mounted) return;
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
         MaterialPageRoute(
@@ -219,6 +221,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
 
       if (res['ok'] == true) {
         await context.read<AuthProvider>().updateUserData(res['user'] ?? {});
+        if (!mounted) return;
         setState(() => _avatarFile = null);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Avatar updated successfully!'),
@@ -462,18 +465,18 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                             child: CircleAvatar(
                                               radius: 40,
                                               backgroundColor:
-                                                  primaryColor.withOpacity(0.1),
+                                                  primaryColor.withValues(alpha: 0.1),
                                               backgroundImage: _avatarFile !=
                                                       null
                                                   ? FileImage(_avatarFile!)
                                                   : (_localAvatarBytes != null
-                                                          ? MemoryImage(
-                                                              _localAvatarBytes!)
-                                                          : (finalAvatarUrl
-                                                                  .isNotEmpty
-                                                              ? NetworkImage(
-                                                                  finalAvatarUrl)
-                                                              : null))
+                                                      ? MemoryImage(
+                                                          _localAvatarBytes!)
+                                                      : (finalAvatarUrl
+                                                              .isNotEmpty
+                                                          ? NetworkImage(
+                                                              finalAvatarUrl)
+                                                          : null))
                                                       as ImageProvider?,
                                               child: _isUploadingAvatar
                                                   ? CircularProgressIndicator(
@@ -565,7 +568,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                 horizontal: 12, vertical: 4),
                                             decoration: BoxDecoration(
                                               color: primaryColor
-                                                  .withOpacity(0.08),
+                                                  .withValues(alpha: 0.08),
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                             ),
@@ -574,7 +577,7 @@ class _AdminAccountSettingsScreenState extends State<AdminAccountSettingsScreen>
                                                     .toUpperCase(),
                                                 style: TextStyle(
                                                     color: primaryColor
-                                                        .withOpacity(0.9),
+                                                        .withValues(alpha: 0.9),
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w800,
                                                     letterSpacing: 1.0)),

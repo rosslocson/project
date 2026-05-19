@@ -14,6 +14,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 
 	"project/backend/email"
 	"project/backend/models"
@@ -78,11 +79,13 @@ func (s *AuthService) Register(firstName, lastName, rawEmail, password, phone, d
 	// Normalize email for consistent uniqueness checks.
 	normalizedEmail := strings.ToLower(strings.TrimSpace(rawEmail))
 
-	// Pre-check for VERIFIED users only - pending users can re-register
-	existing, err := s.userRepo.GetByEmail(normalizedEmail)
-	if err == nil && existing.IsVerified {
-		// Block verified users from re-registering.
+	// Block any already-registered email from re-registering.
+	_, err := s.userRepo.GetByEmail(normalizedEmail)
+	if err == nil {
 		return nil, "", errors.New("email already in use")
+	}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, "", err
 	}
 
 	// Hash password
@@ -203,9 +206,8 @@ func (s *AuthService) Login(email, password, ip string) (*LoginResult, error) {
 		return s.handleFailedAttempt(ip, genericErr)
 	}
 
-	// 4b. Enforce email verification
-	if !user.IsVerified {
-		// Per requirement: deny login for unverified accounts.
+	// 4b. Enforce email verification for modern accounts only.
+	if !user.IsVerified && !user.LegacyAccount {
 		loginErr := errors.New("Please verify your email first")
 		return &LoginResult{
 			Error:        loginErr,
@@ -376,6 +378,7 @@ func (s *AuthService) VerifyRegistrationOTP(otp string) (*models.User, string, e
 	}
 
 	// Create the user account now
+	verifiedAt := time.Now()
 	user := &models.User{
 		FirstName:        pending.FirstName,
 		LastName:         pending.LastName,
@@ -387,6 +390,8 @@ func (s *AuthService) VerifyRegistrationOTP(otp string) (*models.User, string, e
 		Role:             models.RoleUser,
 		IsActive:         pending.IsActive,
 		IsVerified:       true, // Mark as verified since OTP was verified
+		LegacyAccount:    false,
+		EmailVerifiedAt:  &verifiedAt,
 		RequiredOjtHours: pending.RequiredOjtHours,
 	}
 

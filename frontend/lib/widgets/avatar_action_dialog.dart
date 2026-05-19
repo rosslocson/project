@@ -30,9 +30,9 @@ class AvatarActionDialog extends StatelessWidget {
     final Color outlineBtnTextColor = isDark ? Colors.white : Colors.black87;
     
     final Color avatarBorderColor = isDark ? const Color(0xFF1F2235) : Colors.grey.shade200;
-    final Color avatarPlaceholderBg = isDark ? Colors.white.withOpacity(0.05) : _kBlue.withOpacity(0.1);
+    final Color avatarPlaceholderBg = isDark ? Colors.white.withValues(alpha: 0.05) : _kBlue.withValues(alpha: 0.1);
     final Color avatarIconColor = isDark ? Colors.white54 : _kBlue;
-    final Color shadowColor = isDark ? Colors.black.withOpacity(0.5) : Colors.black.withOpacity(0.25);
+    final Color shadowColor = isDark ? Colors.black.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.25);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -69,7 +69,7 @@ class AvatarActionDialog extends StatelessWidget {
                   border: Border.all(color: avatarBorderColor, width: 4),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),

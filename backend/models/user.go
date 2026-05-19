@@ -114,20 +114,22 @@ type User struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"-"          gorm:"index"`
 
-	FirstName   string     `json:"first_name"         gorm:"not null"`
-	LastName    string     `json:"last_name"          gorm:"not null"`
-	Email       string     `json:"email"              gorm:"uniqueIndex;not null"`
-	Password    string     `json:"-"                  gorm:"not null"`
-	Phone       string     `json:"phone"`
-	Department  string     `json:"department"`
-	Position    string     `json:"position"`
-	AvatarURL   string     `json:"avatar_url"`
-	Role        Role       `json:"role"               gorm:"default:'user'"`
-	IsActive    bool       `json:"is_active"          gorm:"default:true"`
-	IsArchived  bool       `json:"is_archived"        gorm:"default:false"`
-	IsVerified  bool       `json:"is_verified"        gorm:"default:false"`
-	LastLoginAt *time.Time `json:"last_login_at"`
-	Bio         string     `json:"bio"`
+	FirstName       string     `json:"first_name"         gorm:"not null"`
+	LastName        string     `json:"last_name"          gorm:"not null"`
+	Email           string     `json:"email"              gorm:"uniqueIndex;not null"`
+	Password        string     `json:"-"                  gorm:"not null"`
+	Phone           string     `json:"phone"`
+	Department      string     `json:"department"`
+	Position        string     `json:"position"`
+	AvatarURL       string     `json:"avatar_url"`
+	Role            Role       `json:"role"               gorm:"default:'user'"`
+	IsActive        bool       `json:"is_active"          gorm:"default:true"`
+	IsArchived      bool       `json:"is_archived"        gorm:"default:false"`
+	IsVerified      bool       `json:"is_verified"        gorm:"default:false"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"  gorm:"column:email_verified_at"`
+	LegacyAccount   bool       `json:"legacy_account"     gorm:"default:false"`
+	LastLoginAt     *time.Time `json:"last_login_at"`
+	Bio             string     `json:"bio"`
 
 	// --- NEW SECURITY FIELDS ---
 	FailedAttempts int        `json:"failed_attempts"    gorm:"default:0"`

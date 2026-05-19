@@ -81,25 +81,6 @@ class ProfileLeftPanel extends StatelessWidget {
                           ),
                         ),
                       ),
-                      /* GestureDetector(
-                        onTap: () => context.go('/edit-profile'),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: theme.surface,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4)),
-                            ],
-                          ),
-                          child: Icon(Icons.edit_rounded,
-                              color: theme.surfaceText, size: 18),
-                        ),
-                      ), */
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -157,12 +138,16 @@ class ProfileLeftPanel extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.10), height: 1),
                   ),
                   const SizedBox(height: 24),
-                  QuickInfoTile(
+                  
+                  // Replaced QuickInfoTile with our custom _MultilineInfoTile
+                  _MultilineInfoTile(
                       icon: Icons.business_rounded,
                       label: 'Department',
                       value: getProfileVal(user, 'department')),
                   const SizedBox(height: 16),
-                  QuickInfoTile(
+                  
+                  // Replaced QuickInfoTile with our custom _MultilineInfoTile
+                  _MultilineInfoTile(
                       icon: Icons.school_rounded,
                       label: 'School',
                       value: getProfileVal(user, 'school')),
@@ -216,6 +201,69 @@ class _AvatarInitials extends StatelessWidget {
           color: Colors.white,
           letterSpacing: 2,
         ),
+      ),
+    );
+  }
+}
+
+// Custom widget to guarantee multiline text wrapping
+class _MultilineInfoTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _MultilineInfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.internTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start, // Align to top for multiline
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05), // Matches subtle dark UI tile styles
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.blueAccent, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded( // Expanded forces the Column/Text to obey parent width limits
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.dashboardCardText.withValues(alpha: 0.6),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value.isEmpty ? 'Not Provided' : value,
+                  softWrap: true, // Enables text to wrap to the next line
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: theme.dashboardCardText,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
