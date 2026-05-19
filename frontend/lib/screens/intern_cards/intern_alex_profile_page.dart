@@ -335,8 +335,6 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
           child: Text(
-            // NOTE: Make sure `bio` exists in your InternProfile model. 
-            // If the intern object doesn't have one set, this personalized fallback will show.
             (widget.intern.bio != null && widget.intern.bio!.isNotEmpty) 
                 ? widget.intern.bio! 
                 : 'Information Systems student at CMDI and intern at FDS Asya Philippines Inc. Passionate about Flutter, UI/UX design, and crafting space-themed digital experiences.',
@@ -368,6 +366,10 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
 
   // ── FROSTED GLASS DATA PANELS (FRONT) ──────────────────────────────────────
   Widget _buildDataPanels(bool isLightMode) {
+    // Helper to safely extract start/end dates
+    final String safeStartDate = widget.intern.startDate.toString().isEmpty || widget.intern.startDate.toString() == 'null' ? 'N/A' : widget.intern.startDate.toString();
+    final String safeEndDate = widget.intern.endDate.toString().isEmpty || widget.intern.endDate.toString() == 'null' ? 'N/A' : widget.intern.endDate.toString();
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -405,11 +407,11 @@ class _AlexProfilePageState extends State<AlexProfilePage> with SingleTickerProv
                 value2: widget.intern.position?.isNotEmpty == true ? widget.intern.position! : 'Intern',
               ),
               const SizedBox(height: 36), 
-              const _DetailGridRow(
+              _DetailGridRow(
                 label1: 'START DATE',
-                value1: 'Feb 18, 2026',
+                value1: safeStartDate,
                 label2: 'END DATE',
-                value2: 'May 15, 2026',
+                value2: safeEndDate,
               ),
             ],
           ),
