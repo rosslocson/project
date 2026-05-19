@@ -52,14 +52,14 @@ class PendingBellState extends State<PendingBell>
   }
 
   Future<void> reload() async {
-    if (!mounted) return;
+    if (!context.mounted) return;
     setState(() => _loading = true);
 
     final res = await AdminAttendanceService.fetchPendingReports();
     debugPrint(
         '🔔 Bell fetch: ok=${res['ok']}, count=${(res['records'] as List?)?.length ?? 0}');
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     final prev = _pending.length;
 
@@ -79,7 +79,7 @@ class PendingBellState extends State<PendingBell>
     showDialog(
       context: rootCtx,
       useRootNavigator: true,
-      barrierColor: Colors.black.withOpacity(0.45),
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (_) => PendingPanel(
         initialRecords: _pending,
         rootContext: rootCtx,
@@ -210,14 +210,14 @@ class _PendingPanelState extends State<PendingPanel> {
   }
 
   Future<void> _refresh() async {
-    if (!mounted) return;
+    if (!context.mounted) return;
     setState(() => _refreshing = true);
 
     final res = await AdminAttendanceService.fetchPendingReports();
     debugPrint(
         '📋 Panel refresh: ok=${res['ok']}, count=${(res['records'] as List<AdminAttendanceRecord>?)?.length ?? 0}');
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     setState(() {
       _records = res['ok'] == true
@@ -245,7 +245,7 @@ class _PendingPanelState extends State<PendingPanel> {
 
     // Adjusted dynamic colors for the header action buttons
     final Color actionBtnBg =
-        isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF4F4F8);
+        isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFF4F4F8);
     final Color actionBtnIconColor = isDark ? Colors.white70 : textMid;
 
     return Center(
@@ -260,7 +260,7 @@ class _PendingPanelState extends State<PendingPanel> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.18),
+              color: Colors.black.withValues(alpha: 0.18),
               blurRadius: 32,
               offset: const Offset(0, 8),
             ),
@@ -417,12 +417,12 @@ class PendingTile extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isDark
-              ? const Color(0xFF3B2F00).withOpacity(0.3)
+              ? const Color(0xFF3B2F00).withValues(alpha: 0.3)
               : const Color(0xFFFFFBEB),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark
-                ? const Color(0xFFF59E0B).withOpacity(0.5)
+                ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
                 : const Color(0xFFFCD34D),
           ),
         ),
@@ -467,7 +467,7 @@ class PendingTile extends StatelessWidget {
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF78350F).withOpacity(0.4)
+                            ? const Color(0xFF78350F).withValues(alpha: 0.4)
                             : const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(6),
                       ),

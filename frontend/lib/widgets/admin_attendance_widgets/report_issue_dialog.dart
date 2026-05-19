@@ -203,7 +203,7 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
                             horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(
                           color: selected
-                              ? _kAccentBlue.withOpacity(0.18)
+                              ? _kAccentBlue.withValues(alpha: 0.18)
                               : _kSheetDeep,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
@@ -289,7 +289,7 @@ class _ReportIssueDialogState extends State<ReportIssueDialog> {
                     style: FilledButton.styleFrom(
                       backgroundColor: _kAccentBlue,
                       disabledBackgroundColor:
-                          _kAccentBlue.withOpacity(0.4),
+                          _kAccentBlue.withValues(alpha: 0.4),
                       padding:
                           const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
@@ -333,17 +333,17 @@ class _StatusChip extends StatelessWidget {
       'Late' => (
           const Color(0xFFF59E0B),
           const Color(0xFFF59E0B),
-          const Color(0xFFF59E0B).withOpacity(0.15),
+          const Color(0xFFF59E0B).withValues(alpha: 0.15),
         ),
       'Missed Clock Out' => (
           const Color(0xFFEA580C),
           const Color(0xFFEA580C),
-          const Color(0xFFEA580C).withOpacity(0.15),
+          const Color(0xFFEA580C).withValues(alpha: 0.15),
         ),
       _ => (
           const Color(0xFFEF4444),
           const Color(0xFFEF4444),
-          const Color(0xFFEF4444).withOpacity(0.15),
+          const Color(0xFFEF4444).withValues(alpha: 0.15),
         ),
     };
 
