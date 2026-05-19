@@ -32,13 +32,14 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
   late PageController _pageController;
   Timer? _autoScrollTimer;
   int _currentPage = 0;
+  double _lastTargetFraction = 0.35; // Track active viewport state
 
   @override
   void initState() {
     super.initState();
     _currentPage = widget.interns.isNotEmpty ? widget.interns.length * 1000 : 0;
     _pageController =
-        PageController(viewportFraction: 0.35, initialPage: _currentPage);
+        PageController(viewportFraction: _lastTargetFraction, initialPage: _currentPage);
     if (!widget.loading && widget.interns.isNotEmpty) {
       _startAutoScroll();
     }
@@ -49,11 +50,18 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
     super.didUpdateWidget(oldWidget);
     if (widget.interns != oldWidget.interns && widget.interns.isNotEmpty) {
       _currentPage = widget.interns.length * 1000;
-      _pageController.dispose();
-      _pageController =
-          PageController(viewportFraction: 0.35, initialPage: _currentPage);
+      _rebuildPageController(_lastTargetFraction);
       _startAutoScroll();
     }
+  }
+
+  void _rebuildPageController(double targetFraction) {
+    _pageController.dispose();
+    _pageController = PageController(
+      viewportFraction: targetFraction,
+      initialPage: _currentPage,
+    );
+    _lastTargetFraction = targetFraction;
   }
 
   @override
@@ -101,8 +109,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
         : intern.name == 'Alex Llanza'
             ? AlexProfilePage(intern: intern)
             : intern.name == 'Airra Lorraine De Castro'
-            ? AirraProfilePage(intern: intern)  
-            : InternDetailPage(intern: intern);
+                ? AirraProfilePage(intern: intern)  
+                : InternDetailPage(intern: intern);
 
     Navigator.of(context)
         .push(PageRouteBuilder(
@@ -120,27 +128,43 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
   Widget build(BuildContext context) {
     final theme = context.internTheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Expanded(
-                  child: SizedBox()), // left spacer keeps title centered
-              Text(
-                'Meet Our Interns',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.topbarText,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 550;
+        final double targetFraction = isCompact ? 0.75 : 0.35;
+
+        if (targetFraction != _lastTargetFraction) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _rebuildPageController(targetFraction);
+              });
+            }
+          });
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Meet Our Interns',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.topbarText,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-              ),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
+                  ),
+                  const SizedBox(width: 16),
+                  TextButton(
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -164,24 +188,26 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
                       ],
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildCarouselBody(),
-        const SizedBox(height: 16),
-        if (!widget.loading && widget.interns.isNotEmpty) _buildDotNavigation(),
-      ],
+            ),
+            const SizedBox(height: 16),
+            _buildCarouselBody(isCompact),
+            const SizedBox(height: 16),
+            if (!widget.loading && widget.interns.isNotEmpty) _buildDotNavigation(isCompact),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildCarouselBody() {
+  Widget _buildCarouselBody(bool isCompact) {
+    final double computedHeight = isCompact ? 210 : 180;
+
     if (widget.loading) {
-      return const SizedBox(
-        height: 180,
-        child: Center(
+      return SizedBox(
+        height: computedHeight,
+        child: const Center(
           child: CircularProgressIndicator(
             color: InternCarouselPalette.accent,
           ),
@@ -192,7 +218,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
     if (widget.error != null) {
       final theme = context.internTheme;
       return SizedBox(
-        height: 180,
+        height: computedHeight,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -225,7 +251,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
 
     if (widget.interns.isEmpty) {
       return SizedBox(
-        height: 180,
+        height: computedHeight,
         child: Center(
             child: Text('No interns found.',
                 style: TextStyle(
@@ -236,7 +262,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
     }
 
     return SizedBox(
-      height: 180,
+      height: computedHeight,
       child: PageView.builder(
         controller: _pageController,
         onPageChanged: (i) => setState(() => _currentPage = i),
@@ -252,7 +278,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
               duration: const Duration(milliseconds: 350),
               child: GestureDetector(
                 onTap: () => _openDetail(intern),
-                child: _InternCardFront(intern: intern),
+                child: _InternCardFront(intern: intern, isCompact: isCompact),
               ),
             ),
           );
@@ -261,45 +287,58 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
     );
   }
 
-  Widget _buildDotNavigation() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _ArrowButton(icon: Icons.chevron_left, onTap: _prev),
-        const SizedBox(width: 20),
-        Row(
-          children: List.generate(widget.interns.length, (i) {
-            final active = i == (_currentPage % widget.interns.length);
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: active ? 16 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: active
-                    ? InternCarouselPalette.dotActive
-                    : InternCarouselPalette.dotActive.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(3),
+  Widget _buildDotNavigation(bool isCompact) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _ArrowButton(icon: Icons.chevron_left, onTap: _prev, isCompact: isCompact),
+              const SizedBox(width: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(widget.interns.length, (i) {
+                  final active = i == (_currentPage % widget.interns.length);
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: active ? 16 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: active
+                          ? InternCarouselPalette.dotActive
+                          : InternCarouselPalette.dotActive.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
               ),
-            );
-          }),
+              const SizedBox(width: 16),
+              _ArrowButton(icon: Icons.chevron_right, onTap: _next, isCompact: isCompact),
+            ],
+          ),
         ),
-        const SizedBox(width: 20),
-        _ArrowButton(icon: Icons.chevron_right, onTap: _next),
-      ],
+      ),
     );
   }
 }
 
 class _InternCardFront extends StatelessWidget {
   final InternProfile intern;
+  final bool isCompact;
 
-  const _InternCardFront({required this.intern});
+  const _InternCardFront({
+    required this.intern,
+    required this.isCompact,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -312,19 +351,24 @@ class _InternCardFront extends StatelessWidget {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          InternAvatar(
-              intern: intern, size: 70, borderRadius: 18, fontSize: 28),
+          BorderedAvatar(
+            intern: intern, 
+            size: isCompact ? 55 : 70, 
+            borderRadius: 18, 
+            fontSize: isCompact ? 22 : 28,
+          ),
           const SizedBox(height: 12),
           Text(
             intern.name,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: isCompact ? 14 : 16,
               fontWeight: FontWeight.bold,
               color: InternCarouselPalette.cardForeground(context),
             ),
             textAlign: TextAlign.center,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
@@ -333,9 +377,11 @@ class _InternCardFront extends StatelessWidget {
                 ? 'Intern #${intern.internNumber}'
                 : '',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: isCompact ? 11 : 12,
               color: InternCarouselPalette.cardForegroundMuted(context),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -346,8 +392,13 @@ class _InternCardFront extends StatelessWidget {
 class _ArrowButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final bool isCompact;
 
-  const _ArrowButton({required this.icon, required this.onTap});
+  const _ArrowButton({
+    required this.icon, 
+    required this.onTap,
+    required this.isCompact,
+  });
 
   @override
   State<_ArrowButton> createState() => _ArrowButtonState();
@@ -358,6 +409,9 @@ class _ArrowButtonState extends State<_ArrowButton> {
 
   @override
   Widget build(BuildContext context) {
+    final double buttonSize = widget.isCompact ? 34 : 40;
+    final double iconSize = widget.isCompact ? 18 : 22;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -366,8 +420,8 @@ class _ArrowButtonState extends State<_ArrowButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: 40,
-          height: 40,
+          width: buttonSize,
+          height: buttonSize,
           decoration: BoxDecoration(
             color: InternCarouselPalette.arrowBackground(
               context,
@@ -388,8 +442,48 @@ class _ArrowButtonState extends State<_ArrowButton> {
               context,
               hovered: _isHovered,
             ),
-            size: 22,
+            size: iconSize,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Fallback helper component to render initials or fallback avatar styling cleanly
+class BorderedAvatar extends StatelessWidget {
+  final InternProfile intern;
+  final double size;
+  final double borderRadius;
+  final double fontSize;
+
+  const BorderedAvatar({
+    super.key,
+    required this.intern,
+    required this.size,
+    required this.borderRadius,
+    required this.fontSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Generate up to 2 uppercase initials from the intern's name
+    final initials = intern.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0].toUpperCase() : '').where((e) => e.isNotEmpty).take(2).join();
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initials.isNotEmpty ? initials : '??',
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFF5E001F), // Dark wine tone to complement the card's profile color accents
         ),
       ),
     );
