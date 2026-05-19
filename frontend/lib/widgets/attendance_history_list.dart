@@ -54,6 +54,14 @@ String _fmtWeekRange(DateTime monday) {
   return '${_monthAbbr(monday.month)} ${monday.day} – ${_monthAbbr(friday.month)} ${friday.day}, ${friday.year}';
 }
 
+// e.g. "Tuesday, May 19"
+String _fmtToday(DateTime dt) {
+  const days = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  ];
+  return '${days[dt.weekday - 1]}, ${_monthAbbr(dt.month)} ${dt.day}';
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Widget
 // ─────────────────────────────────────────────────────────────────────────────
@@ -96,9 +104,9 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
     final grouped = <String, List<AttendanceRecord>>{};
     for (final r in widget.records) {
       // Never show records dated after today.
-    final recordDate = DateTime(r.date.year, r.date.month, r.date.day);
-    if (recordDate.isAfter(today)) continue;
-    
+      final recordDate = DateTime(r.date.year, r.date.month, r.date.day);
+      if (recordDate.isAfter(today)) continue;
+
       final monday = _weekStart(r.date);
       final key = _weekKey(monday);
       grouped.putIfAbsent(key, () => []).add(r);
@@ -106,6 +114,12 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
     for (final list in grouped.values) {
       list.sort((a, b) => a.date.compareTo(b.date));
     }
+
+    // Always ensure the current week slot exists so today is always visible.
+    final thisWeekKey = _weekKey(_weekStart(now));
+    grouped.putIfAbsent(thisWeekKey, () => []);
+
+    // _weeks[0] = most recent week, _weeks[last] = oldest week.
     final weeks = grouped.keys.map((k) => DateTime.parse(k)).toList()
       ..sort((a, b) => b.compareTo(a));
 
@@ -137,6 +151,14 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
     return records;
   }
 
+  /// Whether today already has an attendance record in the current week.
+  bool get _todayHasRecord {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return _currentRecords.any((r) =>
+        DateTime(r.date.year, r.date.month, r.date.day) == today);
+  }
+
   void _goTo(int index) {
     final clamped = index.clamp(0, (_weeks.length - 1).clamp(0, 9999));
     if (clamped != _weekIndex) setState(() => _weekIndex = clamped);
@@ -160,6 +182,8 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
 
     final totalWeeks = _weeks.length;
     final monday = _weeks.isNotEmpty ? _weeks[_weekIndex] : null;
+    // _weekIndex == 0  → newest week (no "newer" to go to)
+    // _weekIndex == totalWeeks-1 → oldest week (no "older" to go to)
     final isNewestWeek = _weekIndex == 0;
     final isOldestWeek = _weekIndex >= totalWeeks - 1;
 
@@ -284,6 +308,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Row(
                 children: [
+                  // ← goes to an OLDER week (higher index)
                   _NavArrow(
                     icon: Icons.chevron_left_rounded,
                     enabled: !isOldestWeek,
@@ -304,6 +329,20 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                             color: isDark ? Colors.white : _kTextHead,
                           ),
                         ),
+                        // ── Today label (current week only) ───────────
+                        if (isCurrentWeek) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            'Today: ${_fmtToday(now)}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? Colors.white38
+                                  : Colors.grey.shade400,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 6),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -335,6 +374,7 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     ),
                   ),
                   const SizedBox(width: 10),
+                  // → goes to a NEWER week (lower index)
                   _NavArrow(
                     icon: Icons.chevron_right_rounded,
                     enabled: !isNewestWeek,
@@ -373,40 +413,79 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                 borderRadius: totalWeeks <= 1
                     ? const BorderRadius.vertical(bottom: Radius.circular(16))
                     : BorderRadius.zero,
-                child: _currentRecords.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.all(28),
-                        child: Center(
-                          child: Text(
-                            'No records for this week',
-                            style: TextStyle(color: Colors.grey.shade400),
-                          ),
-                        ),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _currentRecords.length,
-                        separatorBuilder: (_, __) => Divider(
-                            height: 1, indent: 20, color: Colors.grey.shade100),
-                        itemBuilder: (context, i) => _AttendanceRow(
-                          record: _currentRecords[i],
-                          accentColor: accentColor,
+                child: Builder(builder: (context) {
+                  // Build the combined item list:
+                  // real records + optional today-placeholder at the right position.
+                  final records = _currentRecords;
+                  final showTodayPlaceholder =
+                      isCurrentWeek && !_todayHasRecord;
+
+                  // Items: each is either an AttendanceRecord or a sentinel
+                  // DateTime (today placeholder).
+                  final items = <Object>[...records];
+                  if (showTodayPlaceholder) {
+                    // Insert today in sorted position among existing records.
+                    final todayDate = DateTime(now.year, now.month, now.day);
+                    int insertAt = items.indexWhere((item) =>
+                        item is AttendanceRecord &&
+                        item.date.isAfter(todayDate));
+                    if (insertAt == -1) insertAt = items.length;
+                    items.insert(insertAt, todayDate);
+                  }
+
+                  if (items.isEmpty) {
+                    // Shouldn't happen (today placeholder always shows on
+                    // current week), but guard just in case.
+                    return Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: Center(
+                        child: Text(
+                          'No records for this week',
+                          style: TextStyle(color: Colors.grey.shade400),
                         ),
                       ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => Divider(
+                        height: 1, indent: 20, color: Colors.grey.shade100),
+                    itemBuilder: (context, i) {
+                      final item = items[i];
+                      if (item is DateTime) {
+                        // Today placeholder — no record yet.
+                        return _TodayPlaceholderRow(
+                          date: item,
+                          isDark: isDark,
+                        );
+                      }
+                      return _AttendanceRow(
+                        record: item as AttendanceRecord,
+                        accentColor: accentColor,
+                      );
+                    },
+                  );
+                }),
               ),
             ),
 
             // ── Week dot indicators ──────────────────────────────────────
+            // Dots: left = oldest week, right = newest week.
+            // ← (older) moves left along the dots; → (newer) moves right.
             if (totalWeeks > 1)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(totalWeeks, (i) {
-                    final active = i == _weekIndex;
+                    // i=0 here = leftmost dot = OLDEST week (highest _weekIndex)
+                    final dotWeekIndex = (totalWeeks - 1) - i;
+                    final active = dotWeekIndex == _weekIndex;
                     return GestureDetector(
-                      onTap: () => _goTo(i),
+                      onTap: () => _goTo(dotWeekIndex),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -579,6 +658,12 @@ class _AttendanceRow extends StatelessWidget {
     // Excused-uncredited days render like absent (greyed out date tile).
     final bool greyDate = _isAbsent || _isExcusedUncredited;
 
+    // ── Is this row today? ─────────────────────────────────────────────────
+    final now = DateTime.now();
+    final isToday = record.date.year == now.year &&
+        record.date.month == now.month &&
+        record.date.day == now.day;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
@@ -588,11 +673,20 @@ class _AttendanceRow extends StatelessWidget {
             width: 44,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: greyDate ? Colors.grey.shade100 : _kNavy.withValues(alpha: 0.07),
+              color: greyDate
+                  ? (isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.grey.shade100)
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : _kNavy.withValues(alpha: 0.07)),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color:
-                    greyDate ? Colors.grey.shade200 : _kBorder.withValues(alpha: 0.4),
+                color: greyDate
+                    ? (isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.grey.shade200)
+                    : _kBorder.withValues(alpha: isDark ? 0.6 : 0.4),
               ),
             ),
             child: Column(
@@ -601,7 +695,9 @@ class _AttendanceRow extends StatelessWidget {
                   _monthAbbr(record.date.month),
                   style: TextStyle(
                     fontSize: 10,
-                    color: greyDate ? Colors.grey.shade400 : _kAccent,
+                    color: greyDate
+                        ? (isDark ? Colors.white30 : Colors.grey.shade400)
+                        : _kAccent,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -610,7 +706,9 @@ class _AttendanceRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: greyDate ? Colors.grey.shade400 : _kNavy,
+                    color: greyDate
+                        ? (isDark ? Colors.white30 : Colors.grey.shade400)
+                        : (isDark ? Colors.white : _kNavy),
                     height: 1.1,
                   ),
                 ),
@@ -624,13 +722,38 @@ class _AttendanceRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _dayName(record.date.weekday),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: greyDate ? Colors.grey.shade400 : _kTextHead,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      _dayName(record.date.weekday),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: greyDate
+                            ? (isDark ? Colors.white30 : Colors.grey.shade400)
+                            : (isDark ? Colors.white : _kTextHead),
+                      ),
+                    ),
+                    if (isToday) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: _kAccent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'Today',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: _kAccent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 if (!_isAbsent)
@@ -762,7 +885,137 @@ class _AttendanceRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Status badge
+// Today placeholder row (shown when today has no attendance record yet)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TodayPlaceholderRow extends StatelessWidget {
+  final DateTime date;
+  final bool isDark;
+
+  const _TodayPlaceholderRow({required this.date, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    const days = [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+      'Saturday', 'Sunday',
+    ];
+    const months = [
+      'Jan','Feb','Mar','Apr','May','Jun',
+      'Jul','Aug','Sep','Oct','Nov','Dec',
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        children: [
+          // ── Date tile (today accent) ──────────────────────────────
+          Container(
+            width: 44,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: _kAccent.withValues(alpha: isDark ? 0.15 : 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _kAccent.withValues(alpha: 0.5)),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  months[date.month - 1],
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: _kAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  date.day.toString(),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : _kNavy,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // ── Day name + "Today" pill ───────────────────────────────
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      days[date.weekday - 1],
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white30 : Colors.grey.shade400,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: _kAccent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Today',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: _kAccent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'No clock-in recorded',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white30 : Colors.grey.shade400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Hours + status ────────────────────────────────────────
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '0h 00m',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white30 : Colors.grey.shade400,
+                ),
+              ),
+              const SizedBox(height: 4),
+              _StatusBadge(
+                isAbsent: true,
+                isComplete: false,
+                isOngoing: false,
+                isDark: isDark,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StatusBadge extends StatelessWidget {
