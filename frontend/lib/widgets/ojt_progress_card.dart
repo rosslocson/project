@@ -21,7 +21,10 @@ class OjtProgressCard extends StatelessWidget {
     final theme = context.internTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pct = summary.progressPercent;
-    final color = _progressColor(pct);
+    final color = _progressColor(pct, isDark);
+
+    // Cyan color pair — same as AttendanceClockCard
+    //final ojtCyan = isDark ? const Color(0xFF00FFFF) : const Color(0xFF006060);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -48,22 +51,10 @@ class OjtProgressCard extends StatelessWidget {
           // ── Header ──────────────────────────────────────────────────────
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? color.withValues(alpha: 0.15)
-                      : const Color(0xFF460A14).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: isDark
-                      ? Border.all(color: color.withValues(alpha: 0.3), width: 1)
-                      : null,
-                ),
-                child: Icon(
-                  Icons.timer_outlined,
-                  color: isDark ? color : const Color(0xFF460A14),
-                  size: 20,
-                ),
+              Icon(
+                Icons.timer_outlined,
+                color: isDark ? Colors.white70 : theme.mutedText,
+                size: 18,
               ),
               const SizedBox(width: 10),
               Text(
@@ -75,29 +66,6 @@ class OjtProgressCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (summary.isComplete)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.green.withValues(alpha: 0.15)
-                        : Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                    border: isDark
-                        ? Border.all(
-                            color: Colors.green.withValues(alpha: 0.4), width: 1)
-                        : null,
-                  ),
-                  child: Text(
-                    'Complete!',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.greenAccent : Colors.green.shade700,
-                    ),
-                  ),
-                ),
             ],
           ),
 
@@ -109,7 +77,7 @@ class OjtProgressCard extends StatelessWidget {
               _StatChip(
                 label: 'Rendered',
                 value: _fmtHours(summary.totalHoursRendered),
-                color: isDark ? Colors.white : const Color(0xFF460A14),
+                color: isDark ? Colors.white : const Color(0xFF00022E),
                 isDark: isDark,
               ),
               const SizedBox(width: 12),
@@ -123,16 +91,15 @@ class OjtProgressCard extends StatelessWidget {
               _StatChip(
                 label: 'Remaining',
                 value: _fmtHours(summary.remainingHours),
-                color: color,
+                color: theme.mutedText,
+                //color: isDark ? Colors.white : const Color(0xFF00022E),
                 isDark: isDark,
               ),
               const SizedBox(width: 12),
               _StatChip(
                 label: 'Days',
                 value: '${summary.totalDays}',
-                color: isDark
-                    ? Colors.blueAccent.shade100
-                    : Colors.blueGrey.shade600,
+               color: theme.mutedText,
                 isDark: isDark,
               ),
             ],
@@ -149,7 +116,9 @@ class OjtProgressCard extends StatelessWidget {
               backgroundColor: isDark
                   ? Colors.white.withValues(alpha: 0.08)
                   : theme.formFill,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E),
+              ),
             ),
           ),
 
@@ -178,8 +147,9 @@ class OjtProgressCard extends StatelessWidget {
     );
   }
 
-  Color _progressColor(double pct) {
-    if (pct >= 1.0) return Colors.greenAccent.shade400;
+  Color _progressColor(double pct, bool isDark) {
+    if (pct >= 1.0)
+      return isDark ? const Color(0xFF00FFFF) : const Color(0xFF006060);
     if (pct >= 0.75) return Colors.blueAccent.shade200;
     if (pct >= 0.5) return const Color(0xFF7367F0);
     return Colors.orange.shade400;

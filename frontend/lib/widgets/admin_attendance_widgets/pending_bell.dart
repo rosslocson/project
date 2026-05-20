@@ -281,11 +281,11 @@ class _PendingPanelState extends State<PendingPanel> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFDE68A),
+                        color: isDark ? const Color(0xFF6C63FF) : const Color(0xFF00022E),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.pending_actions_rounded,
-                          color: Color(0xFF92400E), size: 18),
+                          color:  Colors.white, size: 18),
                     ),
                     const SizedBox(width: 10),
                     Text(
