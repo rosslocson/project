@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../models/attendance_record.dart';
 import '../../models/attendance_constants.dart';
 import '../../services/admin_attendance_service.dart';
+import '../app_theme.dart';
 
 class ReviewReportSheet extends StatefulWidget {
   final AdminAttendanceRecord record;
@@ -32,11 +33,10 @@ class ReviewReportSheet extends StatefulWidget {
   State<ReviewReportSheet> createState() => _ReviewReportSheetState();
 }
 
-// Each resolution option shown in the UI
 class _ResolutionOption {
-  final String value; // sent to backend
-  final String label; // shown in chip
-  final String hint; // subtitle under chip
+  final String value;
+  final String label;
+  final String hint;
   final IconData icon;
 
   const _ResolutionOption({
@@ -48,8 +48,6 @@ class _ResolutionOption {
 }
 
 class _ReviewReportSheetState extends State<ReviewReportSheet> {
-  // Resolution options — labels match the canonical status strings used
-  // in attendance_constants.dart and StatusBadge so everything stays in sync.
   static const _options = [
     _ResolutionOption(
       value: 'set_timeout',
@@ -95,21 +93,94 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
   @override
   void initState() {
     super.initState();
-
-    // Default resolution based on status
     _selectedResolution = widget.record.status == 'Missed Clock Out'
         ? 'set_timeout'
         : 'excused_credited';
-
-    // Pre-fill credited times with standard 8 AM – 5 PM so the admin
-    // can just confirm without touching the pickers unless they need to override.
     _creditedTimeIn  = const TimeOfDay(hour: 8, minute: 0);
     _creditedTimeOut = const TimeOfDay(hour: 17, minute: 0);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  // ── Theme builder — mirrors custom_date_picker_dialog._theme ──────────────
+  // Passed to showTimePicker/showDatePicker so the native dialog matches
+  // the app's dark/light scheme exactly.
+
+  Widget _pickerTheme(BuildContext ctx, Widget? child, bool isDark, Color accentColor) {
+    if (isDark) {
+      return Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: accentColor,           // selected ring / header bg
+            onPrimary: Colors.white,         // text on selected
+            surface: const Color(0xFF0E0E12), // dialog bg
+            onSurface: Colors.white,
+            surfaceContainerHighest: const Color(0xFF18181E), // input field bg
+          ),
+          timePickerTheme: TimePickerThemeData(
+            backgroundColor: const Color(0xFF0E0E12),
+            hourMinuteColor: const Color(0xFF18181E),
+            hourMinuteTextColor: Colors.white,
+            dayPeriodColor: const Color(0xFF18181E),
+            dayPeriodTextColor: MaterialStateColor.resolveWith(
+              (states) => states.contains(MaterialState.selected)
+                  ? Colors.white
+                  : Colors.white60,
+            ),
+            dialBackgroundColor: const Color(0xFF18181E),
+            dialHandColor: accentColor,
+            dialTextColor: MaterialStateColor.resolveWith(
+              (states) => states.contains(MaterialState.selected)
+                  ? Colors.white
+                  : Colors.white70,
+            ),
+            entryModeIconColor: Colors.white54,
+            helpTextStyle: const TextStyle(color: Colors.white54, fontSize: 11),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(foregroundColor: accentColor),
+          ),
+        ),
+        child: child!,
+      );
+    }
+
+    // ── Light mode ────────────────────────────────────────────────────────
+    return Theme(
+      data: Theme.of(ctx).copyWith(
+        colorScheme: ColorScheme.light(
+          primary: accentColor,             // selected ring / header bg
+          onPrimary: Colors.white,           // text on selected
+          surface: Colors.white,             // dialog bg
+          onSurface: kTextDark,
+          surfaceContainerHighest: const Color(0xFFF4F5F8), // input field bg
+        ),
+        timePickerTheme: TimePickerThemeData(
+          backgroundColor: Colors.white,
+          hourMinuteColor: const Color(0xFFF4F5F8),
+          hourMinuteTextColor: kTextDark,
+          dayPeriodColor: const Color(0xFFF4F5F8),
+          dayPeriodTextColor: MaterialStateColor.resolveWith(
+            (states) => states.contains(MaterialState.selected)
+                ? accentColor
+                : kTextMid,
+          ),
+          dialBackgroundColor: const Color(0xFFF4F5F8),
+          dialHandColor: accentColor,
+          dialTextColor: MaterialStateColor.resolveWith(
+            (states) => states.contains(MaterialState.selected)
+                ? Colors.white
+                : kTextDark,
+          ),
+          entryModeIconColor: kTextMid,
+          helpTextStyle: TextStyle(color: kTextMid, fontSize: 11),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(foregroundColor: accentColor),
+        ),
+      ),
+      child: child!,
+    );
   }
 
   // ── Validation ─────────────────────────────────────────────────────────────
@@ -119,12 +190,8 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
       return 'Please pick a time-out before saving.';
     }
     if (_selectedResolution == 'excused_credited') {
-      if (_creditedTimeIn == null) {
-        return 'Please pick a time-in for credited excusal.';
-      }
-      if (_creditedTimeOut == null) {
-        return 'Please pick a time-out for credited excusal.';
-      }
+      if (_creditedTimeIn == null)  return 'Please pick a time-in for credited excusal.';
+      if (_creditedTimeOut == null) return 'Please pick a time-out for credited excusal.';
     }
     if (_selectedResolution == 'adjust_timein' && _adjustedTimeIn == null) {
       return 'Please pick the corrected time-in before saving.';
@@ -140,11 +207,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
       setState(() => _error = validationErr);
       return;
     }
-
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
+    setState(() { _submitting = true; _error = null; });
 
     final result = await AdminAttendanceService.resolveAttendanceIssue(
       recordId: widget.record.id,
@@ -154,10 +217,8 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
           : _selectedResolution == 'excused_credited'
               ? _creditedTimeOut
               : null,
-      adjustedTimeIn:
-          _selectedResolution == 'adjust_timein' ? _adjustedTimeIn : null,
-      creditedTimeIn:
-          _selectedResolution == 'excused_credited' ? _creditedTimeIn : null,
+      adjustedTimeIn: _selectedResolution == 'adjust_timein' ? _adjustedTimeIn : null,
+      creditedTimeIn: _selectedResolution == 'excused_credited' ? _creditedTimeIn : null,
       note: null,
     );
 
@@ -181,77 +242,96 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
     );
   }
 
-  // ── Time pickers ───────────────────────────────────────────────────────────
+  // ── Time pickers — all pass _pickerTheme as builder ───────────────────────
 
-  Future<void> _pickTimeOut() async {
+  Future<void> _pickTimeOut(bool isDark, Color accent) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _timeOut ?? const TimeOfDay(hour: 17, minute: 0),
+      builder: (ctx, child) => _pickerTheme(ctx, child, isDark, accent),
     );
     if (picked != null && mounted) setState(() => _timeOut = picked);
   }
 
-  Future<void> _pickAdjustedTimeIn() async {
+  Future<void> _pickAdjustedTimeIn(bool isDark, Color accent) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _adjustedTimeIn ?? const TimeOfDay(hour: 8, minute: 0),
+      builder: (ctx, child) => _pickerTheme(ctx, child, isDark, accent),
     );
     if (picked != null && mounted) setState(() => _adjustedTimeIn = picked);
   }
 
-  Future<void> _pickCreditedTimeIn() async {
+  Future<void> _pickCreditedTimeIn(bool isDark, Color accent) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _creditedTimeIn ?? const TimeOfDay(hour: 8, minute: 0),
+      builder: (ctx, child) => _pickerTheme(ctx, child, isDark, accent),
     );
     if (picked != null && mounted) setState(() => _creditedTimeIn = picked);
   }
 
-  Future<void> _pickCreditedTimeOut() async {
+  Future<void> _pickCreditedTimeOut(bool isDark, Color accent) async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _creditedTimeOut ?? const TimeOfDay(hour: 17, minute: 0),
+      builder: (ctx, child) => _pickerTheme(ctx, child, isDark, accent),
     );
     if (picked != null && mounted) setState(() => _creditedTimeOut = picked);
   }
 
-  // ── Excused callout colours ────────────────────────────────────────────────
+  // ── Excused helpers ────────────────────────────────────────────────────────
 
   bool get _isExcusedCredited   => _selectedResolution == 'excused_credited';
   bool get _isExcusedUncredited => _selectedResolution == 'excused_uncredited';
   bool get _isExcused           => _isExcusedCredited || _isExcusedUncredited;
 
-  Color get _excusedBg =>
-      _isExcusedCredited ? const Color(0xFFECFDF5) : const Color(0xFFF5F3FF);
-
-  Color get _excusedBorder =>
-      _isExcusedCredited ? const Color(0xFF6EE7B7) : const Color(0xFFC4B5FD);
-
-  Color get _excusedFg =>
-      _isExcusedCredited ? const Color(0xFF047857) : const Color(0xFF6D28D9);
-
-  IconData get _excusedIcon => _isExcusedCredited
-      ? Icons.verified_rounded
-      : Icons.remove_circle_outline_rounded;
-
-  String get _excusedCallout => _isExcusedCredited
-      ? 'This day will count toward the intern\'s required hours. '
-          'Their status will show as "Excused – Credited".'
-      : 'The absence is excused but this day will not count toward '
-          'required hours. Status will show as "Excused – Uncredited".';
+  _ExcusedColors _excusedColors(bool isDark) {
+    if (_isExcusedCredited) {
+      return _ExcusedColors(
+        bg:     isDark ? const Color(0xFF052E16).withValues(alpha: 0.6) : const Color(0xFFECFDF5),
+        border: isDark ? const Color(0xFF166534).withValues(alpha: 0.8) : const Color(0xFF6EE7B7),
+        fg:     isDark ? const Color(0xFF4ADE80)                        : const Color(0xFF047857),
+        icon:   Icons.verified_rounded,
+        text:   'This day will count toward the intern\'s required hours. '
+                'Their status will show as "Excused – Credited".',
+      );
+    }
+    return _ExcusedColors(
+      bg:     isDark ? const Color(0xFF1E1B4B).withValues(alpha: 0.5) : const Color(0xFFF5F3FF),
+      border: isDark ? const Color(0xFF4338CA).withValues(alpha: 0.7) : const Color(0xFFC4B5FD),
+      fg:     isDark ? const Color(0xFFA78BFA)                        : const Color(0xFF6D28D9),
+      icon:   Icons.remove_circle_outline_rounded,
+      text:   'The absence is excused but this day will not count toward '
+              'required hours. Status will show as "Excused – Uncredited".',
+    );
+  }
 
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final isDark      = Theme.of(context).brightness == Brightness.dark;
+    final theme       = Theme.of(context).extension<InternSpaceThemeColors>() ?? InternSpaceThemeColors.dark;
+    final bgColor     = isDark ? const Color(0xFF0E0E12) : theme.dialogBackground;
+    final accentColor = isDark ? kAccent : const Color(0xFF00022E);
+    final textDark    = isDark ? Colors.white     : kTextDark;
+    final textMid     = isDark ? Colors.white60   : kTextMid;
+    final fieldBg     = isDark ? const Color(0xFF18181E) : const Color(0xFFF4F5F8);
+    final fieldBorder = isDark ? Colors.white.withValues(alpha: 0.1) : kBorder;
+    final dividerColor = isDark ? Colors.white.withValues(alpha: 0.08) : kBorder;
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     final r = widget.record;
+    final excused = _excusedColors(isDark);
 
     return Container(
       margin: EdgeInsets.only(bottom: bottomPadding),
-      decoration: const BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: isDark
+            ? Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08)))
+            : null,
       ),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: SingleChildScrollView(
@@ -265,7 +345,9 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -284,33 +366,35 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Review Report',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: kTextDark,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: textDark),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               '${r.internName} · ${r.formattedDate}',
-              style: const TextStyle(fontSize: 13, color: kTextMid),
+              style: TextStyle(fontSize: 13, color: textMid),
             ),
             const SizedBox(height: 20),
 
-            // ── Intern's report reason ────────────────────────────────
+            // ── Report reason ─────────────────────────────────────────
             if (r.reportReason != null && r.reportReason!.isNotEmpty) ...[
-              const _Label('Intern\'s Reported Reason'),
+              _Label('Intern\'s Reported Reason', textMid),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
+                  color: isDark
+                      ? const Color(0xFF3B2F00).withValues(alpha: 0.4)
+                      : const Color(0xFFFFFBEB),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFFCD34D)),
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFFF59E0B).withValues(alpha: 0.4)
+                        : const Color(0xFFFCD34D),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,19 +402,18 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 2),
-                          child: Icon(Icons.flag_rounded,
-                              size: 14, color: Color(0xFF92400E)),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Icon(Icons.flag_rounded, size: 14,
+                              color: isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E)),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             r.reportReason!,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF92400E),
-                              height: 1.5,
+                            style: TextStyle(
+                              fontSize: 13, height: 1.5,
+                              color: isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E),
                             ),
                           ),
                         ),
@@ -338,20 +421,19 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                     ),
                     if (r.reportedAt != null) ...[
                       const SizedBox(height: 8),
-                      const Divider(height: 1, color: Color(0xFFFCD34D)),
+                      Divider(height: 1,
+                          color: isDark
+                              ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
+                              : const Color(0xFFFCD34D)),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.access_time_rounded,
-                              size: 11, color: Color(0xFFB45309)),
+                          Icon(Icons.access_time_rounded, size: 11,
+                              color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309)),
                           const SizedBox(width: 4),
-                          Text(
-                            'Reported: ${r.reportedAt}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFFB45309),
-                            ),
-                          ),
+                          Text('Reported: ${r.reportedAt}',
+                              style: TextStyle(fontSize: 11,
+                                  color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309))),
                         ],
                       ),
                     ],
@@ -362,33 +444,31 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             ],
 
             // ── Current status ────────────────────────────────────────
-            const _Label('Current Status'),
+            _Label('Current Status', textMid),
             Container(
               margin: const EdgeInsets.only(bottom: 20),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F4F8),
+                color: fieldBg,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: fieldBorder),
               ),
-              child: Text(
-                r.status,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: kTextDark,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: Text(r.status,
+                  style: TextStyle(fontSize: 13, color: textDark, fontWeight: FontWeight.w600)),
             ),
 
             // ── Resolution selector ───────────────────────────────────
-            const _Label('Resolution Action'),
+            _Label('Resolution Action', textMid),
             ...(_options.map((opt) => _ResolutionTile(
                   option: opt,
                   selected: _selectedResolution == opt.value,
-                  onTap: () => setState(() {
-                    _selectedResolution = opt.value;
-                    _error = null;
-                  }),
+                  isDark: isDark,
+                  accentColor: accentColor,
+                  textDark: textDark,
+                  textMid: textMid,
+                  fieldBg: fieldBg,
+                  fieldBorder: fieldBorder,
+                  onTap: () => setState(() { _selectedResolution = opt.value; _error = null; }),
                 ))),
 
             // ── Excused callout ───────────────────────────────────────
@@ -396,27 +476,20 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
               const SizedBox(height: 10),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: _excusedBg,
+                  color: excused.bg,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _excusedBorder),
+                  border: Border.all(color: excused.border),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(_excusedIcon, size: 14, color: _excusedFg),
+                    Icon(excused.icon, size: 14, color: excused.fg),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        _excusedCallout,
-                        style: TextStyle(
-                          fontSize: 12,
-                          height: 1.45,
-                          color: _excusedFg,
-                        ),
-                      ),
+                      child: Text(excused.text,
+                          style: TextStyle(fontSize: 12, height: 1.45, color: excused.fg)),
                     ),
                   ],
                 ),
@@ -424,8 +497,6 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             ],
 
             // ── Excused – Credited time pickers ───────────────────────
-            // Shown only for credited so hours compute correctly.
-            // Pre-filled with 8 AM / 5 PM — admin can override either.
             if (_isExcusedCredited) ...[
               const SizedBox(height: 16),
               Row(
@@ -434,12 +505,18 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Label('Time In'),
+                        _Label('Time In', textMid),
                         _TimePicker(
                           time: _creditedTimeIn,
                           placeholder: 'Set time in',
-                          onTap: _pickCreditedTimeIn,
+                          onTap: () => _pickCreditedTimeIn(isDark, accentColor),
                           hasError: _error != null && _creditedTimeIn == null,
+                          isDark: isDark,
+                          accentColor: accentColor,
+                          textDark: textDark,
+                          textMid: textMid,
+                          fieldBg: fieldBg,
+                          fieldBorder: fieldBorder,
                         ),
                       ],
                     ),
@@ -449,12 +526,18 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Label('Time Out'),
+                        _Label('Time Out', textMid),
                         _TimePicker(
                           time: _creditedTimeOut,
                           placeholder: 'Set time out',
-                          onTap: _pickCreditedTimeOut,
+                          onTap: () => _pickCreditedTimeOut(isDark, accentColor),
                           hasError: _error != null && _creditedTimeOut == null,
+                          isDark: isDark,
+                          accentColor: accentColor,
+                          textDark: textDark,
+                          textMid: textMid,
+                          fieldBg: fieldBg,
+                          fieldBorder: fieldBorder,
                         ),
                       ],
                     ),
@@ -467,24 +550,36 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
 
             // ── Set Time-Out picker ───────────────────────────────────
             if (_selectedResolution == 'set_timeout') ...[
-              const _Label('Corrected Time Out'),
+              _Label('Corrected Time Out', textMid),
               _TimePicker(
                 time: _timeOut,
                 placeholder: 'Tap to set time out',
-                onTap: _pickTimeOut,
+                onTap: () => _pickTimeOut(isDark, accentColor),
                 hasError: _error != null && _timeOut == null,
+                isDark: isDark,
+                accentColor: accentColor,
+                textDark: textDark,
+                textMid: textMid,
+                fieldBg: fieldBg,
+                fieldBorder: fieldBorder,
               ),
               const SizedBox(height: 20),
             ],
 
             // ── Adjust Time-In picker ─────────────────────────────────
             if (_selectedResolution == 'adjust_timein') ...[
-              const _Label('Corrected Time In'),
+              _Label('Corrected Time In', textMid),
               _TimePicker(
                 time: _adjustedTimeIn,
                 placeholder: 'Tap to set corrected time in',
-                onTap: _pickAdjustedTimeIn,
+                onTap: () => _pickAdjustedTimeIn(isDark, accentColor),
                 hasError: _error != null && _adjustedTimeIn == null,
+                isDark: isDark,
+                accentColor: accentColor,
+                textDark: textDark,
+                textMid: textMid,
+                fieldBg: fieldBg,
+                fieldBorder: fieldBorder,
               ),
               const SizedBox(height: 20),
             ],
@@ -492,27 +587,27 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             // ── Inline error ──────────────────────────────────────────
             if (_error != null) ...[
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: isDark
+                      ? const Color(0xFF450A0A).withValues(alpha: 0.6)
+                      : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
+                  border: Border.all(
+                    color: isDark ? Colors.red.withValues(alpha: 0.4) : Colors.red.shade200,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.error_outline_rounded,
-                        size: 14, color: Colors.red.shade500),
+                    Icon(Icons.error_outline_rounded, size: 14,
+                        color: isDark ? Colors.red.shade300 : Colors.red.shade500),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        _error!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      child: Text(_error!,
+                          style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.red.shade300 : Colors.red.shade700,
+                          )),
                     ),
                   ],
                 ),
@@ -520,20 +615,24 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
               const SizedBox(height: 16),
             ],
 
+            // ── Divider ───────────────────────────────────────────────
+            Divider(height: 1, color: dividerColor),
+            const SizedBox(height: 20),
+
             // ── Action buttons ────────────────────────────────────────
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed:
-                        _submitting ? null : () => Navigator.pop(context),
+                    onPressed: _submitting ? null : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
+                      foregroundColor: textMid,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      side: BorderSide(color: fieldBorder),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text('Cancel'),
+                    child: Text('Cancel',
+                        style: TextStyle(color: textMid, fontWeight: FontWeight.w600, fontSize: 13)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -542,28 +641,17 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
                   child: FilledButton(
                     onPressed: _submitting ? null : _resolve,
                     style: FilledButton.styleFrom(
-                      backgroundColor: kAccent,
+                      backgroundColor: accentColor,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     child: _submitting
                         ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            height: 18, width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text(
-                            'Resolve & Save',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
+                        : const Text('Resolve & Save',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.white)),
                   ),
                 ),
               ],
@@ -575,17 +663,31 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
   }
 }
 
+// ── Excused color bundle ───────────────────────────────────────────────────
+
+class _ExcusedColors {
+  final Color bg, border, fg;
+  final IconData icon;
+  final String text;
+  const _ExcusedColors({
+    required this.bg, required this.border, required this.fg,
+    required this.icon, required this.text,
+  });
+}
+
 // ── Resolution tile ────────────────────────────────────────────────────────
 
 class _ResolutionTile extends StatelessWidget {
   final _ResolutionOption option;
   final bool selected;
+  final bool isDark;
+  final Color accentColor, textDark, textMid, fieldBg, fieldBorder;
   final VoidCallback onTap;
 
   const _ResolutionTile({
-    required this.option,
-    required this.selected,
-    required this.onTap,
+    required this.option, required this.selected, required this.isDark,
+    required this.accentColor, required this.textDark, required this.textMid,
+    required this.fieldBg, required this.fieldBorder, required this.onTap,
   });
 
   @override
@@ -597,38 +699,26 @@ class _ResolutionTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? kAccent.withOpacity(0.07) : const Color(0xFFF9F9FB),
+          color: selected ? accentColor.withValues(alpha: isDark ? 0.15 : 0.07) : fieldBg,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? kAccent : Colors.grey.shade200,
-            width: selected ? 1.5 : 1,
-          ),
+          border: Border.all(color: selected ? accentColor : fieldBorder, width: selected ? 1.5 : 1),
         ),
         child: Row(
           children: [
-            Icon(option.icon, size: 18, color: selected ? kAccent : kTextMid),
+            Icon(option.icon, size: 18, color: selected ? accentColor : textMid),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    option.label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? kAccent : kTextDark,
-                    ),
-                  ),
-                  Text(
-                    option.hint,
-                    style: const TextStyle(fontSize: 11, color: kTextMid),
-                  ),
+                  Text(option.label,
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                          color: selected ? accentColor : textDark)),
+                  Text(option.hint, style: TextStyle(fontSize: 11, color: textMid)),
                 ],
               ),
             ),
-            if (selected)
-              const Icon(Icons.check_circle_rounded, size: 18, color: kAccent),
+            if (selected) Icon(Icons.check_circle_rounded, size: 18, color: accentColor),
           ],
         ),
       ),
@@ -636,46 +726,72 @@ class _ResolutionTile extends StatelessWidget {
   }
 }
 
-// ── Time picker display ────────────────────────────────────────────────────
+// ── Time picker tile — matches _DatePickerTile layout exactly ─────────────
+// Uses a GestureDetector + Container (no InkWell) so fieldBg is always
+// visible and the border/text/icon colors all respect isDark.
 
 class _TimePicker extends StatelessWidget {
   final TimeOfDay? time;
   final String placeholder;
   final VoidCallback onTap;
   final bool hasError;
+  final bool isDark;
+  final Color accentColor, textDark, textMid, fieldBg, fieldBorder;
 
   const _TimePicker({
     required this.time,
     required this.placeholder,
     required this.onTap,
     this.hasError = false,
+    required this.isDark,
+    required this.accentColor,
+    required this.textDark,
+    required this.textMid,
+    required this.fieldBg,
+    required this.fieldBorder,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final errorColor  = isDark ? Colors.red.shade300 : Colors.red.shade600;
+    final borderColor = hasError ? errorColor : fieldBorder;
+    final iconColor   = hasError
+        ? errorColor
+        : isDark
+            ? Colors.white38
+            : accentColor.withValues(alpha: 0.6);
+    final valueColor  = time != null ? textDark : (hasError ? errorColor : textMid);
+
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
+          // ← same fieldBg as _DatePickerTile: dark = 0xFF18181E, light = 0xFFF4F5F8
+          color: fieldBg,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: hasError ? Colors.red : Colors.grey.shade300,
+            color: borderColor,
+            // thicker border when there's an error, same as date picker selected state
+            width: hasError ? 1.5 : 1,
           ),
-          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
-            Icon(Icons.access_time_rounded,
-                size: 18, color: hasError ? Colors.red : kTextMid),
+            // Clock icon — mirrors the calendar icon position in _DatePickerTile
+            Icon(Icons.access_time_rounded, size: 16, color: iconColor),
             const SizedBox(width: 10),
-            Text(
-              time != null ? time!.format(context) : placeholder,
-              style: TextStyle(
-                fontSize: 13,
-                color: time != null
-                    ? kTextDark
-                    : (hasError ? Colors.red : kTextMid),
+            // Vertical divider — matches _DatePickerTile separator
+            const VerticalDivider(width: 1, thickness: 1, color: kBorder),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                time != null ? time!.format(context) : placeholder,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor,
+                ),
               ),
             ),
           ],
@@ -689,40 +805,18 @@ class _TimePicker extends StatelessWidget {
 
 class _Label extends StatelessWidget {
   final String text;
-  const _Label(this.text);
+  final Color color;
+  const _Label(this.text, this.color);
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(
           text.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: kTextMid,
-            letterSpacing: 0.6,
+          style: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w700,
+            color: color, letterSpacing: 0.6,
           ),
         ),
-      );
-}
-
-// ── Field hint ─────────────────────────────────────────────────────────────
-
-class _FieldHint extends StatelessWidget {
-  final String text;
-  const _FieldHint(this.text);
-
-  @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          const Icon(Icons.info_outline_rounded, size: 12, color: kTextLight),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 11, color: kTextLight),
-            ),
-          ),
-        ],
       );
 }

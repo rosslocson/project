@@ -89,17 +89,109 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
     if (picked != null) setState(() => _rangeEnd = picked);
   }
 
-  Widget _theme(BuildContext ctx, Widget? child) => Theme(
+  // Replace the existing _theme method entirely with this:
+
+  // Replace the existing _theme method entirely with this:
+
+  Widget _theme(BuildContext ctx, Widget? child) {
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+    final accentColor = isDark ? kAccent : const Color(0xFF00022E);
+
+    if (isDark) {
+      return Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: kAccent,
+          colorScheme: ColorScheme.dark(
+            primary: accentColor,
             onPrimary: Colors.white,
-            surface: Color(0xFF0E0E12), // Updated from 0xFF1A1F3A
+            surface: const Color(0xFF0E0E12),
             onSurface: Colors.white,
+            surfaceContainerHighest: const Color(0xFF18181E),
+          ),
+          datePickerTheme: DatePickerThemeData(
+            backgroundColor: const Color(0xFF0E0E12),
+            headerBackgroundColor:
+                const Color(0xFF0E0E12), // ← matches calendar body
+            headerForegroundColor:
+                Colors.white70, // ← softer white for header text
+            dayBackgroundColor: MaterialStateColor.resolveWith(
+              (states) => states.contains(MaterialState.selected)
+                  ? accentColor
+                  : Colors.transparent,
+            ),
+            dayForegroundColor: MaterialStateColor.resolveWith(
+              (states) => states.contains(MaterialState.selected)
+                  ? Colors.white
+                  : Colors.white70,
+            ),
+            todayBorder: BorderSide(color: accentColor),
+            todayForegroundColor: MaterialStateColor.resolveWith(
+              (states) => states.contains(MaterialState.selected)
+                  ? Colors.white
+                  : accentColor,
+            ),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(foregroundColor: accentColor),
           ),
         ),
         child: child!,
       );
+    }
+
+    // ── Light mode ─────────────────────────────────────────────────────────────
+    return Theme(
+      data: Theme.of(ctx).copyWith(
+        colorScheme: ColorScheme.light(
+          primary: accentColor,
+          onPrimary: Colors.white,
+          surface: Colors.white,
+          onSurface: kTextDark,
+          surfaceContainerHighest: const Color(0xFFF4F5F8),
+        ),
+        datePickerTheme: DatePickerThemeData(
+          backgroundColor: Colors.white,
+          headerBackgroundColor: accentColor,
+          headerForegroundColor: Colors.white,
+          dayBackgroundColor: MaterialStateColor.resolveWith(
+            (states) => states.contains(MaterialState.selected)
+                ? accentColor
+                : Colors.transparent,
+          ),
+          dayForegroundColor: MaterialStateColor.resolveWith(
+            (states) => states.contains(MaterialState.selected)
+                ? Colors.white
+                : kTextDark,
+          ),
+          todayBorder: BorderSide(color: accentColor),
+          todayForegroundColor: MaterialStateColor.resolveWith(
+            (states) => states.contains(MaterialState.selected)
+                ? Colors.white
+                : accentColor,
+          ),
+          yearBackgroundColor: MaterialStateColor.resolveWith(
+            (states) => states.contains(MaterialState.selected)
+                ? accentColor
+                : Colors.transparent,
+          ),
+          yearForegroundColor: MaterialStateColor.resolveWith(
+            (states) => states.contains(MaterialState.selected)
+                ? Colors.white
+                : kTextDark,
+          ),
+          rangePickerBackgroundColor: Colors.white,
+          rangeSelectionBackgroundColor: accentColor.withValues(alpha: 0.12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(foregroundColor: accentColor),
+        ),
+      ),
+      child: child!,
+    );
+  }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -108,7 +200,9 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
     final theme = Theme.of(context).extension<InternSpaceThemeColors>() ??
         InternSpaceThemeColors.dark;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0E0E12) : theme.dialogBackground; // Updated from 0xFF0D0D2B
+    final bgColor = isDark
+        ? const Color(0xFF0E0E12)
+        : theme.dialogBackground; // Updated from 0xFF0D0D2B
 
     // Accent: purple in dark mode, navy in light mode
     final accentColor = isDark ? kAccent : const Color(0xFF00022E);
@@ -188,7 +282,9 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
   Widget _buildModeToggle(bool isDark, Color accentColor) => Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF18181E) : const Color(0xFFF4F5F8), // Updated from 0xFF070A1F
+          color: isDark
+              ? const Color(0xFF18181E)
+              : const Color(0xFFF4F5F8), // Updated from 0xFF070A1F
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -253,8 +349,7 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline_rounded,
-                  size: 14, color: accentColor),
+              Icon(Icons.info_outline_rounded, size: 14, color: accentColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -284,9 +379,8 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : kBorder,
+                    color:
+                        isDark ? Colors.white.withValues(alpha: 0.08) : kBorder,
                   ),
                 ),
               ),
@@ -315,8 +409,7 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
                     borderRadius: BorderRadius.circular(12)),
               ),
               child: const Text('Apply',
-                  style:
-                      TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -409,7 +502,9 @@ class _DatePickerTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF18181E) : const Color(0xFFF4F5F8), // Updated from 0xFF070A1F
+          color: isDark
+              ? const Color(0xFF18181E)
+              : const Color(0xFFF4F5F8), // Updated from 0xFF070A1F
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark ? Colors.white.withValues(alpha: 0.08) : kBorder,
@@ -441,7 +536,9 @@ class _DatePickerTile extends StatelessWidget {
             ),
             Icon(Icons.calendar_month_rounded,
                 size: 16,
-                color: isDark ? Colors.white38 : accentColor.withValues(alpha: 0.6)),
+                color: isDark
+                    ? Colors.white38
+                    : accentColor.withValues(alpha: 0.6)),
           ],
         ),
       ),
