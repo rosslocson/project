@@ -42,10 +42,6 @@ class RegisterErrorBanner extends StatelessWidget {
               ),
             ),
           ),
-          GestureDetector(
-            onTap: onClear,
-            child: Icon(Icons.close, size: 20, color: iconColor),
-          ),
         ],
       ),
     );

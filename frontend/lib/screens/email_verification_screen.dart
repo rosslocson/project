@@ -43,6 +43,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Timer? _resendCooldownTimer;
   int _resendCooldownSeconds = 0;
   bool _isResending = false;
+  
+  // Auto-clear error messages
+  Timer? _stepMsgTimer;
 
   @override
   void initState() {
@@ -59,6 +62,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   void dispose() {
     _otpTimer?.cancel();
     _resendCooldownTimer?.cancel();
+    _stepMsgTimer?.cancel();
     for (final controller in _otpDigitCtrls) {
       controller.dispose();
     }
@@ -82,8 +86,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         timer.cancel();
         setState(() {
           _otpSecondsLeft = 0;
-          stepMsg = 'OTP has expired. Please request a new code.';
         });
+        _setStepMessage('OTP has expired. Please request a new code.');
         return;
       }
 
@@ -119,6 +123,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   String get _otpCode =>
       _otpDigitCtrls.map((controller) => controller.text).join();
+
+  /// Helper method to set stepMsg with auto-clear after 4 seconds
+  void _setStepMessage(String message) {
+    _stepMsgTimer?.cancel();
+    setState(() => stepMsg = message);
+    
+    _stepMsgTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() => stepMsg = null);
+      }
+    });
+  }
 
   void _handleOtpChanged(String value, int index) {
     if (value.length > 1) {
@@ -165,12 +181,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   Future<void> _verifyOtp() async {
     if (_otpSecondsLeft <= 0) {
-      setState(() => stepMsg = 'OTP has expired. Please request a new code.');
+      _setStepMessage('OTP has expired. Please request a new code.');
       return;
     }
 
     if (_otpCode.length != 6) {
-      setState(() => stepMsg = 'Please enter the 6-digit OTP.');
+      _setStepMessage('Please enter the 6-digit OTP.');
       return;
     }
 
@@ -194,15 +210,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       } else {
         setState(() {
           stepLoading = false;
-          stepMsg = auth.error ?? 'Invalid OTP. Please try again.';
         });
+        _setStepMessage(auth.error ?? 'Invalid OTP. Please try again.');
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         stepLoading = false;
-        stepMsg = 'Could not verify OTP. Please try again.';
       });
+      _setStepMessage('Could not verify OTP. Please try again.');
     }
   }
 
@@ -222,8 +238,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       if (res['ok'] == true) {
         setState(() {
           _isResending = false;
-          stepMsg = 'New verification code sent to your email!';
         });
+        _setStepMessage('New verification code sent to your email!');
 
         // Restart OTP timer (5 minutes)
         _startOtpTimer(300);
@@ -233,15 +249,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       } else {
         setState(() {
           _isResending = false;
-          stepMsg = res['error'] ?? 'Failed to resend code. Please try again.';
         });
+        _setStepMessage(res['error'] ?? 'Failed to resend code. Please try again.');
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isResending = false;
-        stepMsg = 'Connection error. Please try again.';
       });
+      _setStepMessage('Connection error. Please try again.');
     }
   }
 

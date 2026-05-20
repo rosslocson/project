@@ -44,11 +44,6 @@ class EditProfileStatusBanner extends StatelessWidget {
                   fontSize: 13),
             ),
           ),
-          GestureDetector(
-            onTap: onClose,
-            child: Icon(Icons.close,
-                size: 16, color: context.internTheme.mutedText),
-          ),
         ],
       ),
     );

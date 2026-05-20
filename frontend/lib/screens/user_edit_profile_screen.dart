@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -56,6 +57,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
   bool _saving = false;
   String? _successMsg;
   String? _errorMsg;
+  Timer? _messageTimer;
   bool _academicTabInvalid = false;
   bool _skillsTabInvalid = false;
   int _formResetVersion = 0;
@@ -182,6 +184,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
   @override
   void dispose() {
+    _messageTimer?.cancel();
     _tabs.removeListener(_handleTabChange);
     _tabs.dispose();
     _academicScrollController.dispose();
@@ -203,6 +206,29 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
       c.dispose();
     }
     super.dispose();
+  }
+
+  /// Helper method to set status message with auto-clear after 4 seconds
+  void _setStatusMessage(String message, {bool isSuccess = false}) {
+    _messageTimer?.cancel();
+    setState(() {
+      if (isSuccess) {
+        _successMsg = message;
+        _errorMsg = null;
+      } else {
+        _errorMsg = message;
+        _successMsg = null;
+      }
+    });
+    
+    _messageTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _successMsg = null;
+          _errorMsg = null;
+        });
+      }
+    });
   }
 
   Future<void> _loadConfig() async {
@@ -250,10 +276,7 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
     if (!academicValid || !skillsValid) {
       if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _errorMsg = 'Please complete all required fields before saving.';
-      });
+      _setStatusMessage('Please complete all required fields before saving.');
       return;
     }
 
@@ -291,19 +314,18 @@ class _UserEditProfileScreenState extends State<UserEditProfileScreen>
 
       if (mounted) {
         _savedProfileValues = _currentProfileValues;
+        _setStatusMessage('Profile updated successfully!', isSuccess: true);
         setState(() {
           _saving = false;
-          _successMsg = 'Profile updated successfully!';
-          _errorMsg = null;
           _academicTabInvalid = false;
           _skillsTabInvalid = false;
         });
       }
     } else {
       if (mounted) {
+        _setStatusMessage(res['error'] ?? 'Update failed. Please try again.');
         setState(() {
           _saving = false;
-          _errorMsg = res['error'] ?? 'Update failed. Please try again.';
         });
       }
     }

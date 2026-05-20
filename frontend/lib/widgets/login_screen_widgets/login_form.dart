@@ -200,20 +200,6 @@ class LoginForm extends StatelessWidget {
                           ),
                         ],
                       ),
-                      Positioned(
-                        top: -4,
-                        right: -4,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: Icon(Icons.close,
-                              color: isDark
-                                  ? const Color(0xFFFFCDD2)
-                                  : const Color(0xFFD32F2F),
-                              size: 20),
-                          onPressed: () => auth.clearError(),
-                        ),
-                      ),
                     ],
                   ),
                 ),

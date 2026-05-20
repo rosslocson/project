@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? _user;
   bool _isLoading = false;
   String? _error;
+  Timer? _errorClearTimer;
 
   /// Prevent race conditions between storage restore + refresh.
   Future<void>? _refreshFuture;
@@ -178,14 +180,14 @@ class AuthProvider extends ChangeNotifier {
 
         await refreshProfile();
       } else {
-        _error = res['error'] ?? 'Login failed';
+        _setErrorWithAutoClear(res['error'] ?? 'Login failed');
       }
 
       _isLoading = false;
       notifyListeners();
       return res;
     } catch (e) {
-      _error = 'Connection error. Is the backend running?';
+      _setErrorWithAutoClear('Connection error. Is the backend running?');
       _isLoading = false;
       notifyListeners();
       return {'ok': false, 'error': _error};
@@ -213,13 +215,13 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _error = res['error'] ?? res['details'] ?? 'Registration failed';
+        _setErrorWithAutoClear(res['error'] ?? res['details'] ?? 'Registration failed');
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      _error = 'Connection error. Is the backend running?';
+      _setErrorWithAutoClear('Connection error. Is the backend running?');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -319,13 +321,13 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _error = res['error'] ?? 'OTP verification failed';
+        _setErrorWithAutoClear(res['error'] ?? 'OTP verification failed');
         _isLoading = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
-      _error = 'Connection error. Please try again.';
+      _setErrorWithAutoClear('Connection error. Please try again.');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -342,8 +344,22 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void clearError() {
+    _errorClearTimer?.cancel();
+    _errorClearTimer = null;
     _error = null;
     notifyListeners();
+  }
+
+  /// Helper method to set error with auto-clear after 4 seconds
+  void _setErrorWithAutoClear(String errorMessage) {
+    _errorClearTimer?.cancel(); // Cancel any existing timer
+    _error = errorMessage;
+    notifyListeners();
+    
+    // Start a new timer to auto-clear error after 4 seconds
+    _errorClearTimer = Timer(const Duration(seconds: 4), () {
+      clearError();
+    });
   }
 
   Future<void> _persistUser() async {
