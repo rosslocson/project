@@ -69,7 +69,7 @@ class PaginationFooter extends StatelessWidget {
                     final isActive = pageNumber == currentPage;
                     return Container(
                       margin:
-                          EdgeInsets.symmetric(horizontal: isCompact ? 0.3 : 4),
+                          EdgeInsets.symmetric(horizontal: isCompact ? 0.0 : 4),
                       width:
                           isActive ? (isCompact ? 2 : 20) : (isCompact ? 1 : 8),
                       height: isCompact ? 2 : 8,

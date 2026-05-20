@@ -368,7 +368,7 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                width: 64,
+                width: 48,
                 child: Stack(
                   alignment: Alignment.topCenter,
                   children: [
@@ -385,7 +385,7 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
               Expanded(
                 child: Padding(
                   padding:
-                      const EdgeInsets.only(top: 16, bottom: 20, right: 24),
+                      const EdgeInsets.only(top: 16, bottom: 20, right: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -395,6 +395,8 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                           Expanded(
                             child: Text(
                               displayText,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,

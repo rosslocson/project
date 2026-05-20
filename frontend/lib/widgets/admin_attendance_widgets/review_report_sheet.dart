@@ -120,15 +120,15 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             hourMinuteColor: const Color(0xFF18181E),
             hourMinuteTextColor: Colors.white,
             dayPeriodColor: const Color(0xFF18181E),
-            dayPeriodTextColor: MaterialStateColor.resolveWith(
-              (states) => states.contains(MaterialState.selected)
+            dayPeriodTextColor: WidgetStateColor.resolveWith(
+              (states) => states.contains(WidgetState.selected)
                   ? Colors.white
                   : Colors.white60,
             ),
             dialBackgroundColor: const Color(0xFF18181E),
             dialHandColor: accentColor,
-            dialTextColor: MaterialStateColor.resolveWith(
-              (states) => states.contains(MaterialState.selected)
+            dialTextColor: WidgetStateColor.resolveWith(
+              (states) => states.contains(WidgetState.selected)
                   ? Colors.white
                   : Colors.white70,
             ),
@@ -159,20 +159,20 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
           hourMinuteColor: const Color(0xFFF4F5F8),
           hourMinuteTextColor: kTextDark,
           dayPeriodColor: const Color(0xFFF4F5F8),
-          dayPeriodTextColor: MaterialStateColor.resolveWith(
-            (states) => states.contains(MaterialState.selected)
+          dayPeriodTextColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
                 ? accentColor
                 : kTextMid,
           ),
           dialBackgroundColor: const Color(0xFFF4F5F8),
           dialHandColor: accentColor,
-          dialTextColor: MaterialStateColor.resolveWith(
-            (states) => states.contains(MaterialState.selected)
+          dialTextColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
                 ? Colors.white
                 : kTextDark,
           ),
           entryModeIconColor: kTextMid,
-          helpTextStyle: TextStyle(color: kTextMid, fontSize: 11),
+          helpTextStyle: const TextStyle(color: kTextMid, fontSize: 11),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
         textButtonTheme: TextButtonThemeData(

@@ -148,8 +148,9 @@ class OjtProgressCard extends StatelessWidget {
   }
 
   Color _progressColor(double pct, bool isDark) {
-    if (pct >= 1.0)
+    if (pct >= 1.0) {
       return isDark ? const Color(0xFF00FFFF) : const Color(0xFF006060);
+    }
     if (pct >= 0.75) return Colors.blueAccent.shade200;
     if (pct >= 0.5) return const Color(0xFF7367F0);
     return Colors.orange.shade400;

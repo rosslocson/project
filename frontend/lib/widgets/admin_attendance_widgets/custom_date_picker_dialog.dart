@@ -113,19 +113,19 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
                 const Color(0xFF0E0E12), // ← matches calendar body
             headerForegroundColor:
                 Colors.white70, // ← softer white for header text
-            dayBackgroundColor: MaterialStateColor.resolveWith(
-              (states) => states.contains(MaterialState.selected)
+            dayBackgroundColor: WidgetStateColor.resolveWith(
+              (states) => states.contains(WidgetState.selected)
                   ? accentColor
                   : Colors.transparent,
             ),
-            dayForegroundColor: MaterialStateColor.resolveWith(
-              (states) => states.contains(MaterialState.selected)
+            dayForegroundColor: WidgetStateColor.resolveWith(
+              (states) => states.contains(WidgetState.selected)
                   ? Colors.white
                   : Colors.white70,
             ),
             todayBorder: BorderSide(color: accentColor),
-            todayForegroundColor: MaterialStateColor.resolveWith(
-              (states) => states.contains(MaterialState.selected)
+            todayForegroundColor: WidgetStateColor.resolveWith(
+              (states) => states.contains(WidgetState.selected)
                   ? Colors.white
                   : accentColor,
             ),
@@ -154,29 +154,29 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
           backgroundColor: Colors.white,
           headerBackgroundColor: accentColor,
           headerForegroundColor: Colors.white,
-          dayBackgroundColor: MaterialStateColor.resolveWith(
-            (states) => states.contains(MaterialState.selected)
+          dayBackgroundColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
                 ? accentColor
                 : Colors.transparent,
           ),
-          dayForegroundColor: MaterialStateColor.resolveWith(
-            (states) => states.contains(MaterialState.selected)
+          dayForegroundColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
                 ? Colors.white
                 : kTextDark,
           ),
           todayBorder: BorderSide(color: accentColor),
-          todayForegroundColor: MaterialStateColor.resolveWith(
-            (states) => states.contains(MaterialState.selected)
+          todayForegroundColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
                 ? Colors.white
                 : accentColor,
           ),
-          yearBackgroundColor: MaterialStateColor.resolveWith(
-            (states) => states.contains(MaterialState.selected)
+          yearBackgroundColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
                 ? accentColor
                 : Colors.transparent,
           ),
-          yearForegroundColor: MaterialStateColor.resolveWith(
-            (states) => states.contains(MaterialState.selected)
+          yearForegroundColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
                 ? Colors.white
                 : kTextDark,
           ),
