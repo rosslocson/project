@@ -38,8 +38,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
   void initState() {
     super.initState();
     _currentPage = widget.interns.isNotEmpty ? widget.interns.length * 1000 : 0;
-    _pageController =
-        PageController(viewportFraction: _lastTargetFraction, initialPage: _currentPage);
+    _pageController = PageController(
+        viewportFraction: _lastTargetFraction, initialPage: _currentPage);
     if (!widget.loading && widget.interns.isNotEmpty) {
       _startAutoScroll();
     }
@@ -158,7 +158,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: theme.topbarText,
-                      ),
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -194,7 +194,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
             const SizedBox(height: 16),
             _buildCarouselBody(isCompact),
             const SizedBox(height: 16),
-            if (!widget.loading && widget.interns.isNotEmpty) _buildDotNavigation(isCompact),
+            if (!widget.loading && widget.interns.isNotEmpty)
+              _buildDotNavigation(isCompact),
           ],
         );
       },
@@ -296,7 +297,8 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _ArrowButton(icon: Icons.chevron_left, onTap: _prev, isCompact: isCompact),
+              _ArrowButton(
+                  icon: Icons.chevron_left, onTap: _prev, isCompact: isCompact),
               const SizedBox(width: 16),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -310,14 +312,18 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
                     decoration: BoxDecoration(
                       color: active
                           ? InternCarouselPalette.dotActive
-                          : InternCarouselPalette.dotActive.withValues(alpha: 0.25),
+                          : InternCarouselPalette.dotActive
+                              .withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(3),
                     ),
                   );
                 }),
               ),
               const SizedBox(width: 16),
-              _ArrowButton(icon: Icons.chevron_right, onTap: _next, isCompact: isCompact),
+              _ArrowButton(
+                  icon: Icons.chevron_right,
+                  onTap: _next,
+                  isCompact: isCompact),
             ],
           ),
         ),
@@ -354,9 +360,9 @@ class _InternCardFront extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           BorderedAvatar(
-            intern: intern, 
-            size: isCompact ? 55 : 70, 
-            borderRadius: 18, 
+            intern: intern,
+            size: isCompact ? 55 : 70,
+            borderRadius: 18,
             fontSize: isCompact ? 22 : 28,
           ),
           const SizedBox(height: 12),
@@ -395,7 +401,7 @@ class _ArrowButton extends StatefulWidget {
   final bool isCompact;
 
   const _ArrowButton({
-    required this.icon, 
+    required this.icon,
     required this.onTap,
     required this.isCompact,
   });
@@ -468,7 +474,13 @@ class BorderedAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Generate up to 2 uppercase initials from the intern's name
-    final initials = intern.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0].toUpperCase() : '').where((e) => e.isNotEmpty).take(2).join();
+    final initials = intern.name
+        .trim()
+        .split(' ')
+        .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+        .where((e) => e.isNotEmpty)
+        .take(2)
+        .join();
 
     return Container(
       width: size,
@@ -483,7 +495,8 @@ class BorderedAvatar extends StatelessWidget {
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          color: const Color(0xFF5E001F), // Dark wine tone to complement the card's profile color accents
+          color: const Color(
+              0xFF5E001F), // Dark wine tone to complement the card's profile color accents
         ),
       ),
     );

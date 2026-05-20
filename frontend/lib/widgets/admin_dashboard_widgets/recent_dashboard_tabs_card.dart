@@ -70,24 +70,32 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _activeTab == RecentDashboardTab.users
-                      ? 'Recent Users'
-                      : 'Recent Activity',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.topbarText,
-                      ),
-                ),
-                Text(
-                  _subtitle,
-                  style: TextStyle(fontSize: 12, color: theme.topbarMutedText),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _activeTab == RecentDashboardTab.users
+                        ? 'Recent Users'
+                        : 'Recent Activity',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.topbarText,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  Text(
+                    _subtitle,
+                    style:
+                        TextStyle(fontSize: 12, color: theme.topbarMutedText),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 12),
             Text(
               'Page $safeCurrentPage of $_totalPages',
               style: TextStyle(
@@ -103,6 +111,8 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
           builder: (context, constraints) {
             final listHeight = constraints.maxWidth < 600 ? 320.0 : 420.0;
             return Container(
+              width: double.infinity,
+              clipBehavior: Clip.hardEdge,
               decoration: BoxDecoration(
                 color: isDark
                     ? theme.listBackground.withValues(alpha: 0.98)
@@ -117,9 +127,13 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: _SegmentedToggle(
-                        activeTab: _activeTab,
-                        onChanged: (tab) => setState(() => _activeTab = tab),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: _SegmentedToggle(
+                          activeTab: _activeTab,
+                          onChanged: (tab) => setState(() => _activeTab = tab),
+                        ),
                       ),
                     ),
                   ),
@@ -236,7 +250,7 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
 
         return ListTile(
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           leading: CircleAvatar(
             radius: 22,
             backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
@@ -271,6 +285,8 @@ class _RecentDashboardTabsCardState extends State<RecentDashboardTabsCard> {
           ),
           title: Text(
             titleText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,

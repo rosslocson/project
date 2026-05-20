@@ -107,7 +107,6 @@ class GlassTopBar extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. Sidebar Toggle Button
               if (sidebarClosed) ...[
                 IconButton(
                   padding: EdgeInsets.zero,
@@ -121,7 +120,7 @@ class GlassTopBar extends StatelessWidget {
                 const SizedBox(width: 28),
               ],
 
-              // 2. Title Section (Takes up exactly half of the bar maximum space)
+              // Title section — Expanded so it only takes its fair share
               Expanded(
                 flex: 1,
                 child: Column(
@@ -157,15 +156,15 @@ class GlassTopBar extends StatelessWidget {
                   ],
                 ),
               ),
-              
-              const SizedBox(width: 16), // Protective layout buffer gap
 
-              // 3. User Profile Actions (Expanded container pins alignment securely to the far right)
+              const SizedBox(width: 16), // Protective buffer gap
+
+              // User profile — Expanded + pinned right, shrinks gracefully
               if (user != null)
                 Expanded(
                   flex: 1,
                   child: Align(
-                    alignment: Alignment.centerRight, // Locks layout to the outer right screen edge
+                    alignment: Alignment.centerRight,
                     child: PopupMenuButton<String>(
                       onSelected: (String choice) async {
                         if (choice == 'profile') {
@@ -178,7 +177,8 @@ class GlassTopBar extends StatelessWidget {
                           final confirmed = await showDialog<bool>(
                             context: context,
                             barrierDismissible: true,
-                            builder: (context) => const LogoutConfirmationDialog(),
+                            builder: (context) =>
+                                const LogoutConfirmationDialog(),
                           );
                           if (confirmed == true) {
                             context.read<AuthProvider>().logout();
@@ -188,8 +188,7 @@ class GlassTopBar extends StatelessWidget {
                       },
                       offset: const Offset(0, 50),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                          borderRadius: BorderRadius.circular(16)),
                       itemBuilder: (BuildContext context) => [
                         const PopupMenuItem<String>(
                           value: 'profile',
@@ -198,7 +197,8 @@ class GlassTopBar extends StatelessWidget {
                               Icon(Icons.person_outline, size: 20),
                               SizedBox(width: 12),
                               Text('View Profile',
-                                  style: TextStyle(fontWeight: FontWeight.w500)),
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ),
@@ -211,7 +211,8 @@ class GlassTopBar extends StatelessWidget {
                           value: 'logout',
                           child: Row(
                             children: [
-                              Icon(Icons.logout, size: 20, color: Colors.redAccent),
+                              Icon(Icons.logout,
+                                  size: 20, color: Colors.redAccent),
                               SizedBox(width: 12),
                               Text('Log Out',
                                   style: TextStyle(
@@ -224,7 +225,7 @@ class GlassTopBar extends StatelessWidget {
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: Row(
-                          mainAxisSize: MainAxisSize.min, // shrink-wraps contents naturally on desktop
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Flexible(
                               child: Text(
@@ -237,7 +238,7 @@ class GlassTopBar extends StatelessWidget {
                                       ? Colors.white.withValues(alpha: 0.9)
                                       : const Color(0xFF00022E),
                                 ),
-                                overflow: TextOverflow.ellipsis, // Safely truncates only if the screen gets super tight
+                                overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
                               ),
                             ),
@@ -245,7 +246,8 @@ class GlassTopBar extends StatelessWidget {
                             CircleAvatar(
                               radius: 20,
                               backgroundColor: isDark
-                                  ? const Color(0xFFCDD2FB).withValues(alpha: 0.1)
+                                  ? const Color(0xFFCDD2FB)
+                                      .withValues(alpha: 0.1)
                                   : _kAccentIndigo.withValues(alpha: 0.1),
                               backgroundImage: finalAvatarUrl.isNotEmpty
                                   ? NetworkImage(finalAvatarUrl)
