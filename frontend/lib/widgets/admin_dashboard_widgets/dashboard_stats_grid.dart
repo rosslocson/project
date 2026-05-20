@@ -19,15 +19,22 @@ class DashboardStatsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cols = constraints.maxWidth > 800 ? 4 : 2;
-        final ratio = constraints.maxWidth > 800 ? 1.4 : 1.6;
+        final bool isDesktop = constraints.maxWidth > 900;
+        final int cols = isDesktop ? 4 : 2;
+
+        // Increased ratio ensures cards are shorter (less height), 
+        // preventing bottom overflow.
+        final double ratio = isDesktop ? 2.2 : 1.5;
+
         return GridView.count(
           crossAxisCount: cols,
           shrinkWrap: true,
+          // Explicitly set zero padding to prevent layout pushing
+          padding: EdgeInsets.zero, 
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 16,
-          mainAxisSpacing: 24,
-          childAspectRatio: 1.4,
+          mainAxisSpacing: 16,
+          childAspectRatio: ratio,
           children: [
             _buildGlowingCard(
               child: StatCard(

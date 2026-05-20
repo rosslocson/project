@@ -43,33 +43,48 @@ import '../services/api_service.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const _kButtonDark = Color(0xFF0D0D2B);
-const _kAccent     = Color(0xFF6C63FF);
+const _kAccent = Color(0xFF6C63FF);
 
 // PDF colour palette
-final _pdfDark      = PdfColor.fromHex('0D0D2B');
-final _pdfAccent    = PdfColor.fromHex('6C63FF');
-final _pdfHeaderBg  = PdfColor.fromHex('F4F5F8');
-final _pdfBorder    = PdfColor.fromHex('EEEEF4');
-final _pdfTextMid   = PdfColor.fromHex('64748B');
+final _pdfDark = PdfColor.fromHex('0D0D2B');
+final _pdfAccent = PdfColor.fromHex('6C63FF');
+final _pdfHeaderBg = PdfColor.fromHex('F4F5F8');
+final _pdfBorder = PdfColor.fromHex('EEEEF4');
+final _pdfTextMid = PdfColor.fromHex('64748B');
 final _pdfTextLight = PdfColor.fromHex('94A3B8');
 
 // Status badge colours — (background, text)
 final _statusColors = <String, (PdfColor, PdfColor)>{
-  'Present':          (PdfColor.fromHex('F0FDF4'), PdfColor.fromHex('16A34A')),
-  'Late':             (PdfColor.fromHex('FFFBEB'), PdfColor.fromHex('B45309')),
-  'On Shift':         (PdfColor.fromHex('EEF2FF'), PdfColor.fromHex('4F46E5')),
+  'Present': (PdfColor.fromHex('F0FDF4'), PdfColor.fromHex('16A34A')),
+  'Late': (PdfColor.fromHex('FFFBEB'), PdfColor.fromHex('B45309')),
+  'On Shift': (PdfColor.fromHex('EEF2FF'), PdfColor.fromHex('4F46E5')),
   'Missed Clock Out': (PdfColor.fromHex('FFF7ED'), PdfColor.fromHex('C2410C')),
-  'Absent':           (PdfColor.fromHex('FEF2F2'), PdfColor.fromHex('DC2626')),
+  'Absent': (PdfColor.fromHex('FEF2F2'), PdfColor.fromHex('DC2626')),
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// How many data rows to render per page-chunk.
+// 20 is conservative for landscape A4 at font-size 9 + standard padding.
+// Raise to 25 if pages look too sparse; lower if rows still get clipped.
+// ─────────────────────────────────────────────────────────────────────────────
+const _kRowsPerPage = 1000;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// How many records to pull in one HTTP request.
+// Bump this if you expect > 5 000 records.
+// ─────────────────────────────────────────────────────────────────────────────
+const _kFetchLimit = 5000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AttendanceExportOptions
 // ─────────────────────────────────────────────────────────────────────────────
 
 class AttendanceExportOptions {
-  final bool    allDates;
-  final String? period;  // "today" | "week" | "month" | "year"
-  final String? date;    // "YYYY-MM-DD"
+  final bool allDates;
+  final String? period; // "today" | "week" | "month" | "year"
+  final String? date; // "YYYY-MM-DD"
+  final String? dateFrom;
+  final String? dateTo;
   final String? search;
   final String? status;
 
@@ -77,6 +92,8 @@ class AttendanceExportOptions {
     this.allDates = false,
     this.period,
     this.date,
+    this.dateFrom,
+    this.dateTo,
     this.search,
     this.status,
   });
@@ -87,12 +104,14 @@ class AttendanceExportOptions {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class AttendanceExportResult {
-  final bool    success;
+  final bool success;
   final String? error;
 
   const AttendanceExportResult._({required this.success, this.error});
-  factory AttendanceExportResult.ok()           => const AttendanceExportResult._(success: true);
-  factory AttendanceExportResult.fail(String e) => AttendanceExportResult._(success: false, error: e);
+  factory AttendanceExportResult.ok() =>
+      const AttendanceExportResult._(success: true);
+  factory AttendanceExportResult.fail(String e) =>
+      AttendanceExportResult._(success: false, error: e);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,11 +145,11 @@ class _Record {
     }
     return _Record(
       internName: j['intern_name'] as String? ?? 'Unknown',
-      date:       _fmtDate(j['date'] as String? ?? ''),
-      timeIn:     j['time_in']  as String? ?? '--',
-      timeOut:    j['time_out'] as String? ?? '--',
-      hours:      hours,
-      status:     j['status']  as String? ?? 'Absent',
+      date: _fmtDate(j['date'] as String? ?? ''),
+      timeIn: j['time_in'] as String? ?? '--',
+      timeOut: j['time_out'] as String? ?? '--',
+      hours: hours,
+      status: j['status'] as String? ?? 'Absent',
     );
   }
 
@@ -138,8 +157,8 @@ class _Record {
     try {
       final dt = DateTime.parse(iso);
       return '${dt.month.toString().padLeft(2, '0')}/'
-             '${dt.day.toString().padLeft(2, '0')}/'
-             '${dt.year}';
+          '${dt.day.toString().padLeft(2, '0')}/'
+          '${dt.year}';
     } catch (_) {
       return iso;
     }
@@ -161,13 +180,14 @@ class AttendanceExporter {
     final snackCtrl = messenger.showSnackBar(_progressSnack());
 
     try {
-      // 1. Fetch all matching records (limit=1000 — no pagination for export)
+      // 1. Fetch all matching records
       final records = await _fetchAll(options);
 
       snackCtrl.close();
 
       if (records == null) {
-        _snack(context, 'Export failed: could not fetch records.', isError: true);
+        _snack(context, 'Export failed: could not fetch records.',
+            isError: true);
         return AttendanceExportResult.fail('Fetch error');
       }
       if (records.isEmpty) {
@@ -175,12 +195,11 @@ class AttendanceExporter {
         return AttendanceExportResult.fail('No records');
       }
 
-      // 2. Build the PDF; _buildPdf returns Uint8List directly
+      // 2. Build the PDF
       final pdfBytes = await _buildPdf(records, options);
 
       // 3. Hand off to printing — opens native save/share/print dialog
       await Printing.layoutPdf(
-        // onLayout must return Future<Uint8List>; pdfBytes is already Uint8List
         onLayout: (PdfPageFormat format) async => pdfBytes,
         name: _filename(options),
       );
@@ -197,74 +216,134 @@ class AttendanceExporter {
 
   static Future<List<_Record>?> _fetchAll(AttendanceExportOptions opts) async {
     try {
-      final params = <String, String>{
-        'page':  '1',
-        'limit': '1000',
-        if (opts.allDates)
-          'all_dates': 'true'
-        else if (opts.period != null)
-          'period': opts.period!
-        else if (opts.date != null)
-          'date': opts.date!,
-        if (opts.search != null && opts.search!.isNotEmpty)
-          'search': opts.search!,
-        if (opts.status != null && opts.status != 'All')
-          'status': opts.status!,
-      };
+      final allRecords = <_Record>[];
+      int page = 1;
+      const batchSize = 100; // safe page size your backend definitely supports
 
-      final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance')
-          .replace(queryParameters: params);
+      while (true) {
+        final params = <String, String>{
+          'page': '$page',
+          'limit': '$batchSize',
+          if (opts.allDates)
+            'all_dates': 'true'
+          else if (opts.period != null)
+            'period': opts.period!
+          else if (opts.dateFrom != null && opts.dateTo != null) ...{
+            'date_from': opts.dateFrom!,
+            'date_to': opts.dateTo!,
+          } else if (opts.date != null)
+            'date': opts.date!,
+          if (opts.search != null && opts.search!.isNotEmpty)
+            'search': opts.search!,
+          if (opts.status != null && opts.status != 'All')
+            'status': opts.status!,
+        };
 
-      final res = await http
-          .get(uri, headers: await ApiService.authHeaders())
-          .timeout(const Duration(seconds: 60));
+        final uri = Uri.parse('${ApiService.baseUrl}/admin/attendance')
+            .replace(queryParameters: params);
 
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      if (body['ok'] != true) return null;
+        final res = await http
+            .get(uri, headers: await ApiService.authHeaders())
+            .timeout(const Duration(seconds: 90));
 
-      return (body['records'] as List? ?? [])
-          .map((e) => _Record.fromJson(e as Map<String, dynamic>))
-          .toList();
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        if (body['ok'] != true) return null;
+
+        final batch = (body['records'] as List? ?? [])
+            .map((e) => _Record.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+        allRecords.addAll(batch);
+
+        final total = body['total'] as int? ?? allRecords.length;
+
+        // Stop when we've collected everything or got an empty/short page
+        if (allRecords.length >= total || batch.length < batchSize) break;
+
+        page++;
+      }
+
+      return allRecords;
     } catch (_) {
       return null;
     }
   }
 
-  // ── PDF builder — returns Uint8List ───────────────────────────────────────
-
+  // ── PDF builder ───────────────────────────────────────────────────────────
+  //
+  // FIX: A single pw.Table never page-breaks mid-table in the pdf package.
+  // Solution: slice records into chunks of _kRowsPerPage and emit one
+  // pw.Table per chunk. pw.MultiPage naturally places each chunk widget,
+  // inserting page breaks between them as needed. The column header row is
+  // repeated at the top of every chunk so every page is self-contained.
+  //
   static Future<Uint8List> _buildPdf(
-    List<_Record>           records,
+    List<_Record> records,
     AttendanceExportOptions opts,
   ) async {
     final doc = pw.Document(
-      title:  'Attendance Report',
+      title: 'Attendance Report',
       author: 'Admin',
     );
 
-    // Column labels and their flex widths — explicit List<double>
-    const headers = ['Intern', 'Date', 'Time In', 'Time Out', 'Hours', 'Status'];
-    final flex    = <double>[3.0, 2.0, 1.5, 1.5, 1.5, 2.0];
+    const headers = [
+      'Intern',
+      'Date',
+      'Time In',
+      'Time Out',
+      'Hours',
+      'Status'
+    ];
+    final flex = <double>[3.0, 2.0, 1.5, 1.5, 1.5, 2.0];
+
+    // Slice records into page-sized chunks
+    final chunks = <List<_Record>>[];
+    for (int i = 0; i < records.length; i += _kRowsPerPage) {
+      chunks.add(
+        records.sublist(i, (i + _kRowsPerPage).clamp(0, records.length)),
+      );
+    }
+
+    // Build widget list imperatively — avoid collection-for + spread inside
+    // MultiPage's build callback, which can cause the pdf layout engine to
+    // silently truncate widgets beyond the first page.
+    final List<pw.Widget> pageWidgets = [pw.SizedBox(height: 12)];
+    for (int c = 0; c < chunks.length; c++) {
+      pageWidgets.add(
+        _buildTableChunk(
+          chunk: chunks[c],
+          chunkIndex: c,
+          globalOffset: c * _kRowsPerPage,
+          headers: headers,
+          flex: flex,
+          isFirstChunk: c == 0,
+        ),
+      );
+      if (c < chunks.length - 1) {
+        pageWidgets.add(pw.SizedBox(height: 2));
+      }
+    }
 
     doc.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4.landscape,
-        margin:     const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 36),
-        header:     (ctx) => _buildHeader(ctx, opts),
-        footer:     (ctx) => _buildFooter(ctx),
-        build:      (ctx) => [
-          pw.SizedBox(height: 16),
-          _buildTable(records, headers, flex),
-        ],
+        margin: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+        header: (ctx) => _buildHeader(ctx, opts, records.length),
+        footer: (ctx) => _buildFooter(ctx),
+        build: (ctx) => pageWidgets,
       ),
     );
 
-    // doc.save() returns Future<Uint8List>
     return doc.save();
   }
 
   // ── PDF header ────────────────────────────────────────────────────────────
 
-  static pw.Widget _buildHeader(pw.Context ctx, AttendanceExportOptions opts) {
+  static pw.Widget _buildHeader(
+    pw.Context ctx,
+    AttendanceExportOptions opts,
+    int totalRecords,
+  ) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
       decoration: pw.BoxDecoration(
@@ -279,9 +358,7 @@ class AttendanceExporter {
           pw.Container(
             width: 4,
             height: 36,
-            decoration: pw.BoxDecoration(
-              color: _pdfAccent,
-            ),
+            decoration: pw.BoxDecoration(color: _pdfAccent),
           ),
           pw.SizedBox(width: 10),
           pw.Column(
@@ -297,7 +374,7 @@ class AttendanceExporter {
               ),
               pw.SizedBox(height: 2),
               pw.Text(
-                _subtitleText(opts),
+                '${_subtitleText(opts)}  ·  $totalRecords record${totalRecords == 1 ? '' : 's'}',
                 style: pw.TextStyle(fontSize: 10, color: _pdfTextMid),
               ),
             ],
@@ -338,30 +415,41 @@ class AttendanceExporter {
     );
   }
 
-  // ── PDF table ─────────────────────────────────────────────────────────────
-
-  static pw.Widget _buildTable(
-    List<_Record>  records,
-    List<String>   headers,
-    List<double>   flex,        // explicit List<double> — fixes the type error
-  ) {
+  // ── PDF table chunk ───────────────────────────────────────────────────────
+  //
+  // Renders one pw.Table for a subset of records. Each chunk includes its
+  // own header row so columns are labelled on every page.
+  //
+  static pw.Widget _buildTableChunk({
+    required List<_Record> chunk,
+    required int chunkIndex,
+    required int globalOffset, // row index of chunk[0] in full list
+    required List<String> headers,
+    required List<double> flex,
+    required bool isFirstChunk,
+  }) {
     return pw.Table(
       border: pw.TableBorder(
         horizontalInside: pw.BorderSide(color: _pdfBorder, width: 0.5),
-        bottom:           pw.BorderSide(color: _pdfBorder, width: 0.5),
+        bottom: pw.BorderSide(color: _pdfBorder, width: 0.5),
+        // Draw a top border only on the very first chunk to avoid a
+        // double-line where the previous chunk's bottom border sits.
+        top: isFirstChunk
+            ? pw.BorderSide(color: _pdfBorder, width: 0.5)
+            : pw.BorderSide.none,
       ),
       columnWidths: {
-        for (int i = 0; i < headers.length; i++)
-          i: pw.FlexColumnWidth(flex[i]),
+        for (int i = 0; i < headers.length; i++) i: pw.FlexColumnWidth(flex[i]),
       },
       children: [
-        // ── Header row ──────────────────────────────────────────────────────
+        // ── Column header row (repeated on every chunk / page) ─────────────
         pw.TableRow(
           decoration: pw.BoxDecoration(color: _pdfHeaderBg),
           children: headers.map((h) {
             final centered = h == 'Date' || h == 'Status';
             return pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+              padding:
+                  const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 9),
               child: pw.Text(
                 h.toUpperCase(),
                 textAlign: centered ? pw.TextAlign.center : pw.TextAlign.left,
@@ -377,21 +465,25 @@ class AttendanceExporter {
         ),
 
         // ── Data rows ───────────────────────────────────────────────────────
-        ...records.asMap().entries.map((entry) {
-          final i    = entry.key;
-          final r    = entry.value;
-          final rowBg = i.isEven ? PdfColors.white : PdfColor.fromHex('FAFAFC');
+        ...chunk.asMap().entries.map((entry) {
+          final localIdx = entry.key;
+          final r = entry.value;
+          // Use global offset so alternating colours are consistent across chunks
+          final globalIdx = globalOffset + localIdx;
+          final rowBg =
+              globalIdx.isEven ? PdfColors.white : PdfColor.fromHex('FAFAFC');
 
           return pw.TableRow(
             decoration: pw.BoxDecoration(color: rowBg),
             children: [
               _dataCell(r.internName, bold: true, color: _pdfDark),
-              _dataCell(r.date,    centered: true),
+              _dataCell(r.date, centered: true),
               _dataCell(r.timeIn),
               _dataCell(r.timeOut),
               _dataCell(r.hours),
               pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                padding:
+                    const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: pw.Center(child: _statusBadge(r.status)),
               ),
             ],
@@ -402,9 +494,9 @@ class AttendanceExporter {
   }
 
   static pw.Widget _dataCell(
-    String    text, {
-    bool      bold     = false,
-    bool      centered = false,
+    String text, {
+    bool bold = false,
+    bool centered = false,
     PdfColor? color,
   }) =>
       pw.Padding(
@@ -423,11 +515,9 @@ class AttendanceExporter {
   static pw.Widget _statusBadge(String status) {
     final colors = _statusColors[status] ??
         (PdfColor.fromHex('FEF2F2'), PdfColor.fromHex('DC2626'));
-    final bg        = colors.$1;
+    final bg = colors.$1;
     final textColor = colors.$2;
 
-    // pw.BorderRadius with large radii causes the "fish eye" rendering bug
-    // in the pdf package. Use a small fixed radius (4pt) which is safe.
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: pw.BoxDecoration(
@@ -450,9 +540,11 @@ class AttendanceExporter {
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   static String _filename(AttendanceExportOptions opts) {
-    if (opts.allDates)       return 'attendance_all_dates.pdf';
+    if (opts.allDates) return 'attendance_all_dates.pdf';
     if (opts.period != null) return 'attendance_${opts.period}.pdf';
-    if (opts.date   != null) return 'attendance_${opts.date}.pdf';
+    if (opts.dateFrom != null && opts.dateTo != null)
+      return 'attendance_${opts.dateFrom}_to_${opts.dateTo}.pdf'; // ← ADD
+    if (opts.date != null) return 'attendance_${opts.date}.pdf';
     return 'attendance_${_todayStr()}.pdf';
   }
 
@@ -461,12 +553,13 @@ class AttendanceExporter {
     if (opts.period != null) {
       return switch (opts.period) {
         'today' => 'Today — ${_todayStr()}',
-        'week'  => 'This Week',
+        'week' => 'This Week',
         'month' => 'This Month',
-        //'year'  => 'This Year',
-        _       => opts.period!,
+        _ => opts.period!,
       };
     }
+    if (opts.dateFrom != null && opts.dateTo != null) // ← ADD
+      return '${_Record._fmtDate(opts.dateFrom!)} – ${_Record._fmtDate(opts.dateTo!)}'; // ← ADD
     if (opts.date != null) return _Record._fmtDate(opts.date!);
     return _todayStr();
   }
@@ -474,8 +567,8 @@ class AttendanceExporter {
   static String _todayStr() {
     final now = DateTime.now();
     return '${now.month.toString().padLeft(2, '0')}/'
-           '${now.day.toString().padLeft(2, '0')}/'
-           '${now.year}';
+        '${now.day.toString().padLeft(2, '0')}/'
+        '${now.year}';
   }
 }
 
@@ -500,7 +593,7 @@ SnackBar _progressSnack() => SnackBar(
           ),
           SizedBox(width: 14),
           Text(
-            'Preparing PDF export…',
+            'Fetching all records… this may take a moment',
             style: TextStyle(
               color: Colors.white,
               fontSize: 13,

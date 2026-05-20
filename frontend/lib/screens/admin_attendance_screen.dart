@@ -425,6 +425,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
                   period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+                  // ↓ Pass range dates when in range mode
+                  dateFrom: (isCustom && _isRangeMode)
+                      ? toApiDate(_customRangeStart)
+                      : null,
+                  dateTo: (isCustom && _isRangeMode)
+                      ? toApiDate(_customRangeEnd)
+                      : null,
+                  // ↓ Pass single date only when NOT in range mode
                   date: (isCustom && !_isRangeMode)
                       ? toApiDate(_customDate)
                       : null,
@@ -721,9 +729,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-       
-       
-
         // No vertical SingleChildScrollView here. Scrolling is natively handled by the parent wrapper!
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
