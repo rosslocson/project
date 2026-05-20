@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart'; // ── Added for safe navigation ──
+import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
@@ -65,11 +65,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     final auth = context.watch<AuthProvider>();
 
     // ── FIXED REDIRECT LOGIC ──
-    // Wait until auth is fully initialized before making routing decisions.
     if (auth.isAuthInitialized && !auth.isLoggedIn) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        context.go('/login'); // Replaced Navigator.pushNamed with go_router
+        context.go('/login');
       });
       return const SizedBox.shrink();
     }
@@ -86,30 +85,44 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               isSidebarOpen: _isSidebarOpen,
               onToggleSidebar: () =>
                   setState(() => _isSidebarOpen = !_isSidebarOpen),
-              user: user, // Topbar will automatically show skeleton if still initializing
+              user: user,
             ),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 0, right: 0, bottom: 24),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(top: 32, bottom: 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 24),
+              // LayoutBuilder handles responsiveness for different screen sizes
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Dynamically calculate padding based on screen width
+                  // This prevents the "View All" or carousel from hitting the screen edge
+                  final double horizontalPadding = constraints.maxWidth > 600 ? 32.0 : 16.0;
 
-                      // Extracted Carousel Component
-                      UserInternCarousel(
-                        interns: _interns,
-                        loading: _loadingInterns,
-                        error: _internsError,
-                        onRetry: _fetchInterns,
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(top: 32, bottom: 32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 24),
+
+                          // Extracted Carousel Component
+                          // Constraining this width within the column ensures 
+                          // the "View All" inside it respects the available space.
+                          SizedBox(
+                            width: constraints.maxWidth,
+                            child: UserInternCarousel(
+                              interns: _interns,
+                              loading: _loadingInterns,
+                              error: _internsError,
+                              onRetry: _fetchInterns,
+                            ),
+                          ),
+
+                          const SizedBox(height: 36),
+                        ],
                       ),
-
-                      const SizedBox(height: 36),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ],

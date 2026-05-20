@@ -86,15 +86,6 @@ class AttendanceClockCard extends StatelessWidget {
                       : theme.border,
                 ),
               ],
-              if (isOjtComplete) ...[
-                const SizedBox(width: 10),
-                _Pill(
-                  label: 'OJT Complete',
-                  bg: Colors.greenAccent.withValues(alpha: 0.15),
-                  fg: Colors.greenAccent,
-                  border: Colors.greenAccent.withValues(alpha: 0.4),
-                ),
-              ],
             ],
           ),
 
@@ -184,14 +175,21 @@ class AttendanceClockCard extends StatelessWidget {
     final disabledBorder =
         isDark ? Colors.white.withValues(alpha: 0.2) : theme.border;
 
+    //final ojtCyan = isDark ? const Color(0xFF00FFFF) : const Color(0xFF006060);
+
     if (isOjtComplete) {
       return _ActionButton(
         label: 'OJT Hours Completed',
         icon: Icons.verified_rounded,
         enabled: false,
-        bg: Colors.greenAccent.withValues(alpha: 0.12),
-        fg: Colors.greenAccent.withValues(alpha: 0.7),
-        borderColor: Colors.greenAccent.withValues(alpha: 0.3),
+        bg: isDark
+            ? Colors.white.withValues(alpha: 0.15)
+            : const Color(0xFF00022E),
+        fg: 
+             Colors.greenAccent,
+        borderColor: isDark
+            ? Colors.white.withValues(alpha: 0.3)
+            : const Color(0xFF00022E),
         onPressed: null,
         isLoading: false,
       );

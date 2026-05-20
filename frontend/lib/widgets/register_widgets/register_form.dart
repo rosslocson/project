@@ -511,7 +511,7 @@ class RegisterForm {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: kAccentPurple,
                               foregroundColor: Colors.white,
-                              disabledBackgroundColor: kAccentPurple.withOpacity(0.5),
+                              disabledBackgroundColor: kAccentPurple.withValues(alpha: 0.5),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),

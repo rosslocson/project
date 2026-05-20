@@ -37,7 +37,7 @@ class AttendanceTable extends StatelessWidget {
     'Status',
   ];
 
-  static const _minColWidths = [160.0, 110.0, 100.0, 100.0, 72.0, 110.0, 44.0];
+  static const _minColWidths = [150.0, 100.0, 95.0, 95.0, 65.0, 120.0, 40.0];
 
   @override
   Widget build(BuildContext context) {

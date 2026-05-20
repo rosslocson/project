@@ -16,7 +16,7 @@ class RegisterErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor =
-        isDark ? Colors.red.shade900.withOpacity(0.2) : Colors.red.shade50;
+        isDark ? Colors.red.shade900.withValues(alpha: 0.2) : Colors.red.shade50;
     final borderColor = isDark ? Colors.red.shade700 : Colors.red.shade200;
     final iconColor = isDark ? Colors.red.shade200 : Colors.red.shade700;
     final textColor = isDark ? Colors.red.shade100 : Colors.red.shade900;

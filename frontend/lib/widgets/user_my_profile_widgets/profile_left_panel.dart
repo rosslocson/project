@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../app_theme.dart';
-import 'profile_components.dart';
 import 'profile_utils.dart';
 
 class ProfileLeftPanel extends StatelessWidget {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
@@ -9,7 +9,7 @@ import '../services/api_service.dart';
 import '../widgets/app_theme.dart';
 
 // InternSpace Shared Palette (Matched with Admin)
-const _kCosmicBlue = Color(0xFF00022E);
+//const _kCosmicBlue = Color(0xFF00022E);
 const _kAccentIndigo = Color(0xFF7367F0);
 const _kLightAvatarEnd = Color(0xFFA78BFA);
 
@@ -25,8 +25,8 @@ class HamburgerIcon extends StatelessWidget {
     final color = theme.topbarText;
 
     return SizedBox(
-      width: 24, 
-      height: 18, 
+      width: 24,
+      height: 18,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -82,7 +82,7 @@ class GlassTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.internTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     // User specific logic
     final sidebar = context.watch<SidebarProvider>();
     final bool sidebarClosed = !sidebar.isUserSidebarOpen;
@@ -91,14 +91,12 @@ class GlassTopBar extends StatelessWidget {
     final bool isInitialized = auth.isAuthInitialized;
     final userMap = auth.user;
 
-    // Use provider user as the source of truth to avoid hot-restart stale widget props.
     final String firstName = (userMap?['first_name']?.toString() ?? '').trim();
     final String lastName = (userMap?['last_name']?.toString() ?? '').trim();
 
     final String fullName = lastName.isEmpty ? (firstName.isEmpty ? 'User' : firstName) : '$firstName $lastName';
     final String initials = firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
-    // User specific API logic for Avatar
     final String rawAvatarUrl = (userMap?['avatar_url']?.toString() ?? '');
     final String finalAvatarUrl = rawAvatarUrl.isEmpty
         ? ''
@@ -106,10 +104,6 @@ class GlassTopBar extends StatelessWidget {
             ? rawAvatarUrl
             : '${ApiService.baseUrl.replaceAll('/api', '')}$rawAvatarUrl';
 
-    debugPrint('🧩 Topbar rebuild: isAuthInitialized=${auth.isAuthInitialized} isLoggedIn=${auth.isLoggedIn} authUserKeys=${auth.user?.keys.length}');
-    debugPrint('🧩 Topbar rebuild: widgetUserKeys=${user?.keys.length} widgetUserId=${user?['id']} widgetUserEmail=${user?['email']} widgetUserFirstName=${user?['first_name']}');
-
-    // Helper for skeleton loading state
     Widget buildSkeleton(double width, double height, {bool isCircle = false}) {
       return Container(
         width: width,
@@ -126,11 +120,8 @@ class GlassTopBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 32,
-            vertical: 14, 
-          ),
-          color: isDark ? Colors.transparent : _kLightTopbarBg, 
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          color: isDark ? Colors.transparent : _kLightTopbarBg,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -144,41 +135,51 @@ class GlassTopBar extends StatelessWidget {
                   splashColor: theme.sidebarHoverBackground,
                   highlightColor: Colors.transparent,
                 ),
-                const SizedBox(width: 28),
+                const SizedBox(width: 20),
               ],
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    pageTitle ?? 'Home',
-                    style: TextStyle(
-                      fontSize: 24, 
-                      fontWeight: FontWeight.w800,
-                      color: theme.topbarText,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 2), 
-                  if (showWelcome)
-                    if (!isInitialized)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: buildSkeleton(120, 14),
-                      )
-                    else
-                      Text(
-                        'Welcome, ${firstName.isEmpty ? '...' : firstName}',
-                        style: TextStyle(
-                          fontSize: 14, 
-                          fontWeight: FontWeight.w500,
-                          color: theme.topbarMutedText,
-                        ),
+              
+              // FIX: Wrapping the text column in Expanded ensures it doesn't push the right side off screen.
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      pageTitle ?? 'Home',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: theme.topbarText,
+                        letterSpacing: -0.5,
                       ),
-                ],
+                    ),
+                    const SizedBox(height: 2),
+                    if (showWelcome)
+                      if (!isInitialized)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: buildSkeleton(120, 14),
+                        )
+                      else
+                        Text(
+                          'Welcome, ${firstName.isEmpty ? '...' : firstName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: theme.topbarMutedText,
+                          ),
+                        ),
+                  ],
+                ),
               ),
-              const Spacer(),
+              
+              const SizedBox(width: 16),
+
               PopupMenuButton<String>(
                 onSelected: (String choice) async {
                   if (choice == 'profile') {
@@ -227,6 +228,7 @@ class GlassTopBar extends StatelessWidget {
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (!isInitialized)
                         buildSkeleton(80, 16)
@@ -244,13 +246,11 @@ class GlassTopBar extends StatelessWidget {
                         buildSkeleton(40, 40, isCircle: true)
                       else
                         CircleAvatar(
-                          radius: 20, 
-                          backgroundColor: isDark 
+                          radius: 20,
+                          backgroundColor: isDark
                               ? const Color(0xFFCDD2FB).withValues(alpha: 0.1)
                               : _kAccentIndigo.withValues(alpha: 0.1),
-                          backgroundImage: finalAvatarUrl.isNotEmpty
-                              ? NetworkImage(finalAvatarUrl)
-                              : null,
+                          backgroundImage: finalAvatarUrl.isNotEmpty ? NetworkImage(finalAvatarUrl) : null,
                           child: finalAvatarUrl.isEmpty
                               ? Container(
                                   decoration: BoxDecoration(
@@ -288,17 +288,9 @@ class GlassTopBar extends StatelessWidget {
           width: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: isDark 
-                  ? [
-                      Colors.transparent,
-                      Colors.white.withValues(alpha: 0.08),
-                      Colors.transparent
-                    ]
-                  : [
-                      Colors.transparent,
-                      _kAccentIndigo.withValues(alpha: 0.15),
-                      Colors.transparent
-                    ],
+              colors: isDark
+                  ? [Colors.transparent, Colors.white.withValues(alpha: 0.08), Colors.transparent]
+                  : [Colors.transparent, _kAccentIndigo.withValues(alpha: 0.15), Colors.transparent],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
@@ -309,6 +301,7 @@ class GlassTopBar extends StatelessWidget {
   }
 }
 
+// ... _ThemeToggleMenuItem remains unchanged
 class _ThemeToggleMenuItem extends StatelessWidget {
   const _ThemeToggleMenuItem();
 
@@ -333,8 +326,8 @@ class _ThemeToggleMenuItem extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(darkMode ? 'Dark Mode' : 'Light Mode', 
-                style: const TextStyle(fontWeight: FontWeight.w500)),
+                child: Text(darkMode ? 'Dark Mode' : 'Light Mode',
+                    style: const TextStyle(fontWeight: FontWeight.w500)),
               ),
               Transform.scale(
                 scale: 0.8,

@@ -8,8 +8,6 @@ import '../services/api_service.dart';
 import '../providers/theme_provider.dart';
 import 'intern_cards.dart';
 
-/// A directory screen that visualizes intern profiles as a "solar system".
-/// Users can pan, zoom, search, and click on nodes (planets) representing individual interns.
 class InternDirectoryScreen extends StatefulWidget {
   const InternDirectoryScreen({super.key});
 
@@ -18,48 +16,36 @@ class InternDirectoryScreen extends StatefulWidget {
 }
 
 class _InternDirectoryScreenState extends State<InternDirectoryScreen> with SingleTickerProviderStateMixin {
-  // --- Data & State Management ---
   List<InternProfile> _interns = [];
   List<InternProfile> _filteredInterns = [];
   bool _loading = true;
   String? _error;
   
-  // --- Search Features ---
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   bool _isSearching = false;
 
-  // --- Map Animation & Interactivity ---
-  // Controls the zoom and pan of the InteractiveViewer
   final TransformationController _transformationController = TransformationController();
   late AnimationController _animController;
   late Animation<Matrix4> _mapAnimation;
 
-  // --- Orbital Math Constants ---
-  final double _perspectiveRatio = 0.35; // Gives the rings a 3D isometric tilt
-  double _canvasWidth = 4000.0;          // Base width of the explorable space
-  double _canvasHeight = 2800.0;         // Base height of the explorable space
+  final double _perspectiveRatio = 0.35; 
+  double _canvasWidth = 4000.0;
+  double _canvasHeight = 2800.0;
 
-  // X-axis radii for each orbital ring. Y-axis is derived via _perspectiveRatio.
-  final List<double> _orbitRadiiX = [450.0, 800.0, 1200.0, 1650.0, 2150.0];
-  
-  // How many profile nodes can comfortably fit on each successive ring
+  final List<double> _orbitRadiiX = [450.0, 900.0, 1400.0, 2000.0, 2650.0];
   final List<int> _orbitCapacities = [5, 10, 18, 30, 45];
 
   @override
   void initState() {
     super.initState();
-    // Initialize animation controller for smooth map panning
     _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
     _searchController.addListener(_onSearchChanged);
-    
-    // Fetch data immediately upon initialization
     _fetchInterns();
   }
 
   @override
   void dispose() {
-    // Clean up controllers to prevent memory leaks
     _transformationController.dispose();
     _animController.dispose();
     _searchController.dispose();
@@ -67,8 +53,6 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     super.dispose();
   }
 
-  /// Fetches the intern data from the API and dynamically adjusts the orbital space
-  /// if the intern count exceeds the default capacity.
   Future<void> _fetchInterns() async {
     setState(() {
       _loading = true;
@@ -76,8 +60,6 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     });
 
     final res = await ApiService.getInterns();
-    
-    // GUARD: Ensure the BuildContext is safely mounted before crossing the async gap
     if (!mounted) return;
 
     if (res['ok'] == true) {
@@ -87,12 +69,9 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
           .toList();
 
       setState(() {
-        // Alphabetize the list by name
         loaded.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         _interns = loaded;
         _filteredInterns = loaded;
-        
-        // Expand the universe if we have more than 108 interns
         if (_interns.length > 108) {
           _orbitRadiiX.add(2700.0);
           _orbitCapacities.add(60);
@@ -102,7 +81,6 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
         _loading = false;
       });
       
-      // Auto-center the map once the rendering frame completes
       WidgetsBinding.instance.addPostFrameCallback((_) => _recenterMap(animated: false));
     } else {
       setState(() {
@@ -112,8 +90,6 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     }
   }
 
-  /// Filters the visible interns in real-time based on the search query.
-  /// Checks against Name, Intern Number, and School.
   void _onSearchChanged() {
     final query = _searchController.text.toLowerCase();
     setState(() {
@@ -131,23 +107,16 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     });
   }
 
-  /// Smoothly pans and zooms the InteractiveViewer back to the center "Sun".
   void _recenterMap({bool animated = true}) {
-    // GUARD: Ensure context is available for MediaQuery
-    if (!mounted) return; 
-    
     final Size screenSize = MediaQuery.of(context).size;
-    // Determine zoom level depending on screen size (desktop vs mobile)
-    double targetScale = screenSize.width > 800 ? 0.7 : 0.4; 
+    double targetScale = screenSize.width > 800 ? 0.55 : 0.3; 
     
     final double offsetX = (_canvasWidth * targetScale - screenSize.width) / 2;
     final double offsetY = (_canvasHeight * targetScale - screenSize.height) / 2;
     
-    // FIX: Using 1.0 as the 4th argument (w-coordinate) satisfies the required parameter 
-    // without breaking the homogeneous coordinate math underlying the 3D matrix.
     final Matrix4 targetMatrix = Matrix4.identity()
-      ..translateByDouble(-offsetX, -offsetY, 0.0, 1.0)
-      ..scaleByDouble(targetScale, targetScale, 1.0, 1.0);
+      ..translate(-offsetX, -offsetY)
+      ..scale(targetScale);
 
     if (animated) {
       _mapAnimation = Matrix4Tween(
@@ -164,35 +133,31 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     }
   }
 
-  /// DYNAMIC SCALING LOGIC
-  /// Automatically calculates a visual multiplier for the profile cards
-  /// so they look proportional based on how crowded the screen currently is.
+  // DYNAMIC SCALING LOGIC
+  // Calculates size multiplier based on current number of visible users
   double get _currentScaleFactor {
     int count = _filteredInterns.length;
     if (count == 0) return 1.0;
-    if (count <= 10) return 1.5;   // Very few users -> Much larger cards
-    if (count <= 25) return 1.25;  // Few users -> Slightly larger cards
+    if (count <= 10) return 1.5;   // Very few users -> Much larger
+    if (count <= 25) return 1.25;  // Few users -> Slightly larger
     if (count <= 50) return 1.0;   // Normal amount -> Base size
-    if (count <= 80) return 0.85;  // Many users -> Slightly smaller cards
+    if (count <= 80) return 0.85;  // Many users -> Slightly smaller
     return 0.7;                    // Crowded -> Smallest size
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- Theme Variables ---
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
     final Color headingColor = isDark ? Colors.white : const Color(0xFF00022E);
     const Color accentColor = Color(0xFF6366F1);
     final Color bgColor = isDark ? const Color(0xFF02030A) : Colors.white;
-    final Color orbitColor = isDark 
-        ? Colors.white.withValues(alpha: 0.15) 
-        : const Color(0xFF00022E).withValues(alpha: 0.08);
+    final Color orbitColor = isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFF00022E).withValues(alpha: 0.08);
 
     return Scaffold(
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          // Ambient Background Gradient
           Container(
             decoration: BoxDecoration(
               gradient: RadialGradient(
@@ -205,20 +170,18 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
             ),
           ),
 
-          // Core Interactive Map
           if (!_loading && _error == null)
             InteractiveViewer(
               transformationController: _transformationController,
               minScale: 0.1, 
               maxScale: 1.5,
-              constrained: false, // Allows the canvas to stretch beyond screen bounds
+              constrained: false,
               child: SizedBox(
                 width: _canvasWidth,
                 height: _canvasHeight,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Paints the elliptical orbit lines
                     CustomPaint(
                       size: Size(_canvasWidth, _canvasHeight),
                       painter: OrbitRingsPainter(
@@ -227,22 +190,17 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
                         color: orbitColor,
                       ),
                     ),
-                    
-                    // The Central 'Sun' Core Element
                     Positioned(
                       left: _canvasWidth / 2 - 250,
                       top: _canvasHeight / 2 - 250,
                       child: CentralSun(isDark: isDark),
                     ),
-                    
-                    // The dynamic profile cards placed along the orbits
                     ..._buildPlanetarySystem(isDark, headingColor, accentColor),
                   ],
                 ),
               ),
             ),
 
-          // Floating UI Overlay (Top and Bottom Headers)
           SafeArea(
             child: Column(
               children: [
@@ -262,11 +220,8 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     );
   }
 
-  /// Builds the top navigation bar, title, and animated search field.
   Widget _buildHeader(bool isDark, Color headingColor, Color accentColor) {
-    final Color searchBg = isDark 
-        ? const Color(0xFF141526).withValues(alpha: 0.9) 
-        : const Color(0xFFF3F4F6);
+    final Color searchBg = isDark ? const Color(0xFF141526).withValues(alpha: 0.9) : const Color(0xFFF3F4F6);
 
     return PointerInterceptor(
       child: Padding(
@@ -274,7 +229,6 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Center Titles
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -298,18 +252,13 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
                 ),
               ],
             ),
-            
-            // Left and Right Action Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Back Button
                 IconButton(
                   icon: Icon(Icons.arrow_back_ios_new, color: headingColor),
                   onPressed: () => Navigator.canPop(context) ? Navigator.pop(context) : context.go('/dashboard'),
                 ),
-                
-                // Animated Search Bar & Theme Switcher
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -372,7 +321,6 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Theme Toggle
                     Tooltip(
                       message: isDark ? 'Light Mode' : 'Dark Mode',
                       waitDuration: const Duration(milliseconds: 300),
@@ -401,16 +349,13 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     );
   }
 
-  /// Builds the 'Recenter' floating action button at the bottom of the screen.
   Widget _buildFocusButton(bool isDark, Color headingColor, Color accentColor) {
     return PointerInterceptor(
       child: Padding(
         padding: const EdgeInsets.only(bottom: 30.0),
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isDark 
-                ? const Color(0xFF141526).withValues(alpha: 0.9) 
-                : const Color(0xFF00022E),
+            backgroundColor: isDark ? const Color(0xFF141526).withValues(alpha: 0.9) : const Color(0xFF00022E),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
@@ -426,8 +371,6 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     );
   }
 
-  /// Iterates through the list of interns and calculates their absolute trigonometric (X, Y)
-  /// coordinates based on what orbital ring they belong to.
   List<Widget> _buildPlanetarySystem(bool isDark, Color headingColor, Color accentColor) {
     List<Widget> planets = [];
     final double centerX = _canvasWidth / 2;
@@ -439,34 +382,27 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
 
     for (int ringIndex = 0; ringIndex < _orbitRadiiX.length; ringIndex++) {
       if (currentInternIndex >= _filteredInterns.length) break;
-      
       double radiusX = _orbitRadiiX[ringIndex];
       double radiusY = radiusX * _perspectiveRatio;
       int capacity = _orbitCapacities[ringIndex];
-      
-      // Determine how many interns fit on this specific ring
       int internsOnThisRing = math.min(capacity, _filteredInterns.length - currentInternIndex);
 
       for (int i = 0; i < internsOnThisRing; i++) {
-        // Distribute evenly around the ring mathematically (in radians)
         double angle = (i / internsOnThisRing) * 2 * math.pi;
-        // Shift every other ring slightly so nodes aren't visually blocking each other perfectly inline
         if (ringIndex % 2 != 0) angle += (math.pi / internsOnThisRing); 
-        
-        // Convert polar coordinates to cartesian (X, Y)
         double x = centerX + radiusX * math.cos(angle);
         double y = centerY + radiusY * math.sin(angle);
 
         planets.add(
           Positioned(
-            // Apply scale factor to positioning offsets so cards stay perfectly centered on the orbit ring
+            // Apply scale factor to positioning offsets so cards stay centered on the orbit ring
             left: x - (80 * scaleFactor), 
             top: y - (160 * scaleFactor),
             child: OrbitalPlanetNode(
               intern: _filteredInterns[currentInternIndex], 
               ringIndex: ringIndex,
               isDark: isDark,
-              scaleFactor: scaleFactor, // Pass scale down to the visual node
+              scaleFactor: scaleFactor, // Pass scale to the node
             ),
           ),
         );
@@ -477,7 +413,6 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
   }
 }
 
-/// Custom painter that draws the faint elliptical guides in the background space.
 class OrbitRingsPainter extends CustomPainter {
   final List<double> radiiX;
   final double perspectiveRatio;
@@ -504,7 +439,6 @@ class OrbitRingsPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// A highly decorative, multi-layered visual component representing the center of the system.
 class CentralSun extends StatelessWidget {
   final bool isDark;
   const CentralSun({super.key, required this.isDark});
@@ -525,7 +459,6 @@ class CentralSun extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer Glow
           if (isDark)
             Container(
               width: 490,
@@ -541,7 +474,6 @@ class CentralSun extends StatelessWidget {
               ),
             ),
           
-          // Mid Glow
           if (isDark)
             Container(
               width: 450,
@@ -558,7 +490,6 @@ class CentralSun extends StatelessWidget {
               ),
             ),
 
-          // Intense Inner Shadow 
           Container(
             width: 210,
             height: 210,
@@ -579,7 +510,6 @@ class CentralSun extends StatelessWidget {
             ),
           ),
 
-          // Physical Sun Base
           Container(
             width: 195,
             height: 195,
@@ -605,13 +535,11 @@ class CentralSun extends StatelessWidget {
   }
 }
 
-/// The visual widget representing an intern within the 2D space.
-/// Styled as a floating, glassmorphic card pinned to an avatar bubble.
 class OrbitalPlanetNode extends StatelessWidget {
   final InternProfile intern;
   final int ringIndex;
   final bool isDark;
-  final double scaleFactor; // Received from the parent to proportionately shrink/grow
+  final double scaleFactor;
 
   const OrbitalPlanetNode({
     super.key, 
@@ -623,7 +551,6 @@ class OrbitalPlanetNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Rotating palette of colors to give each orbital ring a distinct visual identity
     final List<Color> accents = [
       const Color(0xFF6366F1), 
       const Color(0xFF5A54FF), 
@@ -633,26 +560,24 @@ class OrbitalPlanetNode extends StatelessWidget {
     ];
     Color accentColor = accents[ringIndex % accents.length];
 
-    // Ensure text scales down smoothly but never becomes invisibly small
+    // Ensure text doesn't become impossibly small to read
     final double titleFontSize = math.max(12 * scaleFactor, 8.0);
     final double subFontSize = math.max(9 * scaleFactor, 6.0);
 
     return GestureDetector(
       onTap: () {
-        // Route to the specific intern's details page when tapped
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => InternDetailPage(intern: intern)),
         );
       },
       child: SizedBox(
-        // Apply scaling directly to the container boundaries
+        // Apply scaling to the container size
         width: 160 * scaleFactor,
         height: 180 * scaleFactor,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // Floating Informational Nameplate
             ClipRRect(
               borderRadius: BorderRadius.circular(8 * scaleFactor),
               child: BackdropFilter(
@@ -664,9 +589,7 @@ class OrbitalPlanetNode extends StatelessWidget {
                     vertical: 6 * scaleFactor
                   ),
                   decoration: BoxDecoration(
-                    color: isDark 
-                        ? Colors.black.withValues(alpha: 0.4) 
-                        : Colors.white.withValues(alpha: 0.85),
+                    color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(8 * scaleFactor),
                     border: Border(
                       bottom: BorderSide(color: accentColor.withValues(alpha: 0.8), width: 2 * scaleFactor),
@@ -702,12 +625,10 @@ class OrbitalPlanetNode extends StatelessWidget {
               ),
             ),
             SizedBox(height: 12 * scaleFactor),
-            
-            // The Physical Avatar Bubble (The 'Planet')
             Stack(
               alignment: Alignment.center,
               children: [
-                // Outer glowing aura matching the ring's accent color
+                // Outer glow scales dynamically
                 Container(
                   width: 54 * scaleFactor,
                   height: 54 * scaleFactor,
@@ -722,8 +643,7 @@ class OrbitalPlanetNode extends StatelessWidget {
                     ],
                   ),
                 ),
-                
-                // Solid border surrounding the actual photo
+                // Inner ring scales dynamically
                 Container(
                   width: 50 * scaleFactor,
                   height: 50 * scaleFactor,
@@ -745,8 +665,6 @@ class OrbitalPlanetNode extends StatelessWidget {
                 ),
               ],
             ),
-            
-            // Subtle tether line extending downwards
             Container(
               height: 20 * scaleFactor,
               width: 1 * scaleFactor,
@@ -765,8 +683,6 @@ class OrbitalPlanetNode extends StatelessWidget {
   }
 }
 
-/// Utility widget that intercepts raw pointer events. 
-/// Used to prevent taps on floating UI elements from affecting the zoomable background.
 class PointerInterceptor extends StatelessWidget {
   final Widget child;
   const PointerInterceptor({super.key, required this.child});
@@ -775,7 +691,7 @@ class PointerInterceptor extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () {}, // Traps taps so they don't propagate to the InteractiveViewer underneath
+      onTap: () {},
       child: child,
     );
   }

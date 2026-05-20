@@ -258,7 +258,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF101828) : const Color(0xFFF3F4FF),
         border: Border.all(
-          color: currentColor.withOpacity(0.35),
+          color: currentColor.withValues(alpha: 0.35),
         ),
         borderRadius: BorderRadius.circular(8),
       ),
@@ -295,7 +295,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         style: OutlinedButton.styleFrom(
           foregroundColor: canResend ? activeColor : Colors.grey,
           side: BorderSide(
-            color: canResend ? activeColor : Colors.grey.withOpacity(0.5),
+            color: canResend ? activeColor : Colors.grey.withValues(alpha: 0.5),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
@@ -368,21 +368,21 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
+                      borderSide: const BorderSide(
                         color: kAccentPurple,
                         width: 2,
                       ),
                     ),
                     errorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
+                      borderSide: const BorderSide(
                         color: Colors.redAccent,
                         width: 2,
                       ),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
+                      borderSide: const BorderSide(
                         color: Colors.redAccent,
                         width: 2,
                       ),
@@ -436,7 +436,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isDark
-                        ? Colors.redAccent.withOpacity(0.35)
+                        ? Colors.redAccent.withValues(alpha: 0.35)
                         : Colors.red.shade200,
                   ),
                 ),
@@ -465,8 +465,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF3F4FF),
                 border: Border.all(
                   color: isDark
-                      ? kAccentPurple.withOpacity(0.25)
-                      : kAccentPurple.withOpacity(0.35),
+                      ? kAccentPurple.withValues(alpha: 0.25)
+                      : kAccentPurple.withValues(alpha: 0.35),
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),

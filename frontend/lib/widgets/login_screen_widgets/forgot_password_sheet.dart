@@ -84,7 +84,20 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
   /// STEP 1: Sends the password reset request to the server.
   Future<void> requestReset() async {
-    if (_resetEmailCtrl.text.isEmpty) return;
+    final email = _resetEmailCtrl.text.trim();
+
+    // 1. Validation: Check if empty
+    if (email.isEmpty) {
+      setState(() => stepMsg = 'Please enter your email address.');
+      return;
+    }
+
+    // 2. Validation: Check if valid email format
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      setState(() => stepMsg = 'Please enter a valid email address.');
+      return;
+    }
 
     setState(() {
       stepLoading = true;
@@ -92,7 +105,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     });
 
     // Call API to send OTP to the provided email
-    final res = await ApiService.forgotPassword(_resetEmailCtrl.text.trim());
+    final res = await ApiService.forgotPassword(email);
     setState(() => stepLoading = false);
 
     if (res['ok'] == true) {
@@ -570,26 +583,27 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             ),
             const SizedBox(height: 20),
             
-            // Shared Error / Success Message Banner
+            // Shared Error / Info Message Banner (Now updated to Red)
             if (stepMsg != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.blue.withValues(alpha: 0.1)
-                      : Colors.blue.shade50,
+                      ? Colors.red.withValues(alpha: 0.1)
+                      : Colors.red.shade50,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark
-                        ? Colors.blue.withValues(alpha: 0.3)
-                        : Colors.blue.shade100,
+                        ? Colors.red.withValues(alpha: 0.3)
+                        : Colors.red.shade200,
                   ),
                 ),
                 child: Text(
                   stepMsg!,
                   style: TextStyle(
-                    color: isDark ? Colors.blue.shade200 : Colors.blue.shade800,
+                    color: isDark ? Colors.red.shade300 : Colors.red.shade900,
                     fontSize: 13,
+                    fontWeight: FontWeight.w500,
                     height: 1.4,
                   ),
                 ),

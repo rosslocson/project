@@ -91,8 +91,8 @@ class _ProfileFormTabState extends State<ProfileFormTab> {
     final isDark = context.isDarkInternTheme;
     final primaryColor = isDark ? const Color(0xFF7367F0) : const Color(0xFF00022E);
     final errorColor = isDark
-        ? const Color(0xFF7367F0).withOpacity(0.6)
-        : const Color(0xFF00022E).withOpacity(0.6);
+        ? const Color(0xFF7367F0).withValues(alpha: 0.6)
+        : const Color(0xFF00022E).withValues(alpha: 0.6);
 
     return InputDecoration(
       labelText: label,

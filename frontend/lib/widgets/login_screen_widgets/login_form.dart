@@ -119,12 +119,12 @@ class LoginForm extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? const Color(0xFF4F1B1B).withOpacity(0.28)
+                        ? const Color(0xFF4F1B1B).withValues(alpha: 0.28)
                         : const Color(0xFFFFEBEE),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isDark
-                          ? const Color(0xFFF28B82).withOpacity(0.8)
+                          ? const Color(0xFFF28B82).withValues(alpha: 0.8)
                           : const Color(0xFFEF9A9A),
                       width: 1,
                     ),
@@ -327,7 +327,7 @@ class LoginForm extends StatelessWidget {
                           backgroundColor: kAccentPurple,
                           foregroundColor: Colors.white,
                           disabledBackgroundColor:
-                              kAccentPurple.withOpacity(0.5),
+                              kAccentPurple.withValues(alpha: 0.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),

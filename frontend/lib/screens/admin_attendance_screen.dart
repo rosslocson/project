@@ -149,7 +149,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       debugPrint('═══════════════════════════════════════');
 
       setState(() {
-        _records = result['records'] as List<AdminAttendanceRecord>;
+        _records = filtered;
         _total = result['total'] as int;
         _loading = false;
       });
@@ -213,11 +213,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
   int get _pendingReportCount => _records.where((r) => r.hasOpenReport).length;
 
-  void _clearAllFilters() {
-    _searchCtrl.clear();
-    setState(() => _selectedStatus = 'All');
-    _load();
-  }
+
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -425,6 +421,14 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 options: AttendanceExportOptions(
                   allDates: isAllDates,
                   period: (!isAllDates && !isCustom) ? _period.apiPeriod : null,
+                  // ↓ Pass range dates when in range mode
+                  dateFrom: (isCustom && _isRangeMode)
+                      ? toApiDate(_customRangeStart)
+                      : null,
+                  dateTo: (isCustom && _isRangeMode)
+                      ? toApiDate(_customRangeEnd)
+                      : null,
+                  // ↓ Pass single date only when NOT in range mode
                   date: (isCustom && !_isRangeMode)
                       ? toApiDate(_customDate)
                       : null,
@@ -721,15 +725,11 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Enforce a minimum width so the "ADMIN NOTE" column is never squeezed tightly
-        final tableWidth =
-            constraints.maxWidth > 1200 ? constraints.maxWidth : 1200.0;
-
         // No vertical SingleChildScrollView here. Scrolling is natively handled by the parent wrapper!
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: SizedBox(
-            width: tableWidth,
+            width: constraints.maxWidth,
             child: Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 12),
               child: AttendanceTable(
