@@ -169,7 +169,7 @@ class RecentUsersCard extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           leading: CircleAvatar(
             radius: 22,
-            backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+            backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
             child: hasImage && fullAvatarUrl.isNotEmpty
                 ? ClipOval(
                     child: Image.network(

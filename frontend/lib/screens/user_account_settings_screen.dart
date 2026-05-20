@@ -455,7 +455,7 @@ builder: (_) => AvatarCropScreen(
                                 CircleAvatar(
                                   radius: 40,
                                   backgroundColor:
-                                      primaryColor.withOpacity(0.1),
+                                      primaryColor.withValues(alpha: 0.1),
                                   backgroundImage: avatarImage,
                                   child: _isUploadingAvatar
                                       ? CircularProgressIndicator(
@@ -535,7 +535,7 @@ builder: (_) => AvatarCropScreen(
                                     decoration: BoxDecoration(
                                       color: isDark
                                           ? Colors.grey.withValues(alpha: 0.3)
-                                          : primaryColor.withOpacity(0.08),
+                                          : primaryColor.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Text(

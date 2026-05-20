@@ -181,6 +181,9 @@ class AttendanceExporter {
     try {
       // 1. Fetch all matching records
       final records = await _fetchAll(options);
+      if (!context.mounted) {
+        return AttendanceExportResult.fail('Context unmounted');
+      }
 
       snackCtrl.close();
 
@@ -197,6 +200,10 @@ class AttendanceExporter {
       // 2. Build the PDF
       final pdfBytes = await _buildPdf(records, options);
 
+      if (!context.mounted) {
+        return AttendanceExportResult.fail('Context unmounted');
+      }
+
       // 3. Hand off to printing — opens native save/share/print dialog
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async => pdfBytes,
@@ -205,8 +212,10 @@ class AttendanceExporter {
 
       return AttendanceExportResult.ok();
     } catch (e) {
-      snackCtrl.close();
-      _snack(context, 'Export error: $e', isError: true);
+      if (context.mounted) {
+        snackCtrl.close();
+        _snack(context, 'Export error: $e', isError: true);
+      }
       return AttendanceExportResult.fail('$e');
     }
   }

@@ -152,7 +152,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
     final Color headingColor = isDark ? Colors.white : const Color(0xFF00022E);
     const Color accentColor = Color(0xFF6366F1);
     final Color bgColor = isDark ? const Color(0xFF02030A) : Colors.white;
-    final Color orbitColor = isDark ? Colors.white.withOpacity(0.15) : const Color(0xFF00022E).withOpacity(0.08);
+    final Color orbitColor = isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFF00022E).withValues(alpha: 0.08);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -221,7 +221,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
   }
 
   Widget _buildHeader(bool isDark, Color headingColor, Color accentColor) {
-    final Color searchBg = isDark ? const Color(0xFF141526).withOpacity(0.9) : const Color(0xFFF3F4F6);
+    final Color searchBg = isDark ? const Color(0xFF141526).withValues(alpha: 0.9) : const Color(0xFFF3F4F6);
 
     return PointerInterceptor(
       child: Padding(
@@ -355,7 +355,7 @@ class _InternDirectoryScreenState extends State<InternDirectoryScreen> with Sing
         padding: const EdgeInsets.only(bottom: 30.0),
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isDark ? const Color(0xFF141526).withOpacity(0.9) : const Color(0xFF00022E),
+            backgroundColor: isDark ? const Color(0xFF141526).withValues(alpha: 0.9) : const Color(0xFF00022E),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
@@ -467,7 +467,7 @@ class CentralSun extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    ambientPurple.withOpacity(0.15),
+                    ambientPurple.withValues(alpha: 0.15),
                     Colors.transparent,
                   ],
                 ),
@@ -482,8 +482,8 @@ class CentralSun extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    fieryRed.withOpacity(0.6),
-                    fieryRed.withOpacity(0.0),
+                    fieryRed.withValues(alpha: 0.6),
+                    fieryRed.withValues(alpha: 0.0),
                   ],
                   stops: const [0.4, 1.0],
                 ),
@@ -497,12 +497,12 @@ class CentralSun extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: coronaYellow.withOpacity(isDark ? 0.9 : 0.8),
+                  color: coronaYellow.withValues(alpha: isDark ? 0.9 : 0.8),
                   blurRadius: 40,
                   spreadRadius: isDark ? 2 : 12,
                 ),
                 BoxShadow(
-                  color: coreWhite.withOpacity(0.8),
+                  color: coreWhite.withValues(alpha: 0.8),
                   blurRadius: 15,
                   spreadRadius: 1,
                 ),
@@ -522,7 +522,7 @@ class CentralSun extends StatelessWidget {
               ),
               boxShadow: isDark ? [] : [
                 BoxShadow(
-                  color: sunYellow.withOpacity(0.4),
+                  color: sunYellow.withValues(alpha: 0.4),
                   blurRadius: 25,
                   spreadRadius: 5,
                 )
@@ -589,13 +589,13 @@ class OrbitalPlanetNode extends StatelessWidget {
                     vertical: 6 * scaleFactor
                   ),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.black.withOpacity(0.4) : Colors.white.withOpacity(0.85),
+                    color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(8 * scaleFactor),
                     border: Border(
-                      bottom: BorderSide(color: accentColor.withOpacity(0.8), width: 2 * scaleFactor),
+                      bottom: BorderSide(color: accentColor.withValues(alpha: 0.8), width: 2 * scaleFactor),
                     ),
                     boxShadow: isDark ? [] : [
-                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: Offset(0, 4 * scaleFactor))
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: Offset(0, 4 * scaleFactor))
                     ],
                   ),
                   child: Column(
@@ -636,7 +636,7 @@ class OrbitalPlanetNode extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: accentColor.withOpacity(isDark ? 0.4 : 0.2),
+                        color: accentColor.withValues(alpha: isDark ? 0.4 : 0.2),
                         blurRadius: 15 * scaleFactor,
                         spreadRadius: 2 * scaleFactor,
                       ),
@@ -649,7 +649,7 @@ class OrbitalPlanetNode extends StatelessWidget {
                   height: 50 * scaleFactor,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: accentColor.withOpacity(0.8), width: 1.5 * scaleFactor),
+                    border: Border.all(color: accentColor.withValues(alpha: 0.8), width: 1.5 * scaleFactor),
                   ),
                   child: ClipOval(
                     child: Container(
@@ -672,7 +672,7 @@ class OrbitalPlanetNode extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [accentColor.withOpacity(0.5), Colors.transparent],
+                  colors: [accentColor.withValues(alpha: 0.5), Colors.transparent],
                 ),
               ),
             ),
