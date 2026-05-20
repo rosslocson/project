@@ -111,6 +111,16 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	if strings.TrimSpace(req.Email) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Email is required"})
+		return
+	}
+
+	if req.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": "Password is required"})
+		return
+	}
+
 	userRepo := repositories.NewUserRepository(h.DB)
 	authService := services.NewAuthService(userRepo)
 
@@ -336,7 +346,7 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// FIX: Use Updates with a map to explicitly target only the fields that need changing, 
+	// FIX: Use Updates with a map to explicitly target only the fields that need changing,
 	// preventing GORM from overwriting the rest of the profile with blank data.
 	if err := h.DB.Model(&user).Updates(map[string]interface{}{
 		"password":           string(hashedPassword),
