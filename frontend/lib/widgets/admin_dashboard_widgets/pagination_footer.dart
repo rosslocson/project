@@ -19,29 +19,25 @@ class PaginationFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.internTheme;
 
-    // Calculate visible page range for sliding window effect
     int startPage = 1;
     int endPage = totalPages;
-    
+
     if (totalPages > 5) {
-      // Center the current page in the window when possible
       startPage = currentPage - 2;
       endPage = currentPage + 2;
-      
-      // Adjust if at the beginning
+
       if (startPage < 1) {
         startPage = 1;
         endPage = 5;
       }
-      
-      // Adjust if at the end
+
       if (endPage > totalPages) {
         endPage = totalPages;
         startPage = totalPages - 4;
         if (startPage < 1) startPage = 1;
       }
     }
-    
+
     int visiblePages = endPage - startPage + 1;
 
     return Container(
@@ -50,6 +46,7 @@ class PaginationFooter extends StatelessWidget {
         border: Border(top: BorderSide(color: theme.border)),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton.icon(
@@ -61,20 +58,31 @@ class PaginationFooter extends StatelessWidget {
               disabledForegroundColor: theme.mutedText.withValues(alpha: 0.5),
             ),
           ),
-          Row(
-            children: List.generate(visiblePages, (index) {
-              final pageNumber = startPage + index;
-              final isActive = pageNumber == currentPage;
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: isActive ? 20 : 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFF6366F1) : theme.border,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              );
-            }),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 300;
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(visiblePages, (index) {
+                    final pageNumber = startPage + index;
+                    final isActive = pageNumber == currentPage;
+                    return Container(
+                      margin:
+                          EdgeInsets.symmetric(horizontal: isCompact ? 0.3 : 4),
+                      width:
+                          isActive ? (isCompact ? 2 : 20) : (isCompact ? 1 : 8),
+                      height: isCompact ? 2 : 8,
+                      decoration: BoxDecoration(
+                        color:
+                            isActive ? const Color(0xFF6366F1) : theme.border,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
           ),
           TextButton(
             onPressed: currentPage < totalPages ? onNext : null,
@@ -83,6 +91,7 @@ class PaginationFooter extends StatelessWidget {
               disabledForegroundColor: theme.mutedText.withValues(alpha: 0.5),
             ),
             child: const Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Next'),
                 SizedBox(width: 4),
@@ -95,4 +104,3 @@ class PaginationFooter extends StatelessWidget {
     );
   }
 }
-
