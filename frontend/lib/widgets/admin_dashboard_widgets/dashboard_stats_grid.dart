@@ -29,7 +29,7 @@ class DashboardStatsGrid extends StatelessWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 24,
-              mainAxisExtent: 200, // fixed pixel height, not ratio
+              mainAxisExtent: 230, // fixed pixel height, not ratio
             ),
             itemCount: 4,
             itemBuilder: (context, index) => _buildGlowingCard(

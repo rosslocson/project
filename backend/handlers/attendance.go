@@ -45,13 +45,11 @@ const attendanceSelectWithHours = `
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-// todayDate returns midnight UTC of today.
 func todayDate() time.Time {
 	now := time.Now()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 }
 
-// getUserIDFromCtx reads the user_id injected by JWTAuth middleware.
 func getUserIDFromCtx(c *gin.Context) (uint, bool) {
 	raw, exists := c.Get("user_id")
 	if !exists {
@@ -74,7 +72,6 @@ func getUserIDFromCtx(c *gin.Context) (uint, bool) {
 	return 0, false
 }
 
-// refreshAttendance re-fetches the record so the computed hours_rendered column is included.
 func (h *Handler) refreshAttendance(id uint) (*models.Attendance, error) {
 	var rec models.Attendance
 	err := h.DB.
@@ -173,19 +170,12 @@ func (h *Handler) GetAttendanceSummary(c *gin.Context) {
 	}
 
 	var user models.User
-	h.DB.Select("start_date").First(&user, userID)
+	h.DB.Select("start_date, required_ojt_hours").First(&user, userID)
 	requiredHours := 400.0
 	if user.RequiredOjtHours > 0 {
 		requiredHours = float64(user.RequiredOjtHours)
 	}
 
-	type Summary struct {
-		TotalHours float64
-		TotalDays  int
-	}
-
-	// Fetch raw times and compute hours in Go so the lunch-break deduction
-	// (12:00–13:00, same as the admin side) is applied consistently.
 	type SummaryRaw struct {
 		Date    string  `gorm:"column:date"`
 		TimeIn  *string `gorm:"column:time_in"`
@@ -201,11 +191,12 @@ func (h *Handler) GetAttendanceSummary(c *gin.Context) {
 		WHERE user_id = ?
 	`, userID).Scan(&summaryRaws)
 
-	var summary Summary
+	var totalHours float64
+	var totalDays int
 	for _, r := range summaryRaws {
 		if hrs := computeHours(r.TimeIn, r.TimeOut, r.Date); hrs != nil {
-			summary.TotalHours += *hrs
-			summary.TotalDays++
+			totalHours += *hrs
+			totalDays++
 		}
 	}
 
@@ -220,12 +211,16 @@ func (h *Handler) GetAttendanceSummary(c *gin.Context) {
 		todayRec = &t
 	}
 
+	// Expose OJT completion flag so the dashboard can react immediately.
+	isCompleted := totalHours >= requiredHours
+
 	c.JSON(http.StatusOK, gin.H{
 		"ok":                   true,
-		"total_hours_rendered": summary.TotalHours,
+		"total_hours_rendered": totalHours,
 		"required_hours":       requiredHours,
-		"total_days":           summary.TotalDays,
+		"total_days":           totalDays,
 		"today":                todayRec,
+		"is_ojt_completed":     isCompleted,
 	})
 }
 
@@ -238,15 +233,17 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 		return
 	}
 
-	// ── Fetch the intern's start_date from their profile ─────────────────────
 	var user models.User
 	if err := h.DB.Select("start_date, required_ojt_hours").First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": "Could not load user profile"})
 		return
 	}
 
-	// ── Fetch all real attendance records for this user ───────────────────────
-	var records []models.Attendance
+	requiredHours := 400.0
+	if user.RequiredOjtHours > 0 {
+		requiredHours = float64(user.RequiredOjtHours)
+	}
+
 	loc := manilaLoc()
 	now := time.Now().In(loc)
 	yesterday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -1)
@@ -261,6 +258,7 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 		start = walkStart
 	}
 
+	var records []models.Attendance
 	q := h.DB.
 		Select(attendanceSelectWithHours).
 		Where("user_id = ? AND date <= ?", userID, yesterday)
@@ -270,15 +268,13 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 	q = q.Order("date DESC")
 	q.Find(&records)
 
-	// ── Build a date → record lookup map ─────────────────────────────────────
-	type dateKey = string // "YYYY-MM-DD"
+	type dateKey = string
 	byDate := make(map[dateKey]*models.Attendance, len(records))
 	for i := range records {
 		key := records[i].Date.UTC().Format("2006-01-02")
 		byDate[key] = &records[i]
 	}
 
-	// ── Determine the walk range ──────────────────────────────────────────────
 	if walkStart.IsZero() {
 		if len(records) > 0 {
 			earliest := records[len(records)-1].Date.In(loc)
@@ -289,7 +285,38 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 		}
 	}
 
-	// ── Walk every weekday and emit real or absent rows ───────────────────────
+	// ── First pass: find the OJT completion date ──────────────────────────────
+	// Walk forward and accumulate hours until requiredHours is reached.
+	// The date on which the threshold is crossed is the completion date —
+	// no absent rows are emitted after it.
+	var completionDate string
+	var cumulativeHours float64
+
+	for cursor := walkStart; !cursor.After(yesterday); cursor = cursor.AddDate(0, 0, 1) {
+		if cursor.Weekday() == time.Saturday || cursor.Weekday() == time.Sunday {
+			continue
+		}
+		key := cursor.Format("2006-01-02")
+		if rec, found := byDate[key]; found {
+			var tIn, tOut *string
+			if rec.TimeIn != nil {
+				s := rec.TimeIn.In(loc).Format("3:04 PM")
+				tIn = &s
+			}
+			if rec.TimeOut != nil {
+				s := rec.TimeOut.In(loc).Format("3:04 PM")
+				tOut = &s
+			}
+			if hrs := computeHours(tIn, tOut, key); hrs != nil {
+				cumulativeHours += *hrs
+				if cumulativeHours >= requiredHours && completionDate == "" {
+					completionDate = key
+				}
+			}
+		}
+	}
+
+	// ── Second pass: build the result rows ────────────────────────────────────
 	type HistoryRow struct {
 		ID            uint     `json:"id"`
 		UserID        uint     `json:"user_id"`
@@ -312,6 +339,11 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 
 		key := cursor.Format("2006-01-02")
 
+		// Stop emitting rows past the OJT completion date.
+		if completionDate != "" && key > completionDate {
+			break
+		}
+
 		if rec, found := byDate[key]; found {
 			var timeInStr, timeOutStr *string
 			if rec.TimeIn != nil {
@@ -322,13 +354,16 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 				s := rec.TimeOut.In(loc).Format("3:04 PM")
 				timeOutStr = &s
 			}
-			// Use computeHours so the 12:00–13:00 lunch break is deducted,
-			// matching the admin side exactly.
 			hours := computeHours(timeInStr, timeOutStr, key)
 
 			status := deriveStatus(timeInStr, timeOutStr, key)
 			if rec.Status != nil && *rec.Status != "" {
 				status = *rec.Status
+			}
+
+			// Tag the exact completion date row with "OJT Completed".
+			if completionDate != "" && key == completionDate {
+				status = "OJT Completed"
 			}
 
 			result = append(result, HistoryRow{
@@ -343,6 +378,7 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 				IsAbsent:      false,
 			})
 		} else {
+			// Only emit absent rows before OJT is complete.
 			result = append(result, HistoryRow{
 				ID:       0,
 				UserID:   userID,
@@ -379,7 +415,7 @@ func (h *Handler) GetAttendanceHistory(c *gin.Context) {
 //	user_id     int     — filter to a single intern
 func (h *Handler) GetAdminAttendance(c *gin.Context) {
 
-	// ── pagination ──────────────────────────────────────────────────────────
+	// ── pagination ────────────────────────────────────────────────────────────
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	if page < 1 {
@@ -390,7 +426,7 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 	}
 	offset := (page - 1) * limit
 
-	// ── date / period range ─────────────────────────────────────────────────
+	// ── date / period range ───────────────────────────────────────────────────
 	allDates := c.Query("all_dates") == "true"
 	period := c.Query("period")
 	dateStr := c.Query("date")
@@ -445,7 +481,7 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 			allDates, useRange, rangeStart.Format("2006-01-02"), rangeEnd.Format("2006-01-02"))
 	}
 
-	// ── optional filters ────────────────────────────────────────────────────
+	// ── optional filters ──────────────────────────────────────────────────────
 	search := c.Query("search")
 	status := c.Query("status")
 	userIDStr := c.Query("user_id")
@@ -456,16 +492,17 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 		todayLocal := time.Date(nowLoc.Year(), nowLoc.Month(), nowLoc.Day(), 0, 0, 0, 0, loc)
 
 		type InternMeta struct {
-			ID        int        `gorm:"column:id"`
-			FirstName string     `gorm:"column:first_name"`
-			LastName  string     `gorm:"column:last_name"`
-			AvatarURL string     `gorm:"column:avatar_url"`
-			StartDate *time.Time `gorm:"column:start_date"`
+			ID               int        `gorm:"column:id"`
+			FirstName        string     `gorm:"column:first_name"`
+			LastName         string     `gorm:"column:last_name"`
+			AvatarURL        string     `gorm:"column:avatar_url"`
+			StartDate        *time.Time `gorm:"column:start_date"`
+			RequiredOjtHours int        `gorm:"column:required_ojt_hours"`
 		}
 
 		var interns []InternMeta
 		q := h.DB.Table("users").
-			Select("id, first_name, last_name, COALESCE(avatar_url, '') as avatar_url, start_date").
+			Select("id, first_name, last_name, COALESCE(avatar_url, '') as avatar_url, start_date, required_ojt_hours").
 			Where("role = 'user'")
 		if userIDStr != "" {
 			uid, err := strconv.Atoi(userIDStr)
@@ -480,8 +517,8 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 
 		fmt.Printf("[DEBUG allDates] found %d interns\n", len(interns))
 		for _, intern := range interns {
-			fmt.Printf("[DEBUG allDates] intern id=%d name=%s %s start_date=%v\n",
-				intern.ID, intern.FirstName, intern.LastName, intern.StartDate)
+			fmt.Printf("[DEBUG allDates] intern id=%d name=%s %s start_date=%v required_hours=%d\n",
+				intern.ID, intern.FirstName, intern.LastName, intern.StartDate, intern.RequiredOjtHours)
 		}
 
 		if len(interns) == 0 {
@@ -564,29 +601,68 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 		var walked []WalkRow
 
 		for _, intern := range interns {
-			var walkStart time.Time
+			var internWalkStart time.Time
 			if intern.StartDate != nil {
-				walkStart = time.Date(intern.StartDate.Year(), intern.StartDate.Month(), intern.StartDate.Day(), 0, 0, 0, 0, loc)
+				internWalkStart = time.Date(intern.StartDate.Year(), intern.StartDate.Month(), intern.StartDate.Day(), 0, 0, 0, 0, loc)
 			}
-			if walkStart.IsZero() {
+			if internWalkStart.IsZero() {
 				continue
+			}
+
+			requiredHours := 400.0
+			if intern.RequiredOjtHours > 0 {
+				requiredHours = float64(intern.RequiredOjtHours)
 			}
 
 			internName := intern.FirstName + " " + intern.LastName
 
-			for cursor := walkStart; !cursor.After(todayLocal); cursor = cursor.AddDate(0, 0, 1) {
+			// ── First pass: find this intern's OJT completion date ────────────
+			var completionDate string
+			var cumulativeHours float64
+
+			for cursor := internWalkStart; !cursor.After(todayLocal); cursor = cursor.AddDate(0, 0, 1) {
+				if cursor.Weekday() == time.Saturday || cursor.Weekday() == time.Sunday {
+					continue
+				}
+				key := cursor.Format("2006-01-02")
+				rk := rowKey{intern.ID, key}
+				if rec, found := byKey[rk]; found {
+					if hrs := computeHours(rec.TimeIn, rec.TimeOut, key); hrs != nil {
+						cumulativeHours += *hrs
+						if cumulativeHours >= requiredHours && completionDate == "" {
+							completionDate = key
+						}
+					}
+				}
+			}
+
+			// ── Second pass: emit walk rows up to completion date ─────────────
+			for cursor := internWalkStart; !cursor.After(todayLocal); cursor = cursor.AddDate(0, 0, 1) {
 				wd := cursor.Weekday()
 				if wd == time.Saturday || wd == time.Sunday {
 					continue
 				}
 				key := cursor.Format("2006-01-02")
+
+				// Stop walking past the OJT completion date.
+				if completionDate != "" && key > completionDate {
+					break
+				}
+
 				rk := rowKey{intern.ID, key}
 
 				if rec, found := byKey[rk]; found {
-					if status != "" && rec.Status != status {
+					// Determine the effective row status, tagging the completion date.
+					rowStatus := rec.Status
+					if completionDate != "" && key == completionDate {
+						rowStatus = "OJT Completed"
+					}
+
+					// Apply status filter against the effective status.
+					if status != "" && rowStatus != status {
 						continue
 					}
-					// Use computeHours for lunch-break deduction.
+
 					hrs := computeHours(rec.TimeIn, rec.TimeOut, key)
 					walked = append(walked, WalkRow{
 						ID:            rec.ID,
@@ -597,13 +673,14 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 						TimeIn:        rec.TimeIn,
 						TimeOut:       rec.TimeOut,
 						HoursRendered: hrs,
-						Status:        rec.Status,
+						Status:        rowStatus,
 						IsReported:    rec.IsReported,
 						ReportReason:  rec.ReportReason,
 						ReportType:    rec.ReportType,
 						AdminNote:     rec.AdminNote,
 					})
 				} else {
+					// Only emit absent rows before OJT is complete.
 					if status != "" && status != "Absent" {
 						continue
 					}
@@ -624,24 +701,26 @@ func (h *Handler) GetAdminAttendance(c *gin.Context) {
 		}
 
 		total := len(walked)
-		start := (page - 1) * limit
-		if start > total {
-			start = total
+		startIdx := (page - 1) * limit
+		if startIdx > total {
+			startIdx = total
 		}
-		end := start + limit
-		if end > total {
-			end = total
+		endIdx := startIdx + limit
+		if endIdx > total {
+			endIdx = total
 		}
 
 		c.JSON(http.StatusOK, gin.H{
 			"ok":      true,
-			"records": walked[start:end],
+			"records": walked[startIdx:endIdx],
 			"total":   total,
 			"page":    page,
 			"limit":   limit,
 		})
 		return
 	}
+
+	// ── Non-allDates path (period / date range / single date) ─────────────────
 
 	type AdminRow struct {
 		ID            int      `gorm:"column:id"             json:"id"`
@@ -861,14 +940,11 @@ func (h *Handler) GetWeeklyAttendance(c *gin.Context) {
 	weekStart := time.Date(now.Year(), now.Month(), now.Day()-(weekday-1), 0, 0, 0, 0, loc)
 	weekEnd := weekStart.AddDate(0, 0, 7)
 
-	// Cap to today so future dates are never returned.
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	if weekEnd.After(today) {
 		weekEnd = today
 	}
 
-	// Fetch raw times and compute hours in Go so the lunch-break deduction
-	// (12:00–13:00) is applied, matching the admin side.
 	type weekRaw struct {
 		Date    string  `gorm:"column:date"`
 		TimeIn  *string `gorm:"column:time_in"`

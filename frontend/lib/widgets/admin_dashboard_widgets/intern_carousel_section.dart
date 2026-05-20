@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../intern_carousel_palette.dart';
 
-// Intern profile & detail page models
 import '../../screens/intern_cards.dart';
 import '../../screens/intern_directory_screen.dart';
 import '../../screens/intern_cards/intern_ross_profile_page.dart';
@@ -32,7 +31,7 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
   late PageController _pageController;
   Timer? _autoScrollTimer;
   int _currentPage = 0;
-  double _lastTargetFraction = 0.35; // Track active viewport state
+  double _lastTargetFraction = 0.35;
 
   @override
   void initState() {
@@ -148,48 +147,97 @@ class _InternCarouselSectionState extends State<InternCarouselSection> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Meet Our Interns',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.topbarText,
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) =>
-                                const InternDirectoryScreen()),
-                      );
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: InternCarouselPalette.accent,
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+              child: isCompact
+                  // ── Compact: title left, "View All" right, no overlap
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('View All'),
-                        SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_ios, size: 12),
+                        Flexible(
+                          child: Text(
+                            'Meet Our Interns',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.topbarText,
+                                ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const InternDirectoryScreen()),
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: InternCarouselPalette.accent,
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('View All'),
+                              SizedBox(width: 4),
+                              Icon(Icons.arrow_forward_ios, size: 12),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  // ── Wide: UNTOUCHED original layout
+                  : Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Center(
+                          child: Text(
+                            'Meet Our Interns',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.topbarText,
+                                ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const InternDirectoryScreen()),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: InternCarouselPalette.accent,
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('View All'),
+                                SizedBox(width: 4),
+                                Icon(Icons.arrow_forward_ios, size: 12),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 16),
             _buildCarouselBody(isCompact),
@@ -456,7 +504,6 @@ class _ArrowButtonState extends State<_ArrowButton> {
   }
 }
 
-/// Fallback helper component to render initials or fallback avatar styling cleanly
 class BorderedAvatar extends StatelessWidget {
   final InternProfile intern;
   final double size;
@@ -473,7 +520,6 @@ class BorderedAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Generate up to 2 uppercase initials from the intern's name
     final initials = intern.name
         .trim()
         .split(' ')
@@ -495,8 +541,7 @@ class BorderedAvatar extends StatelessWidget {
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          color: const Color(
-              0xFF5E001F), // Dark wine tone to complement the card's profile color accents
+          color: const Color(0xFF5E001F),
         ),
       ),
     );

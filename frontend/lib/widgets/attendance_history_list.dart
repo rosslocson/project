@@ -49,6 +49,7 @@ String _fmtWeekRange(DateTime monday) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum _AttStatus {
+  ojtCompleted,       // ← new — must be checked first
   excusedCredited,
   excusedUncredited,
   absent,
@@ -70,6 +71,7 @@ class _StatusMeta {
 
 _StatusMeta _resolveStatus({
   required bool isAbsent,
+  required bool isOjtCompleted,      // ← new
   required bool isExcusedCredited,
   required bool isExcusedUncredited,
   required bool isComplete,
@@ -78,6 +80,14 @@ _StatusMeta _resolveStatus({
   required bool isLate,
   required bool isReported,
 }) {
+  // OJT Completed takes highest precedence — the intern is finished.
+  if (isOjtCompleted) {
+    return const _StatusMeta(
+      _AttStatus.ojtCompleted,
+      'OJT Completed',
+      Icons.workspace_premium_rounded,
+    );
+  }
   if (isExcusedCredited) {
     return const _StatusMeta(_AttStatus.excusedCredited, 'Excused – Credited', Icons.verified_rounded);
   }
@@ -118,6 +128,12 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (Color border, Color fg, Color bg) = switch (meta.status) {
+
+      // ── OJT Completed — gold/amber achievement ────────────────────────
+      _AttStatus.ojtCompleted => isDark
+          ? (const Color(0xFFFBBF24), const Color(0xFFFBBF24), const Color(0xFFFBBF24).withValues(alpha: 0.12))
+          : (const Color(0xFFD97706), const Color(0xFF92400E), const Color(0xFFFFFBEB)),
+
       _AttStatus.excusedCredited => isDark
           ? (const Color(0xFF34D399), const Color(0xFF34D399), const Color(0xFF34D399).withValues(alpha: 0.12))
           : (const Color(0xFF059669), const Color(0xFF047857), const Color(0xFFECFDF5)),
@@ -263,6 +279,12 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
     return _currentRecords.any((r) =>
         DateTime(r.date.year, r.date.month, r.date.day) == today);
   }
+
+  /// True if any record in the current week is "OJT Completed".
+  /// When this is true we suppress the today-placeholder so the intern
+  /// doesn't see a dangling "Absent" row after finishing.
+  bool get _weekHasCompletion => _currentRecords
+      .any((r) => r.status == 'OJT Completed');
 
   void _goTo(int index) {
     final clamped = index.clamp(0, (_weeks.length - 1).clamp(0, 9999));
@@ -490,7 +512,10 @@ class _AttendanceHistoryListState extends State<AttendanceHistoryList> {
                     : BorderRadius.zero,
                 child: Builder(builder: (context) {
                   final records = _currentRecords;
-                  final showTodayPlaceholder = isCurrentWeek && !_todayHasRecord;
+
+                  // Only show the today-placeholder when OJT is not yet done
+                  final showTodayPlaceholder =
+                      isCurrentWeek && !_todayHasRecord && !_weekHasCompletion;
 
                   final items = <Object>[...records];
                   if (showTodayPlaceholder) {
@@ -659,7 +684,10 @@ class _AttendanceRow extends StatelessWidget {
 
   // ── Status booleans ───────────────────────────────────────────────────────
 
+  bool get _isOjtCompleted => record.status == 'OJT Completed';
+
   bool get _isMissedClockOut {
+    if (_isOjtCompleted) return false;
     final today = DateTime.now();
     final isToday = record.date.year == today.year &&
         record.date.month == today.month &&
@@ -674,7 +702,10 @@ class _AttendanceRow extends StatelessWidget {
   }
 
   bool get _isOngoing =>
-      record.hasTimedIn && !record.hasTimedOut && !_isMissedClockOut;
+      !_isOjtCompleted &&
+      record.hasTimedIn &&
+      !record.hasTimedOut &&
+      !_isMissedClockOut;
 
   bool get _isExcusedCredited =>
       record.status == 'Excused – Credited' ||
@@ -687,6 +718,8 @@ class _AttendanceRow extends StatelessWidget {
   bool get _isExcused => _isExcusedCredited || _isExcusedUncredited;
 
   String? get _reportType {
+    // OJT Completed and excused rows are never reportable
+    if (_isOjtCompleted) return null;
     if (record.isReported) return null;
     if (_isExcused) return null;
     if (_isMissedClockOut) return 'missed_clock_out';
@@ -710,6 +743,7 @@ class _AttendanceRow extends StatelessWidget {
 
     final meta = _resolveStatus(
       isAbsent: record.isAbsent,
+      isOjtCompleted: _isOjtCompleted,
       isExcusedCredited: _isExcusedCredited,
       isExcusedUncredited: _isExcusedUncredited,
       isComplete: record.isComplete,
@@ -719,184 +753,211 @@ class _AttendanceRow extends StatelessWidget {
       isReported: record.isReported,
     );
 
-    // Grey date tile for absent / excused-uncredited
-    final bool greyDate = record.isAbsent || _isExcusedUncredited;
+    // Grey date tile for absent / excused-uncredited; gold for OJT completed
+    final bool greyDate = !_isOjtCompleted && (record.isAbsent || _isExcusedUncredited);
+    final bool goldDate = _isOjtCompleted;
 
     final rt = _reportType;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // ── Date tile ────────────────────────────────────────────────
-          Container(
-            width: 44,
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(
-              color: greyDate
-                  ? (isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.grey.shade100)
-                  : (isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : _kNavy.withValues(alpha: 0.07)),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: greyDate
+    return Container(
+      // Subtle gold row tint for the completion milestone
+      color: goldDate
+          ? (isDark
+              ? const Color(0xFFFBBF24).withValues(alpha: 0.06)
+              : const Color(0xFFFFFBEB).withValues(alpha: 0.8))
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ── Date tile ────────────────────────────────────────────────
+            Container(
+              width: 44,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: goldDate
                     ? (isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.grey.shade200)
-                    : _kBorder.withValues(alpha: isDark ? 0.6 : 0.4),
+                        ? const Color(0xFFFBBF24).withValues(alpha: 0.15)
+                        : const Color(0xFFFEF3C7))
+                    : greyDate
+                        ? (isDark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.grey.shade100)
+                        : (isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : _kNavy.withValues(alpha: 0.07)),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: goldDate
+                      ? const Color(0xFFF59E0B).withValues(alpha: 0.6)
+                      : greyDate
+                          ? (isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.grey.shade200)
+                          : _kBorder.withValues(alpha: isDark ? 0.6 : 0.4),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    _monthAbbr(record.date.month),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: goldDate
+                          ? const Color(0xFFD97706)
+                          : greyDate
+                              ? (isDark ? Colors.white30 : Colors.grey.shade400)
+                              : _kAccent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    record.date.day.toString(),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: goldDate
+                          ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFF92400E))
+                          : greyDate
+                              ? (isDark ? Colors.white30 : Colors.grey.shade400)
+                              : (isDark ? Colors.white : _kNavy),
+                      height: 1.1,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                Text(
-                  _monthAbbr(record.date.month),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: greyDate
-                        ? (isDark ? Colors.white30 : Colors.grey.shade400)
-                        : _kAccent,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  record.date.day.toString(),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: greyDate
-                        ? (isDark ? Colors.white30 : Colors.grey.shade400)
-                        : (isDark ? Colors.white : _kNavy),
-                    height: 1.1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
+            const SizedBox(width: 14),
 
-          // ── Day label + times ─────────────────────────────────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Day name + Today pill
-                Row(
-                  children: [
-                    Text(
-                      _dayName(record.date.weekday),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: greyDate
-                            ? (isDark ? Colors.white30 : Colors.grey.shade400)
-                            : (isDark ? Colors.white : _kTextHead),
-                      ),
-                    ),
-                    if (isToday) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: _kAccent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
+            // ── Day label + times ─────────────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Day name + Today pill
+                  Row(
+                    children: [
+                      Text(
+                        _dayName(record.date.weekday),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: goldDate
+                              ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFF92400E))
+                              : greyDate
+                                  ? (isDark ? Colors.white30 : Colors.grey.shade400)
+                                  : (isDark ? Colors.white : _kTextHead),
                         ),
-                        child: const Text(
-                          'Today',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: _kAccent,
+                      ),
+                      if (isToday) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _kAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'Today',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: _kAccent,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-
-                // ── Time In → Time Out (single row) ──────────────────
-                if (!record.isAbsent)
-                  _ClockInOutRow(
-                    timeIn: record.timeIn != null ? _fmtTime(record.timeIn!) : '--',
-                    timeOut: record.timeOut != null
-                        ? _fmtTime(record.timeOut!)
-                        : (_isMissedClockOut ? 'Missing' : '--'),
-                    timeInColor: record.timeIn != null
-                        ? (_isLate
-                            ? Colors.orange.shade600
-                            : (isDark ? Colors.white70 : _kTextSub))
-                        : (isDark ? Colors.white38 : Colors.grey.shade400),
-                    timeOutColor: _isMissedClockOut
-                        ? Colors.red.shade400
-                        : (record.timeOut != null
-                            ? (isDark ? Colors.white70 : _kTextSub)
-                            : (isDark ? Colors.white38 : Colors.grey.shade400)),
-                    missedClockOut: _isMissedClockOut,
-                    isDark: isDark,
-                  )
-                else
-                  Text(
-                    'No clock-in recorded',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white30 : Colors.grey.shade400),
                   ),
+                  const SizedBox(height: 4),
+
+                  // ── Time In → Time Out (single row) ──────────────────
+                  if (!record.isAbsent)
+                    _ClockInOutRow(
+                      timeIn: record.timeIn != null ? _fmtTime(record.timeIn!) : '--',
+                      timeOut: record.timeOut != null
+                          ? _fmtTime(record.timeOut!)
+                          : (_isMissedClockOut ? 'Missing' : '--'),
+                      timeInColor: record.timeIn != null
+                          ? (_isLate
+                              ? Colors.orange.shade600
+                              : (isDark ? Colors.white70 : _kTextSub))
+                          : (isDark ? Colors.white38 : Colors.grey.shade400),
+                      timeOutColor: _isMissedClockOut
+                          ? Colors.red.shade400
+                          : (record.timeOut != null
+                              ? (isDark ? Colors.white70 : _kTextSub)
+                              : (isDark ? Colors.white38 : Colors.grey.shade400)),
+                      missedClockOut: _isMissedClockOut,
+                      isDark: isDark,
+                    )
+                  else
+                    Text(
+                      _isOjtCompleted
+                          ? 'Required hours completed 🎉'
+                          : 'No clock-in recorded',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: goldDate
+                              ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706))
+                              : (isDark ? Colors.white30 : Colors.grey.shade400)),
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // ── Hours + status pill + report button ───────────────────────
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Hours
+                Builder(builder: (context) {
+                  final String hoursText;
+                  if (record.isAbsent || _isExcusedUncredited) {
+                    hoursText = _isOjtCompleted ? '—' : '0h 00m';
+                  } else if (record.hoursRendered != null) {
+                    hoursText = _fmtHours(record.hoursRendered!);
+                  } else {
+                    hoursText = '--';
+                  }
+                  return Text(
+                    hoursText,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: goldDate
+                          ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFF92400E))
+                          : record.isAbsent || _isExcusedUncredited
+                              ? (isDark ? Colors.white30 : Colors.grey.shade400)
+                              : _isExcusedCredited
+                                  ? const Color(0xFF047857)
+                                  : (isDark ? Colors.white : _kTextHead),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 5),
+
+                // ── Unified status pill ───────────────────────────────────
+                _StatusPill(meta: meta, isDark: isDark),
+
+                // ── Report button (suppressed for OJT Completed) ──────────
+                if (rt != null) ...[
+                  const SizedBox(height: 6),
+                  _ReportButton(
+                    recordId: record.id,
+                    date: _dateKey(record.date),
+                    reportType: rt,
+                    accentColor: accentColor,
+                  ),
+                ],
               ],
             ),
-          ),
-
-          const SizedBox(width: 10),
-
-          // ── Hours + status pill + report button ───────────────────────
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Hours — fetched directly from the database (hoursRendered).
-              Builder(builder: (context) {
-                final String hoursText;
-                if (record.isAbsent || _isExcusedUncredited) {
-                  hoursText = '0h 00m';
-                } else if (record.hoursRendered != null) {
-                  hoursText = _fmtHours(record.hoursRendered!);
-                } else {
-                  hoursText = '--';
-                }
-                return Text(
-                  hoursText,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: record.isAbsent || _isExcusedUncredited
-                        ? (isDark ? Colors.white30 : Colors.grey.shade400)
-                        : _isExcusedCredited
-                            ? const Color(0xFF047857)
-                            : (isDark ? Colors.white : _kTextHead),
-                  ),
-                );
-              }),
-              const SizedBox(height: 5),
-
-              // ── Unified status pill ───────────────────────────────────
-              _StatusPill(meta: meta, isDark: isDark),
-
-              // ── Report button ─────────────────────────────────────────
-              if (rt != null) ...[
-                const SizedBox(height: 6),
-                _ReportButton(
-                  recordId: record.id,
-                  date: _dateKey(record.date),
-                  reportType: rt,
-                  accentColor: accentColor,
-                ),
-              ],
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -977,6 +1038,7 @@ class _ClockInOutRow extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Today placeholder row — shown when today has no attendance record yet
+// (suppressed once OJT is completed)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TodayPlaceholderRow extends StatelessWidget {
@@ -994,6 +1056,7 @@ class _TodayPlaceholderRow extends StatelessWidget {
     // No record exists yet for today — always "Absent" placeholder
     final meta = _resolveStatus(
       isAbsent: true,
+      isOjtCompleted: false,
       isExcusedCredited: false,
       isExcusedUncredited: false,
       isComplete: false,
