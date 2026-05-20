@@ -3,6 +3,7 @@ import '../../widgets/app_theme.dart';
 import '../../models/attendance_model.dart';
 import 'edit_profile_form_components.dart';
 
+
 class AcademicInfoTab extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final List<String> departments;
@@ -21,6 +22,7 @@ class AcademicInfoTab extends StatefulWidget {
   final VoidCallback? onChanged;
   final int? requiredHours;
   final AttendanceSummary? summary;
+
 
   const AcademicInfoTab({
     super.key,
@@ -43,17 +45,21 @@ class AcademicInfoTab extends StatefulWidget {
     this.summary,
   });
 
+
   @override
   State<AcademicInfoTab> createState() => _AcademicInfoTabState();
 }
+
 
 class _AcademicInfoTabState extends State<AcademicInfoTab> {
   String? _computedEnd;
   String? _localDept;
 
+
   String? _selectedYearDropdown;
   final TextEditingController _localProgramCtrl = TextEditingController();
   final FocusNode _programFocus = FocusNode();
+
 
   final List<String> _yearOptions = [
     'SHS 12th Grade',
@@ -63,12 +69,15 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     '4th Year',
   ];
 
+
   @override
   void initState() {
     super.initState();
     _localDept = widget.selectedDept;
 
+
     widget.startCtrl.addListener(_onStartChanged);
+
 
     if (widget.programCtrl.text.startsWith('Bachelor of Science in ')) {
       _localProgramCtrl.text =
@@ -77,13 +86,16 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
       _localProgramCtrl.text = widget.programCtrl.text;
     }
 
+
     if (_yearOptions.contains(widget.yearCtrl.text)) {
       _selectedYearDropdown = widget.yearCtrl.text;
     }
 
+
     _programFocus.addListener(() {
       setState(() {});
     });
+
 
     _localProgramCtrl.addListener(() {
       if (_localProgramCtrl.text.isNotEmpty) {
@@ -95,8 +107,10 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
       widget.onChanged?.call();
     });
 
+
     _recalculate();
   }
+
 
   @override
   void dispose() {
@@ -105,6 +119,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     _programFocus.dispose();
     super.dispose();
   }
+
 
   @override
   void didUpdateWidget(AcademicInfoTab old) {
@@ -122,23 +137,28 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     }
   }
 
+
   void _onStartChanged() {
     _recalculate();
     widget.onChanged?.call();
   }
 
+
   void _recalculate() {
     final startVal = widget.startCtrl.text.trim();
     final hours = widget.requiredHours;
+
 
     if (hours == null || hours <= 0 || startVal.isEmpty) {
       if (_computedEnd != null) setState(() => _computedEnd = null);
       return;
     }
 
+
     final result = _computeEndDate(startVal, hours);
     if (result != _computedEnd) {
       setState(() => _computedEnd = result);
+
 
       final isComplete = widget.summary?.isComplete ?? false;
       if (isComplete && result != null && widget.endCtrl.text != result) {
@@ -148,6 +168,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     }
   }
 
+
   String? _computeEndDate(String startDateStr, int hours) {
     DateTime start;
     try {
@@ -156,9 +177,11 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
       return null;
     }
 
+
     final int daysNeeded = (hours / 8).ceil();
     DateTime current = start;
     int worked = 0;
+
 
     while (worked < daysNeeded) {
       if (current.weekday != DateTime.saturday &&
@@ -170,15 +193,18 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
       }
     }
 
+
     return '${current.year}-'
         '${current.month.toString().padLeft(2, '0')}-'
         '${current.day.toString().padLeft(2, '0')}';
   }
 
+
   String? _requiredValidator(String? value) {
     if (value == null || value.trim().isEmpty) return 'This field is required';
     return null;
   }
+
 
   InputDecoration _buildInputDecoration(
     BuildContext context, {
@@ -189,6 +215,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     final isDark = context.isDarkInternTheme;
     final primaryAccent = isDark ? const Color(0xFF7367F0) : kCrimsonDeep;
     final errorColor = isDark ? Colors.redAccent : Colors.red;
+
 
     return InputDecoration(
       hintText: hintText,
@@ -226,6 +253,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
@@ -233,8 +261,10 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     final primaryAccent = isDark ? const Color(0xFF7367F0) : kCrimsonDeep;
     final isOjtComplete = widget.summary?.isComplete ?? false;
 
+
     bool showProgramPrefix =
         _programFocus.hasFocus || _localProgramCtrl.text.isNotEmpty;
+
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(28),
@@ -249,6 +279,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
               sub: 'Your school, program, department, and internship details',
             ),
 
+
             // ── Department + Position ─────────────────────────────
             Row(children: [
               Expanded(
@@ -257,7 +288,6 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                   children: [
                     const FormLabel(text: 'Department'),
                     DropdownButtonFormField<String>(
-                      isExpanded: true,
                       key: ValueKey(_localDept),
                       initialValue: _localDept,
                       icon: Icon(Icons.keyboard_arrow_down,
@@ -275,14 +305,8 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                         return DropdownMenuItem(
                             value: dept,
                             child: Text(dept,
-<<<<<<< HEAD
-                                style: TextStyle(color: theme.surfaceText),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1));
-=======
                                 style:
                                     TextStyle(color: theme.surfaceText)));
->>>>>>> a65bb49def1190c92ce1a57baeeedb3ff1bc917f
                       }).toList(),
                       onChanged: (v) {
                         setState(() => _localDept = v);
@@ -302,7 +326,6 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                     const FormLabel(text: 'Position'),
                     IgnorePointer(
                       child: DropdownButtonFormField<String>(
-                        isExpanded: true,
                         initialValue: widget.defaultPosition,
                         icon: Icon(Icons.keyboard_arrow_down,
                             color: theme.mutedText),
@@ -316,8 +339,6 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                               widget.defaultPosition,
                               style: TextStyle(
                                   color: theme.mutedText, fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
                             ),
                           ),
                         ],
@@ -330,6 +351,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
             ]),
             const SizedBox(height: 16),
 
+
             // ── School ────────────────────────────────────────────
             const FormLabel(text: 'School / University'),
             TextFormField(
@@ -341,6 +363,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
               onChanged: (_) => widget.onChanged?.call(),
             ),
             const SizedBox(height: 16),
+
 
             // ── Program ───────────────────────────────────────────
             const FormLabel(text: 'Program'),
@@ -368,6 +391,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
             ),
             const SizedBox(height: 16),
 
+
             // ── Specialization + Year ─────────────────────────────
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
@@ -394,7 +418,6 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                   children: [
                     const FormLabel(text: 'Year Level'),
                     DropdownButtonFormField<String>(
-                      isExpanded: true,
                       initialValue: _selectedYearDropdown,
                       icon: Icon(Icons.keyboard_arrow_down,
                           color: theme.mutedText),
@@ -407,14 +430,8 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                         return DropdownMenuItem(
                             value: year,
                             child: Text(year,
-<<<<<<< HEAD
-                                style: TextStyle(color: theme.surfaceText),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1));
-=======
                                 style:
                                     TextStyle(color: theme.surfaceText)));
->>>>>>> a65bb49def1190c92ce1a57baeeedb3ff1bc917f
                       }).toList(),
                       onChanged: (v) {
                         setState(() {
@@ -431,6 +448,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
             ]),
             const SizedBox(height: 16),
 
+
             // ── Intern Number ─────────────────────────────────────
             const FormLabel(text: 'Intern Number'),
             TextFormField(
@@ -442,6 +460,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
               onChanged: (_) => widget.onChanged?.call(),
             ),
             const SizedBox(height: 16),
+
 
             // ── Start + End dates ─────────────────────────────────
             Row(
@@ -494,6 +513,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                   ),
                 ),
                 const SizedBox(width: 16),
+
 
                 // End date
                 Expanded(
@@ -571,3 +591,4 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
     );
   }
 }
+
