@@ -73,7 +73,6 @@ const _kRowsPerPage = 1000;
 // How many records to pull in one HTTP request.
 // Bump this if you expect > 5 000 records.
 // ─────────────────────────────────────────────────────────────────────────────
-const _kFetchLimit = 5000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AttendanceExportOptions

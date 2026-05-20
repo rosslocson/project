@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
@@ -9,7 +9,7 @@ import '../services/api_service.dart';
 import '../widgets/app_theme.dart';
 
 // InternSpace Shared Palette (Matched with Admin)
-const _kCosmicBlue = Color(0xFF00022E);
+//const _kCosmicBlue = Color(0xFF00022E);
 const _kAccentIndigo = Color(0xFF7367F0);
 const _kLightAvatarEnd = Color(0xFFA78BFA);
 

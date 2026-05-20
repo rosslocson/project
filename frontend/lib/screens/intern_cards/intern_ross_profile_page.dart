@@ -3,7 +3,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import '../intern_cards.dart';
-import '../../widgets/app_background.dart';
 
 // ── ROSALYN LOCSON PROFILE PAGE — SPACE THEME (Two-Column) ───────────────────
 //
@@ -57,7 +56,7 @@ class _SpacePainter extends CustomPainter {
         rect,
         Paint()
           ..shader = RadialGradient(
-            colors: [n.c.withOpacity(n.o), Colors.transparent],
+            colors: [n.c.withValues(alpha: n.o), Colors.transparent],
           ).createShader(rect)
           ..blendMode = BlendMode.screen,
       );
@@ -72,7 +71,7 @@ class _SpacePainter extends CustomPainter {
         Offset(s.x * size.width, s.y * size.height),
         s.size,
         Paint()
-          ..color = Colors.white.withOpacity(s.opacity * twinkle)
+          ..color = Colors.white.withValues(alpha: s.opacity * twinkle)
           ..maskFilter = s.size > 1.4
               ? MaskFilter.blur(BlurStyle.normal, s.size * 0.5)
               : null,
@@ -524,7 +523,7 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 20),
 
           // ── Connect with Me — label + centered chips ──────────────────
-          const _SectionHeader(
+            const _SectionHeader(
               icon: Icons.people_alt_outlined, label: 'Connect with Me'),
           const SizedBox(height: 12),
           Center(

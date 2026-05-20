@@ -149,7 +149,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       debugPrint('═══════════════════════════════════════');
 
       setState(() {
-        _records = result['records'] as List<AdminAttendanceRecord>;
+        _records = filtered;
         _total = result['total'] as int;
         _loading = false;
       });
@@ -213,11 +213,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
   int get _pendingReportCount => _records.where((r) => r.hasOpenReport).length;
 
-  void _clearAllFilters() {
-    _searchCtrl.clear();
-    setState(() => _selectedStatus = 'All');
-    _load();
-  }
+
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
