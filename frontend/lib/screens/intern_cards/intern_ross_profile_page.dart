@@ -373,7 +373,7 @@ class _MobileCard extends StatelessWidget {
                       // Bio — no label, centered
                       Center(child: _AboutBlock(bio: intern.bio)),
                       _Divider(),
-                      _SectionHeader(
+                      const _SectionHeader(
                           icon: Icons.people_alt_outlined,
                           label: 'Connect with Me'),
                       const SizedBox(height: 12),
@@ -386,20 +386,20 @@ class _MobileCard extends StatelessWidget {
                         ),
                       ),
                       _Divider(),
-                      _SectionHeader(
+                      const _SectionHeader(
                           icon: Icons.school_outlined,
                           label: 'Academic Profile'),
                       const SizedBox(height: 12),
                       _AcademicProfileBlock(intern: intern),
                       _Divider(),
-                      _SectionHeader(
+                      const _SectionHeader(
                           icon: Icons.location_on_outlined,
                           label: 'Deployment Data'),
                       const SizedBox(height: 12),
                       _DeploymentBlock(intern: intern),
                       if (intern.technicalSkills.isNotEmpty) ...[
                         _Divider(),
-                        _SectionHeader(
+                        const _SectionHeader(
                             icon: Icons.code_rounded,
                             label: 'Technical Skills'),
                         const SizedBox(height: 10),
@@ -408,7 +408,7 @@ class _MobileCard extends StatelessWidget {
                       ],
                       if (intern.softSkills.isNotEmpty) ...[
                         _Divider(),
-                        _SectionHeader(
+                        const _SectionHeader(
                             icon: Icons.psychology_outlined,
                             label: 'Soft Skills'),
                         const SizedBox(height: 10),
@@ -524,7 +524,7 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 20),
 
           // ── Connect with Me — label + centered chips ──────────────────
-          _SectionHeader(
+          const _SectionHeader(
               icon: Icons.people_alt_outlined, label: 'Connect with Me'),
           const SizedBox(height: 12),
           Center(
@@ -596,7 +596,7 @@ class _RightPanel extends StatelessWidget {
           const SizedBox(height: 20),
 
           // ── ACADEMIC PROFILE ──────────────────────────────────────────
-          _SectionHeader(
+          const _SectionHeader(
               icon: Icons.school_outlined, label: 'Academic Profile'),
           const SizedBox(height: 14),
           _AcademicProfileBlock(intern: intern),
@@ -604,7 +604,7 @@ class _RightPanel extends StatelessWidget {
           _Divider(),
 
           // ── DEPLOYMENT DATA ───────────────────────────────────────────
-          _SectionHeader(
+          const _SectionHeader(
               icon: Icons.location_on_outlined, label: 'Deployment Data'),
           const SizedBox(height: 14),
           _DeploymentBlock(intern: intern, safeStart: safeStart, safeEnd: safeEnd),
@@ -612,7 +612,7 @@ class _RightPanel extends StatelessWidget {
           // ── TECHNICAL SKILLS ──────────────────────────────────────────
           if (intern.technicalSkills.isNotEmpty) ...[
             _Divider(),
-            _SectionHeader(
+            const _SectionHeader(
                 icon: Icons.code_rounded, label: 'Technical Skills'),
             const SizedBox(height: 12),
             _SkillChips(skills: intern.technicalSkills, isTech: true),
@@ -621,7 +621,7 @@ class _RightPanel extends StatelessWidget {
           // ── SOFT SKILLS ───────────────────────────────────────────────
           if (intern.softSkills.isNotEmpty) ...[
             _Divider(),
-            _SectionHeader(
+            const _SectionHeader(
                 icon: Icons.psychology_outlined, label: 'Soft Skills'),
             const SizedBox(height: 12),
             _SkillChips(skills: intern.softSkills, isTech: false),
@@ -949,7 +949,7 @@ class _IdBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.badge_outlined, size: 13, color: _kAccent),
+          const Icon(Icons.badge_outlined, size: 13, color: _kAccent),
           const SizedBox(width: 8),
           Text(
             '# $number',

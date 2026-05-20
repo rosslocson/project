@@ -542,8 +542,9 @@ class AttendanceExporter {
   static String _filename(AttendanceExportOptions opts) {
     if (opts.allDates) return 'attendance_all_dates.pdf';
     if (opts.period != null) return 'attendance_${opts.period}.pdf';
-    if (opts.dateFrom != null && opts.dateTo != null)
+    if (opts.dateFrom != null && opts.dateTo != null) {
       return 'attendance_${opts.dateFrom}_to_${opts.dateTo}.pdf'; // ← ADD
+    }
     if (opts.date != null) return 'attendance_${opts.date}.pdf';
     return 'attendance_${_todayStr()}.pdf';
   }
@@ -558,8 +559,10 @@ class AttendanceExporter {
         _ => opts.period!,
       };
     }
-    if (opts.dateFrom != null && opts.dateTo != null) // ← ADD
+    if (opts.dateFrom != null && opts.dateTo != null) {
+      // ← ADD
       return '${_Record._fmtDate(opts.dateFrom!)} – ${_Record._fmtDate(opts.dateTo!)}'; // ← ADD
+    }
     if (opts.date != null) return _Record._fmtDate(opts.date!);
     return _todayStr();
   }
