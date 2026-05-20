@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../widgets/app_theme.dart';
 
 class EditProfileStatusBanner extends StatelessWidget {
   final String msg;

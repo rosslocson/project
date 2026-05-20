@@ -528,22 +528,43 @@ class BorderedAvatar extends StatelessWidget {
         .take(2)
         .join();
 
+    // Determine final avatar URL, handle relative and absolute paths
+    String? finalAvatarUrl;
+    if (intern.avatarUrl != null && intern.avatarUrl!.isNotEmpty) {
+      final rawUrl = intern.avatarUrl!;
+      if (rawUrl.startsWith('http')) {
+        finalAvatarUrl = rawUrl;
+      } else if (rawUrl.startsWith('/')) {
+        finalAvatarUrl = 'http://127.0.0.1:8080$rawUrl';
+      } else {
+        finalAvatarUrl = 'http://127.0.0.1:8080/$rawUrl';
+      }
+    }
+
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(borderRadius),
+        image: finalAvatarUrl != null
+            ? DecorationImage(
+                image: NetworkImage(finalAvatarUrl),
+                fit: BoxFit.cover,
+              )
+            : null,
       ),
       alignment: Alignment.center,
-      child: Text(
-        initials.isNotEmpty ? initials : '??',
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: FontWeight.bold,
-          color: const Color(0xFF5E001F),
-        ),
-      ),
+      child: finalAvatarUrl == null
+          ? Text(
+              initials.isNotEmpty ? initials : '??',
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF5E001F),
+              ),
+            )
+          : null,
     );
   }
 }

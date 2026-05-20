@@ -150,23 +150,23 @@ class AttendanceTable extends StatelessWidget {
                     ),
                     // Small "OJT Done" label under name for completed rows
                     if (r.isOjtCompleted)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.workspace_premium_rounded,
                               size: 10,
                               color: Color(0xFFD97706),
                             ),
-                            const SizedBox(width: 3),
+                            SizedBox(width: 3),
                             Text(
                               'OJT Done',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFFD97706),
+                                color: Color(0xFFD97706),
                               ),
                             ),
                           ],

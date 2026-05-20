@@ -53,4 +53,4 @@ const kOjtCompletedText       = Color(0xFF92400E);
 const kOjtCompletedBg         = Color(0xFFFFFBEB);
 const kOjtCompletedBorderDark = Color(0xFFFBBF24);
 const kOjtCompletedTextDark   = Color(0xFFFBBF24);
-const kOjtCompletedBgDark     = Color(0xFFFBBF2414); // ~8 % opacity
+const kOjtCompletedBgDark     = Color(0xfffbbf2414); // ~8 % opacity
