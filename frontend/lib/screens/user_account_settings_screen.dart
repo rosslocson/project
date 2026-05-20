@@ -1,6 +1,5 @@
 import 'dart:io';
 
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
@@ -18,7 +17,6 @@ import '../widgets/app_theme.dart';
 import 'avatar_crop_screen.dart';
 
 import '../services/image_processing_service.dart';
-
 
 // ── Imported Extracted Widgets ──
 import '../widgets/user_account_settings_widgets/user_profile_tab.dart';
@@ -69,7 +67,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   final ImagePicker _picker = ImagePicker();
   Uint8List? _localAvatarBytes;
   File? _avatarFile;
-
 
   @override
   void initState() {
@@ -149,10 +146,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         quality: 85,
       );
 
-
       final mimeType =
           lookupMimeType(pickedFile.name, headerBytes: preDownscaledBytes);
-
 
       if (mimeType == null || !mimeType.startsWith('image/')) {
         if (mounted) {
@@ -171,7 +166,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
       final croppedBytes = await Navigator.push<Uint8List>(
         context,
         MaterialPageRoute(
-builder: (_) => AvatarCropScreen(
+          builder: (_) => AvatarCropScreen(
             // Use pre-downscaled bytes so crop opens fast.
             imageBytes: preDownscaledBytes,
             fileName: pickedFile.name,
@@ -192,7 +187,6 @@ builder: (_) => AvatarCropScreen(
         croppedBytes,
         name: pickedFile.name.isNotEmpty ? pickedFile.name : 'avatar.jpg',
       );
-
 
       final res = await ApiService.uploadAvatar(uploadFile);
       if (!mounted) return;
@@ -383,6 +377,9 @@ builder: (_) => AvatarCropScreen(
     final user = context.watch<AuthProvider>().user;
     final sidebar = context.watch<SidebarProvider>();
 
+    // Responsive breakpoints
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     final rawAvatarUrl = user?['avatar_url'] as String? ?? '';
     final finalAvatarUrl = rawAvatarUrl.isEmpty
         ? ''
@@ -420,7 +417,11 @@ builder: (_) => AvatarCropScreen(
           // ── Main container ──
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(left: 100, right: 100, bottom: 28),
+              padding: EdgeInsets.only(
+                left: isSmallScreen ? 16 : 100, 
+                right: isSmallScreen ? 16 : 100, 
+                bottom: isSmallScreen ? 16 : 28
+              ),
               child: Container(
                 decoration: BoxDecoration(
                   color: isDark ? theme.surface : theme.sidebarBackground,
@@ -442,8 +443,10 @@ builder: (_) => AvatarCropScreen(
                     children: [
                       // Profile Header Card
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 20),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 16 : 32, 
+                            vertical: 20
+                        ),
                         decoration: BoxDecoration(
                             border: Border(
                                 bottom: BorderSide(color: theme.border))),
@@ -496,15 +499,15 @@ builder: (_) => AvatarCropScreen(
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 20),
+                            SizedBox(width: isSmallScreen ? 12 : 20),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     '${user?['first_name'] ?? ''} ${user?['last_name'] ?? ''}',
-                                    style: const TextStyle(
-                                      fontSize: 22,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 18 : 22,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 0.5,
                                     ).copyWith(color: theme.surfaceText),

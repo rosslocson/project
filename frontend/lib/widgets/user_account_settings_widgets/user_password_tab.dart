@@ -101,9 +101,6 @@ class UserPasswordTab extends StatelessWidget {
       );
 
   Widget _buildActionButtons(BuildContext context) {
-    // We use AnimatedBuilder to listen to changes in the text controllers.
-    // This allows the buttons to dynamically appear/disappear as the user types
-    // without needing to convert this to a StatefulWidget.
     return AnimatedBuilder(
       animation: Listenable.merge([curPassCtrl, newPassCtrl, confirmPassCtrl]),
       builder: (context, child) {
@@ -117,7 +114,7 @@ class UserPasswordTab extends StatelessWidget {
         }
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          padding: const EdgeInsets.only(bottom: 28),
           child: Row(
             children: [
               Expanded(
@@ -156,8 +153,8 @@ class UserPasswordTab extends StatelessWidget {
                     onPressed: savingPass ? null : onSave,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: context.isDarkInternTheme
-    ? const Color(0xFF7367F0)
-    : _kBlue,
+                        ? const Color(0xFF7367F0)
+                        : _kBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -189,74 +186,72 @@ class UserPasswordTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-            child: Form(
-              key: formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (passMsg != null) ...[
-                    UserAccountStatusBanner(
-                        msg: passMsg!, success: passSuccess),
-                    const SizedBox(height: 16),
-                  ],
-                  _passField(
-                    context,
-                    controller: curPassCtrl,
-                    label: 'Current Password',
-                    obscure: obscureCur,
-                    onToggle: onToggleCur,
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  _passField(
-                    context,
-                    controller: newPassCtrl,
-                    label: 'New Password',
-                    obscure: obscureNew,
-                    onToggle: onToggleNew,
-                    validator: (v) {
-                      if (v == null || v.length < 8) return 'Min 8 characters';
-                      if (!v.contains(RegExp(r'[A-Z]'))) {
-                        return 'Need one uppercase letter';
-                      }
-                      if (!v.contains(RegExp(r'[0-9]'))) {
-                        return 'Need one number';
-                      }
-                      if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-                        return 'Need one special character';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  _passField(
-                    context,
-                    controller: confirmPassCtrl,
-                    label: 'Confirm New Password',
-                    obscure: obscureConf,
-                    onToggle: onToggleConf,
-                    validator: (v) {
-                      if (v!.isEmpty) return 'Required';
-                      if (v != newPassCtrl.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ),
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 40, 
+        vertical: 24
+      ),
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (passMsg != null) ...[
+              UserAccountStatusBanner(
+                  msg: passMsg!, success: passSuccess),
+              const SizedBox(height: 16),
+            ],
+            _passField(
+              context,
+              controller: curPassCtrl,
+              label: 'Current Password',
+              obscure: obscureCur,
+              onToggle: onToggleCur,
+              validator: (v) => v!.isEmpty ? 'Required' : null,
             ),
-          ),
+            const SizedBox(height: 20),
+            _passField(
+              context,
+              controller: newPassCtrl,
+              label: 'New Password',
+              obscure: obscureNew,
+              onToggle: onToggleNew,
+              validator: (v) {
+                if (v == null || v.length < 8) return 'Min 8 characters';
+                if (!v.contains(RegExp(r'[A-Z]'))) {
+                  return 'Need one uppercase letter';
+                }
+                if (!v.contains(RegExp(r'[0-9]'))) {
+                  return 'Need one number';
+                }
+                if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+                  return 'Need one special character';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            _passField(
+              context,
+              controller: confirmPassCtrl,
+              label: 'Confirm New Password',
+              obscure: obscureConf,
+              onToggle: onToggleConf,
+              validator: (v) {
+                if (v!.isEmpty) return 'Required';
+                if (v != newPassCtrl.text) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20), // Spacer before the buttons
+            _buildActionButtons(context),
+          ],
         ),
-        // Replace the single button with the separated logic method
-        _buildActionButtons(context),
-      ],
+      ),
     );
   }
 }

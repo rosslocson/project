@@ -255,6 +255,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                   children: [
                     const FormLabel(text: 'Department'),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       key: ValueKey(_localDept),
                       initialValue: _localDept,
                       icon: Icon(Icons.keyboard_arrow_down, color: theme.mutedText),
@@ -270,7 +271,9 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                         return DropdownMenuItem(
                             value: dept,
                             child: Text(dept,
-                                style: TextStyle(color: theme.surfaceText)));
+                                style: TextStyle(color: theme.surfaceText),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1));
                       }).toList(),
                       onChanged: (v) {
                         setState(() => _localDept = v);
@@ -290,6 +293,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                     const FormLabel(text: 'Position'),
                     IgnorePointer(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: widget.defaultPosition,
                         icon: Icon(Icons.keyboard_arrow_down, color: theme.mutedText),
                         decoration: _buildInputDecoration(context, hintText: ''),
@@ -301,6 +305,8 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                               widget.defaultPosition,
                               style: TextStyle(
                                   color: theme.mutedText, fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                         ],
@@ -376,6 +382,7 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                   children: [
                     const FormLabel(text: 'Year Level'),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _selectedYearDropdown,
                       icon: Icon(Icons.keyboard_arrow_down, color: theme.mutedText),
                       style: TextStyle(fontSize: 14, color: theme.surfaceText),
@@ -386,7 +393,9 @@ class _AcademicInfoTabState extends State<AcademicInfoTab> {
                         return DropdownMenuItem(
                             value: year,
                             child: Text(year,
-                                style: TextStyle(color: theme.surfaceText)));
+                                style: TextStyle(color: theme.surfaceText),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1));
                       }).toList(),
                       onChanged: (v) {
                         setState(() {

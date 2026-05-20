@@ -211,7 +211,6 @@ class _UserProfileTabState extends State<UserProfileTab> {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    // We use AnimatedBuilder to evaluate button visibility instantly as the user types
     return AnimatedBuilder(
       animation: Listenable.merge(
           [widget.firstCtrl, widget.lastCtrl, widget.ojtHoursCtrl]),
@@ -222,7 +221,7 @@ class _UserProfileTabState extends State<UserProfileTab> {
         }
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 28),
+          padding: const EdgeInsets.only(bottom: 28),
           child: Row(
             children: [
               Expanded(
@@ -254,10 +253,9 @@ class _UserProfileTabState extends State<UserProfileTab> {
                   child: ElevatedButton(
                     onPressed: widget.savingProfile ? null : widget.onSave,
                     style: ElevatedButton.styleFrom(
-                      // AFTER
-backgroundColor: context.isDarkInternTheme
-    ? const Color(0xFF7367F0)
-    : _kBlue,
+                      backgroundColor: context.isDarkInternTheme
+                          ? const Color(0xFF7367F0)
+                          : _kBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -287,101 +285,99 @@ backgroundColor: context.isDarkInternTheme
   @override
   Widget build(BuildContext context) {
     final theme = context.internTheme;
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-            child: Form(
-              key: widget.formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.profileMsg != null) ...[
-                    UserAccountStatusBanner(
-                        msg: widget.profileMsg!,
-                        success: widget.profileSuccess),
-                    const SizedBox(height: 16),
-                  ],
-                  Row(children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: widget.firstCtrl,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: theme.surfaceText),
-                        decoration: _getFormDecoration(context, 'First Name'),
-                        validator: (v) => v!.isEmpty ? 'Required' : null,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: widget.lastCtrl,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: theme.surfaceText),
-                        decoration: _getFormDecoration(context, 'Last Name'),
-                        validator: (v) => v!.isEmpty ? 'Required' : null,
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: widget.emailCtrl,
-                    enabled: false,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: theme.mutedText),
-                    decoration: _getFormDecoration(
-                        context, 'Email (cannot change)',
-                        prefixIcon: Icons.email_outlined),
-                  ),
-                  const SizedBox(height: 16),
-                  widget.loadingDepts
-                      ? _loadingDropdown(context, 'Department')
-                      : _dropdownField(
-                          context,
-                          label: 'Department',
-                          value: widget.selectedDept,
-                          hint: widget.departments.isEmpty
-                              ? 'None available'
-                              : 'Select Department',
-                          items: widget.departments,
-                          onChanged: widget.onDeptChanged,
-                        ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: widget.ojtHoursCtrl,
-                    keyboardType: TextInputType.number,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: theme.surfaceText),
-                    decoration: _getFormDecoration(
-                        context, 'Required OJT Hours',
-                        prefixIcon: Icons.access_time_outlined),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Required';
-                      final parsed = int.tryParse(v.trim());
-                      if (parsed == null || parsed <= 0) {
-                        return 'Enter a valid number of hours';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 40, 
+        vertical: 24
+      ),
+      child: Form(
+        key: widget.formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.profileMsg != null) ...[
+              UserAccountStatusBanner(
+                  msg: widget.profileMsg!,
+                  success: widget.profileSuccess),
+              const SizedBox(height: 16),
+            ],
+            Row(children: [
+              Expanded(
+                child: TextFormField(
+                  controller: widget.firstCtrl,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: theme.surfaceText),
+                  decoration: _getFormDecoration(context, 'First Name'),
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                ),
               ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextFormField(
+                  controller: widget.lastCtrl,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: theme.surfaceText),
+                  decoration: _getFormDecoration(context, 'Last Name'),
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                ),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: widget.emailCtrl,
+              enabled: false,
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: theme.mutedText),
+              decoration: _getFormDecoration(
+                  context, 'Email (cannot change)',
+                  prefixIcon: Icons.email_outlined),
             ),
-          ),
+            const SizedBox(height: 16),
+            widget.loadingDepts
+                ? _loadingDropdown(context, 'Department')
+                : _dropdownField(
+                    context,
+                    label: 'Department',
+                    value: widget.selectedDept,
+                    hint: widget.departments.isEmpty
+                        ? 'None available'
+                        : 'Select Department',
+                    items: widget.departments,
+                    onChanged: widget.onDeptChanged,
+                  ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: widget.ojtHoursCtrl,
+              keyboardType: TextInputType.number,
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: theme.surfaceText),
+              decoration: _getFormDecoration(
+                  context, 'Required OJT Hours',
+                  prefixIcon: Icons.access_time_outlined),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Required';
+                final parsed = int.tryParse(v.trim());
+                if (parsed == null || parsed <= 0) {
+                  return 'Enter a valid number of hours';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20), // Spacer before the buttons
+            _buildActionButtons(context),
+          ],
         ),
-        _buildActionButtons(context),
-      ],
+      ),
     );
   }
 }
