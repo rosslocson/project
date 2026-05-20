@@ -2,7 +2,6 @@
 // Admin-facing attendance record model.
 // Distinct from attendance_model.dart which is used by intern-facing screens.
 
-//import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
 class AdminAttendanceRecord {
@@ -85,6 +84,9 @@ class AdminAttendanceRecord {
 
   // ── Computed properties ───────────────────────────────────────────────
 
+  /// True when this row marks the day the intern finished all required OJT hours.
+  bool get isOjtCompleted => status == 'OJT Completed';
+
   /// True if intern clocked in at or before 8:00 AM.
   bool get isOnTime {
     final minutes = _toMinutes(timeIn);
@@ -111,12 +113,13 @@ class AdminAttendanceRecord {
   /// True when this record has a report that hasn't been resolved yet.
   bool get hasOpenReport => isReported && reportStatus != 'resolved';
 
-  /// True when interns can flag this record (only actionable statuses).
+  /// OJT Completed rows are never reportable — the intern is done.
   bool get isReportable =>
-      status == 'Missed Clock Out' ||
-      status == 'On Shift' ||
-      status == 'Absent' ||
-      status == 'Late';
+      !isOjtCompleted &&
+      (status == 'Missed Clock Out' ||
+          status == 'On Shift' ||
+          status == 'Absent' ||
+          status == 'Late');
 
   // ── Private helpers ───────────────────────────────────────────────────
 

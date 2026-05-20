@@ -117,8 +117,13 @@ class AttendanceTable extends StatelessWidget {
   TableRow _buildRow(BuildContext context, AdminAttendanceRecord r, int index) {
     final theme = context.internTheme;
 
+    // OJT Completed rows get a subtle gold tint on the entire row
+    final rowBg = r.isOjtCompleted
+        ? const Color(0xFFFFFBEB).withValues(alpha: 0.6)
+        : Colors.transparent;
+
     return TableRow(
-      decoration: const BoxDecoration(color: Colors.transparent),
+      decoration: BoxDecoration(color: rowBg),
       children: [
         // ── Intern name + avatar ─────────────────────────────────────────
         Padding(
@@ -128,16 +133,46 @@ class AttendanceTable extends StatelessWidget {
               InternAvatar(url: r.avatarUrl, name: r.internName),
               const SizedBox(width: 8),
               Flexible(
-                child: Text(
-                  r.internName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: theme.surfaceText,
-                  ),
-                  softWrap: true,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      r.internName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: theme.surfaceText,
+                      ),
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
+                    // Small "OJT Done" label under name for completed rows
+                    if (r.isOjtCompleted)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.workspace_premium_rounded,
+                              size: 10,
+                              color: Color(0xFFD97706),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'OJT Done',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFD97706),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -501,6 +536,9 @@ class _ActionCell extends StatelessWidget {
     final theme = context.internTheme;
     final r = record;
 
+    // OJT Completed rows need no action from either role
+    if (r.isOjtCompleted) return const SizedBox.shrink();
+
     // ── Admin branch ──────────────────────────────────────────────────────
     if (isAdmin) {
       if (!r.hasOpenReport) return const SizedBox.shrink();
@@ -656,6 +694,21 @@ class StatusBadge extends StatelessWidget {
               const Color(0xFF6D28D9),
               const Color(0xFFF5F3FF),
             ),
+
+      // ── OJT Completed — gold/amber achievement badge ──────────────────
+      'OJT Completed' => isDark
+          ? (
+              const Color(0xFFFBBF24),
+              const Color(0xFFFBBF24),
+              const Color(0xFFFBBF24).withValues(alpha: 0.12),
+            )
+          : (
+              const Color(0xFFD97706),
+              const Color(0xFF92400E),
+              const Color(0xFFFFFBEB),
+            ),
+
+      // ── Fallback (Absent / unknown) ───────────────────────────────────
       _ => isDark
           ? (
               const Color(0xFFEF4444),
@@ -669,22 +722,43 @@ class StatusBadge extends StatelessWidget {
             ),
     };
 
+    // Use a star/trophy icon prefix for the OJT Completed badge
+    final bool isCompleted = status == 'OJT Completed';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompleted ? 6 : 4,
+        vertical: 5,
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: border, width: 1.5),
       ),
-      child: Text(
-        status,
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        softWrap: false,
-        overflow: TextOverflow.ellipsis,
-        style:
-            TextStyle(color: text, fontWeight: FontWeight.w600, fontSize: 11),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (isCompleted) ...[
+            Icon(Icons.workspace_premium_rounded, size: 11, color: text),
+            const SizedBox(width: 3),
+          ],
+          Flexible(
+            child: Text(
+              status,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: text,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

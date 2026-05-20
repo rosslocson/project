@@ -44,6 +44,24 @@ func manilaLoc() *time.Location {
 	return loc
 }
 
+func (h *Handler) loadInternOjtMeta() map[int]int {
+	type row struct {
+		ID               int `gorm:"column:id"`
+		RequiredOjtHours int `gorm:"column:required_ojt_hours"`
+	}
+	var rows []row
+	h.DB.Table("users").
+		Select("id, required_ojt_hours").
+		Where("deleted_at IS NULL AND is_archived = false AND role = 'user' AND position = 'Intern'").
+		Scan(&rows)
+
+	m := make(map[int]int, len(rows))
+	for _, r := range rows {
+		m[r.ID] = r.RequiredOjtHours
+	}
+	return m
+}
+
 // ── Status logic ──────────────────────────────────────────────────────────────
 
 const lateThresholdHour = 8
@@ -421,7 +439,11 @@ func (h *Handler) AdminGetAttendance(c *gin.Context) {
 		q.Order("intern_name ASC").Scan(&allRows)
 	}
 
-	// ── derive status + compute hours ─────────────────────────────────────────
+	// ── OJT completion filter (drop absents after completion, tag row) ─
+	ojtMeta := h.loadInternOjtMeta()
+	allRows = applyOjtCompletionFilter(allRows, ojtMeta)
+
+	//     // ── derive status + compute hours ──────────────────────────────────
 	response := toResponseRows(allRows)
 
 	// ── apply status filter in-memory ─────────────────────────────────────────
@@ -523,6 +545,8 @@ func (h *Handler) AdminExportAttendance(c *gin.Context) {
 		q.Order("intern_name ASC").Scan(&allRows)
 	}
 
+	ojtMeta := h.loadInternOjtMeta()
+	allRows = applyOjtCompletionFilter(allRows, ojtMeta)
 	rows := toResponseRows(allRows)
 	if statusFilter != "" {
 		filtered := rows[:0]
